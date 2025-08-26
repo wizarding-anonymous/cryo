@@ -11,6 +11,8 @@ import { PublisherProfile } from './domain/entities/publisher-profile.entity';
 import { CorporateProfile } from './domain/entities/corporate-profile.entity';
 import { OutboxEvent } from './domain/entities/outbox-event.entity';
 import { UserToken } from './domain/entities/user-token.entity';
+import { Role } from './domain/entities/role.entity';
+import { UserRole } from './domain/entities/user-role.entity';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 import { KafkaModule } from './infrastructure/event-emitters/kafka.module';
@@ -22,6 +24,11 @@ import { UserModule } from './modules/user.module';
 import { AuthModule } from './modules/auth.module';
 import { MfaModule } from './modules/mfa.module';
 import { OAuthModule } from './modules/oauth.module';
+import { ProfileModule } from './modules/profile.module';
+import { CorporateModule } from './modules/corporate.module';
+import { RoleModule } from './modules/role.module';
+import { CustomizationModule } from './modules/customization.module';
+import { ReputationModule } from './modules/reputation.module';
 
 @Module({
   imports: [
@@ -34,6 +41,11 @@ import { OAuthModule } from './modules/oauth.module';
     AuthModule,
     MfaModule,
     OAuthModule,
+    ProfileModule,
+    CorporateModule,
+    RoleModule,
+    CustomizationModule,
+    ReputationModule,
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -66,6 +78,8 @@ import { OAuthModule } from './modules/oauth.module';
           CorporateProfile,
           OutboxEvent,
           UserToken,
+          Role,
+          UserRole,
         ],
         synchronize: false, // Use migrations instead
       }),

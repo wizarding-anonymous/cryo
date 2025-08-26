@@ -60,4 +60,14 @@ export class UserService {
   async findByEmail(email: string): Promise<User | null> {
       return this.userRepository.findOneBy({ email });
   }
+
+  async updateAvatarUrl(userId: string, avatarUrl: string): Promise<void> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+        // Or throw a NotFoundException
+        return;
+    }
+    const newProfile = { ...(user.profile as object), avatarUrl };
+    await this.userRepository.update(userId, { profile: newProfile });
+  }
 }

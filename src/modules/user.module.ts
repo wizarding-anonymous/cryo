@@ -6,16 +6,19 @@ import { UserController } from '../infrastructure/http/controllers/user.controll
 import { MockEmailService } from '../application/services/mock-email.service';
 import { IEmailService } from '../domain/interfaces/email.interface';
 import { AuthModule } from './auth.module';
+import { MockAvatarService } from '../application/services/mock-avatar.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User]), AuthModule],
   providers: [
     UserService,
+    MockAvatarService,
     {
       provide: IEmailService,
       useClass: MockEmailService,
     },
   ],
   controllers: [UserController],
+  exports: [UserService], // Export UserService so other modules can use it
 })
 export class UserModule {}
