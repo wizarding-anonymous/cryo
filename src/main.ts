@@ -1,9 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { LoggingMiddleware } from './infrastructure/middleware/logging.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(new LoggingMiddleware().use);
 
   // Swagger configuration
   const config = new DocumentBuilder()

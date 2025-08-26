@@ -1,11 +1,13 @@
 import {
-    Controller, Post, Body, HttpException, HttpStatus, UseInterceptors, UploadedFile, Req, UseGuards
+    Controller, Post, Body, HttpException, HttpStatus, UseInterceptors, UploadedFile, Req, UseGuards, Get, Delete, Param, ParseUUIDPipe
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from '../../../application/services/user.service';
+import { SessionService } from '../../../application/services/session.service';
 import { CreateUserDto } from '../../../application/services/dtos/create-user.dto';
 import { MockAvatarService } from '../../../application/services/mock-avatar.service';
+import { MockExternalIntegrationService } from '../../../application/services/mock-external-integration.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 @ApiTags('Users & Registration')
@@ -14,6 +16,8 @@ export class UserController {
     constructor(
         private readonly userService: UserService,
         private readonly avatarService: MockAvatarService,
+        private readonly integrationService: MockExternalIntegrationService,
+        private readonly sessionService: SessionService,
     ) {}
 
     @Post('register')
@@ -42,20 +46,48 @@ export class UserController {
       schema: {
         type: 'object',
         properties: {
-          avatar: {
-            type: 'string',
-            format: 'binary',
-          },
+          avatar: { type: 'string', format: 'binary' },
         },
       },
     })
-    async uploadAvatar(
-      @Req() req,
-      @UploadedFile() file: Express.Multer.File
-    ) {
+    async uploadAvatar(@Req() req, @UploadedFile() file: Express.Multer.File) {
       const avatarUrl = await this.avatarService.uploadAvatar(req.user.userId, file);
       await this.userService.updateAvatarUrl(req.user.userId, avatarUrl);
-
       return { avatarUrl, message: 'Avatar uploaded successfully' };
+    }
+
+    @Post('me/import/steam')
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: "Import user data from Steam (Mock)" })
+    async importFromSteam(@Req() req, @Body() body: { steamId: string }) {
+        return this.integrationService.importFromSteam(req.user.userId, body.steamId);
+    }
+
+    @Post('me/import/epic')
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: "Import user data from Epic Games (Mock)" })
+    async importFromEpic(@Req() req, @Body() body: { epicId: string }) {
+        return this.integrationService.importFromEpicGames(req.user.userId, body.epicId);
+    }
+
+    @Get('me/sessions')
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: "Get current user's active sessions" })
+    async getActiveSessions(@Req() req) {
+        // Placeholder implementation
+        return [];
+    }
+
+    @Delete('me/sessions/:sessionId')
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: "Terminate a specific user session" })
+    async terminateSession(@Req() req, @Param('sessionId', ParseUUIDPipe) sessionId: string) {
+        // Placeholder implementation
+        await this.sessionService.terminateSession(sessionId);
+        return { message: 'Session terminated' };
     }
 }

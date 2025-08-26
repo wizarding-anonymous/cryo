@@ -62,7 +62,16 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   @ApiOperation({ summary: 'Get user profile (protected route)' })
-  getProfile(@Body() body) {
-      return body.user;
+  getProfile(@Req() req) {
+      return req.user;
+  }
+
+  @Post('refresh')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Refresh an access token' })
+  @ApiResponse({ status: 201, description: 'New access token generated.'})
+  async refreshToken(@Req() req) {
+    return this.authService.refreshToken(req.user.userId);
   }
 }

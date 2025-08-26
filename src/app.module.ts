@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { AuditInterceptor } from './infrastructure/interceptors/audit.interceptor';
 import { AppController } from './infrastructure/http/app.controller';
 import { AppService } from './application/use-cases/app.service';
 import { User } from './domain/entities/user.entity';
@@ -13,6 +16,7 @@ import { OutboxEvent } from './domain/entities/outbox-event.entity';
 import { UserToken } from './domain/entities/user-token.entity';
 import { Role } from './domain/entities/role.entity';
 import { UserRole } from './domain/entities/user-role.entity';
+import { AuditLog } from './domain/entities/audit-log.entity';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 import { KafkaModule } from './infrastructure/event-emitters/kafka.module';
@@ -29,9 +33,16 @@ import { CorporateModule } from './modules/corporate.module';
 import { RoleModule } from './modules/role.module';
 import { CustomizationModule } from './modules/customization.module';
 import { ReputationModule } from './modules/reputation.module';
+import { AdminModule } from './modules/admin.module';
+import { AuditModule } from './modules/audit.module';
+import { MonitoringModule } from './modules/monitoring.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 60 seconds
+      limit: 100, // 100 requests per minute
+    }]),
     KafkaModule,
     EventsModule,
     DeveloperModule,
@@ -46,6 +57,9 @@ import { ReputationModule } from './modules/reputation.module';
     RoleModule,
     CustomizationModule,
     ReputationModule,
+    AdminModule,
+    AuditModule,
+    MonitoringModule,
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -80,12 +94,23 @@ import { ReputationModule } from './modules/reputation.module';
           UserToken,
           Role,
           UserRole,
+          AuditLog,
         ],
         synchronize: false, // Use migrations instead
       }),
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    }
+  ],
 })
 export class AppModule {}

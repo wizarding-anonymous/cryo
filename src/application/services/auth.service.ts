@@ -101,4 +101,14 @@ export class AuthService {
 
     return this.login(savedUser);
   }
+
+  async refreshToken(userId: string): Promise<{ accessToken: string }> {
+    // In a real implementation, we would validate a refresh token here.
+    // For now, we'll just re-issue an access token for the given user ID.
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return this.login(user);
+  }
 }

@@ -7,9 +7,11 @@ import { MockEmailService } from '../application/services/mock-email.service';
 import { IEmailService } from '../domain/interfaces/email.interface';
 import { AuthModule } from './auth.module';
 import { MockAvatarService } from '../application/services/mock-avatar.service';
+import { IntegrationModule } from './integration.module';
+import { SessionModule } from './session.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), AuthModule],
+  imports: [TypeOrmModule.forFeature([User]), AuthModule, IntegrationModule, SessionModule],
   providers: [
     UserService,
     MockAvatarService,
