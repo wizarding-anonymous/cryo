@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Put, Param, ParseUUIDPipe, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Put, Param, ParseUUIDPipe, Body, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AdminService, UserSearchCriteria } from '../../../application/services/admin.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
@@ -26,9 +26,11 @@ export class AdminController {
     @AuditAction('user.block')
     @AuditResource('user')
     blockUser(
-        @Param('id', ParseUUIDPipe) userId: string,
+        @Param('id', ParseUUIDPipe) userIdToBlock: string,
         @Body('reason') reason: string,
+        @Req() req,
     ) {
-        return this.adminService.blockUser(userId, reason);
+        const adminId = req.user.userId;
+        return this.adminService.blockUser(userIdToBlock, adminId, reason);
     }
 }
