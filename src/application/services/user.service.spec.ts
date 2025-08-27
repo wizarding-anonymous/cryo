@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserService } from './user.service';
-import { UserActivationService } from './user-activation.service';
+import { UserTokenService } from './user-token.service';
 import { IEmailService } from '../../domain/interfaces/email.interface';
 import { User } from '../../domain/entities/user.entity';
 import { ConflictException } from '@nestjs/common';
@@ -10,7 +10,7 @@ import { ConflictException } from '@nestjs/common';
 describe('UserService', () => {
   let service: UserService;
   let userRepository: Repository<User>;
-  let activationService: UserActivationService;
+  let tokenService: UserTokenService;
   let emailService: IEmailService;
 
   const mockUserRepository = {
@@ -19,8 +19,9 @@ describe('UserService', () => {
     save: jest.fn(),
   };
 
-  const mockActivationService = {
-    generateActivationToken: jest.fn(),
+  const mockTokenService = {
+    generateToken: jest.fn(),
+    validateToken: jest.fn(),
   };
 
   const mockEmailService = {
@@ -37,19 +38,19 @@ describe('UserService', () => {
           useValue: mockUserRepository,
         },
         {
-          provide: UserActivationService,
-          useValue: mockActivationService,
-        },
-        {
           provide: IEmailService,
           useValue: mockEmailService,
+        },
+        {
+          provide: UserTokenService,
+          useValue: mockTokenService,
         },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    activationService = module.get<UserActivationService>(UserActivationService);
+    tokenService = module.get<UserTokenService>(UserTokenService);
     emailService = module.get<IEmailService>(IEmailService);
 
     jest.clearAllMocks();
@@ -59,14 +60,14 @@ describe('UserService', () => {
     mockUserRepository.findOneBy.mockResolvedValue(null);
     mockUserRepository.create.mockReturnValue({ email: 'test@test.com' } as User);
     mockUserRepository.save.mockResolvedValue({ id: 'user-id', email: 'test@test.com' } as User);
-    mockActivationService.generateActivationToken.mockResolvedValue('test-token');
+    mockTokenService.generateToken.mockResolvedValue('test-token');
 
     const dto = { email: 'test@test.com', username: 'testuser', password: 'Password123' };
     await service.createUser(dto);
 
     expect(mockUserRepository.findOneBy).toHaveBeenCalledTimes(2);
     expect(mockUserRepository.save).toHaveBeenCalled();
-    expect(mockActivationService.generateActivationToken).toHaveBeenCalledWith('user-id');
+    expect(mockTokenService.generateToken).toHaveBeenCalledWith('user-id', 'activation');
     expect(mockEmailService.sendVerificationEmail).toHaveBeenCalledWith('test@test.com', 'test-token');
   });
 

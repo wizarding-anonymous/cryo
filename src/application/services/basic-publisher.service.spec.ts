@@ -81,7 +81,7 @@ describe('BasicPublisherService', () => {
       expect(mockEventPublisher.publish).toHaveBeenCalledWith(
         'publisher.verification.changed',
         expect.any(Object),
-        expect.any(Function),
+        expect.any(Function), // Event class constructor
       );
     });
   });

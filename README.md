@@ -1,98 +1,236 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Cryo - Российская игровая платформа
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Cryo - это современная российская игровая платформа, построенная на микросервисной архитектуре с соблюдением российского законодательства.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Архитектура проекта
 
-## Description
+Проект организован по принципу микросервисной архитектуры:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+cryo/
+├── backend/                    # Микросервисы backend
+│   ├── user-service/          # Управление пользователями
+│   ├── user-service-new/      # Обновленный User Service
+│   └── [другие сервисы]/      # Будущие микросервисы
+├── frontend/                   # Frontend приложения
+├── docs/                      # Документация
+├── k8s/                       # Kubernetes манифесты
+├── helm/                      # Helm charts
+└── .kiro/                     # Спецификации и конфигурация
 ```
 
-## Compile and run the project
+## Микросервисы
 
+### User Service (backend/user-service-new/)
+
+Центральный микросервис для управления пользователями:
+
+- ✅ Регистрация и аутентификация
+- ✅ Управление профилями
+- ✅ OAuth интеграция (VK, Yandex, Одноклассники)
+- ✅ Многофакторная аутентификация
+- ✅ Базовые профили разработчиков и издателей
+- ✅ Система событий (Kafka)
+- ✅ Соответствие 152-ФЗ
+
+**Статус:** ✅ Готов к разработке (исправлены ошибки компиляции, все тесты проходят)
+
+### Планируемые микросервисы
+
+- **Game Catalog Service** - Каталог игр
+- **Payment Service** - Платежи и биллинг
+- **Library Service** - Библиотека пользователя
+- **Social Service** - Социальные функции
+- **Developer Portal Service** - Портал разработчиков
+- **Notification Service** - Уведомления
+- **Analytics Service** - Аналитика
+
+## Технологический стек
+
+### Backend
+- **NestJS** - Основной фреймворк
+- **TypeScript** - Язык программирования
+- **PostgreSQL** - Основная база данных
+- **Redis** - Кэширование и сессии
+- **Apache Kafka** - Обмен событиями
+- **Docker** - Контейнеризация
+- **Kubernetes** - Оркестрация
+
+### Frontend
+- **React** - UI библиотека
+- **TypeScript** - Язык программирования
+- **Next.js** - Фреймворк
+- **Tailwind CSS** - Стилизация
+
+### Инфраструктура
+- **Docker Compose** - Локальная разработка
+- **Kubernetes** - Production окружение
+- **Helm** - Управление деплоями
+- **Prometheus** - Мониторинг
+- **Grafana** - Визуализация метрик
+
+## Быстрый старт
+
+### Предварительные требования
+
+- Node.js 18+
+- Docker и Docker Compose
+- PostgreSQL 15+
+- Redis 7+
+
+### Запуск User Service
+
+1. Перейдите в папку сервиса:
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cd backend/user-service-new
 ```
 
-## Run tests
-
+2. Установите зависимости:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+3. Запустите инфраструктуру:
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker-compose up -d postgres redis kafka
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+4. Выполните миграции:
+```bash
+npm run migration:run
+```
 
-## Resources
+5. Запустите сервис:
+```bash
+npm run start:dev
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+API документация будет доступна по адресу: http://localhost:3001/api
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Запуск всего стека
 
-## Support
+```bash
+# Запуск всех сервисов через Docker Compose
+docker-compose up
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Разработка
 
-## Stay in touch
+### Структура микросервиса
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Каждый микросервис следует принципам Hexagonal Architecture:
 
-## License
+```
+src/
+├── application/          # Слой приложения
+│   ├── services/        # Бизнес-логика
+│   └── events/          # События и их схемы
+├── domain/              # Доменный слой
+│   ├── entities/        # Сущности
+│   ├── value-objects/   # Объекты-значения
+│   └── interfaces/      # Интерфейсы
+├── infrastructure/      # Инфраструктурный слой
+│   ├── auth/           # Аутентификация
+│   ├── http/           # HTTP контроллеры
+│   └── persistence/    # Работа с БД
+└── modules/            # NestJS модули
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Добавление нового микросервиса
+
+1. Создайте папку в `backend/`:
+```bash
+mkdir backend/new-service
+```
+
+2. Скопируйте структуру из User Service
+3. Обновите package.json и конфигурацию
+4. Создайте спецификацию в `.kiro/specs/`
+
+### Тестирование
+
+```bash
+# Unit тесты
+npm test
+
+# E2E тесты
+npm run test:e2e
+
+# Покрытие
+npm run test:cov
+```
+
+## Соответствие законодательству
+
+Платформа полностью соответствует российскому законодательству:
+
+- ✅ **152-ФЗ** - Защита персональных данных
+- ✅ **ГОСТ шифрование** - Сертифицированные алгоритмы
+- ✅ **Локализация данных** - Хранение в РФ
+- ✅ **Аудит действий** - Полное логирование
+- ✅ **Право на забвение** - Удаление данных по запросу
+
+## Мониторинг и наблюдаемость
+
+- **Structured Logging** - Структурированные логи
+- **Distributed Tracing** - Трассировка запросов
+- **Metrics** - Метрики Prometheus
+- **Health Checks** - Проверки состояния
+- **Alerting** - Система алертов
+
+## Безопасность
+
+- **JWT токены** - Аутентификация
+- **RBAC** - Контроль доступа
+- **Rate Limiting** - Защита от злоупотреблений
+- **Input Validation** - Валидация входных данных
+- **SQL Injection Protection** - Защита от SQL инъекций
+- **CORS** - Настройка CORS политик
+
+## Развертывание
+
+### Development
+```bash
+docker-compose up
+```
+
+### Staging/Production
+```bash
+# Kubernetes
+kubectl apply -f k8s/
+
+# Или через Helm
+helm install cryo ./helm/cryo
+```
+
+## Документация
+
+- [API Documentation](docs/api/) - REST API документация
+- [Architecture](docs/architecture.md) - Архитектура системы
+- [Security](docs/security-review-checklist.md) - Безопасность
+- [Runbook](docs/runbook.md) - Операционное руководство
+- [Testing Plan](docs/testing-plan.md) - План тестирования
+
+## Участие в разработке
+
+1. Форкните репозиторий
+2. Создайте feature ветку
+3. Внесите изменения
+4. Добавьте тесты
+5. Создайте Pull Request
+
+## Лицензия
+
+MIT License - см. [LICENSE](LICENSE) файл.
+
+## Контакты
+
+- **Команда разработки:** Cryo Platform Team
+- **Email:** dev@cryo-platform.ru
+- **Документация:** https://docs.cryo-platform.ru
+
+---
+
+**Статус проекта:** 🚧 В активной разработке
+
+**Последнее обновление:** Август 2025

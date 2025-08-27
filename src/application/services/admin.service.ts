@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../domain/entities/user.entity';
 import { EventPublisher } from '../events/event-publisher.service';
-import { UserBlockedEvent } from '../events/schemas/user-blocked.event';
 
 // Define DTOs for search criteria and paginated results
 export class UserSearchCriteria {
@@ -75,13 +74,12 @@ export class AdminService {
 
     await this.eventPublisher.publish(
         'user.blocked',
-        new UserBlockedEvent({
+        {
             userId: updatedUser.id,
             reason: reason,
             blockedBy: adminId,
             timestamp: new Date().toISOString(),
-        }),
-        UserBlockedEvent,
+        }
     );
 
     return updatedUser;

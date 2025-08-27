@@ -9,6 +9,7 @@ import { INN } from '../../domain/value-objects/inn.value-object';
 import { OGRN } from '../../domain/value-objects/ogrn.value-object';
 import { KPP } from '../../domain/value-objects/kpp.value-object';
 import { PublisherProfileUpdatedEvent } from '../events/schemas/publisher-profile-updated.event';
+import { PublisherVerificationChangedEvent, PublisherVerificationStatus } from '../events/schemas/publisher-verification-changed.event';
 
 @Injectable()
 export class BasicPublisherService {
@@ -59,7 +60,6 @@ export class BasicPublisherService {
             },
             timestamp: new Date().toISOString(),
         }),
-        PublisherProfileUpdatedEvent,
     );
 
     return updatedProfile;
@@ -71,5 +71,39 @@ export class BasicPublisherService {
       throw new NotFoundException(`Publisher profile for user ID ${userId} not found`);
     }
     return profile;
+  }
+
+  async updateVerificationStatus(userId: string, status: string): Promise<PublisherProfile> {
+    const profile = await this.publisherProfileRepository.findOneBy({ userId });
+    if (!profile) {
+      throw new NotFoundException(`Publisher profile for user ID ${userId} not found`);
+    }
+
+    const previousStatus = profile.verification?.status || 'pending';
+    
+    profile.verification = {
+      ...profile.verification as any,
+      status,
+      isVerified: status === 'approved',
+      verifiedAt: status === 'approved' ? new Date().toISOString() : null,
+    };
+
+    const updatedProfile = await this.publisherProfileRepository.save(profile);
+
+    // Publish verification changed event
+    await this.eventPublisher.publish(
+      'publisher.verification.changed',
+      new PublisherVerificationChangedEvent({
+        userId: updatedProfile.userId,
+        publisherId: updatedProfile.id,
+        oldStatus: previousStatus as PublisherVerificationStatus,
+        newStatus: status as PublisherVerificationStatus,
+        verifiedAt: status === 'approved' ? new Date().toISOString() : undefined,
+        timestamp: new Date().toISOString(),
+      }),
+      PublisherVerificationChangedEvent,
+    );
+
+    return updatedProfile;
   }
 }

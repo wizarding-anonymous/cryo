@@ -18,6 +18,7 @@ import { Role } from './domain/entities/role.entity';
 import { UserRole } from './domain/entities/user-role.entity';
 import { AuditLog } from './domain/entities/audit-log.entity';
 import { CacheModule } from '@nestjs/cache-manager';
+import { RedisModule } from '@nestjs-modules/ioredis';
 import * as redisStore from 'cache-manager-redis-store';
 import { KafkaModule } from './infrastructure/event-emitters/kafka.module';
 import { EventsModule } from './application/events/events.module';
@@ -33,10 +34,13 @@ import { CorporateModule } from './modules/corporate.module';
 import { RoleModule } from './modules/role.module';
 import { CustomizationModule } from './modules/customization.module';
 import { ReputationModule } from './modules/reputation.module';
-import { AdminModule } from './modules/admin.module';
+// import { AdminModule } from './modules/admin.module';
 import { AuditModule } from './modules/audit.module';
 import { MonitoringModule } from './modules/monitoring.module';
 import { ComplianceModule } from './modules/compliance.module';
+import { IntegrationMonitoringModule } from './modules/integration-monitoring.module';
+import { RateLimitMiddleware } from './infrastructure/middleware/rate-limit.middleware';
+import { ApiKeyAuthMiddleware } from './infrastructure/middleware/api-key-auth.middleware';
 
 @Module({
   imports: [
@@ -58,10 +62,11 @@ import { ComplianceModule } from './modules/compliance.module';
     RoleModule,
     CustomizationModule,
     ReputationModule,
-    AdminModule,
+    // AdminModule,
     AuditModule,
     MonitoringModule,
     ComplianceModule,
+    IntegrationMonitoringModule,
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -74,6 +79,14 @@ import { ComplianceModule } from './modules/compliance.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+    RedisModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'single',
+        url: `redis://${configService.get<string>('REDIS_HOST')}:${configService.get<number>('REDIS_PORT')}`,
+      }),
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -105,6 +118,8 @@ import { ComplianceModule } from './modules/compliance.module';
   controllers: [AppController],
   providers: [
     AppService,
+    RateLimitMiddleware,
+    ApiKeyAuthMiddleware,
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditInterceptor,

@@ -6,7 +6,7 @@ import { UpdateVerificationStatusDto } from '../dtos/update-verification-status.
 import { BasicDeveloperProfileDto } from '../dtos/basic-developer-profile.dto';
 
 @ApiTags('Developer Profiles')
-@Controller('developers')
+@Controller('api/v1/developers')
 export class BasicDeveloperController {
   constructor(private readonly developerService: BasicDeveloperService) {}
 

@@ -6,7 +6,7 @@ import { UpdatePublisherVerificationDto } from '../dtos/update-publisher-verific
 import { BasicPublisherProfileDto } from '../dtos/basic-publisher-profile.dto';
 
 @ApiTags('Publisher Profiles')
-@Controller('publishers')
+@Controller('api/v1/publishers')
 export class BasicPublisherController {
   constructor(private readonly publisherService: BasicPublisherService) {}
 

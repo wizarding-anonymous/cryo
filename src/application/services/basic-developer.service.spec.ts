@@ -75,7 +75,7 @@ describe('BasicDeveloperService', () => {
       expect(mockEventPublisher.publish).toHaveBeenCalledWith(
         'developer.verification.changed',
         expect.any(Object), // In a real test, we'd check the event payload more closely
-        expect.any(Function),
+        expect.any(Function), // Event class constructor
       );
     });
   });

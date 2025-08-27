@@ -4,10 +4,11 @@ import { User } from '../domain/entities/user.entity';
 import { AdminService } from '../application/services/admin.service';
 import { AdminController } from '../infrastructure/http/controllers/admin.controller';
 import { RoleModule } from './role.module'; // RoleService is needed for RolesGuard
+import { EventsModule } from '../application/events/events.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), RoleModule],
+  imports: [TypeOrmModule.forFeature([User]), RoleModule, EventsModule],
   providers: [AdminService],
   controllers: [AdminController],
 })
-export class AdminModule {}
+export class AdminModule { }

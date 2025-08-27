@@ -8,6 +8,7 @@ import { CreateDeveloperProfileDto } from './dtos/create-developer-profile.dto';
 import { INN } from '../../domain/value-objects/inn.value-object';
 import { OGRN } from '../../domain/value-objects/ogrn.value-object';
 import { DeveloperProfileUpdatedEvent } from '../events/schemas/developer-profile-updated.event';
+import { DeveloperVerificationChangedEvent, VerificationStatus } from '../events/schemas/developer-verification-changed.event';
 
 @Injectable()
 export class BasicDeveloperService {
@@ -60,7 +61,7 @@ export class BasicDeveloperService {
             },
             timestamp: new Date().toISOString(),
         }),
-        DeveloperProfileUpdatedEvent,
+
     );
 
     return updatedProfile;
@@ -72,5 +73,38 @@ export class BasicDeveloperService {
       throw new NotFoundException(`Developer profile for user ID ${userId} not found`);
     }
     return profile;
+  }
+
+  async updateVerificationStatus(userId: string, status: string): Promise<DeveloperProfile> {
+    const profile = await this.developerProfileRepository.findOneBy({ userId });
+    if (!profile) {
+      throw new NotFoundException(`Developer profile for user ID ${userId} not found`);
+    }
+
+    const previousStatus = profile.verificationStatus;
+    profile.verificationStatus = status;
+    profile.isVerified = status === 'approved';
+    
+    if (status === 'approved') {
+      profile.verifiedAt = new Date();
+    }
+
+    const updatedProfile = await this.developerProfileRepository.save(profile);
+
+    // Publish verification changed event
+    await this.eventPublisher.publish(
+      'developer.verification.changed',
+      new DeveloperVerificationChangedEvent({
+        userId: updatedProfile.userId,
+        developerId: updatedProfile.id,
+        oldStatus: previousStatus as VerificationStatus,
+        newStatus: status as VerificationStatus,
+        verifiedAt: status === 'approved' ? new Date().toISOString() : undefined,
+        timestamp: new Date().toISOString(),
+      }),
+      DeveloperVerificationChangedEvent,
+    );
+
+    return updatedProfile;
   }
 }
