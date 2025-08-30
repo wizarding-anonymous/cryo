@@ -1,12 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { LoggingMiddleware } from './infrastructure/middleware/logging.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  app.use(new LoggingMiddleware().use);
 
   // Swagger configuration
   const config = new DocumentBuilder()
@@ -25,6 +22,9 @@ async function bootstrap() {
   // Enable graceful shutdown
   app.enableShutdownHooks();
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT || 3000;
+  console.log(`Starting server on port ${port}`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`Server is running on http://localhost:${port}`);
 }
 bootstrap();

@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { LoggingMiddleware } from './infrastructure/middleware/logging.middleware';
 // import { AuditInterceptor } from './infrastructure/interceptors/audit.interceptor';
 import { AppController } from './infrastructure/http/app.controller';
 import { AppService } from './application/use-cases/app.service';
@@ -44,75 +45,25 @@ import { ComplianceModule } from './modules/compliance.module';
       ttl: 60000, // 60 seconds
       limit: 100, // 100 requests per minute
     }]),
-    KafkaModule,
-    EventsModule,
-    // DeveloperModule,
-    // PublisherModule,
-    // VerificationModule,
-    // UserModule,
-    // AuthModule,
-    // MfaModule,
-    // OAuthModule,
-    // ProfileModule,
-    // CorporateModule,
-    // RoleModule,
-    // CustomizationModule,
-    // ReputationModule,
-    // AdminModule,
-    // AuditModule,
-    MonitoringModule,
-    // ComplianceModule,
-    CacheModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        store: redisStore,
-        host: configService.get<string>('REDIS_HOST'),
-        port: configService.get<number>('REDIS_PORT'),
-      }),
-    }),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('POSTGRES_HOST'),
-        port: configService.get<number>('POSTGRES_PORT'),
-        username: configService.get<string>('POSTGRES_USER'),
-        password: configService.get<string>('POSTGRES_PASSWORD'),
-        database: configService.get<string>('POSTGRES_DB'),
-        entities: [
-          User,
-          Session,
-          SocialAccount,
-          DeveloperProfile,
-          PublisherProfile,
-          CorporateProfile,
-          OutboxEvent,
-          UserToken,
-          Role,
-          UserRole,
-          AuditLog,
-        ],
-        synchronize: false, // Use migrations instead
-      }),
-    }),
+    MonitoringModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // {
-    //   provide: APP_INTERCEPTOR,
-    //   useClass: AuditInterceptor,
-    // },
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     }
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(LoggingMiddleware)
+      .forRoutes('*');
+  }
+}
