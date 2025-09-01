@@ -3,7 +3,8 @@ import { GameService } from '../game.service';
 import { GameRepository } from '../../../infrastructure/persistence/game.repository';
 import { CreateGameDto } from '../../../infrastructure/http/dtos/create-game.dto';
 import { Game, GameStatus } from '../../../domain/entities/game.entity';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { SearchService } from '../search.service';
 
 const mockGameRepository = {
   findAll: jest.fn(),
@@ -11,6 +12,13 @@ const mockGameRepository = {
   create: jest.fn(),
   save: jest.fn(),
   remove: jest.fn(),
+  findByDeveloper: jest.fn(),
+  findByStatus: jest.fn(),
+};
+
+const mockSearchService = {
+    indexGame: jest.fn(),
+    removeGame: jest.fn(),
 };
 
 describe('GameService', () => {
@@ -25,6 +33,10 @@ describe('GameService', () => {
           provide: GameRepository,
           useValue: mockGameRepository,
         },
+        {
+            provide: SearchService,
+            useValue: mockSearchService,
+        }
       ],
     }).compile();
 
@@ -84,6 +96,54 @@ describe('GameService', () => {
         const result = await service.findAll({ page: 1, limit: 10 });
         expect(result).toEqual(expectedResult);
         expect(repository.findAll).toHaveBeenCalledWith({ page: 1, limit: 10 });
+    });
+  });
+
+  describe('submitForModeration', () => {
+    it('should change game status to PENDING_REVIEW', async () => {
+        const gameId = 'game-uuid';
+        const developerId = 'dev-uuid';
+        const game = { id: gameId, developerId, status: GameStatus.DRAFT };
+
+        repository.findById.mockResolvedValue(game);
+        repository.save.mockResolvedValue({ ...game, status: GameStatus.PENDING_REVIEW });
+
+        const result = await service.submitForModeration(gameId, developerId);
+        expect(result.status).toBe(GameStatus.PENDING_REVIEW);
+        expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ status: GameStatus.PENDING_REVIEW }));
+    });
+
+    it('should throw ForbiddenException if developer does not own the game', async () => {
+        const gameId = 'game-uuid';
+        const developerId = 'dev-uuid';
+        const otherDeveloperId = 'other-dev-uuid';
+        const game = { id: gameId, developerId: otherDeveloperId, status: GameStatus.DRAFT };
+
+        repository.findById.mockResolvedValue(game);
+
+        await expect(service.submitForModeration(gameId, developerId)).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('approveGame', () => {
+    it('should change game status to PUBLISHED', async () => {
+        const gameId = 'game-uuid';
+        const game = { id: gameId, status: GameStatus.PENDING_REVIEW };
+
+        repository.findById.mockResolvedValue(game);
+        repository.save.mockResolvedValue({ ...game, status: GameStatus.PUBLISHED });
+
+        const result = await service.approveGame(gameId);
+        expect(result.status).toBe(GameStatus.PUBLISHED);
+    });
+
+    it('should throw BadRequestException if game is not pending review', async () => {
+        const gameId = 'game-uuid';
+        const game = { id: gameId, status: GameStatus.PUBLISHED };
+
+        repository.findById.mockResolvedValue(game);
+
+        await expect(service.approveGame(gameId)).rejects.toThrow(BadRequestException);
     });
   });
 });

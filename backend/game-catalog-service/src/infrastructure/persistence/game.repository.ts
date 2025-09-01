@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Game } from '../../domain/entities/game.entity';
+import { Game, GameStatus } from '../../domain/entities/game.entity';
 import { PaginationDto } from '../http/dtos/pagination.dto';
 
 @Injectable()
@@ -14,6 +14,26 @@ export class GameRepository {
   async findAll(paginationDto: PaginationDto): Promise<{ data: Game[], total: number }> {
     const { page = 1, limit = 10 } = paginationDto;
     const [data, total] = await this.gameRepository.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
+  }
+
+  async findByDeveloper(developerId: string, paginationDto: PaginationDto): Promise<{ data: Game[], total: number }> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const [data, total] = await this.gameRepository.findAndCount({
+      where: { developerId },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
+  }
+
+  async findByStatus(status: GameStatus, paginationDto: PaginationDto): Promise<{ data: Game[], total: number }> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const [data, total] = await this.gameRepository.findAndCount({
+      where: { status },
       skip: (page - 1) * limit,
       take: limit,
     });

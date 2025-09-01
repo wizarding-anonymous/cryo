@@ -30,6 +30,8 @@ import { SearchModule } from './modules/search.module';
 import { CategoryModule } from './modules/category.module';
 import { TagModule } from './modules/tag.module';
 import { MediaModule } from './modules/media.module';
+import { DeveloperModule } from './modules/developer.module';
+import { ModerationModule } from './modules/moderation.module';
 
 @Module({
   imports: [
@@ -70,6 +72,8 @@ import { MediaModule } from './modules/media.module';
     CategoryModule,
     TagModule,
     MediaModule,
+    DeveloperModule,
+    ModerationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
