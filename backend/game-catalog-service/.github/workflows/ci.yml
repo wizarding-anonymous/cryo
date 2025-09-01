@@ -1,0 +1,37 @@
+name: Game Catalog Service CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'backend/game-catalog-service/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'backend/game-catalog-service/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/game-catalog-service/package-lock.json
+
+    - name: Install Dependencies
+      working-directory: ./backend/game-catalog-service
+      run: npm ci
+
+    - name: Run Lint
+      working-directory: ./backend/game-catalog-service
+      run: npm run lint
+
+    - name: Run Tests
+      working-directory: ./backend/game-catalog-service
+      run: npm test
