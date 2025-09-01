@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany, ManyToMany, JoinTable, OneToOne } from 'typeorm';
 import { Category } from './category.entity';
 import { Screenshot } from './screenshot.entity';
 import { Tag } from './tag.entity';
@@ -7,6 +7,9 @@ import { Discount } from './discount.entity';
 import { SystemRequirements } from './system-requirements.entity';
 import { GameTranslation } from './game-translation.entity';
 import { Dlc } from './dlc.entity';
+import { Preorder } from './preorder.entity';
+import { Demo } from './demo.entity';
+import { GameEdition } from './game-edition.entity';
 
 export enum GameStatus {
   DRAFT = 'draft',
@@ -61,6 +64,12 @@ export class Game {
   @Column(type => SystemRequirements, { prefix: false })
   systemRequirements: SystemRequirements;
 
+  @OneToOne(() => Preorder, preorder => preorder.game, { cascade: true, nullable: true })
+  preorder: Preorder;
+
+  @OneToOne(() => Demo, demo => demo.game, { cascade: true, nullable: true })
+  demo: Demo;
+
   @OneToMany(() => Screenshot, screenshot => screenshot.game, { cascade: true })
   screenshots: Screenshot[];
 
@@ -75,6 +84,9 @@ export class Game {
 
   @OneToMany(() => Dlc, dlc => dlc.baseGame, { cascade: true })
   dlcs: Dlc[];
+
+  @OneToMany(() => GameEdition, edition => edition.game, { cascade: true })
+  editions: GameEdition[];
 
   @ManyToMany(() => Category, { cascade: true })
   @JoinTable({
