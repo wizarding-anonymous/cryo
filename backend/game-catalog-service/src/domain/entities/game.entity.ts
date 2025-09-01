@@ -3,6 +3,9 @@ import { Category } from './category.entity';
 import { Screenshot } from './screenshot.entity';
 import { Tag } from './tag.entity';
 import { Video } from './video.entity';
+import { Discount } from './discount.entity';
+import { SystemRequirements } from './system-requirements.entity';
+import { GameTranslation } from './game-translation.entity';
 
 export enum GameStatus {
   DRAFT = 'draft',
@@ -54,11 +57,20 @@ export class Game {
   @Index()
   status: GameStatus;
 
+  @Column(type => SystemRequirements, { prefix: false })
+  systemRequirements: SystemRequirements;
+
   @OneToMany(() => Screenshot, screenshot => screenshot.game, { cascade: true })
   screenshots: Screenshot[];
 
   @OneToMany(() => Video, video => video.game, { cascade: true })
   videos: Video[];
+
+  @OneToMany(() => Discount, discount => discount.game, { cascade: true })
+  discounts: Discount[];
+
+  @OneToMany(() => GameTranslation, translation => translation.game, { cascade: true })
+  translations: GameTranslation[];
 
   @ManyToMany(() => Category, { cascade: true })
   @JoinTable({

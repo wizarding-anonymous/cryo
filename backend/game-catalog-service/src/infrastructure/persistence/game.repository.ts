@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, In } from 'typeorm';
 import { Game, GameStatus } from '../../domain/entities/game.entity';
 import { PaginationDto } from '../http/dtos/pagination.dto';
 
@@ -41,7 +41,32 @@ export class GameRepository {
   }
 
   async findById(id: string): Promise<Game | null> {
-    return this.gameRepository.findOneBy({ id });
+    return this.gameRepository.findOne({ where: { id }, relations: ['tags', 'categories'] });
+  }
+
+  async findSimilar(gameId: string, categoryIds: string[], tagIds: string[], limit: number): Promise<Game[]> {
+    if (categoryIds.length === 0 && tagIds.length === 0) {
+      return [];
+    }
+
+    const queryBuilder = this.gameRepository.createQueryBuilder('game')
+      .leftJoinAndSelect('game.tags', 'tag')
+      .leftJoinAndSelect('game.categories', 'category')
+      .where('game.id != :gameId', { gameId })
+      .andWhere('game.status = :status', { status: GameStatus.PUBLISHED });
+
+    if (categoryIds.length > 0) {
+      queryBuilder.orWhere('category.id IN (:...categoryIds)', { categoryIds });
+    }
+    if (tagIds.length > 0) {
+      queryBuilder.orWhere('tag.id IN (:...tagIds)', { tagIds });
+    }
+
+    return queryBuilder
+      .groupBy('game.id')
+      .orderBy('COUNT(game.id)', 'DESC')
+      .limit(limit)
+      .getMany();
   }
 
   async create(game: Partial<Game>): Promise<Game> {

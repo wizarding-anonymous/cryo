@@ -5,9 +5,10 @@ import { GameRepository } from '../../infrastructure/persistence/game.repository
 import { GameService } from '../../application/services/game.service';
 import { GameController } from '../../infrastructure/http/controllers/game.controller';
 import { SearchModule } from './search.module';
+import { AnalyticsModule } from './analytics.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Game]), SearchModule],
+  imports: [TypeOrmModule.forFeature([Game]), SearchModule, AnalyticsModule],
   providers: [GameRepository, GameService],
   controllers: [GameController],
 })

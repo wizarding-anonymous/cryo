@@ -5,12 +5,14 @@ import { CreateGameDto } from '../../infrastructure/http/dtos/create-game.dto';
 import { UpdateGameDto } from '../../infrastructure/http/dtos/update-game.dto';
 import { PaginationDto } from '../../infrastructure/http/dtos/pagination.dto';
 import { SearchService } from './search.service';
+import { AnalyticsService } from './analytics.service';
 
 @Injectable()
 export class GameService {
   constructor(
     private readonly gameRepository: GameRepository,
     private readonly searchService: SearchService,
+    private readonly analyticsService: AnalyticsService,
     ) {}
 
   async findAll(paginationDto: PaginationDto): Promise<{ data: Game[], total: number }> {
@@ -26,6 +28,7 @@ export class GameService {
     if (!game) {
       throw new NotFoundException(`Game with ID "${id}" not found`);
     }
+    this.analyticsService.trackGameView(id);
     return game;
   }
 

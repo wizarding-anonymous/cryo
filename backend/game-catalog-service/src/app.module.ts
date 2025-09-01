@@ -24,6 +24,8 @@ import { Category } from './domain/entities/category.entity';
 import { Tag } from './domain/entities/tag.entity';
 import { Screenshot } from './domain/entities/screenshot.entity';
 import { Video } from './domain/entities/video.entity';
+import { Discount } from './domain/entities/discount.entity';
+import { GameTranslation } from './domain/entities/game-translation.entity';
 import { ElasticsearchModule } from './infrastructure/search/elasticsearch.module';
 import { GameModule } from './modules/game.module';
 import { SearchModule } from './modules/search.module';
@@ -32,6 +34,9 @@ import { TagModule } from './modules/tag.module';
 import { MediaModule } from './modules/media.module';
 import { DeveloperModule } from './modules/developer.module';
 import { ModerationModule } from './modules/moderation.module';
+import { RecommendationModule } from './modules/recommendation.module';
+import { PromotionModule } from './modules/promotion.module';
+import { LocalizationModule } from './modules/localization.module';
 
 @Module({
   imports: [
@@ -48,7 +53,7 @@ import { ModerationModule } from './modules/moderation.module';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
-        entities: [Game, Category, Tag, Screenshot, Video],
+        entities: [Game, Category, Tag, Screenshot, Video, Discount, GameTranslation],
         synchronize: true, // Should be false in production, true for local dev
       }),
       inject: [ConfigService],
@@ -74,6 +79,9 @@ import { ModerationModule } from './modules/moderation.module';
     MediaModule,
     DeveloperModule,
     ModerationModule,
+    RecommendationModule,
+    PromotionModule,
+    LocalizationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
