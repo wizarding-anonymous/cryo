@@ -26,6 +26,7 @@ import { Screenshot } from './domain/entities/screenshot.entity';
 import { Video } from './domain/entities/video.entity';
 import { Discount } from './domain/entities/discount.entity';
 import { GameTranslation } from './domain/entities/game-translation.entity';
+import { Dlc } from './domain/entities/dlc.entity';
 import { ElasticsearchModule } from './infrastructure/search/elasticsearch.module';
 import { GameModule } from './modules/game.module';
 import { SearchModule } from './modules/search.module';
@@ -37,6 +38,7 @@ import { ModerationModule } from './modules/moderation.module';
 import { RecommendationModule } from './modules/recommendation.module';
 import { PromotionModule } from './modules/promotion.module';
 import { LocalizationModule } from './modules/localization.module';
+import { DlcModule } from './modules/dlc.module';
 
 @Module({
   imports: [
@@ -53,7 +55,7 @@ import { LocalizationModule } from './modules/localization.module';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
-        entities: [Game, Category, Tag, Screenshot, Video, Discount, GameTranslation],
+        entities: [Game, Category, Tag, Screenshot, Video, Discount, GameTranslation, Dlc],
         synchronize: true, // Should be false in production, true for local dev
       }),
       inject: [ConfigService],
@@ -82,6 +84,7 @@ import { LocalizationModule } from './modules/localization.module';
     RecommendationModule,
     PromotionModule,
     LocalizationModule,
+    DlcModule,
   ],
   controllers: [AppController],
   providers: [AppService],

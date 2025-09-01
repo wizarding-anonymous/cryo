@@ -6,6 +6,7 @@ import { Video } from './video.entity';
 import { Discount } from './discount.entity';
 import { SystemRequirements } from './system-requirements.entity';
 import { GameTranslation } from './game-translation.entity';
+import { Dlc } from './dlc.entity';
 
 export enum GameStatus {
   DRAFT = 'draft',
@@ -71,6 +72,9 @@ export class Game {
 
   @OneToMany(() => GameTranslation, translation => translation.game, { cascade: true })
   translations: GameTranslation[];
+
+  @OneToMany(() => Dlc, dlc => dlc.baseGame, { cascade: true })
+  dlcs: Dlc[];
 
   @ManyToMany(() => Category, { cascade: true })
   @JoinTable({
