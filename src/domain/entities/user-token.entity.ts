@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 
-export type TokenType = 'activation' | 'password_reset' | 'email_change';
+export type TokenType = 'activation' | 'password_reset' | 'email_change' | 'sms_verification';
 
 @Entity('user_tokens')
 export class UserToken {
@@ -50,6 +50,9 @@ export class UserToken {
 
   @Column({ name: 'used_at', nullable: true, type: 'timestamp' })
   usedAt?: Date;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata?: Record<string, any>;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

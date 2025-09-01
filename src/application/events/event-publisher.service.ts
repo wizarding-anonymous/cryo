@@ -17,11 +17,11 @@ export class EventPublisher {
     @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka,
     private readonly outboxRepository: OutboxRepository,
     @Optional() private readonly integrationMonitoringService?: IntegrationMonitoringService,
-  ) {}
+  ) { }
 
   async publish(topic: string, eventData: object, eventSchema?: new (...args: any[]) => any): Promise<void> {
     const startTime = Date.now();
-    
+
     if (eventSchema) {
       // For events that are already instances, just validate them
       const eventObject = eventData instanceof eventSchema ? eventData : plainToInstance(eventSchema, eventData);
@@ -42,7 +42,7 @@ export class EventPublisher {
       try {
         await this.kafkaClient.emit(topic, event.data).toPromise();
         const deliveryTime = Date.now() - startTime;
-        
+
         this.logger.log(`Event published to topic ${topic} on attempt ${attempt} (${deliveryTime}ms)`);
         if (this.integrationMonitoringService) {
           await this.integrationMonitoringService.recordEventDelivery(topic, true, deliveryTime);
@@ -64,7 +64,7 @@ export class EventPublisher {
     if (this.integrationMonitoringService) {
       await this.integrationMonitoringService.recordEventDelivery(topic, false, deliveryTime);
     }
-    
+
     try {
       await this.outboxRepository.save(event);
       this.logger.log(`Event saved to outbox for topic ${topic}`);

@@ -9,6 +9,76 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 
+export interface CorporateCompanyInfo {
+  name: string;
+  legalName: string;
+  inn: string;
+  ogrn: string;
+  industry: string;
+  companySize: 'small' | 'medium' | 'large' | 'enterprise';
+  annualRevenue?: number;
+  headquarters: string;
+  website: string;
+}
+
+export interface CorporateEmployee {
+  userId: string;
+  role: string;
+  department?: string;
+  position?: string;
+  permissions?: string[];
+  addedAt: Date;
+}
+
+export interface CorporateDepartment {
+  id: string;
+  name: string;
+  description?: string;
+  parentDepartmentId?: string;
+  managerUserId?: string;
+  budgetLimit?: number;
+  createdAt: Date;
+}
+
+export interface CorporateOrganization {
+  departments: CorporateDepartment[];
+  employees: CorporateEmployee[];
+  hierarchy: Record<string, any>;
+  roles: any[];
+}
+
+export interface CorporateSubscription {
+  plan: string;
+  licenseCount: number;
+  usedLicenses: number;
+  billingCycle: 'monthly' | 'quarterly' | 'annual';
+  nextBillingDate: Date;
+  totalSpent: number;
+}
+
+export interface CorporateIntegrations {
+  ssoEnabled: boolean;
+  ssoProvider?: string;
+  ssoConfiguration?: Record<string, any>;
+  apiIntegrations: any[];
+}
+
+export interface CorporatePolicies {
+  gameAccessPolicy: Record<string, any>;
+  spendingLimits: Record<string, any>;
+  contentFilters: any[];
+  workingHours: Record<string, any>;
+  vacationPolicy: Record<string, any>;
+}
+
+export interface CorporateUsage {
+  monthlyActiveUsers: number;
+  totalGameHours: number;
+  popularGames: any[];
+  departmentUsage: any[];
+  costPerEmployee: number;
+}
+
 @Entity('corporate_profiles')
 export class CorporateProfile {
   @PrimaryGeneratedColumn('uuid')
@@ -22,22 +92,22 @@ export class CorporateProfile {
   adminUser: User;
 
   @Column({ type: 'jsonb', default: {}, name: 'company_info' })
-  companyInfo: object;
+  companyInfo: CorporateCompanyInfo;
 
   @Column({ type: 'jsonb', default: {}, name: 'organization' })
-  organization: object;
+  organization: CorporateOrganization;
 
   @Column({ type: 'jsonb', default: {}, name: 'subscription' })
-  subscription: object;
+  subscription: CorporateSubscription;
 
   @Column({ type: 'jsonb', default: {}, name: 'integrations' })
-  integrations: object;
+  integrations: CorporateIntegrations;
 
   @Column({ type: 'jsonb', default: {}, name: 'policies' })
-  policies: object;
+  policies: CorporatePolicies;
 
   @Column({ type: 'jsonb', default: {}, name: 'usage' })
-  usage: object;
+  usage: CorporateUsage;
 
   @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', name: 'created_at' })
   createdAt: Date;

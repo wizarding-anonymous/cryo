@@ -4,8 +4,10 @@ import { Request } from 'express';
 import { UserTokenService } from '../../../application/services/user-token.service';
 import { AuthService } from '../../../application/services/auth.service';
 import { PasswordResetService } from '../../../application/services/password-reset.service';
+import { UserActivationService } from '../../../application/services/user-activation.service';
 import { LoginDto } from '../dtos/login.dto';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
+import { ResendActivationDto } from '../dtos/activation.dto';
 import { Email } from '../../../domain/value-objects/email.value-object';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
@@ -16,6 +18,7 @@ export class AuthController {
       private readonly tokenService: UserTokenService,
       private readonly authService: AuthService,
       private readonly passwordResetService: PasswordResetService,
+      private readonly userActivationService: UserActivationService,
     ) {}
 
   @Get('activate')
@@ -24,11 +27,17 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Account successfully activated.'})
   @ApiResponse({ status: 400, description: 'Invalid or expired activation token.'})
   async activateAccount(@Query('token') token: string) {
-    const { userId } = await this.tokenService.validateAndUseToken(token, 'activation');
-    // The activation logic itself (setting user.isActive) is in UserService now.
-    // This controller should call a service that handles that.
-    // For now, this is incomplete as per the refactoring.
+    await this.userActivationService.activateUser(token);
     return { message: 'Account successfully activated' };
+  }
+
+  @Post('resend-activation')
+  @ApiOperation({ summary: 'Resend activation email' })
+  @ApiResponse({ status: 200, description: 'Activation email sent if account exists and is not verified' })
+  @ApiResponse({ status: 400, description: 'Email already verified or sent recently' })
+  async resendActivationEmail(@Body() activationDto: ResendActivationDto) {
+    const result = await this.userActivationService.resendActivationEmail(activationDto.email);
+    return result;
   }
 
   @Post('login')

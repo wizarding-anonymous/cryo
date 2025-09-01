@@ -60,4 +60,65 @@ export class UserActivationService {
     userToken.usedAt = new Date();
     await this.userTokenRepository.save(userToken);
   }
+
+  async resendActivationEmail(email: string): Promise<{ success: boolean; message: string }> {
+    const user = await this.userRepository.findOne({
+      where: { email, emailVerified: false }
+    });
+
+    if (!user) {
+      // Не раскрываем существование email для безопасности
+      return {
+        success: true,
+        message: 'If this email exists and is not verified, an activation email has been sent.'
+      };
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    // Проверяем, не отправляли ли мы недавно письмо
+    const recentToken = await this.userTokenRepository.findOne({
+      where: { 
+        userId: user.id, 
+        type: 'activation', 
+        isUsed: false 
+      },
+      order: { createdAt: 'DESC' }
+    });
+
+    if (recentToken && recentToken.createdAt > new Date(Date.now() - 5 * 60 * 1000)) {
+      throw new BadRequestException('Activation email was sent recently. Please wait 5 minutes before requesting another.');
+    }
+
+    // Деактивируем старые токены
+    await this.userTokenRepository.update(
+      { userId: user.id, type: 'activation', isUsed: false },
+      { isUsed: true, usedAt: new Date() }
+    );
+
+    // Генерируем новый токен
+    const newToken = await this.generateActivationToken(user.id);
+
+    // В реальной реализации здесь была бы отправка email
+    console.log(`Resending activation email to ${email} with token: ${newToken}`);
+
+    return {
+      success: true,
+      message: 'Activation email has been sent.'
+    };
+  }
+
+  async checkActivationStatus(userId: string): Promise<{ isActive: boolean; emailVerified: boolean }> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+    };
+  }
 }

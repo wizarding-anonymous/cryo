@@ -1,0 +1,539 @@
+{
+  "info": {
+    "name": "User Service API",
+    "description": "Коллекция API эндпоинтов для User Service российской игровой платформы Cryo",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"username\": \"testuser\",\n  \"password\": \"SecurePassword123!\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.accessToken);",
+                  "    pm.collectionVariables.set('refresh_token', response.refreshToken);",
+                  "    pm.collectionVariables.set('user_id', response.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👤 User Profile",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\",\n  \"bio\": \"Updated bio\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Avatar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/users/me/avatar",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me", "avatar"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔐 MFA",
+      "item": [
+        {
+          "name": "Enable TOTP MFA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/mfa/totp/enable",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "mfa", "totp", "enable"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify TOTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/mfa/totp/verify",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "mfa", "totp", "verify"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏆 Reputation",
+      "item": [
+        {
+          "name": "Get My Reputation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reputation/me",
+              "host": ["{{base_url}}"],
+              "path": ["reputation", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reputation History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reputation/history?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["reputation", "history"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reputation/leaderboard?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["reputation", "leaderboard"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🎨 Customization",
+      "item": [
+        {
+          "name": "Get Customization Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customization",
+              "host": ["{{base_url}}"],
+              "path": ["customization"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Theme",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"theme\": \"dark\",\n  \"primaryColor\": \"#007bff\",\n  \"accentColor\": \"#28a745\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/customization/theme",
+              "host": ["{{base_url}}"],
+              "path": ["customization", "theme"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Widget",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"achievements\",\n  \"position\": {\n    \"x\": 0,\n    \"y\": 0,\n    \"width\": 300,\n    \"height\": 200\n  },\n  \"settings\": {\n    \"showProgress\": true,\n    \"maxItems\": 5\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/customization/widgets",
+              "host": ["{{base_url}}"],
+              "path": ["customization", "widgets"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏢 Corporate",
+      "item": [
+        {
+          "name": "Create Corporate Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"ООО Тестовая Компания\",\n  \"inn\": \"1234567890\",\n  \"ogrn\": \"1234567890123\",\n  \"legalAddress\": \"г. Москва, ул. Тестовая, д. 1\",\n  \"contactEmail\": \"contact@testcompany.ru\",\n  \"contactPhone\": \"+7 (495) 123-45-67\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/corporate/profile",
+              "host": ["{{base_url}}"],
+              "path": ["corporate", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee@testcompany.ru\",\n  \"role\": \"developer\",\n  \"department\": \"IT\",\n  \"permissions\": [\"games.create\", \"games.update\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/corporate/employees",
+              "host": ["{{base_url}}"],
+              "path": ["corporate", "employees"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🇷🇺 Russian SSO",
+      "item": [
+        {
+          "name": "Configure Gosuslugi SSO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"gosuslugi\",\n  \"clientId\": \"your-client-id\",\n  \"clientSecret\": \"your-client-secret\",\n  \"organizationId\": \"your-org-id\",\n  \"certPath\": \"/path/to/gost-cert.pem\",\n  \"keyPath\": \"/path/to/gost-key.pem\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/corporate/russian-sso/gosuslugi/configure",
+              "host": ["{{base_url}}"],
+              "path": ["corporate", "russian-sso", "gosuslugi", "configure"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login via Yandex ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"yandex-oauth-token\",\n  \"domain\": \"company.yandex.ru\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/corporate/russian-sso/yandex/login",
+              "host": ["{{base_url}}"],
+              "path": ["corporate", "russian-sso", "yandex", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Detailed Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/detailed",
+              "host": ["{{base_url}}"],
+              "path": ["health", "detailed"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["metrics"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Integration Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/integration-monitoring/health",
+              "host": ["{{base_url}}"],
+              "path": ["integration-monitoring", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -4,7 +4,7 @@ services:
   # User Service
   user-service:
     build:
-      context: ./backend/user-service-new
+      context: ./backend/user-service
       dockerfile: Dockerfile.dev
     ports:
       - "3001:3000"
@@ -23,7 +23,7 @@ services:
       - redis
       - kafka
     volumes:
-      - ./backend/user-service-new:/app
+      - ./backend/user-service:/app
       - /app/node_modules
     networks:
       - cryo-network
