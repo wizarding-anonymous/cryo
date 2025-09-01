@@ -5,10 +5,11 @@ import { PreorderController } from '../infrastructure/http/controllers/preorder.
 import { Preorder } from '../domain/entities/preorder.entity';
 import { PreorderTier } from '../domain/entities/preorder-tier.entity';
 import { Game } from '../domain/entities/game.entity';
+import { PreorderFulfillmentTask } from '../application/tasks/preorder-fulfillment.task';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Preorder, PreorderTier, Game])],
-  providers: [PreorderService],
+  providers: [PreorderService, PreorderFulfillmentTask],
   controllers: [PreorderController],
 })
 export class PreorderModule {}

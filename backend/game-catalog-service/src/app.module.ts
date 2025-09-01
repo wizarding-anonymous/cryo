@@ -5,6 +5,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { I18nModule, QueryResolver, AcceptLanguageResolver } from 'nestjs-i18n';
 import * as path from 'path';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig, { redisConfig, elasticsearchConfig, s3Config } from './config/configuration';
@@ -60,6 +61,7 @@ import { IntegrationModule } from './modules/integration.module';
       isGlobal: true,
       load: [databaseConfig, redisConfig, elasticsearchConfig, s3Config],
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
