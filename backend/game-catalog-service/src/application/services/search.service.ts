@@ -74,6 +74,12 @@ export class SearchService implements OnModuleInit {
     });
   }
 
+  async updateGame(game: Game) {
+    // Elasticsearch's index operation is an "upsert" - it creates or updates.
+    // This method is for semantic clarity.
+    return this.indexGame(game);
+  }
+
   async removeGame(gameId: string) {
     await this.elasticsearchService.delete({
       index: this.index,

@@ -1,0 +1,30 @@
+import { IsString, IsNotEmpty, IsUUID, IsEnum, IsOptional, IsInt, Min, MaxLength, IsUrl, IsBoolean } from 'class-validator';
+import { DemoType } from '../../../domain/entities/demo.entity';
+
+export class CreateDemoDto {
+  @IsUUID()
+  @IsNotEmpty()
+  gameId: string;
+
+  @IsEnum(DemoType)
+  @IsNotEmpty()
+  type: DemoType;
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  timeLimitMinutes?: number;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(1000)
+  contentDescription?: string;
+
+  @IsUrl()
+  @IsOptional()
+  downloadUrl?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isAvailable?: boolean = true;
+}

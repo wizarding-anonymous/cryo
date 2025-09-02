@@ -44,6 +44,14 @@ export class GameRepository {
     return this.gameRepository.findOne({ where: { id }, relations: ['tags', 'categories'] });
   }
 
+  async findBySlug(slug: string): Promise<Game | null> {
+    return this.gameRepository.findOne({ where: { slug } });
+  }
+
+  async findByIds(ids: string[]): Promise<Game[]> {
+    return this.gameRepository.findBy({ id: In(ids) });
+  }
+
   async findSimilar(gameId: string, categoryIds: string[], tagIds: string[], limit: number): Promise<Game[]> {
     if (categoryIds.length === 0 && tagIds.length === 0) {
       return [];
