@@ -6,22 +6,12 @@ import { redisStore } from 'cache-manager-redis-store';
 import { I18nModule, QueryResolver, AcceptLanguageResolver } from 'nestjs-i18n';
 import * as path from 'path';
 import { ScheduleModule } from '@nestjs/schedule';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig, { redisConfig, elasticsearchConfig, s3Config } from './config/configuration';
-import { Game } from './domain/entities/game.entity';
-import { Category } from './domain/entities/category.entity';
-import { Tag } from './domain/entities/tag.entity';
-import { Screenshot } from './domain/entities/screenshot.entity';
-import { Video } from './domain/entities/video.entity';
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-store';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import databaseConfig, { redisConfig, elasticsearchConfig } from './config/configuration';
+
+// Domain Entities
 import { Game } from './domain/entities/game.entity';
 import { Category } from './domain/entities/category.entity';
 import { Tag } from './domain/entities/tag.entity';
@@ -36,6 +26,10 @@ import { Demo } from './domain/entities/demo.entity';
 import { GameEdition } from './domain/entities/game-edition.entity';
 import { Bundle } from './domain/entities/bundle.entity';
 import { Franchise } from './domain/entities/franchise.entity';
+import { SystemRequirements } from './domain/entities/system-requirements.entity';
+
+
+// Feature Modules
 import { ElasticsearchModule } from './infrastructure/search/elasticsearch.module';
 import { GameModule } from './modules/game.module';
 import { SearchModule } from './modules/search.module';
@@ -54,6 +48,13 @@ import { EditionModule } from './modules/edition.module';
 import { BundleModule } from './modules/bundle.module';
 import { FranchiseModule } from './modules/franchise.module';
 import { IntegrationModule } from './modules/integration.module';
+import { AuthModule } from './infrastructure/auth/auth.module';
+import { EventPublisherModule } from './modules/event-publisher.module';
+
+const entities = [
+    Game, Category, Tag, Screenshot, Video, Discount, GameTranslation, Dlc, Preorder,
+    PreorderTier, Demo, GameEdition, Bundle, Franchise, SystemRequirements
+];
 
 @Module({
   imports: [
@@ -71,8 +72,8 @@ import { IntegrationModule } from './modules/integration.module';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
-        entities: [Game, Category, Tag, Screenshot, Video, Discount, GameTranslation, Dlc, Preorder, PreorderTier, Demo, GameEdition, Bundle, Franchise],
-        synchronize: true, // Should be false in production, true for local dev
+        entities: entities,
+        synchronize: false, // Use migrations in production
       }),
       inject: [ConfigService],
     }),
@@ -96,7 +97,7 @@ import { IntegrationModule } from './modules/integration.module';
             socket: {
               host: configService.get<string>('redis.host'),
               port: configService.get<number>('redis.port'),
-              connectTimeout: 1000, // 1 second timeout
+              connectTimeout: 1000,
             },
           });
           logger.log('Successfully connected to Redis for caching.');
@@ -127,8 +128,10 @@ import { IntegrationModule } from './modules/integration.module';
     BundleModule,
     FranchiseModule,
     IntegrationModule,
+    AuthModule,
+    EventPublisherModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, Logger],
 })
 export class AppModule {}

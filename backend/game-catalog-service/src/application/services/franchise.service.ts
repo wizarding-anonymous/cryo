@@ -1,47 +1,59 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { FranchiseRepository } from '../../infrastructure/persistence/franchise.repository';
+import { GameRepository } from '../../infrastructure/persistence/game.repository';
 import { Franchise } from '../../domain/entities/franchise.entity';
-import { Game } from '../../domain/entities/game.entity';
+import { CreateFranchiseDto } from '../../infrastructure/http/dtos/create-franchise.dto';
+import { UpdateFranchiseDto } from '../../infrastructure/http/dtos/update-franchise.dto';
 
 @Injectable()
 export class FranchiseService {
   constructor(
-    @InjectRepository(Franchise)
-    private readonly franchiseRepository: Repository<Franchise>,
-    @InjectRepository(Game)
-    private readonly gameRepository: Repository<Game>,
+    private readonly franchiseRepository: FranchiseRepository,
+    private readonly gameRepository: GameRepository,
   ) {}
 
-  async createFranchise(franchiseData: Partial<Franchise>, gameIds: string[]): Promise<Franchise> {
-    const games = await this.gameRepository.findBy({ id: In(gameIds) });
-    if (games.length !== gameIds.length) {
-      throw new NotFoundException('One or more games not found');
+  async create(createFranchiseDto: CreateFranchiseDto): Promise<Franchise> {
+    const { gameIds, ...franchiseData } = createFranchiseDto;
+    const franchise = new Franchise();
+    Object.assign(franchise, franchiseData);
+
+    if (gameIds && gameIds.length > 0) {
+      const games = await this.gameRepository.findByIds(gameIds);
+      if (games.length !== gameIds.length) {
+        throw new NotFoundException('One or more games not found for the franchise.');
+      }
+      franchise.games = games;
     }
 
-    const franchise = this.franchiseRepository.create({
-      ...franchiseData,
-      games,
-    });
-
-    return this.franchiseRepository.save(franchise);
+    return this.franchiseRepository.create(franchise);
   }
 
-  async findFranchiseById(id: string): Promise<Franchise | null> {
-    return this.franchiseRepository.findOne({ where: { id }, relations: ['games'] });
-  }
-
-  async addGameToFranchise(franchiseId: string, gameId: string): Promise<Franchise> {
-    const franchise = await this.findFranchiseById(franchiseId);
+  async findOne(id: string): Promise<Franchise> {
+    const franchise = await this.franchiseRepository.findById(id);
     if (!franchise) {
-        throw new NotFoundException(`Franchise with ID "${franchiseId}" not found`);
+      throw new NotFoundException(`Franchise with ID "${id}" not found`);
     }
-    const game = await this.gameRepository.findOneBy({ id: gameId });
-    if (!game) {
-        throw new NotFoundException(`Game with ID "${gameId}" not found`);
+    return franchise;
+  }
+
+  async update(id: string, updateFranchiseDto: UpdateFranchiseDto): Promise<Franchise> {
+    const { gameIds, ...franchiseData } = updateFranchiseDto;
+    const franchise = await this.findOne(id);
+    Object.assign(franchise, franchiseData);
+
+    if (gameIds) {
+      const games = await this.gameRepository.findByIds(gameIds);
+      if (games.length !== gameIds.length) {
+        throw new NotFoundException('One or more games not found for the franchise.');
+      }
+      franchise.games = games;
     }
 
-    franchise.games.push(game);
     return this.franchiseRepository.save(franchise);
+  }
+
+  async remove(id: string): Promise<void> {
+    const franchise = await this.findOne(id);
+    await this.franchiseRepository.remove(franchise);
   }
 }

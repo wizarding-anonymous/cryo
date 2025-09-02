@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsNumber, Min, IsBoolean, IsDateString, MaxLength, MinLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional, IsNumber, Min, IsBoolean, IsDateString, MaxLength, MinLength, IsArray, ArrayMinSize } from 'class-validator';
 
 export class CreateGameDto {
   @IsString()
@@ -35,4 +35,16 @@ export class CreateGameDto {
   @IsDateString()
   @IsOptional()
   releaseDate?: Date;
+
+  @IsArray()
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  @ArrayMinSize(1)
+  categoryIds?: string[];
+
+  @IsArray()
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  @ArrayMinSize(1)
+  tagIds?: string[];
 }

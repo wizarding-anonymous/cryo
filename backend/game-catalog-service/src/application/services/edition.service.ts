@@ -2,32 +2,48 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GameEdition } from '../../domain/entities/game-edition.entity';
-import { Game } from '../../domain/entities/game.entity';
+import { GameRepository } from '../../infrastructure/persistence/game.repository';
+import { CreateEditionDto } from '../../infrastructure/http/dtos/create-edition.dto';
+import { UpdateEditionDto } from '../../infrastructure/http/dtos/update-edition.dto';
 
 @Injectable()
 export class EditionService {
   constructor(
     @InjectRepository(GameEdition)
     private readonly editionRepository: Repository<GameEdition>,
-    @InjectRepository(Game)
-    private readonly gameRepository: Repository<Game>,
+    private readonly gameRepository: GameRepository,
   ) {}
 
-  async createEdition(gameId: string, editionData: Partial<GameEdition>): Promise<GameEdition> {
-    const game = await this.gameRepository.findOneBy({ id: gameId });
+  async create(createEditionDto: CreateEditionDto): Promise<GameEdition> {
+    const game = await this.gameRepository.findById(createEditionDto.gameId);
     if (!game) {
-      throw new NotFoundException(`Game with ID "${gameId}" not found`);
+      throw new NotFoundException(`Game with ID "${createEditionDto.gameId}" not found.`);
     }
 
     const edition = this.editionRepository.create({
-      ...editionData,
-      gameId,
+      ...createEditionDto,
+      game,
     });
 
     return this.editionRepository.save(edition);
   }
 
-  async findEditionsForGame(gameId: string): Promise<GameEdition[]> {
-    return this.editionRepository.find({ where: { gameId } });
+  async findOne(id: string): Promise<GameEdition> {
+    const edition = await this.editionRepository.findOne({ where: { id }, relations: ['game'] });
+    if (!edition) {
+      throw new NotFoundException(`Edition with ID "${id}" not found.`);
+    }
+    return edition;
+  }
+
+  async update(id: string, updateEditionDto: UpdateEditionDto): Promise<GameEdition> {
+    const edition = await this.findOne(id);
+    Object.assign(edition, updateEditionDto);
+    return this.editionRepository.save(edition);
+  }
+
+  async remove(id: string): Promise<void> {
+    const edition = await this.findOne(id);
+    await this.editionRepository.remove(edition);
   }
 }

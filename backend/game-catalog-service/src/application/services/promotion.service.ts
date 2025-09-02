@@ -1,44 +1,49 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Discount } from '../../domain/entities/discount.entity';
-import { Game } from '../../domain/entities/game.entity';
+import { GameRepository } from '../../infrastructure/persistence/game.repository';
+import { CreatePromotionDto } from '../../infrastructure/http/dtos/create-promotion.dto';
+import { UpdatePromotionDto } from '../../infrastructure/http/dtos/update-promotion.dto';
 
 @Injectable()
 export class PromotionService {
   constructor(
     @InjectRepository(Discount)
     private readonly discountRepository: Repository<Discount>,
-    @InjectRepository(Game)
-    private readonly gameRepository: Repository<Game>,
+    private readonly gameRepository: GameRepository,
   ) {}
 
-  async createDiscount(gameId: string, percentage: number, startDate: Date, endDate: Date): Promise<Discount> {
-    const game = await this.gameRepository.findOneBy({ id: gameId });
+  async create(createPromotionDto: CreatePromotionDto): Promise<Discount> {
+    const game = await this.gameRepository.findById(createPromotionDto.gameId);
     if (!game) {
-      throw new Error('Game not found');
+      throw new NotFoundException(`Game with ID "${createPromotionDto.gameId}" not found.`);
     }
 
     const discount = this.discountRepository.create({
-      gameId,
-      percentage,
-      startDate,
-      endDate,
-      isActive: true,
+      ...createPromotionDto,
+      game,
     });
 
-    // In a real app, we would update the game's price here or have a
-    // dynamic price calculation that considers active discounts.
     return this.discountRepository.save(discount);
   }
 
-  async getActiveDiscountsForGame(gameId: string): Promise<Discount[]> {
-    return this.discountRepository.find({
-      where: {
-        gameId,
-        isActive: true,
-        endDate: new Date(), // Simplified logic: find discounts that have not ended
-      },
-    });
+  async findOne(id: string): Promise<Discount> {
+    const discount = await this.discountRepository.findOne({ where: { id }, relations: ['game'] });
+    if (!discount) {
+      throw new NotFoundException(`Promotion (Discount) with ID "${id}" not found.`);
+    }
+    return discount;
+  }
+
+  async update(id: string, updatePromotionDto: UpdatePromotionDto): Promise<Discount> {
+    const discount = await this.findOne(id);
+    Object.assign(discount, updatePromotionDto);
+    return this.discountRepository.save(discount);
+  }
+
+  async remove(id: string): Promise<void> {
+    const discount = await this.findOne(id);
+    await this.discountRepository.remove(discount);
   }
 }

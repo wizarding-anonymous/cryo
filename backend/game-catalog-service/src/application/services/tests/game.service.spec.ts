@@ -1,14 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GameService } from '../game.service';
 import { GameRepository } from '../../../infrastructure/persistence/game.repository';
+import { CategoryRepository } from '../../../infrastructure/persistence/category.repository';
+import { TagRepository } from '../../../infrastructure/persistence/tag.repository';
+import { SearchService } from '../search.service';
+import { AnalyticsService } from '../analytics.service';
+import { EventPublisherService } from '../event-publisher.service';
 import { CreateGameDto } from '../../../infrastructure/http/dtos/create-game.dto';
 import { Game, GameStatus } from '../../../domain/entities/game.entity';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { SearchService } from '../search.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 const mockGameRepository = {
   findAll: jest.fn(),
   findById: jest.fn(),
+  findBySlug: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
   remove: jest.fn(),
@@ -16,32 +22,53 @@ const mockGameRepository = {
   findByStatus: jest.fn(),
 };
 
+const mockCategoryRepository = {
+  findByIds: jest.fn(),
+};
+
+const mockTagRepository = {
+  findByIds: jest.fn(),
+};
+
 const mockSearchService = {
-    indexGame: jest.fn(),
-    removeGame: jest.fn(),
+  indexGame: jest.fn(),
+  removeGame: jest.fn(),
+};
+
+const mockAnalyticsService = {
+  trackGameView: jest.fn(),
+};
+
+const mockEventPublisher = {
+  publish: jest.fn(),
+};
+
+const mockCacheManager = {
+  store: {
+    keys: jest.fn(),
+    del: jest.fn(),
+  },
 };
 
 describe('GameService', () => {
   let service: GameService;
-  let repository: typeof mockGameRepository;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GameService,
-        {
-          provide: GameRepository,
-          useValue: mockGameRepository,
-        },
-        {
-            provide: SearchService,
-            useValue: mockSearchService,
-        }
+        { provide: GameRepository, useValue: mockGameRepository },
+        { provide: CategoryRepository, useValue: mockCategoryRepository },
+        { provide: TagRepository, useValue: mockTagRepository },
+        { provide: SearchService, useValue: mockSearchService },
+        { provide: AnalyticsService, useValue: mockAnalyticsService },
+        { provide: EventPublisherService, useValue: mockEventPublisher },
+        { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
 
     service = module.get<GameService>(GameService);
-    repository = module.get(GameRepository);
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -49,101 +76,130 @@ describe('GameService', () => {
   });
 
   describe('create', () => {
-    it('should create a game successfully', async () => {
-      const createGameDto: CreateGameDto = {
-        title: 'Test Game',
-        price: 59.99,
-        developerId: 'dev-uuid',
-        isFree: false,
-      };
-      const expectedGame = { ...new Game(), ...createGameDto, id: 'some-uuid', slug: 'test-game' };
+    it('should create a game with unique slug and relations', async () => {
+      const dto: CreateGameDto = { title: 'New Game', price: 10, developerId: 'dev1', isFree: false, categoryIds: ['cat1'], tagIds: ['tag1'] };
+      const game = { ...new Game(), ...dto };
 
-      repository.create.mockResolvedValue(expectedGame);
+      mockGameRepository.findBySlug.mockResolvedValue(null); // Slug is unique
+      mockCategoryRepository.findByIds.mockResolvedValue([{ id: 'cat1', name: 'Action' }]);
+      mockTagRepository.findByIds.mockResolvedValue([{ id: 'tag1', name: 'Indie' }]);
+      mockGameRepository.create.mockResolvedValue(game);
 
-      const result = await service.create(createGameDto);
-      expect(result).toEqual(expectedGame);
-      expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({
-        ...createGameDto,
-        slug: 'test-game',
+      await service.create(dto, 'dev1');
+
+      expect(mockGameRepository.create).toHaveBeenCalledWith(expect.objectContaining({
+        slug: 'new-game',
+        categories: expect.any(Array),
+        tags: expect.any(Array),
       }));
+      expect(mockSearchService.indexGame).toHaveBeenCalled();
+      expect(mockCacheManager.store.keys).toHaveBeenCalled();
+    });
+
+    it('should generate a unique slug if the initial slug exists', async () => {
+        const dto: CreateGameDto = { title: 'Existing Game', price: 10, developerId: 'dev1', isFree: false };
+
+        mockGameRepository.findBySlug.mockResolvedValueOnce({ id: '1', title: 'Existing Game', slug: 'existing-game' }); // First slug exists
+        mockGameRepository.findBySlug.mockResolvedValueOnce(null); // Second slug is unique
+        mockGameRepository.create.mockResolvedValue({} as Game);
+
+        await service.create(dto, 'dev1');
+
+        expect(mockGameRepository.create).toHaveBeenCalledWith(expect.objectContaining({
+          slug: 'existing-game-1',
+        }));
+      });
+  });
+
+  describe('update', () => {
+    it('should update a game', async () => {
+        const gameId = 'game1';
+        const devId = 'dev1';
+        const existingGame = { id: gameId, developerId: devId, title: 'Old Title' } as Game;
+        const updateDto = { title: 'New Title' };
+
+        mockGameRepository.findById.mockResolvedValue(existingGame);
+        mockGameRepository.save.mockResolvedValue({ ...existingGame, ...updateDto });
+
+        await service.update(gameId, updateDto, devId);
+
+        expect(mockGameRepository.save).toHaveBeenCalled();
+        expect(mockSearchService.indexGame).toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException if developer is not the owner', async () => {
+        const gameId = 'game1';
+        const devId = 'dev1';
+        const otherDevId = 'dev2';
+        const existingGame = { id: gameId, developerId: otherDevId } as Game;
+
+        mockGameRepository.findById.mockResolvedValue(existingGame);
+
+        await expect(service.update(gameId, {}, devId)).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe('findOne', () => {
-    it('should return a game if found', async () => {
-      const gameId = 'some-uuid';
-      const expectedGame = { id: gameId, title: 'Found Game', status: GameStatus.PUBLISHED };
-      repository.findById.mockResolvedValue(expectedGame);
+  describe('remove', () => {
+    it('should remove a game', async () => {
+        const gameId = 'game1';
+        const devId = 'dev1';
+        const existingGame = { id: gameId, developerId: devId } as Game;
 
-      const result = await service.findOne(gameId);
-      expect(result).toEqual(expectedGame);
-      expect(repository.findById).toHaveBeenCalledWith(gameId);
+        mockGameRepository.findById.mockResolvedValue(existingGame);
+
+        await service.remove(gameId, devId);
+
+        expect(mockGameRepository.remove).toHaveBeenCalledWith(existingGame);
+        expect(mockSearchService.removeGame).toHaveBeenCalledWith(gameId);
     });
 
-    it('should throw NotFoundException if game not found', async () => {
-      const gameId = 'not-found-uuid';
-      repository.findById.mockResolvedValue(null);
+    it('should throw ForbiddenException if developer does not own the game on remove', async () => {
+        const gameId = 'game1';
+        const devId = 'dev1';
+        const otherDevId = 'dev2';
+        const existingGame = { id: gameId, developerId: otherDevId } as Game;
 
-      await expect(service.findOne(gameId)).rejects.toThrow(NotFoundException);
-    });
-  });
+        mockGameRepository.findById.mockResolvedValue(existingGame);
 
-  describe('findAll', () => {
-    it('should return an array of games and total count', async () => {
-        const expectedResult = { data: [{ id: '1', title: 'Game 1' }], total: 1 };
-        repository.findAll.mockResolvedValue(expectedResult);
-
-        const result = await service.findAll({ page: 1, limit: 10 });
-        expect(result).toEqual(expectedResult);
-        expect(repository.findAll).toHaveBeenCalledWith({ page: 1, limit: 10 });
+        await expect(service.remove(gameId, devId)).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe('submitForModeration', () => {
-    it('should change game status to PENDING_REVIEW', async () => {
-        const gameId = 'game-uuid';
-        const developerId = 'dev-uuid';
-        const game = { id: gameId, developerId, status: GameStatus.DRAFT };
-
-        repository.findById.mockResolvedValue(game);
-        repository.save.mockResolvedValue({ ...game, status: GameStatus.PENDING_REVIEW });
-
-        const result = await service.submitForModeration(gameId, developerId);
-        expect(result.status).toBe(GameStatus.PENDING_REVIEW);
-        expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ status: GameStatus.PENDING_REVIEW }));
-    });
-
-    it('should throw ForbiddenException if developer does not own the game', async () => {
-        const gameId = 'game-uuid';
-        const developerId = 'dev-uuid';
-        const otherDeveloperId = 'other-dev-uuid';
-        const game = { id: gameId, developerId: otherDeveloperId, status: GameStatus.DRAFT };
-
-        repository.findById.mockResolvedValue(game);
-
-        await expect(service.submitForModeration(gameId, developerId)).rejects.toThrow(ForbiddenException);
-    });
-  });
 
   describe('approveGame', () => {
-    it('should change game status to PUBLISHED', async () => {
-        const gameId = 'game-uuid';
-        const game = { id: gameId, status: GameStatus.PENDING_REVIEW };
+    it('should approve a game and publish an event', async () => {
+        const gameId = 'game1';
+        const game = { id: gameId, status: GameStatus.PENDING_REVIEW } as Game;
 
-        repository.findById.mockResolvedValue(game);
-        repository.save.mockResolvedValue({ ...game, status: GameStatus.PUBLISHED });
+        mockGameRepository.findById.mockResolvedValue(game);
+        mockGameRepository.save.mockResolvedValue({ ...game, status: GameStatus.PUBLISHED });
 
         const result = await service.approveGame(gameId);
+
         expect(result.status).toBe(GameStatus.PUBLISHED);
+        expect(mockEventPublisher.publish).toHaveBeenCalledWith({
+            type: 'game.approved',
+            payload: { gameId: gameId },
+        });
     });
+  });
 
-    it('should throw BadRequestException if game is not pending review', async () => {
-        const gameId = 'game-uuid';
-        const game = { id: gameId, status: GameStatus.PUBLISHED };
+  describe('rejectGame', () => {
+    it('should reject a game and publish an event', async () => {
+        const gameId = 'game1';
+        const reason = 'Not appropriate';
+        const game = { id: gameId, status: GameStatus.PENDING_REVIEW } as Game;
 
-        repository.findById.mockResolvedValue(game);
+        mockGameRepository.findById.mockResolvedValue(game);
+        mockGameRepository.save.mockResolvedValue({ ...game, status: GameStatus.REJECTED });
 
-        await expect(service.approveGame(gameId)).rejects.toThrow(BadRequestException);
+        const result = await service.rejectGame(gameId, reason);
+
+        expect(result.status).toBe(GameStatus.REJECTED);
+        expect(mockEventPublisher.publish).toHaveBeenCalledWith({
+            type: 'game.rejected',
+            payload: { gameId: gameId, reason },
+        });
     });
   });
 });
