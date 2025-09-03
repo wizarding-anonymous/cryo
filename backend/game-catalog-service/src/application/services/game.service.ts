@@ -55,6 +55,12 @@ export class GameService {
     Object.assign(game, rest);
     game.developerId = developerId;
 
+    // TODO: Fetch real names from User Service or an aggregated source
+    game.developerName = 'Developer Name Placeholder';
+    if (game.publisherId) {
+      game.publisherName = 'Publisher Name Placeholder';
+    }
+
     if (categoryIds && categoryIds.length > 0) {
       game.categories = await this.categoryRepository.findByIds(categoryIds);
     }
@@ -63,6 +69,9 @@ export class GameService {
     }
 
     game.slug = await this.generateUniqueSlug(createGameDto.title);
+
+    game.averageRating = 0;
+    game.reviewsCount = 0;
 
     const newGame = await this.gameRepository.create(game);
     await this.searchService.indexGame(newGame);
@@ -79,6 +88,11 @@ export class GameService {
     }
 
     Object.assign(game, rest);
+
+    // TODO: Fetch real publisher name if publisherId is updated
+    if (updateGameDto.publisherId) {
+      game.publisherName = 'New Publisher Name Placeholder';
+    }
 
     if (categoryIds) {
         game.categories = await this.categoryRepository.findByIds(categoryIds);

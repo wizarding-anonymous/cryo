@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from 'typeorm';
-import { Game } from './game.entity';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { FranchiseGame } from './franchise-game.entity';
 
 @Entity('franchises')
 export class Franchise {
@@ -12,11 +12,6 @@ export class Franchise {
     @Column({ type: 'text', nullable: true })
     description: string;
 
-    @ManyToMany(() => Game)
-    @JoinTable({
-        name: 'franchise_games',
-        joinColumn: { name: 'franchise_id', referencedColumnName: 'id' },
-        inverseJoinColumn: { name: 'game_id', referencedColumnName: 'id' },
-    })
-    games: Game[];
+    @OneToMany(() => FranchiseGame, franchiseGame => franchiseGame.franchise, { cascade: true })
+    gamesInFranchise: FranchiseGame[];
 }

@@ -1,9 +1,11 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { Game } from '../../domain/entities/game.entity';
 import { SearchQueryDto } from '../../infrastructure/http/dtos/search-query.dto';
 
 @Injectable()
+@UseInterceptors(CacheInterceptor)
 export class SearchService implements OnModuleInit {
   private readonly logger = new Logger(SearchService.name);
   private readonly index = 'games';
@@ -38,6 +40,7 @@ export class SearchService implements OnModuleInit {
               status: { type: 'keyword' },
               tags: { type: 'keyword' },
               categories: { type: 'keyword' },
+              averageRating: { type: 'float' },
             },
           },
           settings: {
@@ -64,10 +67,11 @@ export class SearchService implements OnModuleInit {
         id: game.id,
         title: game.title,
         description: game.description,
-        developerName: 'Developer Name Placeholder', // This should come from a relation
+        developerName: game.developerName,
         price: game.price,
         releaseDate: game.releaseDate,
         status: game.status,
+        averageRating: game.averageRating,
         tags: game.tags?.map(t => t.name) || [],
         categories: game.categories?.map(c => c.name) || [],
       },
@@ -87,8 +91,9 @@ export class SearchService implements OnModuleInit {
     });
   }
 
+  @CacheTTL(60) // 60 seconds
   async search(searchQueryDto: SearchQueryDto) {
-    const { q, tags, categories, minPrice, maxPrice, sortBy, sortOrder } = searchQueryDto;
+    const { q, tags, categories, minPrice, maxPrice, status, releaseDateFrom, releaseDateTo, sortBy, sortOrder } = searchQueryDto;
 
     const boolQuery: any = {
         must: [],
@@ -121,6 +126,17 @@ export class SearchService implements OnModuleInit {
         boolQuery.filter.push({ range: { price: priceRange } });
     }
 
+    if (status) {
+        boolQuery.filter.push({ term: { status: status } });
+    }
+
+    if (releaseDateFrom || releaseDateTo) {
+        const dateRange: any = {};
+        if (releaseDateFrom) dateRange.gte = releaseDateFrom;
+        if (releaseDateTo) dateRange.lte = releaseDateTo;
+        boolQuery.filter.push({ range: { releaseDate: dateRange } });
+    }
+
     const sort = sortBy ? [{ [sortBy]: { order: sortOrder } }] : [];
 
     const { body } = await this.elasticsearchService.search({
@@ -134,5 +150,32 @@ export class SearchService implements OnModuleInit {
     });
 
     return body.hits.hits.map((hit) => hit._source);
+  }
+
+  async getSearchSuggestions(prefix: string): Promise<string[]> {
+    if (!prefix) {
+      return [];
+    }
+
+    const { body } = await this.elasticsearchService.search({
+      index: this.index,
+      body: {
+        suggest: {
+          'title-suggester': {
+            prefix: prefix,
+            completion: {
+              field: 'title.suggest',
+              size: 5,
+              skip_duplicates: true,
+            },
+          },
+        },
+      },
+    });
+
+    const suggestions = body.suggest['title-suggester'][0].options.map(
+      (option) => option.text,
+    );
+    return suggestions;
   }
 }

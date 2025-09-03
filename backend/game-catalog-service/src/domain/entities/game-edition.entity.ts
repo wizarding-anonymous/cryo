@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, OneToMany } from 'typeorm';
+import { DlcEditionCompatibility } from './dlc-edition-compatibility.entity';
 import { Game } from './game.entity';
 
 @Entity('game_editions')
@@ -21,4 +22,7 @@ export class GameEdition {
 
     @Column({ type: 'jsonb', nullable: true })
     content: any; // Description of what's included
+
+  @OneToMany(() => DlcEditionCompatibility, compatibility => compatibility.edition)
+  compatibleDlcs: DlcEditionCompatibility[];
 }

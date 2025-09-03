@@ -22,5 +22,13 @@ export const s3Config = registerAs('s3', () => ({
     accessKeyId: process.env.S3_ACCESS_KEY,
     secretAccessKey: process.env.S3_SECRET_KEY,
     bucket: process.env.S3_BUCKET || 'game-media',
-    region: 'us-east-1', // MinIO default
+    region: process.env.S3_REGION || 'us-east-1',
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+}));
+
+export const kafkaConfig = registerAs('kafka', () => ({
+  brokers: process.env.KAFKA_BROKERS?.split(',') || ['localhost:9092'],
+  clientId: process.env.KAFKA_CLIENT_ID || 'game-catalog-service',
+  groupId: process.env.KAFKA_GROUP_ID || 'game-catalog-group',
+  retries: parseInt(process.env.KAFKA_RETRIES, 10) || 3,
 }));

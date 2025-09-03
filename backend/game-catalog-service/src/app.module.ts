@@ -9,7 +9,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import databaseConfig, { redisConfig, elasticsearchConfig, s3Config } from './config/configuration';
+import { validate } from './config/env.validation';
+import databaseConfig, { redisConfig, elasticsearchConfig, s3Config, kafkaConfig } from './config/configuration';
 
 // Domain Entities
 import { Game } from './domain/entities/game.entity';
@@ -60,7 +61,9 @@ const entities = [
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, redisConfig, elasticsearchConfig, s3Config],
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      load: [databaseConfig, redisConfig, elasticsearchConfig, s3Config, kafkaConfig],
+      validate,
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({

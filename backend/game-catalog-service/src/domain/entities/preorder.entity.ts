@@ -2,6 +2,12 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany
 import { Game } from './game.entity';
 import { PreorderTier } from './preorder-tier.entity';
 
+export enum PreorderStatus {
+  ACTIVE = 'active',
+  FULFILLED = 'fulfilled',
+  CANCELLED = 'cancelled',
+}
+
 @Entity('preorders')
 export class Preorder {
   @PrimaryGeneratedColumn('uuid')
@@ -26,4 +32,12 @@ export class Preorder {
 
   @OneToMany(() => PreorderTier, tier => tier.preorder, { cascade: true })
   tiers: PreorderTier[];
+
+  @Column({
+    type: 'enum',
+    enum: PreorderStatus,
+    default: PreorderStatus.ACTIVE,
+  })
+  @Index()
+  status: PreorderStatus;
 }

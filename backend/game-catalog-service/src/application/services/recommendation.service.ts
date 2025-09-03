@@ -2,10 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { GameRepository } from '../../infrastructure/persistence/game.repository';
 import { Game } from '../../domain/entities/game.entity';
 import { In } from 'typeorm';
+import { UserPreferenceServiceIntegration } from '../../infrastructure/integrations/user-preference.service';
 
 @Injectable()
 export class RecommendationService {
-  constructor(private readonly gameRepository: GameRepository) {}
+  constructor(
+    private readonly gameRepository: GameRepository,
+    private readonly userPreferenceService: UserPreferenceServiceIntegration,
+  ) {}
 
   async findSimilarGames(gameId: string, limit = 5): Promise<Game[]> {
     const game = await this.gameRepository.findById(gameId);
@@ -26,5 +30,23 @@ export class RecommendationService {
     const similarGames = await this.gameRepository.findSimilar(gameId, categoryIds, tagIds, limit);
 
     return similarGames;
+  }
+
+  async getForYou(userId: string, limit = 10): Promise<Game[]> {
+    const preferences = await this.userPreferenceService.getPreferences(userId);
+    if (!preferences || (preferences.favoriteTags.length === 0 && preferences.favoriteCategories.length === 0)) {
+      // Fallback to popular games if no preferences are set
+      return this.gameRepository.findPopular(limit);
+    }
+
+    // A real implementation would have a more complex scoring algorithm.
+    // This is a simplified version that just finds games with any of the preferred tags or categories.
+    const recommendedGames = await this.gameRepository.findByTagsAndCategories(
+      preferences.favoriteCategories,
+      preferences.favoriteTags,
+      limit,
+    );
+
+    return recommendedGames;
   }
 }

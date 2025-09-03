@@ -1,5 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, Index, OneToMany } from 'typeorm';
 import { Game } from './game.entity';
+import { SeasonPassDlc } from './season-pass-dlc.entity';
+import { DlcEditionCompatibility } from './dlc-edition-compatibility.entity';
 
 @Entity('dlcs')
 export class Dlc {
@@ -27,4 +29,10 @@ export class Dlc {
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;
+
+  @OneToMany(() => SeasonPassDlc, seasonPassDlc => seasonPassDlc.dlc)
+  seasonPasses: SeasonPassDlc[];
+
+  @OneToMany(() => DlcEditionCompatibility, compatibility => compatibility.dlc)
+  compatibleEditions: DlcEditionCompatibility[];
 }

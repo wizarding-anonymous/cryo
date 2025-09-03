@@ -89,4 +89,42 @@ export class GameRepository {
   async remove(game: Game): Promise<void> {
     await this.gameRepository.remove(game);
   }
+
+  async findPopular(limit: number): Promise<Game[]> {
+    // A real implementation would use a better metric for popularity,
+    // e.g., sales, reviewsCount, or a dedicated views counter.
+    // For now, we'll just sort by reviewsCount as a proxy.
+    return this.gameRepository.find({
+      where: { status: GameStatus.PUBLISHED },
+      order: { reviewsCount: 'DESC' },
+      take: limit,
+    });
+  }
+
+  async findByTagsAndCategories(categoryIds: string[], tagIds: string[], limit: number): Promise<Game[]> {
+    if (categoryIds.length === 0 && tagIds.length === 0) {
+      return [];
+    }
+
+    const queryBuilder = this.gameRepository.createQueryBuilder('game')
+      .leftJoin('game.tags', 'tag')
+      .leftJoin('game.categories', 'category')
+      .where('game.status = :status', { status: GameStatus.PUBLISHED });
+
+    const conditions: string[] = [];
+    if (categoryIds.length > 0) {
+      conditions.push('category.id IN (:...categoryIds)');
+    }
+    if (tagIds.length > 0) {
+      conditions.push('tag.id IN (:...tagIds)');
+    }
+
+    queryBuilder.andWhere(`(${conditions.join(' OR ')})`, { categoryIds, tagIds });
+
+    return queryBuilder
+      .groupBy('game.id')
+      .orderBy('COUNT(DISTINCT category.id) + COUNT(DISTINCT tag.id)', 'DESC') // Order by number of matched preferences
+      .limit(limit)
+      .getMany();
+  }
 }

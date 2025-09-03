@@ -1,4 +1,15 @@
-import { IsString, IsNotEmpty, MaxLength, IsOptional, IsUUID, IsArray, ArrayMinSize } from 'class-validator';
+import { IsString, IsNotEmpty, MaxLength, IsOptional, IsUUID, IsArray, ArrayMinSize, ValidateNested, IsInt, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class FranchiseGameDto {
+  @IsUUID()
+  @IsNotEmpty()
+  gameId: string;
+
+  @IsInt()
+  @Min(1)
+  orderInSeries: number;
+}
 
 export class CreateFranchiseDto {
   @IsString()
@@ -13,7 +24,7 @@ export class CreateFranchiseDto {
 
   @IsArray()
   @IsOptional()
-  @IsUUID('4', { each: true })
-  @ArrayMinSize(1)
-  gameIds?: string[];
+  @ValidateNested({ each: true })
+  @Type(() => FranchiseGameDto)
+  games?: FranchiseGameDto[];
 }

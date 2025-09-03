@@ -1,7 +1,46 @@
-import { IsOptional, IsDateString, IsBoolean } from 'class-validator';
-import { PartialType } from '@nestjs/swagger';
-import { CreatePreorderDto } from './create-preorder.dto';
+import { IsOptional, IsDateString, IsBoolean, IsArray, ValidateNested, IsUUID, IsString, IsNotEmpty, MaxLength, IsNumber, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
-// For simplicity, we'll allow updating top-level fields.
-// Updating tiers would require a more complex DTO and service logic (e.g., specifying tier IDs to update/delete).
-export class UpdatePreorderDto extends PartialType(CreatePreorderDto) {}
+export class UpdatePreorderTierDto {
+    @IsUUID()
+    @IsOptional()
+    id?: string;
+
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(100)
+    name: string;
+
+    @IsNumber()
+    @Min(0)
+    price: number;
+
+    @IsString()
+    @IsOptional()
+    description?: string;
+}
+
+export class UpdatePreorderDto {
+  @IsDateString()
+  @IsOptional()
+  startDate?: Date;
+
+  @IsDateString()
+  @IsOptional()
+  releaseDate?: Date;
+
+  @IsBoolean()
+  @IsOptional()
+  isAvailable?: boolean;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdatePreorderTierDto)
+  @IsOptional()
+  tiers?: UpdatePreorderTierDto[];
+
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  tiersToDelete?: string[];
+}

@@ -36,6 +36,19 @@ export class SearchQueryDto {
 
     @IsOptional()
     @IsString()
+    // In a real app, we would import the GameStatus enum and use @IsEnum
+    status?: string;
+
+    @IsOptional()
+    @IsDateString()
+    releaseDateFrom?: string;
+
+    @IsOptional()
+    @IsDateString()
+    releaseDateTo?: string;
+
+    @IsOptional()
+    @IsString()
     @IsIn(['price', 'releaseDate', 'rating'])
     sortBy?: string = 'releaseDate';
 

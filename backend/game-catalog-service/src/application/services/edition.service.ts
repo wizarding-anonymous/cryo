@@ -46,4 +46,27 @@ export class EditionService {
     const edition = await this.findOne(id);
     await this.editionRepository.remove(edition);
   }
+
+  async compareEditions(gameId: string): Promise<GameEdition[]> {
+    return this.editionRepository.find({
+      where: { gameId },
+      order: { price: 'ASC' }, // Sort by price by default for comparison
+    });
+  }
+
+  async calculateUpgradePrice(fromEditionId: string, toEditionId: string): Promise<{ upgradePrice: number }> {
+    const fromEdition = await this.findOne(fromEditionId);
+    const toEdition = await this.findOne(toEditionId);
+
+    if (fromEdition.gameId !== toEdition.gameId) {
+      throw new Error('Editions must be for the same game.');
+    }
+
+    if (fromEdition.price >= toEdition.price) {
+      return { upgradePrice: 0 };
+    }
+
+    const upgradePrice = toEdition.price - fromEdition.price;
+    return { upgradePrice };
+  }
 }
