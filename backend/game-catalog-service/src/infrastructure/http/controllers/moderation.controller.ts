@@ -1,12 +1,12 @@
 import { Controller, Get, Param, Patch, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ModerationService } from '../../../application/services/moderation.service';
 import { PaginationDto } from '../dtos/pagination.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { RejectGameDto } from '../dtos/reject-game.dto';
 import { Game } from 'src/domain/entities/game.entity';
-import { ModerationService } from '../../../application/services/moderation.service';
 
 @ApiTags('Moderation')
 @Controller('moderation')

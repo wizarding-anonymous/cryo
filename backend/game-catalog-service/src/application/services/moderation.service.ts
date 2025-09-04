@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, ForbiddenException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { GameRepository } from '../../infrastructure/persistence/game.repository';
@@ -16,6 +16,25 @@ export class ModerationService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
+  async submitForModeration(id: string, developerId: string): Promise<Game> {
+    const game = await this.gameRepository.findById(id);
+    if (!game) {
+      throw new NotFoundException(`Game with ID "${id}" not found`);
+    }
+    if (game.developerId !== developerId) {
+      throw new ForbiddenException('You do not own this game.');
+    }
+    if (game.status !== GameStatus.DRAFT && game.status !== GameStatus.REJECTED) {
+      throw new ForbiddenException(`Game cannot be submitted for moderation in its current state: ${game.status}`);
+    }
+    game.status = GameStatus.PENDING_REVIEW;
+    const updatedGame = await this.gameRepository.save(game);
+    await this.searchService.indexGame(updatedGame);
+    await this.invalidateCache();
+    this.eventPublisher.publish({ type: 'game.submitted', payload: { gameId: updatedGame.id } });
+    return updatedGame;
+  }
+
   async getModerationQueue(paginationDto: PaginationDto): Promise<{ data: Game[], total: number }> {
     return this.gameRepository.findByStatus(GameStatus.PENDING_REVIEW, paginationDto);
   }
@@ -28,8 +47,6 @@ export class ModerationService {
     if (game.status !== GameStatus.PENDING_REVIEW) {
       throw new BadRequestException(`Game is not pending review.`);
     }
-
-    await this.runAutomaticChecks(game);
 
     game.status = GameStatus.PUBLISHED;
     const updatedGame = await this.gameRepository.save(game);
@@ -51,7 +68,6 @@ export class ModerationService {
     }
 
     game.status = GameStatus.REJECTED;
-    // In a real application, this reason would be stored in a dedicated moderation history table.
     game.moderationNotes = reason;
 
     const updatedGame = await this.gameRepository.save(game);
@@ -60,27 +76,6 @@ export class ModerationService {
     this.eventPublisher.publish({ type: 'game.rejected', payload: { gameId: updatedGame.id, reason } });
 
     return updatedGame;
-  }
-
-  /**
-   * Placeholder for automatic content checks against Russian legislation.
-   * This could involve checks for forbidden keywords, image analysis, etc.
-   * @param game The game to check.
-   */
-  private async runAutomaticChecks(game: Game): Promise<void> {
-    console.log(`Running automatic compliance checks for game: ${game.title}`);
-    // Example: Check for forbidden words in title or description
-    const forbiddenWords = ['word1', 'word2', 'запрещенка'];
-    const content = `${game.title} ${game.description}`.toLowerCase();
-    for (const word of forbiddenWords) {
-      if (content.includes(word)) {
-        // In a real scenario, this would trigger a more complex flow,
-        // maybe auto-rejecting or flagging for senior moderator review.
-        throw new BadRequestException(`Game contains forbidden content: ${word}`);
-      }
-    }
-    // This is a simplified placeholder. A real implementation would be much more complex.
-    console.log(`Automatic checks passed for game: ${game.title}`);
   }
 
   private async invalidateCache() {

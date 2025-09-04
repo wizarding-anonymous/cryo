@@ -15,5 +15,6 @@ import { EventPublisherModule } from './event-publisher.module';
   ],
   providers: [ModerationService, GameRepository],
   controllers: [ModerationController],
+  exports: [ModerationService],
 })
 export class ModerationModule {}

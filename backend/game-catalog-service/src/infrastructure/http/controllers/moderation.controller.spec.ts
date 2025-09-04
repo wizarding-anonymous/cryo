@@ -27,7 +27,6 @@ describe('ModerationController', () => {
         },
       ],
     })
-    // Mock guards to bypass actual authentication logic in unit tests
     .overrideGuard(JwtAuthGuard)
     .useValue({ canActivate: () => true })
     .overrideGuard(RolesGuard)

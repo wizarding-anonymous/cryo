@@ -14,7 +14,6 @@ import { SearchService } from './search.service';
 import { AnalyticsService } from './analytics.service';
 import { EventPublisherService } from './event-publisher.service';
 import { LocalizationService } from './localization.service';
-import { GameAnalyticsDto } from 'src/infrastructure/http/dtos/game-analytics.dto';
 
 @Injectable()
 @UseInterceptors(CacheInterceptor)
@@ -181,20 +180,6 @@ export class GameService {
     await this.invalidateCache();
   }
 
-  async submitForModeration(id: string, developerId: string): Promise<Game> {
-    const game = await this.findOne(id);
-    if (game.developerId !== developerId) {
-      throw new ForbiddenException('You do not own this game.');
-    }
-    if (game.status !== GameStatus.DRAFT && game.status !== GameStatus.REJECTED) {
-      throw new ForbiddenException(`Game cannot be submitted for moderation in its current state: ${game.status}`);
-    }
-    game.status = GameStatus.PENDING_REVIEW;
-    const updatedGame = await this.gameRepository.save(game);
-    await this.searchService.indexGame(updatedGame);
-    await this.invalidateCache();
-    return updatedGame;
-  }
 
   async getDeveloperGameAnalytics(id: string, developerId: string): Promise<GameAnalyticsDto> {
     const game = await this.findOne(id);
@@ -203,8 +188,6 @@ export class GameService {
       throw new ForbiddenException('You do not have permission to view analytics for this game.');
     }
 
-    // This is a simple DTO mapping. In a real application, this might involve
-    // aggregating data from a separate analytics service or database.
     return {
       gameId: game.id,
       title: game.title,

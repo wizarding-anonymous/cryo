@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, Put, Patch, UsePipes, ValidationPipe, Query, UseGuards, Headers } from '@nestjs/common';
-import { ApiResponse, ApiHeader } from '@nestjs/swagger';
+import { ApiResponse, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { GameService } from '../../../application/services/game.service';
+import { ModerationService } from '../../../application/services/moderation.service';
 import { CreateGameDto } from '../dtos/create-game.dto';
 import { UpdateGameDto } from '../dtos/update-game.dto';
 import { Game } from '../../../domain/entities/game.entity';
@@ -13,7 +14,10 @@ import { GameAnalyticsDto } from '../dtos/game-analytics.dto';
 @Controller('developer/games')
 // @UseGuards(JwtAuthGuard) // All routes in this controller will be protected
 export class DeveloperController {
-  constructor(private readonly gameService: GameService) {}
+  constructor(
+    private readonly gameService: GameService,
+    private readonly moderationService: ModerationService,
+    ) {}
 
   // This would be modified to get games only for the authenticated developer
   @Get()
@@ -64,10 +68,11 @@ export class DeveloperController {
   @Patch(':id/submit')
   submitForModeration(@Param('id') id: string /*@DeveloperId() developerId: string*/) {
     const developerId = 'mock-dev-id'; // Placeholder
-    return this.gameService.submitForModeration(id, developerId);
+    return this.moderationService.submitForModeration(id, developerId);
   }
 
   @Get(':id/analytics')
+  @ApiOperation({ summary: 'Get analytics data for a game' })
   @ApiResponse({ status: 200, description: 'Analytics data for the game.', type: GameAnalyticsDto })
   @ApiResponse({ status: 404, description: 'Game not found.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })

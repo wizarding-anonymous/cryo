@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GameController } from './game.controller';
 import { GameService } from '../../../application/services/game.service';
+import { RequirementsService } from '../../../application/services/requirements.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 
 describe('GameController', () => {
   let controller: GameController;
-  let service: GameService;
+  let gameService: GameService;
 
   const mockGameService = {
     findAll: jest.fn(),
@@ -16,14 +17,16 @@ describe('GameController', () => {
     remove: jest.fn(),
   };
 
+  const mockRequirementsService = {
+    getRequirements: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [GameController],
       providers: [
-        {
-          provide: GameService,
-          useValue: mockGameService,
-        },
+        { provide: GameService, useValue: mockGameService },
+        { provide: RequirementsService, useValue: mockRequirementsService },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -33,7 +36,7 @@ describe('GameController', () => {
       .compile();
 
     controller = module.get<GameController>(GameController);
-    service = module.get<GameService>(GameService);
+    gameService = module.get<GameService>(GameService);
   });
 
   afterEach(() => {
@@ -52,7 +55,7 @@ describe('GameController', () => {
 
       await controller.findOne(gameId, langHeader);
 
-      expect(service.findOne).toHaveBeenCalledWith(gameId, langHeader);
+      expect(gameService.findOne).toHaveBeenCalledWith(gameId, langHeader);
     });
   });
 
@@ -64,7 +67,7 @@ describe('GameController', () => {
 
       await controller.findAll(paginationDto, langHeader);
 
-      expect(service.findAll).toHaveBeenCalledWith(paginationDto, langHeader);
+      expect(gameService.findAll).toHaveBeenCalledWith(paginationDto, langHeader);
     });
   });
 });

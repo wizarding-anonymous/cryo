@@ -15,13 +15,11 @@ export class LocalizationService {
   async getTranslationsForGames(gameIds: string[], languageCode: string): Promise<Map<string, GameTranslation>> {
     const translationsMap = new Map<string, GameTranslation>();
 
-    // 1. Fetch translations for the requested language
     const requestedTranslations = await this.translationRepository.findForGames(gameIds, languageCode);
     for (const t of requestedTranslations) {
       translationsMap.set(t.gameId, t);
     }
 
-    // 2. For games without a translation, try the default language
     if (languageCode !== this.defaultLanguage) {
       const missingGameIds = gameIds.filter(id => !translationsMap.has(id));
       if (missingGameIds.length > 0) {
@@ -59,7 +57,6 @@ export class LocalizationService {
     let translation = await this.translationRepository.findOne({ gameId, languageCode });
 
     if (!translation && languageCode !== this.defaultLanguage) {
-      // If translation is not found, fall back to the default language
       translation = await this.translationRepository.findOne({ gameId, languageCode: this.defaultLanguage });
     }
 
@@ -70,7 +67,6 @@ export class LocalizationService {
     if (!translation) {
       return game;
     }
-    // Create a new game object to avoid mutating the original entity from cache
     const localizedGame = { ...game };
     localizedGame.title = translation.title;
     localizedGame.description = translation.description;
@@ -83,7 +79,6 @@ export class LocalizationService {
       return this.defaultLanguage;
     }
     const languages = acceptLanguageParser.parse(acceptLanguageHeader);
-    // Return the best match or default if none are supported/provided
     return languages.length > 0 ? languages[0].code : this.defaultLanguage;
   }
 }

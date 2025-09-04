@@ -17,5 +17,6 @@ import { LocalizationModule } from './localization.module';
   ],
   providers: [GameRepository, GameService],
   controllers: [GameController],
+  exports: [GameService, GameRepository],
 })
 export class GameModule {}

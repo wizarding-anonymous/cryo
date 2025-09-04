@@ -68,7 +68,7 @@ describe('MediaService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('uploadFile', () => {
+  describe('uploadFile for Screenshots', () => {
     const mockFile: Express.Multer.File = {
       buffer: Buffer.from('test'),
       mimetype: 'image/jpeg',
