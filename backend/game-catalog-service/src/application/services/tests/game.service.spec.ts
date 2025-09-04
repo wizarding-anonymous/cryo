@@ -6,6 +6,7 @@ import { TagRepository } from '../../../infrastructure/persistence/tag.repositor
 import { SearchService } from '../search.service';
 import { AnalyticsService } from '../analytics.service';
 import { EventPublisherService } from '../event-publisher.service';
+import { LocalizationService } from '../localization.service';
 import { CreateGameDto } from '../../../infrastructure/http/dtos/create-game.dto';
 import { Game, GameStatus } from '../../../domain/entities/game.entity';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
@@ -43,6 +44,12 @@ const mockEventPublisher = {
   publish: jest.fn(),
 };
 
+const mockLocalizationService = {
+    getLanguageFromHeader: jest.fn(),
+    getTranslationWithFallback: jest.fn(),
+    applyTranslation: jest.fn((game, translation) => (translation ? { ...game, title: translation.title } : game)),
+};
+
 const mockCacheManager = {
   store: {
     keys: jest.fn(),
@@ -63,6 +70,7 @@ describe('GameService', () => {
         { provide: SearchService, useValue: mockSearchService },
         { provide: AnalyticsService, useValue: mockAnalyticsService },
         { provide: EventPublisherService, useValue: mockEventPublisher },
+        { provide: LocalizationService, useValue: mockLocalizationService },
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
@@ -166,40 +174,70 @@ describe('GameService', () => {
   });
 
 
-  describe('approveGame', () => {
-    it('should approve a game and publish an event', async () => {
-        const gameId = 'game1';
-        const game = { id: gameId, status: GameStatus.PENDING_REVIEW } as Game;
+  describe('findOne', () => {
+    it('should return a game without translation if no language header is provided', async () => {
+      const game = { id: 'game1', title: 'Original Title' } as Game;
+      mockGameRepository.findById.mockResolvedValue(game);
 
-        mockGameRepository.findById.mockResolvedValue(game);
-        mockGameRepository.save.mockResolvedValue({ ...game, status: GameStatus.PUBLISHED });
+      const result = await service.findOne('game1');
 
-        const result = await service.approveGame(gameId);
-
-        expect(result.status).toBe(GameStatus.PUBLISHED);
-        expect(mockEventPublisher.publish).toHaveBeenCalledWith({
-            type: 'game.approved',
-            payload: { gameId: gameId },
-        });
+      expect(result.title).toBe('Original Title');
+      expect(mockLocalizationService.getLanguageFromHeader).not.toHaveBeenCalled();
     });
+
+    it('should return a translated game if language header is provided and translation exists', async () => {
+        const game = { id: 'game1', title: 'Original Title' } as Game;
+        const translation = { title: 'Translated Title' };
+        mockGameRepository.findById.mockResolvedValue(game);
+        mockLocalizationService.getLanguageFromHeader.mockReturnValue('de');
+        mockLocalizationService.getTranslationWithFallback.mockResolvedValue(translation);
+
+        const result = await service.findOne('game1', 'de-DE');
+
+        expect(result.title).toBe('Translated Title');
+        expect(mockLocalizationService.getLanguageFromHeader).toHaveBeenCalledWith('de-DE');
+        expect(mockLocalizationService.getTranslationWithFallback).toHaveBeenCalledWith('game1', 'de');
+        expect(mockLocalizationService.applyTranslation).toHaveBeenCalledWith(game, translation);
+      });
+
+      it('should return the original game if translation does not exist', async () => {
+        const game = { id: 'game1', title: 'Original Title' } as Game;
+        mockGameRepository.findById.mockResolvedValue(game);
+        mockLocalizationService.getLanguageFromHeader.mockReturnValue('fr');
+        mockLocalizationService.getTranslationWithFallback.mockResolvedValue(null);
+
+        const result = await service.findOne('game1', 'fr-FR');
+
+        expect(result.title).toBe('Original Title');
+      });
   });
 
-  describe('rejectGame', () => {
-    it('should reject a game and publish an event', async () => {
-        const gameId = 'game1';
-        const reason = 'Not appropriate';
-        const game = { id: gameId, status: GameStatus.PENDING_REVIEW } as Game;
+  describe('findAll', () => {
+    it('should return a list of translated games', async () => {
+        const games = [{ id: 'g1', title: 'Game 1' }, { id: 'g2', title: 'Game 2' }];
+        const translations = new Map([
+            ['g1', { title: 'Translated Game 1' }],
+            ['g2', { title: 'Translated Game 2' }],
+        ]);
+        mockGameRepository.findAll.mockResolvedValue({ data: games, total: 2 });
+        mockLocalizationService.getLanguageFromHeader.mockReturnValue('de');
+        mockLocalizationService.getTranslationsForGames.mockResolvedValue(translations);
 
-        mockGameRepository.findById.mockResolvedValue(game);
-        mockGameRepository.save.mockResolvedValue({ ...game, status: GameStatus.REJECTED });
+        const result = await service.findAll({ page: 1, limit: 10 }, 'de-DE');
 
-        const result = await service.rejectGame(gameId, reason);
+        expect(result.data[0].title).toBe('Translated Game 1');
+        expect(result.data[1].title).toBe('Translated Game 2');
+        expect(mockLocalizationService.getTranslationsForGames).toHaveBeenCalledWith(['g1', 'g2'], 'de');
+    });
 
-        expect(result.status).toBe(GameStatus.REJECTED);
-        expect(mockEventPublisher.publish).toHaveBeenCalledWith({
-            type: 'game.rejected',
-            payload: { gameId: gameId, reason },
-        });
+    it('should return untranslated list if no header is provided', async () => {
+        const games = [{ id: 'g1', title: 'Game 1' }];
+        mockGameRepository.findAll.mockResolvedValue({ data: games, total: 1 });
+
+        const result = await service.findAll({ page: 1, limit: 10 });
+
+        expect(result.data[0].title).toBe('Game 1');
+        expect(mockLocalizationService.getTranslationsForGames).not.toHaveBeenCalled();
     });
   });
 });

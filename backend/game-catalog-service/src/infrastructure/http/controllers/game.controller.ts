@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards, HttpCode, HttpStatus, Headers } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiHeader } from '@nestjs/swagger';
 import { GameService } from '../../../application/services/game.service';
 import { Game } from '../../../domain/entities/game.entity';
 import { CreateGameDto } from '../dtos/create-game.dto';
@@ -19,17 +19,33 @@ export class GameController {
   @ApiOperation({ summary: 'Get a paginated list of games' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number', type: Number })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', type: Number })
+  @ApiHeader({
+    name: 'Accept-Language',
+    description: 'Preferred language(s) for the response (e.g., en-US,en;q=0.9,ru;q=0.8)',
+    required: false,
+  })
   @ApiResponse({ status: 200, description: 'A paginated list of games.' })
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.gameService.findAll(paginationDto);
+  findAll(
+    @Query() paginationDto: PaginationDto,
+    @Headers('accept-language') languageHeader: string,
+  ) {
+    return this.gameService.findAll(paginationDto, languageHeader);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a single game by ID' })
+  @ApiHeader({
+    name: 'Accept-Language',
+    description: 'Preferred language(s) for the response (e.g., en-US,en;q=0.9,ru;q=0.8)',
+    required: false,
+  })
   @ApiResponse({ status: 200, description: 'The game object.', type: Game })
   @ApiResponse({ status: 404, description: 'Game not found.' })
-  findOne(@Param('id') id: string): Promise<Game | null> {
-    return this.gameService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Headers('accept-language') languageHeader: string,
+  ): Promise<Game | null> {
+    return this.gameService.findOne(id, languageHeader);
   }
 
   @Post()

@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Param, Put, Patch, UsePipes, ValidationPipe, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Patch, UsePipes, ValidationPipe, Query, UseGuards, Headers } from '@nestjs/common';
+import { ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { GameService } from '../../../application/services/game.service';
 import { CreateGameDto } from '../dtos/create-game.dto';
 import { UpdateGameDto } from '../dtos/update-game.dto';
 import { Game } from '../../../domain/entities/game.entity';
 import { PaginationDto } from '../dtos/pagination.dto';
+import { GameAnalyticsDto } from '../dtos/game-analytics.dto';
 
 // import { JwtAuthGuard } from '../guards/jwt-auth.guard'; // Placeholder for auth guard
 // import { DeveloperId } from '../decorators/developer-id.decorator'; // Placeholder for custom decorator to get dev ID
@@ -16,12 +18,18 @@ export class DeveloperController {
   // This would be modified to get games only for the authenticated developer
   @Get()
   @UsePipes(new ValidationPipe({ transform: true }))
+  @ApiHeader({
+    name: 'Accept-Language',
+    description: 'Preferred language(s) for the response',
+    required: false,
+  })
   findDeveloperGames(
     @Query() paginationDto: PaginationDto,
+    @Headers('accept-language') languageHeader: string,
     /*@DeveloperId() developerId: string*/
   ) {
     const developerId = 'mock-dev-id'; // Placeholder
-    return this.gameService.findByDeveloper(developerId, paginationDto);
+    return this.gameService.findByDeveloper(developerId, paginationDto, languageHeader);
   }
 
   @Post()
@@ -57,5 +65,17 @@ export class DeveloperController {
   submitForModeration(@Param('id') id: string /*@DeveloperId() developerId: string*/) {
     const developerId = 'mock-dev-id'; // Placeholder
     return this.gameService.submitForModeration(id, developerId);
+  }
+
+  @Get(':id/analytics')
+  @ApiResponse({ status: 200, description: 'Analytics data for the game.', type: GameAnalyticsDto })
+  @ApiResponse({ status: 404, description: 'Game not found.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  getGameAnalytics(
+    @Param('id') id: string,
+    /*@DeveloperId() developerId: string*/
+  ) {
+    const developerId = 'mock-dev-id'; // Placeholder
+    return this.gameService.getDeveloperGameAnalytics(id, developerId);
   }
 }

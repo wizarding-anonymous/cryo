@@ -102,6 +102,21 @@ export class Game {
   @Min(0)
   reviewsCount: number;
 
+  @Column({ type: 'bigint', default: 0, name: 'views_count' })
+  @IsNumber()
+  @IsOptional()
+  viewsCount: number;
+
+  @Column({ type: 'bigint', default: 0, name: 'download_count' })
+  @IsNumber()
+  @IsOptional()
+  downloadCount: number;
+
+  @Column({ type: 'bigint', default: 0, name: 'sales_count' })
+  @IsNumber()
+  @IsOptional()
+  salesCount: number;
+
   @Column({ type: 'date', nullable: true })
   @Type(() => Date)
   @IsDate()
