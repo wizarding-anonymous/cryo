@@ -7,6 +7,7 @@ import { GameController } from '../../infrastructure/http/controllers/game.contr
 import { SearchModule } from './search.module';
 import { AnalyticsModule } from './analytics.module';
 import { LocalizationModule } from './localization.module';
+import { RequirementsModule } from './requirements.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { LocalizationModule } from './localization.module';
     SearchModule,
     AnalyticsModule,
     LocalizationModule,
+    RequirementsModule,
   ],
   providers: [GameRepository, GameService],
   controllers: [GameController],

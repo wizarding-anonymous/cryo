@@ -13,7 +13,6 @@ import { PaginationDto } from '../../infrastructure/http/dtos/pagination.dto';
 import { SearchService } from './search.service';
 import { AnalyticsService } from './analytics.service';
 import { EventPublisherService } from './event-publisher.service';
-import { LocalizationService } from './localization.service';
 
 @Injectable()
 @UseInterceptors(CacheInterceptor)
@@ -25,67 +24,29 @@ export class GameService {
     private readonly searchService: SearchService,
     private readonly analyticsService: AnalyticsService,
     private readonly eventPublisher: EventPublisherService,
-    private readonly localizationService: LocalizationService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   @CacheTTL(60 * 5) // 5 minutes
-  async findAll(paginationDto: PaginationDto, languageHeader?: string): Promise<{ data: Game[], total: number }> {
-    const { data, total } = await this.gameRepository.findAll(paginationDto);
-
-    if (!languageHeader || data.length === 0) {
-      return { data, total };
-    }
-
-    const languageCode = this.localizationService.getLanguageFromHeader(languageHeader);
-    const gameIds = data.map(g => g.id);
-    const translationsMap = await this.localizationService.getTranslationsForGames(gameIds, languageCode);
-
-    const localizedData = data.map(game => {
-      const translation = translationsMap.get(game.id);
-      return this.localizationService.applyTranslation(game, translation);
-    });
-
-    return { data: localizedData, total };
+  async findAll(paginationDto: PaginationDto): Promise<{ data: Game[], total: number }> {
+    return this.gameRepository.findAll(paginationDto);
   }
 
   @CacheTTL(60 * 5) // 5 minutes
-  async findByDeveloper(developerId: string, paginationDto: PaginationDto, languageHeader?: string): Promise<{ data: Game[], total: number }> {
-    const { data, total } = await this.gameRepository.findByDeveloper(developerId, paginationDto);
-
-    if (!languageHeader || data.length === 0) {
-      return { data, total };
-    }
-
-    const languageCode = this.localizationService.getLanguageFromHeader(languageHeader);
-    const gameIds = data.map(g => g.id);
-    const translationsMap = await this.localizationService.getTranslationsForGames(gameIds, languageCode);
-
-    const localizedData = data.map(game => {
-      const translation = translationsMap.get(game.id);
-      return this.localizationService.applyTranslation(game, translation);
-    });
-
-    return { data: localizedData, total };
+  async findByDeveloper(developerId: string, paginationDto: PaginationDto): Promise<{ data: Game[], total: number }> {
+    return this.gameRepository.findByDeveloper(developerId, paginationDto);
   }
 
   @CacheTTL(60 * 60) // 1 hour
-  async findOne(id: string, languageHeader?: string): Promise<Game | null> {
+  async findOne(id: string): Promise<Game | null> {
     const game = await this.gameRepository.findById(id);
     if (!game) {
       throw new NotFoundException(`Game with ID "${id}" not found`);
     }
-
+    // This part should not be cached, so it's a trade-off.
+    // A better approach might be to track views via a separate, non-cached endpoint or event.
     this.analyticsService.trackGameView(id);
-
-    if (!languageHeader) {
-      return game;
-    }
-
-    const languageCode = this.localizationService.getLanguageFromHeader(languageHeader);
-    const translation = await this.localizationService.getTranslationWithFallback(id, languageCode);
-
-    return this.localizationService.applyTranslation(game, translation);
+    return game;
   }
 
   async create(createGameDto: CreateGameDto, developerId: string): Promise<Game> {
@@ -180,23 +141,51 @@ export class GameService {
     await this.invalidateCache();
   }
 
-
-  async getDeveloperGameAnalytics(id: string, developerId: string): Promise<GameAnalyticsDto> {
+  async submitForModeration(id: string, developerId: string): Promise<Game> {
     const game = await this.findOne(id);
-
     if (game.developerId !== developerId) {
-      throw new ForbiddenException('You do not have permission to view analytics for this game.');
+      throw new ForbiddenException('You do not own this game.');
     }
+    if (game.status !== GameStatus.DRAFT && game.status !== GameStatus.REJECTED) {
+      throw new ForbiddenException(`Game cannot be submitted for moderation in its current state: ${game.status}`);
+    }
+    game.status = GameStatus.PENDING_REVIEW;
+    const updatedGame = await this.gameRepository.save(game);
+    await this.searchService.indexGame(updatedGame);
+    await this.invalidateCache();
+    return updatedGame;
+  }
 
-    return {
-      gameId: game.id,
-      title: game.title,
-      viewsCount: game.viewsCount || 0,
-      salesCount: game.salesCount || 0,
-      downloadCount: game.downloadCount || 0,
-      averageRating: game.averageRating || 0,
-      reviewsCount: game.reviewsCount || 0,
-    };
+  async getModerationQueue(paginationDto: PaginationDto): Promise<{ data: Game[], total: number }> {
+    return this.gameRepository.findByStatus(GameStatus.PENDING_REVIEW, paginationDto);
+  }
+
+  async approveGame(id: string): Promise<Game> {
+    const game = await this.findOne(id);
+    if (game.status !== GameStatus.PENDING_REVIEW) {
+      throw new BadRequestException(`Game is not pending review.`);
+    }
+    game.status = GameStatus.PUBLISHED;
+    const updatedGame = await this.gameRepository.save(game);
+    await this.searchService.indexGame(updatedGame);
+    await this.invalidateCache();
+    this.eventPublisher.publish({ type: 'game.approved', payload: { gameId: updatedGame.id } });
+    return updatedGame;
+  }
+
+  async rejectGame(id: string, reason: string): Promise<Game> {
+    const game = await this.findOne(id);
+    if (game.status !== GameStatus.PENDING_REVIEW) {
+      throw new BadRequestException(`Game is not pending review.`);
+    }
+    game.status = GameStatus.REJECTED;
+    // We would store the rejection reason in a separate field/table in a real app
+    console.log(`Game ${id} rejected. Reason: ${reason}`);
+    const updatedGame = await this.gameRepository.save(game);
+    await this.searchService.indexGame(updatedGame);
+    await this.invalidateCache();
+    this.eventPublisher.publish({ type: 'game.rejected', payload: { gameId: updatedGame.id, reason } });
+    return updatedGame;
   }
 
   private async invalidateCache() {

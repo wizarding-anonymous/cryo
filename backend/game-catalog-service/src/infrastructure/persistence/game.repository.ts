@@ -90,10 +90,6 @@ export class GameRepository {
     await this.gameRepository.remove(game);
   }
 
-  async increment(id: string, field: keyof Game, value: number): Promise<void> {
-    await this.gameRepository.increment({ id }, field, value);
-  }
-
   async findPopular(limit: number): Promise<Game[]> {
     // A real implementation would use a better metric for popularity,
     // e.g., sales, reviewsCount, or a dedicated views counter.

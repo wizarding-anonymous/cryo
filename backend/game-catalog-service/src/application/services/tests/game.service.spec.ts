@@ -6,7 +6,6 @@ import { TagRepository } from '../../../infrastructure/persistence/tag.repositor
 import { SearchService } from '../search.service';
 import { AnalyticsService } from '../analytics.service';
 import { EventPublisherService } from '../event-publisher.service';
-import { LocalizationService } from '../localization.service';
 import { CreateGameDto } from '../../../infrastructure/http/dtos/create-game.dto';
 import { Game, GameStatus } from '../../../domain/entities/game.entity';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
@@ -44,13 +43,6 @@ const mockEventPublisher = {
   publish: jest.fn(),
 };
 
-const mockLocalizationService = {
-    getLanguageFromHeader: jest.fn(),
-    getTranslationWithFallback: jest.fn(),
-    getTranslationsForGames: jest.fn(),
-    applyTranslation: jest.fn((game, translation) => (translation ? { ...game, title: translation.title } : game)),
-};
-
 const mockCacheManager = {
   store: {
     keys: jest.fn(),
@@ -71,7 +63,6 @@ describe('GameService', () => {
         { provide: SearchService, useValue: mockSearchService },
         { provide: AnalyticsService, useValue: mockAnalyticsService },
         { provide: EventPublisherService, useValue: mockEventPublisher },
-        { provide: LocalizationService, useValue: mockLocalizationService },
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
@@ -175,32 +166,40 @@ describe('GameService', () => {
   });
 
 
-  describe('findOne', () => {
-    it('should return a translated game if language header is provided', async () => {
-        const game = { id: 'game1', title: 'Original Title' } as Game;
-        const translation = { title: 'Translated Title' };
+  describe('approveGame', () => {
+    it('should approve a game and publish an event', async () => {
+        const gameId = 'game1';
+        const game = { id: gameId, status: GameStatus.PENDING_REVIEW } as Game;
+
         mockGameRepository.findById.mockResolvedValue(game);
-        mockLocalizationService.getLanguageFromHeader.mockReturnValue('de');
-        mockLocalizationService.getTranslationWithFallback.mockResolvedValue(translation);
+        mockGameRepository.save.mockResolvedValue({ ...game, status: GameStatus.PUBLISHED });
 
-        const result = await service.findOne('game1', 'de-DE');
+        const result = await service.approveGame(gameId);
 
-        expect(result.title).toBe('Translated Title');
-        expect(mockLocalizationService.applyTranslation).toHaveBeenCalledWith(game, translation);
-      });
+        expect(result.status).toBe(GameStatus.PUBLISHED);
+        expect(mockEventPublisher.publish).toHaveBeenCalledWith({
+            type: 'game.approved',
+            payload: { gameId: gameId },
+        });
+    });
   });
 
-  describe('findAll', () => {
-    it('should return a list of translated games', async () => {
-        const games = [{ id: 'g1', title: 'Game 1' }];
-        const translations = new Map([['g1', { title: 'Translated Game 1' }]]);
-        mockGameRepository.findAll.mockResolvedValue({ data: games, total: 1 });
-        mockLocalizationService.getLanguageFromHeader.mockReturnValue('de');
-        mockLocalizationService.getTranslationsForGames.mockResolvedValue(translations);
+  describe('rejectGame', () => {
+    it('should reject a game and publish an event', async () => {
+        const gameId = 'game1';
+        const reason = 'Not appropriate';
+        const game = { id: gameId, status: GameStatus.PENDING_REVIEW } as Game;
 
-        const result = await service.findAll({ page: 1, limit: 10 }, 'de-DE');
+        mockGameRepository.findById.mockResolvedValue(game);
+        mockGameRepository.save.mockResolvedValue({ ...game, status: GameStatus.REJECTED });
 
-        expect(result.data[0].title).toBe('Translated Game 1');
+        const result = await service.rejectGame(gameId, reason);
+
+        expect(result.status).toBe(GameStatus.REJECTED);
+        expect(mockEventPublisher.publish).toHaveBeenCalledWith({
+            type: 'game.rejected',
+            payload: { gameId: gameId, reason },
+        });
     });
   });
 });

@@ -68,49 +68,37 @@ describe('DeveloperController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('findDeveloperGames', () => {
-    it('should call findByDeveloper on the service with correct parameters', async () => {
-      const paginationDto = { page: 1, limit: 10 };
-      const langHeader = 'de-DE';
-      const developerId = 'mock-dev-id';
-      mockGameService.findByDeveloper.mockResolvedValue({ data: [], total: 0 });
-
-      await controller.findDeveloperGames(paginationDto, langHeader);
-
-      expect(gameService.findByDeveloper).toHaveBeenCalledWith(developerId, paginationDto, langHeader);
-    });
-  });
-
-  describe('getGameAnalytics', () => {
-    it('should call getDeveloperGameAnalytics on the service and return the result', async () => {
-      const gameId = 'test-game-id';
-      const developerId = 'mock-dev-id';
-      const expectedResult: GameAnalyticsDto = {
-        gameId,
-        title: 'Test Game',
-        viewsCount: 100,
-        salesCount: 10,
-        downloadCount: 50,
-        averageRating: 4.5,
-        reviewsCount: 20,
-      };
-      mockGameService.getDeveloperGameAnalytics.mockResolvedValue(expectedResult);
-
-      const result = await controller.getGameAnalytics(gameId);
-
-      expect(result).toEqual(expectedResult);
-      expect(gameService.getDeveloperGameAnalytics).toHaveBeenCalledWith(gameId, developerId);
-    });
-  });
-
-  describe('submitForModeration', () => {
-    it('should call submitForModeration on the moderation service', async () => {
+  describe('createVersion', () => {
+    it('should call createVersion on the service with correct parameters', async () => {
       const gameId = 'game1';
       const developerId = 'mock-dev-id';
+      const dto: CreateVersionDto = { version: '1.2.0', changelog: 'New stuff' };
 
-      await controller.submitForModeration(gameId);
+      await controller.createVersion(gameId, dto);
 
-      expect(moderationService.submitForModeration).toHaveBeenCalledWith(gameId, developerId);
+      expect(versionService.createVersion).toHaveBeenCalledWith(gameId, developerId, dto);
+    });
+  });
+
+  describe('getVersionHistory', () => {
+    it('should call getVersionHistory on the service with correct game ID', async () => {
+      const gameId = 'game1';
+
+      await controller.getVersionHistory(gameId);
+
+      expect(versionService.getVersionHistory).toHaveBeenCalledWith(gameId);
+    });
+  });
+
+  describe('updateRequirements', () => {
+    it('should call updateRequirements on the service with correct parameters', async () => {
+      const gameId = 'game1';
+      const developerId = 'mock-dev-id';
+      const dto = new SystemRequirements();
+
+      await controller.updateRequirements(gameId, dto);
+
+      expect(requirementsService.updateRequirements).toHaveBeenCalledWith(gameId, developerId, dto);
     });
   });
 });
