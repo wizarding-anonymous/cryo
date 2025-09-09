@@ -1,71 +1,118 @@
-name: CI/CD Pipeline
+name: Game Catalog Service CI/CD
 
 on:
   push:
     branches: [ "main", "develop" ]
+    paths:
+      - 'backend/game-catalog-service/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'backend/game-catalog-service/**'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/game-catalog-service
+
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      elasticsearch:
+        image: elasticsearch:8.11.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: "false"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -f http://localhost:9200/_cluster/health?wait_for_status=green&timeout=10s"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
     - uses: actions/checkout@v4
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20.x'
+        node-version: '18.x'
         cache: 'npm'
+        cache-dependency-path: backend/game-catalog-service/package-lock.json
 
     - name: Install dependencies
       run: npm ci
 
-    - name: Run unit tests
+    - name: Run linter
+      run: npm run lint
+
+    - name: Run tests
       run: npm run test
+      env:
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
+        DATABASE_USER: postgres
+        DATABASE_PASSWORD: postgres
+        DATABASE_DB: test_db
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        ELASTICSEARCH_NODE: http://localhost:9200
 
-    - name: Security scan
-      run: |
-        echo "🔍 Running security scan..."
-        npm audit --audit-level high
-        echo "✅ Security scan completed"
-
-  build:
+  build-and-push:
     needs: test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/game-catalog-service
+
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build Docker image
-      run: |
-        echo "🐳 Building Docker image..."
-        echo "docker build -t user-service:${{ github.sha }} ."
-        echo "✅ Docker image built successfully"
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Push to registry
-      run: |
-        echo "📤 Pushing image to registry..."
-        echo "docker push user-service:${{ github.sha }}"
-        echo "✅ Image pushed to registry"
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend/game-catalog-service
+        file: ./backend/game-catalog-service/Dockerfile.prod
+        push: true
+        tags: your-docker-hub-username/game-catalog-service:${{ github.sha }}
 
-  deploy-staging:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
-    steps:
-    - name: Deploy to staging
-      run: |
-        echo "🚀 Deploying to staging environment..."
-        echo "kubectl set image deployment/user-service user-service=user-service:${{ github.sha }}"
-        echo "✅ Deployed to staging successfully"
-
-  deploy-production:
-    needs: build
+  deploy:
+    needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-    - name: Deploy to production
+    - name: Deploy to Production
       run: |
-        echo "🚀 Deploying to production environment..."
-        echo "helm upgrade user-service ./helm/user-service --set image.tag=${{ github.sha }}"
-        echo "✅ Deployed to production successfully"
+        echo "🚀 Deploying game-catalog-service to production..."
+        # Example deployment command, replace with your actual deployment script
+        # ssh user@your-server "docker pull your-docker-hub-username/game-catalog-service:${{ github.sha }} && docker stop game-catalog-service && docker rm game-catalog-service && docker run --name game-catalog-service -d your-docker-hub-username/game-catalog-service:${{ github.sha }}"
+        echo "✅ Deployment complete."
