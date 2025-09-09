@@ -6,19 +6,11 @@ import { GameService } from '../../application/services/game.service';
 import { GameController } from '../../infrastructure/http/controllers/game.controller';
 import { SearchModule } from './search.module';
 import { AnalyticsModule } from './analytics.module';
-import { LocalizationModule } from './localization.module';
-import { RequirementsModule } from './requirements.module';
+import { RecommendationModule } from './recommendation.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Game]),
-    SearchModule,
-    AnalyticsModule,
-    LocalizationModule,
-    RequirementsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Game]), SearchModule, AnalyticsModule, RecommendationModule],
   providers: [GameRepository, GameService],
   controllers: [GameController],
-  exports: [GameService, GameRepository],
 })
 export class GameModule {}

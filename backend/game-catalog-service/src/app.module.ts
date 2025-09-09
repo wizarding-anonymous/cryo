@@ -1,6 +1,7 @@
 import { Module, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { I18nModule, QueryResolver, AcceptLanguageResolver } from 'nestjs-i18n';
@@ -32,6 +33,7 @@ import { SystemRequirements } from './domain/entities/system-requirements.entity
 
 // Feature Modules
 import { ElasticsearchModule } from './infrastructure/search/elasticsearch.module';
+import { GameKeysModule } from './modules/game-keys/game-keys.module';
 import { GameModule } from './modules/game.module';
 import { SearchModule } from './modules/search.module';
 import { CategoryModule } from './modules/category.module';
@@ -66,6 +68,14 @@ const entities = [
       validate,
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        ttl: configService.get<number>('THROTTLE_TTL', 60),
+        limit: configService.get<number>('THROTTLE_LIMIT', 100),
+      }),
+      inject: [ConfigService],
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -114,6 +124,7 @@ const entities = [
       inject: [ConfigService],
     }),
     ElasticsearchModule,
+    GameKeysModule,
     GameModule,
     SearchModule,
     CategoryModule,

@@ -1,9 +1,8 @@
 import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { GameService } from '../../../application/services/game.service';
-import { RequirementsService } from '../../../application/services/requirements.service';
+import { RecommendationService } from '../../../application/services/recommendation.service';
 import { Game } from '../../../domain/entities/game.entity';
-import { SystemRequirements } from '../../../domain/entities/system-requirements.entity';
 import { CreateGameDto } from '../dtos/create-game.dto';
 import { UpdateGameDto } from '../dtos/update-game.dto';
 import { PaginationDto } from '../dtos/pagination.dto';
@@ -17,7 +16,7 @@ import { User } from '../../auth/decorators/user.decorator';
 export class GameController {
   constructor(
     private readonly gameService: GameService,
-    private readonly requirementsService: RequirementsService,
+    private readonly recommendationService: RecommendationService,
     ) {}
 
   @Get()
@@ -35,6 +34,14 @@ export class GameController {
   @ApiResponse({ status: 404, description: 'Game not found.' })
   findOne(@Param('id') id: string): Promise<Game | null> {
     return this.gameService.findOne(id);
+  }
+
+  @Get(':id/similar')
+  @ApiOperation({ summary: 'Get a list of similar games' })
+  @ApiResponse({ status: 200, description: 'A list of similar games.', type: [Game] })
+  @ApiResponse({ status: 404, description: 'Game not found.' })
+  findSimilar(@Param('id') id: string): Promise<Game[]> {
+    return this.recommendationService.findSimilarGames(id);
   }
 
   @Post()
@@ -74,13 +81,5 @@ export class GameController {
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   remove(@Param('id') id: string, @User() user: { id: string }): Promise<void> {
     return this.gameService.remove(id, user.id);
-  }
-
-  @Get(':id/requirements')
-  @ApiOperation({ summary: 'Get system requirements for a game' })
-  @ApiResponse({ status: 200, description: 'The system requirements.', type: SystemRequirements })
-  @ApiResponse({ status: 404, description: 'Game not found.' })
-  getRequirements(@Param('id') id: string): Promise<SystemRequirements> {
-    return this.requirementsService.getRequirements(id);
   }
 }

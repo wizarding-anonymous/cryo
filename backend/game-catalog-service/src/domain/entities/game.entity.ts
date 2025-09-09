@@ -25,7 +25,6 @@ import { Preorder } from './preorder.entity';
 import { Demo } from './demo.entity';
 import { GameEdition } from './game-edition.entity';
 import { FranchiseGame } from './franchise-game.entity';
-import { GameVersion } from './game-version.entity';
 
 export enum GameStatus {
   DRAFT = 'draft',
@@ -117,16 +116,6 @@ export class Game {
   @Index()
   @IsEnum(GameStatus)
   status: GameStatus;
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  @IsString()
-  @IsOptional()
-  version: string;
-
-  @OneToMany(() => GameVersion, version => version.game, { cascade: true })
-  @ValidateNested({ each: true })
-  @Type(() => GameVersion)
-  versions: GameVersion[];
 
   @Column(type => SystemRequirements, { prefix: false })
   @ValidateNested()
