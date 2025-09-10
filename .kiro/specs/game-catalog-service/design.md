@@ -252,12 +252,9 @@ GET    /admin/reports/content      // Отчеты о контенте
 ### НОВЫЕ API Endpoints для расширенной функциональности
 
 ```typescript
-// Предзаказы
-GET    /games/:id/preorder         // Информация о предзаказе
-POST   /games/:id/preorder         // Создание предзаказа (разработчик)
-PUT    /games/:id/preorder         // Обновление предзаказа
-DELETE /games/:id/preorder         // Отмена предзаказа
-GET    /preorders/active           // Активные предзаказы
+// Интеграция с предзаказами
+GET    /games/:id/preorder-status  // Статус предзаказа из Preorder Service
+POST   /games/:id/submit-preorder  // Отправка в Preorder Service
 
 // Демо-версии
 GET    /games/:id/demo             // Информация о демо
@@ -292,18 +289,13 @@ GET    /franchises/:franchiseId    // Детали франшизы
 GET    /franchises/:franchiseId/games // Игры франшизы
 GET    /games/:id/franchise        // Франшиза игры
 
-// Greenlight система
-GET    /greenlight/games           // Игры на Greenlight
-POST   /greenlight/submit          // Подача игры на Greenlight
-POST   /greenlight/vote/:gameId    // Голосование за игру
-GET    /greenlight/games/:gameId/votes // Результаты голосования
-GET    /greenlight/my-submissions  // Мои заявки на Greenlight
+// Интеграция с Greenlight
+GET    /games/:id/greenlight-status // Статус голосования из Greenlight Service
+POST   /games/:id/submit-greenlight // Отправка в Greenlight Service
 
 // Интеграция с ключами
-POST   /games/activate-key         // Активация игрового ключа
-GET    /games/:id/key-info         // Информация о ключах игры
-POST   /developer/games/:id/keys/generate // Генерация ключей
-GET    /developer/games/:id/keys/stats    // Статистика активации ключей
+GET    /games/:id/key-activation   // Проверка поддержки активации ключей из Game Keys Service
+POST   /games/:id/redirect-key-activation // Перенаправление в Game Keys Service
 
 // Система версий и статусов
 GET    /games/:id/versions         // История версий игры
@@ -1670,60 +1662,66 @@ $$ LANGUAGE plpgsql;
 ## Расшире
 нная функциональность
 
-### Система предзаказов
+### Система статусов жизненного цикла игр
 
 ```typescript
-interface PreorderSystem {
-  // Уровни предзаказов
-  tiers: {
-    standard: {
-      price: number
-      bonuses: string[]
-      earlyAccess: false
-    }
-    deluxe: {
-      price: number
-      bonuses: string[]
-      earlyAccess: true
-      earlyAccessDays: 3
-    }
-    ultimate: {
-      price: number
-      bonuses: string[]
-      earlyAccess: true
-      earlyAccessDays: 7
-      exclusiveContent: string[]
-    }
+interface GameLifecycleSystem {
+  // Статусы жизненного цикла
+  statuses: {
+    draft: { visible: false, purchasable: false }
+    in_development: { visible: false, purchasable: false }
+    alpha: { visible: true, purchasable: false, requiresAccess: true }
+    beta: { visible: true, purchasable: false, requiresAccess: true }
+    early_access: { visible: true, purchasable: true, showRoadmap: true }
+    coming_soon: { visible: true, purchasable: false, showReleaseDate: true }
+    released: { visible: true, purchasable: true }
+    discontinued: { visible: true, purchasable: false, showDiscontinuedNotice: true }
   }
   
-  // Управление предзаказами
-  createPreorder(gameId: string, tier: PreorderTier): Promise<Preorder>
-  updatePreorderTier(preorderId: string, newTier: PreorderTier): Promise<void>
-  cancelPreorder(preorderId: string): Promise<RefundInfo>
-  processPreorderRelease(gameId: string): Promise<void>
+  // Управление статусами
+  updateLifecycleStatus(gameId: string, newStatus: GameLifecycleStatus): Promise<void>
+  validateStatusTransition(currentStatus: GameLifecycleStatus, newStatus: GameLifecycleStatus): boolean
+  getGamesByStatus(status: GameLifecycleStatus): Promise<Game[]>
+  notifyStatusChange(gameId: string, oldStatus: GameLifecycleStatus, newStatus: GameLifecycleStatus): Promise<void>
 }
 
-// Дополнительные таблицы БД
-CREATE TABLE game_preorders (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    game_id UUID NOT NULL REFERENCES games(id),
-    tier VARCHAR(20) NOT NULL CHECK (tier IN ('standard', 'deluxe', 'ultimate')),
-    price DECIMAL(10,2) NOT NULL,
-    bonuses JSONB DEFAULT '[]',
-    early_access_days INTEGER DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT NOW()
+### Система промо-акций
+
+```typescript
+interface PromotionSystem {
+  // Типы промо-акций
+  types: {
+    seasonal: { duration: 'weeks', maxDiscount: 75 }
+    flash: { duration: 'hours', maxDiscount: 50 }
+    weekend: { duration: 'days', maxDiscount: 60 }
+    holiday: { duration: 'weeks', maxDiscount: 80 }
+  }
+  
+  // Управление промо-акциями
+  createPromotion(promotion: CreatePromotionDto): Promise<Promotion>
+  updatePromotion(promotionId: string, updates: UpdatePromotionDto): Promise<void>
+  deletePromotion(promotionId: string): Promise<void>
+  getActivePromotions(): Promise<Promotion[]>
+  applyBestDiscount(gameId: string, availablePromotions: Promotion[]): Promise<number>
+}
+
+// Дополнительные таблицы БД для объединенного функционала
+CREATE TABLE game_lifecycle_status (
+    game_id UUID PRIMARY KEY REFERENCES games(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('draft', 'in_development', 'alpha', 'beta', 'early_access', 'coming_soon', 'released', 'discontinued')),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    updated_by UUID NOT NULL
 );
 
-CREATE TABLE user_preorders (
+CREATE TABLE game_roadmaps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    game_id UUID NOT NULL REFERENCES games(id),
-    preorder_tier VARCHAR(20) NOT NULL,
-    amount_paid DECIMAL(10,2) NOT NULL,
-    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'fulfilled')),
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    milestone_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    target_date DATE,
+    status VARCHAR(20) DEFAULT 'planned' CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled')),
     created_at TIMESTAMP DEFAULT NOW(),
-    fulfilled_at TIMESTAMP
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 ```
 
@@ -1947,47 +1945,57 @@ CREATE INDEX idx_game_keys_code ON game_keys(key_code);
 CREATE INDEX idx_game_keys_game_unused ON game_keys(game_id, is_used) WHERE is_used = FALSE;
 ```
 
-### Интеграция с Greenlight системой
+### Интеграции с внешними сервисами
 
 ```typescript
-interface GreenlightIntegration {
-  // Статусы Greenlight
-  statuses: {
-    submitted: 'Подана на голосование'
-    voting: 'Идет голосование'
-    approved: 'Одобрена сообществом'
-    rejected: 'Отклонена сообществом'
-    graduated: 'Выпущена в каталог'
+interface ExternalServiceIntegrations {
+  // Интеграция с Preorder Service
+  preorderService: {
+    getPreorderStatus(gameId: string): Promise<PreorderStatus | null>
+    submitGameForPreorder(gameId: string, gameData: GameSubmissionDto): Promise<void>
+    handlePreorderFulfilled(gameId: string, preorderData: any): Promise<void>
   }
   
-  // Управление Greenlight
-  submitToGreenlight(gameId: string): Promise<GreenlightSubmission>
-  getVotingResults(gameId: string): Promise<VotingResults>
-  graduateFromGreenlight(gameId: string): Promise<void>
+  // Интеграция с Greenlight Service
+  greenlightService: {
+    getGreenlightStatus(gameId: string): Promise<GreenlightStatus | null>
+    submitToGreenlight(gameId: string, gameData: GameSubmissionDto): Promise<void>
+    handleGreenlightApproved(gameId: string): Promise<void>
+  }
+  
+  // Интеграция с Game Keys Service
+  gameKeysService: {
+    checkKeyActivationSupport(gameId: string): Promise<boolean>
+    handleKeyActivated(gameId: string, keyData: any): Promise<void>
+  }
+  
+  // Интеграция с Coupon Service
+  couponService: {
+    getApplicableCoupons(gameId: string, userId?: string): Promise<CouponInfo[]>
+    validateCoupon(couponCode: string, gameId: string): Promise<CouponValidation>
+  }
 }
 
-// Таблицы БД для Greenlight
-CREATE TABLE greenlight_submissions (
+// Таблицы БД для промо-акций
+CREATE TABLE promotions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    game_id UUID NOT NULL REFERENCES games(id),
-    status VARCHAR(20) DEFAULT 'submitted' CHECK (status IN ('submitted', 'voting', 'approved', 'rejected', 'graduated')),
-    votes_yes INTEGER DEFAULT 0,
-    votes_no INTEGER DEFAULT 0,
-    total_votes INTEGER DEFAULT 0,
-    approval_threshold INTEGER DEFAULT 1000,
-    submission_date TIMESTAMP DEFAULT NOW(),
-    voting_end_date TIMESTAMP,
-    graduated_at TIMESTAMP
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    discount_percentage INTEGER NOT NULL CHECK (discount_percentage > 0 AND discount_percentage <= 100),
+    type VARCHAR(20) NOT NULL CHECK (type IN ('seasonal', 'flash', 'weekend', 'holiday')),
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE greenlight_votes (
+CREATE TABLE game_promotions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    submission_id UUID NOT NULL REFERENCES greenlight_submissions(id),
-    user_id UUID NOT NULL,
-    vote BOOLEAN NOT NULL, -- true = yes, false = no
-    comment TEXT,
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    promotion_id UUID NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(submission_id, user_id)
+    UNIQUE(game_id, promotion_id)
 );
 ```
 
@@ -2436,40 +2444,47 @@ jobs:
 -- НОВ
 ЫЕ ТАБЛИЦЫ ДЛЯ РАСШИРЕННОЙ ФУНКЦИОНАЛЬНОСТИ
 
--- Предзаказы
-CREATE TABLE game_preorders (
+-- Статусы жизненного цикла игр
+CREATE TABLE game_lifecycle_status (
+    game_id UUID PRIMARY KEY REFERENCES games(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('draft', 'in_development', 'alpha', 'beta', 'early_access', 'coming_soon', 'released', 'discontinued')),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    updated_by UUID NOT NULL
+);
+
+-- Roadmap для early access игр
+CREATE TABLE game_roadmaps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-    is_available BOOLEAN DEFAULT TRUE,
-    start_date TIMESTAMP NOT NULL,
-    release_date TIMESTAMP NOT NULL,
-    estimated_release_date TIMESTAMP,
+    milestone_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    target_date DATE,
+    status VARCHAR(20) DEFAULT 'planned' CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled')),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Уровни предзаказов
-CREATE TABLE preorder_tiers (
+-- Промо-акции
+CREATE TABLE promotions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    preorder_id UUID NOT NULL REFERENCES game_preorders(id) ON DELETE CASCADE,
-    name VARCHAR(50) NOT NULL, -- Standard, Deluxe, Ultimate
-    price DECIMAL(10,2) NOT NULL,
-    original_price DECIMAL(10,2) NOT NULL,
-    discount_percentage INTEGER DEFAULT 0,
-    early_access_days INTEGER DEFAULT 0,
-    sort_order INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Бонусы предзаказов
-CREATE TABLE preorder_bonuses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tier_id UUID NOT NULL REFERENCES preorder_tiers(id) ON DELETE CASCADE,
-    type VARCHAR(20) NOT NULL CHECK (type IN ('digital_content', 'physical_item', 'early_access', 'exclusive_content')),
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    image_url VARCHAR(500),
-    created_at TIMESTAMP DEFAULT NOW()
+    discount_percentage INTEGER NOT NULL CHECK (discount_percentage > 0 AND discount_percentage <= 100),
+    type VARCHAR(20) NOT NULL CHECK (type IN ('seasonal', 'flash', 'weekend', 'holiday')),
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Связь игр с промо-акциями
+CREATE TABLE game_promotions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    promotion_id UUID NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(game_id, promotion_id)
 );
 
 -- Демо-версии
@@ -2624,31 +2639,7 @@ CREATE TABLE franchise_games (
     PRIMARY KEY (franchise_id, game_id)
 );
 
--- Greenlight система
-CREATE TABLE greenlight_submissions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-    submission_date TIMESTAMP DEFAULT NOW(),
-    approval_date TIMESTAMP,
-    votes_for INTEGER DEFAULT 0,
-    votes_against INTEGER DEFAULT 0,
-    total_votes INTEGER DEFAULT 0,
-    approval_threshold INTEGER DEFAULT 1000,
-    status VARCHAR(20) DEFAULT 'submitted' CHECK (status IN ('submitted', 'in_voting', 'approved', 'rejected')),
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
 
--- Голоса Greenlight
-CREATE TABLE greenlight_votes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    submission_id UUID NOT NULL REFERENCES greenlight_submissions(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL,
-    vote VARCHAR(10) NOT NULL CHECK (vote IN ('for', 'against')),
-    comment TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(submission_id, user_id)
-);
 
 -- Игровые ключи (интеграция)
 CREATE TABLE game_key_batches (
@@ -2663,9 +2654,14 @@ CREATE TABLE game_key_batches (
 );
 
 -- Индексы для новых таблиц
-CREATE INDEX idx_game_preorders_game ON game_preorders(game_id);
-CREATE INDEX idx_game_preorders_dates ON game_preorders(start_date, release_date);
-CREATE INDEX idx_preorder_tiers_preorder ON preorder_tiers(preorder_id, sort_order);
+CREATE INDEX idx_game_lifecycle_status ON game_lifecycle_status(status);
+CREATE INDEX idx_game_roadmaps_game ON game_roadmaps(game_id);
+CREATE INDEX idx_game_roadmaps_status ON game_roadmaps(status);
+CREATE INDEX idx_promotions_active ON promotions(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_promotions_dates ON promotions(start_date, end_date);
+CREATE INDEX idx_promotions_type ON promotions(type);
+CREATE INDEX idx_game_promotions_game ON game_promotions(game_id);
+CREATE INDEX idx_game_promotions_promotion ON game_promotions(promotion_id);
 CREATE INDEX idx_game_demos_game ON game_demos(game_id);
 CREATE INDEX idx_game_demos_available ON game_demos(is_available) WHERE is_available = TRUE;
 CREATE INDEX idx_game_editions_game ON game_editions(game_id, sort_order);
@@ -2676,8 +2672,5 @@ CREATE INDEX idx_game_bundles_active ON game_bundles(is_active, end_date) WHERE 
 CREATE INDEX idx_bundle_games_bundle ON bundle_games(bundle_id, sort_order);
 CREATE INDEX idx_franchises_name ON franchises(name);
 CREATE INDEX idx_franchise_games_franchise ON franchise_games(franchise_id, order_in_series);
-CREATE INDEX idx_greenlight_status ON greenlight_submissions(status);
-CREATE INDEX idx_greenlight_votes_submission ON greenlight_votes(submission_id);
-CREATE INDEX idx_game_key_batches_game ON game_key_batches(game_id);
 
 ```

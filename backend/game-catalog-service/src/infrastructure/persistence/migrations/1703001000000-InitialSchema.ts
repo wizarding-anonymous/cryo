@@ -106,30 +106,7 @@ export class InitialSchema1703001000000 implements MigrationInterface {
       )
     `);
 
-    // Create preorders table
-    await queryRunner.query(`
-      CREATE TABLE "preorders" (
-        "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-        "gameId" uuid NOT NULL,
-        "startDate" TIMESTAMP WITH TIME ZONE NOT NULL,
-        "releaseDate" TIMESTAMP WITH TIME ZONE NOT NULL,
-        "isAvailable" boolean NOT NULL DEFAULT true,
-        CONSTRAINT "PK_preorders" PRIMARY KEY ("id"),
-        CONSTRAINT "UQ_preorders_game" UNIQUE ("gameId")
-      )
-    `);
-
-    // Create preorder_tiers table
-    await queryRunner.query(`
-      CREATE TABLE "preorder_tiers" (
-        "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-        "preorderId" uuid NOT NULL,
-        "name" character varying(50) NOT NULL,
-        "price" numeric(10,2) NOT NULL,
-        "bonuses" jsonb,
-        CONSTRAINT "PK_preorder_tiers" PRIMARY KEY ("id")
-      )
-    `);
+    // Preorder tables removed - functionality moved to external Preorder Service
 
     // Create demos table
     await queryRunner.query(`
@@ -281,8 +258,7 @@ export class InitialSchema1703001000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE "dlcs"`);
     await queryRunner.query(`DROP TABLE "game_editions"`);
     await queryRunner.query(`DROP TABLE "demos"`);
-    await queryRunner.query(`DROP TABLE "preorder_tiers"`);
-    await queryRunner.query(`DROP TABLE "preorders"`);
+    // Preorder tables were not created in this migration
     
     // Drop main tables
     await queryRunner.query(`DROP TABLE "bundles"`);
