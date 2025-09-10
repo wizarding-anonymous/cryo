@@ -21,10 +21,11 @@ import { Discount } from './discount.entity';
 import { SystemRequirements } from './system-requirements.entity';
 import { GameTranslation } from './game-translation.entity';
 import { Dlc } from './dlc.entity';
-import { Preorder } from './preorder.entity';
 import { Demo } from './demo.entity';
 import { GameEdition } from './game-edition.entity';
-import { FranchiseGame } from './franchise-game.entity';
+import { GameLifecycleStatusEntity } from './game-lifecycle-status.entity';
+import { GameRoadmap } from './game-roadmap.entity';
+import { Promotion } from './promotion.entity';
 
 export enum GameStatus {
   DRAFT = 'draft',
@@ -122,17 +123,17 @@ export class Game {
   @Type(() => SystemRequirements)
   systemRequirements: SystemRequirements;
 
-  @OneToOne(() => Preorder, preorder => preorder.game, { cascade: true, nullable: true })
-  @ValidateNested()
-  @IsOptional()
-  @Type(() => Preorder)
-  preorder: Preorder;
-
   @OneToOne(() => Demo, demo => demo.game, { cascade: true, nullable: true })
   @ValidateNested()
   @IsOptional()
   @Type(() => Demo)
   demo: Demo;
+
+  @OneToOne(() => GameLifecycleStatusEntity, status => status.game, { cascade: true, nullable: true })
+  lifecycleStatus: GameLifecycleStatusEntity;
+
+  @OneToMany(() => GameRoadmap, roadmap => roadmap.game, { cascade: true })
+  roadmaps: GameRoadmap[];
 
   @OneToMany(() => Screenshot, screenshot => screenshot.game, { cascade: true })
   @ValidateNested({ each: true })
@@ -184,8 +185,8 @@ export class Game {
   @Type(() => Tag)
   tags: Tag[];
 
-  @OneToMany(() => FranchiseGame, franchiseGame => franchiseGame.game)
-  franchises: FranchiseGame[];
+  @ManyToMany(() => Promotion, promotion => promotion.games)
+  promotions: Promotion[];
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   @IsDate()

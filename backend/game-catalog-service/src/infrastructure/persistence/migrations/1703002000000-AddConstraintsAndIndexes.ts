@@ -13,19 +13,7 @@ export class AddConstraintsAndIndexes1703002000000 implements MigrationInterface
       FOREIGN KEY ("parentId") REFERENCES "categories"("id") ON DELETE SET NULL
     `);
 
-        // Preorders -> Games
-        await queryRunner.query(`
-      ALTER TABLE "preorders" 
-      ADD CONSTRAINT "FK_preorders_game" 
-      FOREIGN KEY ("gameId") REFERENCES "games"("id") ON DELETE CASCADE
-    `);
-
-        // Preorder tiers -> Preorders
-        await queryRunner.query(`
-      ALTER TABLE "preorder_tiers" 
-      ADD CONSTRAINT "FK_preorder_tiers_preorder" 
-      FOREIGN KEY ("preorderId") REFERENCES "preorders"("id") ON DELETE CASCADE
-    `);
+        // Preorder constraints removed - functionality moved to external Preorder Service
 
         // Demos -> Games
         await queryRunner.query(`
@@ -147,14 +135,7 @@ export class AddConstraintsAndIndexes1703002000000 implements MigrationInterface
         await queryRunner.query(`CREATE INDEX "IDX_tags_name" ON "tags" ("name")`);
         await queryRunner.query(`CREATE INDEX "IDX_tags_slug" ON "tags" ("slug")`);
 
-        // Preorders table indexes
-        await queryRunner.query(`CREATE INDEX "IDX_preorders_game" ON "preorders" ("gameId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_preorders_start_date" ON "preorders" ("startDate")`);
-        await queryRunner.query(`CREATE INDEX "IDX_preorders_release_date" ON "preorders" ("releaseDate")`);
-        await queryRunner.query(`CREATE INDEX "IDX_preorders_is_available" ON "preorders" ("isAvailable")`);
-
-        // Preorder tiers table indexes
-        await queryRunner.query(`CREATE INDEX "IDX_preorder_tiers_preorder" ON "preorder_tiers" ("preorderId")`);
+        // Preorder indexes removed - functionality moved to external Preorder Service
 
         // Demos table indexes
         await queryRunner.query(`CREATE INDEX "IDX_demos_game" ON "demos" ("gameId")`);

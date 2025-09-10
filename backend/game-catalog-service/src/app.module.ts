@@ -22,8 +22,9 @@ import { Video } from './domain/entities/video.entity';
 import { Discount } from './domain/entities/discount.entity';
 import { GameTranslation } from './domain/entities/game-translation.entity';
 import { Dlc } from './domain/entities/dlc.entity';
-import { Preorder } from './domain/entities/preorder.entity';
-import { PreorderTier } from './domain/entities/preorder-tier.entity';
+import { GameLifecycleStatusEntity } from './domain/entities/game-lifecycle-status.entity';
+import { GameRoadmap } from './domain/entities/game-roadmap.entity';
+import { Promotion } from './domain/entities/promotion.entity';
 import { Demo } from './domain/entities/demo.entity';
 import { GameEdition } from './domain/entities/game-edition.entity';
 import { Bundle } from './domain/entities/bundle.entity';
@@ -45,7 +46,7 @@ import { RecommendationModule } from './modules/recommendation.module';
 import { PromotionModule } from './modules/promotion.module';
 import { LocalizationModule } from './modules/localization.module';
 import { DlcModule } from './modules/dlc.module';
-import { PreorderModule } from './modules/preorder.module';
+
 import { DemoModule } from './modules/demo.module';
 import { EditionModule } from './modules/edition.module';
 import { BundleModule } from './modules/bundle.module';
@@ -55,8 +56,9 @@ import { AuthModule } from './infrastructure/auth/auth.module';
 import { EventPublisherModule } from './modules/event-publisher.module';
 
 const entities = [
-    Game, Category, Tag, Screenshot, Video, Discount, GameTranslation, Dlc, Preorder,
-    PreorderTier, Demo, GameEdition, Bundle, Franchise, SystemRequirements
+    Game, Category, Tag, Screenshot, Video, Discount, GameTranslation, Dlc,
+    Demo, GameEdition, Bundle, Franchise, SystemRequirements,
+    GameLifecycleStatusEntity, GameRoadmap, Promotion
 ];
 
 @Module({
@@ -136,7 +138,7 @@ const entities = [
     PromotionModule,
     LocalizationModule,
     DlcModule,
-    PreorderModule,
+
     DemoModule,
     EditionModule,
     BundleModule,
