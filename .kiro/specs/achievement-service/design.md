@@ -1,432 +1,555 @@
-# Дизайн Achievement Service
+# Design Document - Achievement Service MVP
 
-## Обзор
+## Overview
 
-Achievement Service является центральным сервисом для управления достижениями и статистикой игроков российской игровой платформы. Сервис построен на микросервисной архитектуре с использованием Node.js/TypeScript, PostgreSQL для основных данных, Redis для кэширования и RabbitMQ для обработки событий.
+Achievement Service - базовый сервис достижений для MVP российской игровой платформы. Обеспечивает простую систему достижений за основные действия пользователей на платформе.
 
-## Архитектура
+## Technology Stack
 
-### Высокоуровневая архитектура
+- **Framework**: NestJS (встроенная поддержка микросервисов, DI, декораторы)
+- **Runtime**: Node.js 18+ / TypeScript
+- **База данных**: PostgreSQL 14+ (primary), Redis (cache)
+- **ORM**: TypeORM с декораторами
+- **Тестирование**: Jest + Supertest (встроенные в NestJS)
+- **Документация**: Swagger/OpenAPI (автогенерация)
+- **Валидация**: class-validator + class-transformer
+- **Контейнеризация**: Docker + Kubernetes
+
+## Architecture
+
+### NestJS Modular Architecture
 
 ```mermaid
 graph TB
-    Client[Клиентские приложения] --> Gateway[API Gateway]
-    Gateway --> AS[Achievement Service]
+    subgraph "Client Applications"
+        Web[Web App - Next.js]
+        Mobile[Mobile App - React Native]
+        Desktop[Desktop App - Tauri]
+    end
     
-    AS --> DB[(PostgreSQL)]
-    AS --> Cache[(Redis)]
-    AS --> Queue[(RabbitMQ)]
+    subgraph "API Gateway"
+        Gateway[API Gateway - NestJS]
+    end
     
-    AS --> GameService[Game Catalog Service]
-    AS --> UserService[User Service]
-    AS --> SocialService[Social Service]
-    AS --> NotificationService[Notification Service]
+    subgraph "Achievement Service - NestJS"
+        subgraph "Controllers"
+            AchievementController[AchievementController]
+            ProgressController[ProgressController]
+        end
+        
+        subgraph "Services"
+            AchievementService[AchievementService]
+            ProgressService[ProgressService]
+            EventService[EventService]
+        end
+        
+        subgraph "Guards & Middleware"
+            AuthGuard[JWT AuthGuard]
+            ValidationPipe[ValidationPipe]
+            LoggingInterceptor[LoggingInterceptor]
+        end
+        
+        subgraph "Data Layer"
+            AchievementRepository[AchievementRepository]
+            UserAchievementRepository[UserAchievementRepository]
+            ProgressRepository[ProgressRepository]
+        end
+    end
     
-    Queue --> EventProcessor[Event Processor]
-    EventProcessor --> AS
+    subgraph "Databases"
+        PostgreSQL[(PostgreSQL 14+)]
+        Redis[(Redis Cache)]
+    end
+    
+    Web --> Gateway
+    Mobile --> Gateway
+    Desktop --> Gateway
+    Gateway --> AchievementController
+    Gateway --> ProgressController
+    
+    AchievementController --> AchievementService
+    ProgressController --> ProgressService
+    
+    AchievementService --> AchievementRepository
+    ProgressService --> ProgressRepository
+    EventService --> AchievementService
+    
+    AchievementRepository --> PostgreSQL
+    UserAchievementRepository --> PostgreSQL
+    ProgressRepository --> PostgreSQL
+    
+    AchievementService --> Redis
+    ProgressService --> Redis
 ```
 
-### Компоненты сервиса
+## Components and Interfaces
 
-1. **Achievement API** - REST API для управления достижениями
-2. **Event Processor** - обработка игровых событий
-3. **Statistics Engine** - расчет статистики и рейтингов
-4. **Reward System** - система наград за достижения
-5. **Progress Tracker** - отслеживание прогресса пользователей
+### NestJS Modules Structure
 
-## Компоненты и интерфейсы
-
-### API Endpoints
-
-#### Достижения пользователей
-- `GET /api/v1/users/{userId}/achievements` - получить достижения пользователя
-- `GET /api/v1/users/{userId}/achievements/{achievementId}` - детали достижения
-- `GET /api/v1/users/{userId}/progress` - прогресс по всем достижениям
-- `POST /api/v1/users/{userId}/achievements/{achievementId}/unlock` - разблокировать достижение (внутренний)
-
-#### Управление достижениями (для разработчиков)
-- `POST /api/v1/games/{gameId}/achievements` - создать достижение
-- `PUT /api/v1/games/{gameId}/achievements/{achievementId}` - обновить достижение
-- `DELETE /api/v1/games/{gameId}/achievements/{achievementId}` - удалить достижение
-- `GET /api/v1/games/{gameId}/achievements` - список достижений игры
-
-#### Рейтинги и лидерборды
-- `GET /api/v1/leaderboards/global` - глобальные рейтинги
-- `GET /api/v1/leaderboards/friends/{userId}` - рейтинги среди друзей
-- `GET /api/v1/leaderboards/games/{gameId}` - рейтинги по игре
-
-#### События и статистика
-- `POST /api/v1/events` - отправить игровое событие
-- `GET /api/v1/games/{gameId}/analytics` - аналитика достижений для разработчиков
-- `GET /api/v1/users/{userId}/statistics` - статистика пользователя
-
-### Event-Driven Architecture
-
-#### Входящие события
 ```typescript
-interface GameEvent {
-  userId: string;
-  gameId: string;
-  eventType: string;
-  eventData: Record<string, any>;
-  timestamp: Date;
-  sessionId?: string;
-}
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([Achievement, UserAchievement, UserProgress]),
+    CacheModule.register(),
+  ],
+  controllers: [AchievementController, ProgressController],
+  providers: [AchievementService, ProgressService, EventService],
+  exports: [AchievementService, ProgressService],
+})
+export class AchievementModule {}
+```
 
-interface UserEvent {
-  userId: string;
-  eventType: 'user_registered' | 'user_profile_updated' | 'user_blocked';
-  eventData: Record<string, any>;
-  timestamp: Date;
+### REST API Endpoints
+
+#### AchievementController
+
+```typescript
+@Controller('achievements')
+@ApiTags('achievements')
+@UseGuards(JwtAuthGuard)
+export class AchievementController {
+  
+  @Get()
+  @ApiOperation({ summary: 'Получить все достижения' })
+  async getAllAchievements(): Promise<AchievementResponseDto[]>
+  
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Получить достижения пользователя' })
+  async getUserAchievements(@Param('userId') userId: string): Promise<UserAchievementResponseDto[]>
+  
+  @Post('unlock')
+  @ApiOperation({ summary: 'Разблокировать достижение' })
+  async unlockAchievement(@Body() dto: UnlockAchievementDto): Promise<UserAchievementResponseDto>
 }
 ```
 
-#### Исходящие события
-```typescript
-interface AchievementUnlockedEvent {
-  userId: string;
-  achievementId: string;
-  gameId: string;
-  timestamp: Date;
-  isRare: boolean;
-  reward?: {
-    type: 'xp' | 'badge' | 'item';
-    value: any;
-  };
-}
+#### ProgressController
 
-interface LeaderboardUpdateEvent {
-  userId: string;
-  gameId?: string;
-  oldRank: number;
-  newRank: number;
-  category: string;
+```typescript
+@Controller('progress')
+@ApiTags('progress')
+@UseGuards(JwtAuthGuard)
+export class ProgressController {
+  
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Получить прогресс пользователя' })
+  async getUserProgress(@Param('userId') userId: string): Promise<UserProgressResponseDto[]>
+  
+  @Post('update')
+  @ApiOperation({ summary: 'Обновить прогресс' })
+  async updateProgress(@Body() dto: UpdateProgressDto): Promise<UserProgressResponseDto>
 }
 ```
 
-## Модели данных
+### Business Logic Services
 
-### Основные сущности
+#### AchievementService
 
-#### Achievement (Достижение)
 ```typescript
-interface Achievement {
+@Injectable()
+export class AchievementService {
+  constructor(
+    @InjectRepository(Achievement)
+    private achievementRepository: Repository<Achievement>,
+    @InjectRepository(UserAchievement)
+    private userAchievementRepository: Repository<UserAchievement>,
+    @Inject(CACHE_MANAGER)
+    private cacheManager: Cache,
+  ) {}
+
+  async getAllAchievements(): Promise<Achievement[]>
+  async getUserAchievements(userId: string): Promise<UserAchievement[]>
+  async unlockAchievement(userId: string, achievementId: string): Promise<UserAchievement>
+  async isAchievementUnlocked(userId: string, achievementId: string): Promise<boolean>
+}
+```
+
+#### ProgressService
+
+```typescript
+@Injectable()
+export class ProgressService {
+  constructor(
+    @InjectRepository(UserProgress)
+    private progressRepository: Repository<UserProgress>,
+    private achievementService: AchievementService,
+  ) {}
+
+  async updateProgress(userId: string, eventType: string, data: any): Promise<UserProgress[]>
+  async getUserProgress(userId: string): Promise<UserProgress[]>
+  async checkAchievements(userId: string): Promise<UserAchievement[]>
+  private async evaluateCondition(condition: any, userStats: any): Promise<boolean>
+}
+```
+
+#### EventService
+
+```typescript
+@Injectable()
+export class EventService {
+  constructor(private progressService: ProgressService) {}
+
+  async handleGamePurchase(userId: string, gameId: string): Promise<void>
+  async handleReviewCreated(userId: string, reviewId: string): Promise<void>
+  async handleFriendAdded(userId: string, friendId: string): Promise<void>
+}
+```
+
+## Data Models
+
+### TypeORM Entities
+
+#### Achievement Entity
+
+```typescript
+@Entity('achievements')
+export class Achievement {
+  @PrimaryGeneratedColumn('uuid')
   id: string;
-  gameId: string;
+
+  @Column({ type: 'varchar', length: 100, unique: true })
+  @Index()
   name: string;
+
+  @Column({ type: 'text' })
   description: string;
-  icon: string;
-  type: 'single' | 'progress' | 'multi_stage';
-  category: string;
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+  @Column({ 
+    type: 'enum', 
+    enum: ['first_purchase', 'first_review', 'first_friend', 'games_purchased', 'reviews_written'] 
+  })
+  @Index()
+  type: AchievementType;
+
+  @Column({ type: 'jsonb' })
+  condition: AchievementCondition;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  iconUrl: string;
+
+  @Column({ type: 'int', default: 0 })
   points: number;
-  hidden: boolean;
-  conditions: AchievementCondition[];
-  rewards: AchievementReward[];
-  createdAt: Date;
-  updatedAt: Date;
+
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @OneToMany(() => UserAchievement, userAchievement => userAchievement.achievement)
+  userAchievements: UserAchievement[];
+}
+```
+
+#### UserAchievement Entity
+
+```typescript
+@Entity('user_achievements')
+@Index(['userId', 'achievementId'], { unique: true })
+export class UserAchievement {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  @Index()
+  userId: string;
+
+  @Column({ type: 'uuid' })
+  @Index()
+  achievementId: string;
+
+  @CreateDateColumn()
+  unlockedAt: Date;
+
+  @ManyToOne(() => Achievement, achievement => achievement.userAchievements)
+  @JoinColumn({ name: 'achievementId' })
+  achievement: Achievement;
+}
+```
+
+#### UserProgress Entity
+
+```typescript
+@Entity('user_progress')
+@Index(['userId', 'achievementId'], { unique: true })
+export class UserProgress {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  @Index()
+  userId: string;
+
+  @Column({ type: 'uuid' })
+  @Index()
+  achievementId: string;
+
+  @Column({ type: 'int', default: 0 })
+  currentValue: number;
+
+  @Column({ type: 'int' })
+  targetValue: number;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @ManyToOne(() => Achievement)
+  @JoinColumn({ name: 'achievementId' })
+  achievement: Achievement;
+}
+```
+
+### DTOs with Validation
+
+#### Request DTOs
+
+```typescript
+export class UnlockAchievementDto {
+  @IsUUID()
+  @ApiProperty({ description: 'ID пользователя' })
+  userId: string;
+
+  @IsUUID()
+  @ApiProperty({ description: 'ID достижения' })
+  achievementId: string;
 }
 
-interface AchievementCondition {
-  id: string;
+export class UpdateProgressDto {
+  @IsUUID()
+  @ApiProperty({ description: 'ID пользователя' })
+  userId: string;
+
+  @IsEnum(['game_purchase', 'review_created', 'friend_added'])
+  @ApiProperty({ description: 'Тип события' })
   eventType: string;
-  operator: 'equals' | 'greater_than' | 'less_than' | 'contains';
-  value: any;
+
+  @IsObject()
+  @ApiProperty({ description: 'Данные события' })
+  eventData: any;
+}
+```
+
+#### Response DTOs
+
+```typescript
+export class AchievementResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  description: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  iconUrl: string;
+
+  @ApiProperty()
+  points: number;
+
+  @ApiProperty()
+  condition: any;
+}
+
+export class UserAchievementResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  achievement: AchievementResponseDto;
+
+  @ApiProperty()
+  unlockedAt: Date;
+}
+
+export class UserProgressResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  achievement: AchievementResponseDto;
+
+  @ApiProperty()
+  currentValue: number;
+
+  @ApiProperty()
+  targetValue: number;
+
+  @ApiProperty()
+  progressPercentage: number;
+
+  @ApiProperty()
+  updatedAt: Date;
+}
+```
+
+### Types and Enums
+
+```typescript
+export enum AchievementType {
+  FIRST_PURCHASE = 'first_purchase',
+  FIRST_REVIEW = 'first_review',
+  FIRST_FRIEND = 'first_friend',
+  GAMES_PURCHASED = 'games_purchased',
+  REVIEWS_WRITTEN = 'reviews_written',
+}
+
+export interface AchievementCondition {
+  type: 'count' | 'first_time' | 'threshold';
+  target?: number;
   field?: string;
 }
-
-interface AchievementReward {
-  type: 'xp' | 'badge' | 'item' | 'currency';
-  value: any;
-  description: string;
-}
 ```
 
-#### UserAchievement (Достижение пользователя)
+## Error Handling
+
+### Custom Exception Filters
+
 ```typescript
-interface UserAchievement {
-  id: string;
-  userId: string;
-  achievementId: string;
-  gameId: string;
-  progress: number;
-  maxProgress: number;
-  unlockedAt?: Date;
-  currentStage?: number;
-  isCompleted: boolean;
-  metadata: Record<string, any>;
+@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message = 'Internal server error';
+
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      message = exception.message;
+    }
+
+    response.status(status).json({
+      statusCode: status,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      message,
+    });
+  }
 }
 ```
 
-#### UserStatistics (Статистика пользователя)
+### Custom Exceptions
+
 ```typescript
-interface UserStatistics {
-  userId: string;
-  totalAchievements: number;
-  totalPoints: number;
-  rareAchievements: number;
-  completionRate: number;
-  averageCompletionTime: number;
-  favoriteGenres: string[];
-  lastActivityAt: Date;
-  globalRank: number;
-  gameStatistics: GameStatistics[];
+export class AchievementNotFoundException extends NotFoundException {
+  constructor(achievementId: string) {
+    super(`Achievement with ID ${achievementId} not found`);
+  }
 }
 
-interface GameStatistics {
-  gameId: string;
-  achievementsUnlocked: number;
-  totalAchievements: number;
-  completionRate: number;
-  playtime: number;
-  lastPlayedAt: Date;
+export class AchievementAlreadyUnlockedException extends ConflictException {
+  constructor(achievementId: string, userId: string) {
+    super(`Achievement ${achievementId} already unlocked for user ${userId}`);
+  }
+}
+
+export class InvalidProgressDataException extends BadRequestException {
+  constructor(message: string) {
+    super(`Invalid progress data: ${message}`);
+  }
 }
 ```
 
-#### Leaderboard (Рейтинг)
+### Guards and Interceptors
+
 ```typescript
-interface LeaderboardEntry {
-  userId: string;
-  gameId?: string;
-  category: string;
-  score: number;
-  rank: number;
-  metadata: Record<string, any>;
-  updatedAt: Date;
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> {
+    return super.canActivate(context);
+  }
+}
+
+@Injectable()
+export class LoggingInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const method = request.method;
+    const url = request.url;
+    
+    console.log(`${method} ${url} - ${new Date().toISOString()}`);
+    
+    return next.handle().pipe(
+      tap(() => console.log(`${method} ${url} - Completed`)),
+    );
+  }
 }
 ```
 
-### Схема базы данных
+## Testing Strategy
 
-```sql
--- Достижения
-CREATE TABLE achievements (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    game_id UUID NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    icon VARCHAR(500),
-    type achievement_type NOT NULL,
-    category VARCHAR(100),
-    rarity achievement_rarity NOT NULL,
-    points INTEGER DEFAULT 0,
-    hidden BOOLEAN DEFAULT FALSE,
-    conditions JSONB NOT NULL,
-    rewards JSONB,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    is_active BOOLEAN DEFAULT TRUE
-);
+### Unit Tests (Jest)
 
--- Достижения пользователей
-CREATE TABLE user_achievements (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    achievement_id UUID NOT NULL REFERENCES achievements(id),
-    game_id UUID NOT NULL,
-    progress INTEGER DEFAULT 0,
-    max_progress INTEGER DEFAULT 1,
-    unlocked_at TIMESTAMP,
-    current_stage INTEGER DEFAULT 1,
-    is_completed BOOLEAN DEFAULT FALSE,
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(user_id, achievement_id)
-);
-
--- Статистика пользователей
-CREATE TABLE user_statistics (
-    user_id UUID PRIMARY KEY,
-    total_achievements INTEGER DEFAULT 0,
-    total_points INTEGER DEFAULT 0,
-    rare_achievements INTEGER DEFAULT 0,
-    completion_rate DECIMAL(5,2) DEFAULT 0,
-    average_completion_time INTEGER DEFAULT 0,
-    favorite_genres JSONB,
-    last_activity_at TIMESTAMP,
-    global_rank INTEGER,
-    game_statistics JSONB,
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Рейтинги
-CREATE TABLE leaderboards (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    game_id UUID,
-    category VARCHAR(100) NOT NULL,
-    score BIGINT NOT NULL,
-    rank INTEGER,
-    metadata JSONB,
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(user_id, game_id, category)
-);
-
--- События для аудита
-CREATE TABLE achievement_events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    achievement_id UUID,
-    event_type VARCHAR(50) NOT NULL,
-    event_data JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-## Обработка ошибок
-
-### Типы ошибок
 ```typescript
-enum AchievementErrorCode {
-  ACHIEVEMENT_NOT_FOUND = 'ACHIEVEMENT_NOT_FOUND',
-  ACHIEVEMENT_ALREADY_UNLOCKED = 'ACHIEVEMENT_ALREADY_UNLOCKED',
-  INVALID_GAME_EVENT = 'INVALID_GAME_EVENT',
-  INSUFFICIENT_PROGRESS = 'INSUFFICIENT_PROGRESS',
-  ACHIEVEMENT_DISABLED = 'ACHIEVEMENT_DISABLED',
-  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
-  INVALID_CONDITIONS = 'INVALID_CONDITIONS'
-}
+describe('AchievementService', () => {
+  let service: AchievementService;
+  let repository: Repository<Achievement>;
 
-interface AchievementError {
-  code: AchievementErrorCode;
-  message: string;
-  details?: Record<string, any>;
-  timestamp: Date;
-}
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AchievementService,
+        {
+          provide: getRepositoryToken(Achievement),
+          useClass: Repository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<AchievementService>(AchievementService);
+    repository = module.get<Repository<Achievement>>(getRepositoryToken(Achievement));
+  });
+
+  it('should get all achievements', async () => {
+    // Test implementation
+  });
+});
 ```
 
-### Стратегии обработки
-- **Retry Logic**: для временных сбоев при обработке событий
-- **Dead Letter Queue**: для событий, которые не удалось обработать
-- **Circuit Breaker**: для защиты от каскадных сбоев
-- **Graceful Degradation**: возврат кэшированных данных при недоступности БД
+### Integration Tests (Supertest)
 
-## Стратегия тестирования
+```typescript
+describe('AchievementController (e2e)', () => {
+  let app: INestApplication;
 
-### Unit Tests
-- Тестирование бизнес-логики обработки достижений
-- Валидация условий достижений
-- Расчет прогресса и статистики
-- Система наград
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AchievementModule],
+    }).compile();
 
-### Integration Tests
-- Интеграция с базой данных
-- Обработка событий через RabbitMQ
-- API endpoints
-- Кэширование в Redis
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
 
-### Performance Tests
-- Нагрузочное тестирование обработки событий (100K events/sec)
-- Тестирование производительности рейтингов
-- Масштабируемость при росте пользователей
-
-### End-to-End Tests
-- Полный цикл получения достижения
-- Интеграция с другими сервисами
-- Уведомления пользователей
-
-## Безопасность
-
-### Аутентификация и авторизация
-- JWT токены для аутентификации
-- RBAC для разграничения доступа разработчиков
-- Rate limiting для предотвращения злоупотреблений
-
-### Защита от мошенничества
-- Валидация игровых событий
-- Детекция аномальной активности
-- Блокировка подозрительных аккаунтов
-- Аудит всех операций с достижениями
-
-### Шифрование данных
-- Шифрование чувствительных данных в БД
-- TLS для всех API вызовов
-- Безопасное хранение API ключей
-
-## Производительность и масштабируемость
-
-### Кэширование
-- Redis для кэширования:
-  - Достижения пользователей (TTL: 1 час)
-  - Рейтинги (TTL: 15 минут)
-  - Статистика игр (TTL: 30 минут)
-  - Метаданные достижений (TTL: 24 часа)
-
-### Оптимизация базы данных
-- Индексы для быстрого поиска:
-  ```sql
-  CREATE INDEX idx_user_achievements_user_game ON user_achievements(user_id, game_id);
-  CREATE INDEX idx_achievements_game_active ON achievements(game_id, is_active);
-  CREATE INDEX idx_leaderboards_category_rank ON leaderboards(category, rank);
-  CREATE INDEX idx_user_statistics_rank ON user_statistics(global_rank);
-  ```
-
-### Горизонтальное масштабирование
-- Stateless сервисы для легкого масштабирования
-- Шардинг данных по user_id для больших объемов
-- Read replicas для аналитических запросов
-- Event sourcing для аудита и восстановления
-
-### Мониторинг производительности
-- Метрики времени обработки событий
-- Мониторинг использования памяти и CPU
-- Отслеживание размера очередей
-- Алерты при превышении SLA
-
-## Развертывание
-
-### Docker Configuration
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY dist/ ./dist/
-EXPOSE 3000
-CMD ["node", "dist/index.js"]
+  it('/achievements (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/achievements')
+      .expect(200)
+      .expect((res) => {
+        expect(Array.isArray(res.body)).toBe(true);
+      });
+  });
+});
 ```
 
-### Kubernetes Deployment
-- Deployment с 3+ репликами для высокой доступности
-- HorizontalPodAutoscaler для автомасштабирования
-- ConfigMaps для конфигурации
-- Secrets для чувствительных данных
-
-### Environment Variables
-```env
-DATABASE_URL=postgresql://user:pass@host:5432/achievements
-REDIS_URL=redis://host:6379
-RABBITMQ_URL=amqp://user:pass@host:5672
-JWT_SECRET=secret
-API_RATE_LIMIT=1000
-CACHE_TTL=3600
-```
-
-## Мониторинг и наблюдаемость
-
-### Метрики
-- Количество обработанных событий в секунду
-- Время отклика API endpoints
-- Процент успешных разблокировок достижений
-- Размер очередей событий
-- Использование кэша (hit rate)
-
-### Логирование
-- Structured logging в JSON формате
-- Correlation ID для трассировки запросов
-- Логирование всех изменений достижений
-- Аудит подозрительной активности
-
-### Алерты
-- Превышение времени обработки событий (>100ms)
-- Высокий процент ошибок (>1%)
-- Переполнение очередей событий
-- Недоступность зависимых сервисов
-
-### Дашборды
-- Общая статистика достижений
-- Производительность обработки событий
-- Топ игр по активности достижений
-- Аналитика для разработчиков
+### Test Coverage Requirements
+- Unit Tests: 90%+ coverage для services
+- Integration Tests: Все API endpoints
+- E2E Tests: Основные пользовательские сценарии
+- Performance Tests: Нагрузочное тестирование API

@@ -1,752 +1,519 @@
-# Дизайн Notification Service
+# Design Document - Notification Service MVP
 
-## Обзор
+## Overview
 
-Notification Service является центральным сервисом для доставки уведомлений пользователям российской игровой платформы через различные каналы: в приложении, email, push-уведомления, SMS и Telegram. Сервис обеспечивает надежную доставку, персонализацию и соблюдение пользовательских предпочтений.
+Notification Service - базовый микросервис уведомлений для MVP российской игровой платформы, построенный на **NestJS + TypeScript**. Обеспечивает простые уведомления в приложении и email уведомления через REST API.
 
-### Ключевые принципы дизайна
+**Технологический стек:**
+- **Framework**: NestJS + TypeScript
+- **База данных**: PostgreSQL 14+ (primary), Redis (cache)
+- **Тестирование**: Jest + Supertest
+- **Документация**: Swagger/OpenAPI
+- **Контейнеризация**: Docker + Kubernetes
 
-- **Многоканальность**: Поддержка всех популярных каналов доставки
-- **Надежность**: Гарантированная доставка критически важных уведомлений
-- **Персонализация**: Учет предпочтений и поведения пользователей
-- **Производительность**: Обработка до 1 миллиона уведомлений в час
-- **Соответствие законодательству**: Соблюдение российских требований по рассылкам
+## Architecture
 
-## Архитектура
-
-### Общая архитектура
+### NestJS Модульная архитектура MVP
 
 ```mermaid
 graph TB
-    subgraph "Event Sources"
-        User[User Service]
-        Game[Game Catalog]
-        Payment[Payment Service]
-        Social[Social Service]
-        Achievement[Achievement Service]
-        Download[Download Service]
+    subgraph "Client Applications"
+        Web[Web App - Next.js]
     end
     
-    subgraph "Message Queue"
-        Kafka[Apache Kafka]
-        Redis[Redis Queue]
+    subgraph "API Gateway"
+        Gateway[NestJS API Gateway]
     end
     
-    subgraph "Notification Service"
-        API[REST API]
-        Processor[Event Processor]
-        Router[Channel Router]
-        Template[Template Engine]
-        Scheduler[Scheduler]
+    subgraph "Notification Service - NestJS"
+        Controller[NotificationController]
+        Guard[AuthGuard]
+        Service[NotificationService]
+        EmailService[EmailService]
         
-        API --> Processor
-        Processor --> Router
-        Router --> Template
-        Template --> Scheduler
+        Controller --> Guard
+        Guard --> Service
+        Service --> EmailService
     end
     
-    subgraph "Delivery Channels"
-        InApp[In-App Notifications]
-        Email[Email Service]
-        Push[Push Notifications]
-        SMS[SMS Gateway]
-        Telegram[Telegram Bot]
-        VK[VK Notifications]
+    subgraph "External Services"
+        EmailProvider[Russian Email Provider]
     end
     
-    subgraph "Data Layer"
-        PostgreSQL[(PostgreSQL)]
-        MongoDB[(MongoDB)]
-        RedisCache[(Redis Cache)]
+    subgraph "Database Layer"
+        PostgreSQL[(PostgreSQL 14+)]
+        Redis[(Redis Cache)]
     end
     
-    User --> Kafka
-    Game --> Kafka
-    Payment --> Kafka
-    Social --> Kafka
-    Achievement --> Kafka
-    Download --> Kafka
+    Web --> Gateway
+    Gateway --> Controller
     
-    Kafka --> Processor
-    
-    Router --> InApp
-    Router --> Email
-    Router --> Push
-    Router --> SMS
-    Router --> Telegram
-    Router --> VK
-    
-    API --> PostgreSQL
-    Processor --> MongoDB
-    Router --> RedisCache
+    EmailService --> EmailProvider
+    Service --> PostgreSQL
+    Service --> Redis
 ```
 
-### Компонентная архитектура
+## Components and Interfaces
 
-```mermaid
-graph TB
-    subgraph "Notification Service"
-        EventConsumer[Event Consumer]
-        NotificationBuilder[Notification Builder]
-        ChannelSelector[Channel Selector]
-        TemplateRenderer[Template Renderer]
-        DeliveryManager[Delivery Manager]
-        RetryHandler[Retry Handler]
-        AnalyticsCollector[Analytics Collector]
-    end
-    
-    EventConsumer --> NotificationBuilder
-    NotificationBuilder --> ChannelSelector
-    ChannelSelector --> TemplateRenderer
-    TemplateRenderer --> DeliveryManager
-    DeliveryManager --> RetryHandler
-    DeliveryManager --> AnalyticsCollector
-```
+### NestJS Modules
 
-## API Эндпоинты и маршруты
-
-### Структура API
-
-```
-Base URL: https://api.gaming-platform.ru/notification-service/v1
-```
-
-### Public Endpoints
-
+#### NotificationModule
 ```typescript
-// Получение уведомлений пользователя
-GET    /notifications                    // Список уведомлений пользователя
-GET    /notifications/unread            // Непрочитанные уведомления
-PUT    /notifications/:id/read          // Отметить как прочитанное
-PUT    /notifications/mark-all-read     // Отметить все как прочитанные
-DELETE /notifications/:id              // Удалить уведомление
-
-// Настройки уведомлений
-GET    /settings                       // Получить настройки уведомлений
-PUT    /settings                       // Обновить настройки
-GET    /settings/channels              // Доступные каналы доставки
-PUT    /settings/channels/:channel     // Настройки конкретного канала
-
-// Подписки
-GET    /subscriptions                  // Список подписок пользователя
-POST   /subscriptions                  // Создать подписку
-DELETE /subscriptions/:id              // Отписаться
-
-// Устройства для push-уведомлений
-POST   /devices                        // Регистрация устройства
-PUT    /devices/:id                    // Обновление токена устройства
-DELETE /devices/:id                    // Удаление устройства
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([Notification, NotificationSettings]),
+    CacheModule.register(),
+    HttpModule,
+  ],
+  controllers: [NotificationController],
+  providers: [
+    NotificationService,
+    EmailService,
+  ],
+  exports: [NotificationService],
+})
+export class NotificationModule {}
 ```
 
-### Internal API (для других сервисов)
+### REST API Endpoints
 
+#### NotificationController
 ```typescript
-// Отправка уведомлений
-POST   /internal/send                  // Отправить уведомление
-POST   /internal/send/bulk             // Массовая отправка
-POST   /internal/send/broadcast        // Широковещательная рассылка
+@Controller('notifications')
+@UseGuards(JwtAuthGuard)
+@ApiTags('notifications')
+export class NotificationController {
+  
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Получить уведомления пользователя' })
+  async getUserNotifications(
+    @Param('userId') userId: string,
+    @Query() query: GetNotificationsDto
+  ): Promise<PaginatedNotificationsDto>
 
-// Шаблоны уведомлений
-GET    /internal/templates             // Список шаблонов
-POST   /internal/templates             // Создать шаблон
-PUT    /internal/templates/:id         // Обновить шаблон
-DELETE /internal/templates/:id         // Удалить шаблон
+  @Post()
+  @ApiOperation({ summary: 'Создать уведомление' })
+  async createNotification(
+    @Body() createDto: CreateNotificationDto
+  ): Promise<NotificationDto>
 
-// Статистика
-GET    /internal/stats/delivery        // Статистика доставки
-GET    /internal/stats/engagement      // Статистика взаимодействий
+  @Put(':id/read')
+  @ApiOperation({ summary: 'Отметить как прочитанное' })
+  async markAsRead(@Param('id') id: string): Promise<void>
+
+  @Get('settings/:userId')
+  @ApiOperation({ summary: 'Получить настройки уведомлений' })
+  async getSettings(@Param('userId') userId: string): Promise<NotificationSettingsDto>
+
+  @Put('settings/:userId')
+  @ApiOperation({ summary: 'Обновить настройки уведомлений' })
+  async updateSettings(
+    @Param('userId') userId: string,
+    @Body() settingsDto: UpdateNotificationSettingsDto
+  ): Promise<NotificationSettingsDto>
+}
 ```
 
-### Admin Endpoints
+### NestJS Services
 
+#### NotificationService
 ```typescript
-// Управление уведомлениями
-GET    /admin/notifications            // Все уведомления в системе
-GET    /admin/notifications/failed     // Неудачные доставки
-POST   /admin/notifications/resend     // Повторная отправка
+@Injectable()
+export class NotificationService {
+  constructor(
+    @InjectRepository(Notification)
+    private notificationRepository: Repository<Notification>,
+    @InjectRepository(NotificationSettings)
+    private settingsRepository: Repository<NotificationSettings>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private emailService: EmailService,
+  ) {}
 
-// Управление шаблонами
-GET    /admin/templates                // Все шаблоны
-POST   /admin/templates/test           // Тестирование шаблона
-PUT    /admin/templates/:id/activate   // Активация шаблона
-
-// Аналитика и отчеты
-GET    /admin/analytics/delivery       // Аналитика доставки
-GET    /admin/analytics/channels       // Эффективность каналов
-GET    /admin/reports/compliance       // Отчеты соответствия
+  async createNotification(dto: CreateNotificationDto): Promise<Notification>
+  async getUserNotifications(userId: string, query: GetNotificationsDto): Promise<PaginatedResult<Notification>>
+  async markAsRead(notificationId: string): Promise<void>
+  async getSettings(userId: string): Promise<NotificationSettings>
+  async updateSettings(userId: string, settings: UpdateNotificationSettingsDto): Promise<NotificationSettings>
+}
 ```
 
-## Модели данных
-
-### Основные сущности
-
+#### EmailService
 ```typescript
-interface Notification {
-  id: string
-  userId: string
-  
-  // Содержание
-  type: NotificationType
-  title: string
-  message: string
-  data: Record<string, any>
-  
-  // Доставка
-  channels: DeliveryChannel[]
-  priority: NotificationPriority
-  
-  // Статус
-  status: NotificationStatus
-  deliveryAttempts: DeliveryAttempt[]
-  
-  // Планирование
-  scheduledAt?: Date
-  expiresAt?: Date
-  
-  // Метаданные
-  createdAt: Date
-  updatedAt: Date
-  readAt?: Date
-  clickedAt?: Date
-  
-  // Группировка
-  groupKey?: string
-  replaces?: string // ID уведомления для замены
-}
+@Injectable()
+export class EmailService {
+  constructor(
+    private configService: ConfigService,
+    private httpService: HttpService,
+  ) {}
 
-interface NotificationTemplate {
-  id: string
-  name: string
-  type: NotificationType
-  
-  // Шаблоны для разных каналов
-  templates: {
-    inApp: InAppTemplate
-    email: EmailTemplate
-    push: PushTemplate
-    sms: SmsTemplate
-    telegram: TelegramTemplate
-  }
-  
-  // Настройки
-  defaultChannels: DeliveryChannel[]
-  priority: NotificationPriority
-  
-  // Локализация
-  localizations: Record<string, LocalizedTemplate>
-  
-  // Статус
-  isActive: boolean
-  version: number
-  
-  createdAt: Date
-  updatedAt: Date
+  async sendEmail(to: string, subject: string, template: string, data: any): Promise<void>
+  async sendNotificationEmail(userId: string, notification: Notification): Promise<void>
 }
+```
 
-interface UserNotificationSettings {
-  userId: string
-  
-  // Общие настройки
-  globalEnabled: boolean
-  quietHours: {
-    enabled: boolean
-    start: string // HH:mm
-    end: string   // HH:mm
-    timezone: string
-  }
-  
-  // Настройки по типам
-  typeSettings: Record<NotificationType, TypeSettings>
-  
-  // Настройки каналов
-  channelSettings: Record<DeliveryChannel, ChannelSettings>
-  
-  updatedAt: Date
-}
+## Data Models
 
-interface TypeSettings {
-  enabled: boolean
-  channels: DeliveryChannel[]
-  frequency: 'immediate' | 'hourly' | 'daily' | 'weekly'
-  priority: NotificationPriority
-}
+### TypeORM Entities
 
-interface ChannelSettings {
-  enabled: boolean
-  address?: string // email, phone, telegram username
-  verified: boolean
-  preferences: Record<string, any>
-}
+#### Notification Entity
+```typescript
+@Entity('notifications')
+export class Notification {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-interface DeliveryAttempt {
-  id: string
-  notificationId: string
-  channel: DeliveryChannel
-  
-  // Попытка доставки
-  attemptNumber: number
-  status: 'pending' | 'sent' | 'delivered' | 'failed' | 'bounced'
-  
-  // Детали
-  providerId?: string // ID в внешней системе
-  error?: string
-  response?: any
-  
-  // Метрики
-  sentAt?: Date
-  deliveredAt?: Date
-  openedAt?: Date
-  clickedAt?: Date
-  
-  createdAt: Date
-}
+  @Column('uuid')
+  @Index()
+  userId: string;
 
-interface UserDevice {
-  id: string
-  userId: string
-  
-  // Устройство
-  deviceType: 'ios' | 'android' | 'web'
-  deviceToken: string
-  deviceInfo: {
-    model?: string
-    os?: string
-    appVersion?: string
-    language?: string
-  }
-  
-  // Статус
-  isActive: boolean
-  lastSeenAt: Date
-  
-  createdAt: Date
-  updatedAt: Date
+  @Column({
+    type: 'enum',
+    enum: NotificationType,
+  })
+  type: NotificationType;
+
+  @Column()
+  title: string;
+
+  @Column('text')
+  message: string;
+
+  @Column({ default: false })
+  isRead: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: NotificationPriority,
+    default: NotificationPriority.NORMAL,
+  })
+  priority: NotificationPriority;
+
+  @Column('jsonb', { nullable: true })
+  metadata: Record<string, any>;
+
+  @Column('jsonb', { nullable: true })
+  channels: NotificationChannel[];
+
+  @CreateDateColumn()
+  @Index()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @Column({ nullable: true })
+  expiresAt: Date;
 }
 
 enum NotificationType {
-  // Социальные
   FRIEND_REQUEST = 'friend_request',
-  FRIEND_ACCEPTED = 'friend_accepted',
-  GAME_INVITE = 'game_invite',
-  MESSAGE_RECEIVED = 'message_received',
-  
-  // Игровые
-  ACHIEVEMENT_UNLOCKED = 'achievement_unlocked',
-  GAME_UPDATE_AVAILABLE = 'game_update_available',
-  DOWNLOAD_COMPLETED = 'download_completed',
-  
-  // Коммерческие
-  GAME_ON_SALE = 'game_on_sale',
-  WISHLIST_ITEM_DISCOUNTED = 'wishlist_item_discounted',
-  PAYMENT_COMPLETED = 'payment_completed',
-  
-  // Системные
-  SECURITY_ALERT = 'security_alert',
-  MAINTENANCE_NOTICE = 'maintenance_notice',
-  ACCOUNT_VERIFICATION = 'account_verification'
-}
-
-enum DeliveryChannel {
-  IN_APP = 'in_app',
-  EMAIL = 'email',
-  PUSH = 'push',
-  SMS = 'sms',
-  TELEGRAM = 'telegram',
-  VK = 'vk'
+  GAME_UPDATE = 'game_update',
+  ACHIEVEMENT = 'achievement',
+  PURCHASE = 'purchase',
+  SYSTEM = 'system',
 }
 
 enum NotificationPriority {
-  LOW = 'low',
   NORMAL = 'normal',
   HIGH = 'high',
-  CRITICAL = 'critical'
+}
+
+enum NotificationChannel {
+  IN_APP = 'in_app',
+  EMAIL = 'email',
 }
 ```
 
-## Детальная схема базы данных
+#### NotificationSettings Entity
+```typescript
+@Entity('notification_settings')
+export class NotificationSettings {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-```sql
--- Уведомления
-CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    
-    -- Содержание
-    type VARCHAR(50) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
-    data JSONB DEFAULT '{}',
-    
-    -- Доставка
-    channels TEXT[] NOT NULL,
-    priority VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'critical')),
-    
-    -- Статус
-    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'sent', 'delivered', 'failed', 'expired')),
-    
-    -- Планирование
-    scheduled_at TIMESTAMP,
-    expires_at TIMESTAMP,
-    
-    -- Взаимодействие
-    read_at TIMESTAMP,
-    clicked_at TIMESTAMP,
-    
-    -- Группировка
-    group_key VARCHAR(255),
-    replaces UUID REFERENCES notifications(id),
-    
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
+  @Column('uuid', { unique: true })
+  @Index()
+  userId: string;
 
--- Шаблоны уведомлений
-CREATE TABLE notification_templates (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(100) UNIQUE NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    
-    -- Шаблоны
-    in_app_template JSONB,
-    email_template JSONB,
-    push_template JSONB,
-    sms_template JSONB,
-    telegram_template JSONB,
-    
-    -- Настройки
-    default_channels TEXT[] DEFAULT '{}',
-    priority VARCHAR(20) DEFAULT 'normal',
-    
-    -- Локализация
-    localizations JSONB DEFAULT '{}',
-    
-    -- Статус
-    is_active BOOLEAN DEFAULT TRUE,
-    version INTEGER DEFAULT 1,
-    
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
+  @Column({ default: true })
+  inAppNotifications: boolean;
 
--- Настройки уведомлений пользователей
-CREATE TABLE user_notification_settings (
-    user_id UUID PRIMARY KEY,
-    
-    -- Общие настройки
-    global_enabled BOOLEAN DEFAULT TRUE,
-    quiet_hours JSONB DEFAULT '{"enabled": false}',
-    
-    -- Настройки по типам
-    type_settings JSONB DEFAULT '{}',
-    
-    -- Настройки каналов
-    channel_settings JSONB DEFAULT '{}',
-    
-    updated_at TIMESTAMP DEFAULT NOW()
-);
+  @Column({ default: true })
+  emailNotifications: boolean;
 
--- Попытки доставки
-CREATE TABLE delivery_attempts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    notification_id UUID NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
-    channel VARCHAR(20) NOT NULL,
-    
-    -- Попытка
-    attempt_number INTEGER NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'delivered', 'failed', 'bounced')),
-    
-    -- Детали
-    provider_id VARCHAR(255),
-    error_message TEXT,
-    response_data JSONB,
-    
-    -- Метрики
-    sent_at TIMESTAMP,
-    delivered_at TIMESTAMP,
-    opened_at TIMESTAMP,
-    clicked_at TIMESTAMP,
-    
-    created_at TIMESTAMP DEFAULT NOW()
-);
+  // Настройки по типам уведомлений
+  @Column({ default: true })
+  friendRequests: boolean;
 
--- Устройства пользователей
-CREATE TABLE user_devices (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    
-    -- Устройство
-    device_type VARCHAR(20) NOT NULL CHECK (device_type IN ('ios', 'android', 'web')),
-    device_token VARCHAR(500) NOT NULL,
-    device_info JSONB DEFAULT '{}',
-    
-    -- Статус
-    is_active BOOLEAN DEFAULT TRUE,
-    last_seen_at TIMESTAMP DEFAULT NOW(),
-    
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    
-    UNIQUE(user_id, device_token)
-);
+  @Column({ default: true })
+  gameUpdates: boolean;
 
--- Подписки пользователей
-CREATE TABLE user_subscriptions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    
-    -- Подписка
-    subscription_type VARCHAR(50) NOT NULL,
-    target_id VARCHAR(255), -- ID игры, разработчика, etc.
-    
-    -- Настройки
-    channels TEXT[] DEFAULT '{}',
-    frequency VARCHAR(20) DEFAULT 'immediate',
-    
-    -- Статус
-    is_active BOOLEAN DEFAULT TRUE,
-    
-    created_at TIMESTAMP DEFAULT NOW(),
-    
-    UNIQUE(user_id, subscription_type, target_id)
-);
+  @Column({ default: true })
+  achievements: boolean;
 
--- Статистика доставки
-CREATE TABLE delivery_stats (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    date DATE NOT NULL,
-    hour INTEGER NOT NULL CHECK (hour >= 0 AND hour <= 23),
-    
-    -- Группировка
-    notification_type VARCHAR(50) NOT NULL,
-    channel VARCHAR(20) NOT NULL,
-    
-    -- Метрики
-    sent_count INTEGER DEFAULT 0,
-    delivered_count INTEGER DEFAULT 0,
-    opened_count INTEGER DEFAULT 0,
-    clicked_count INTEGER DEFAULT 0,
-    failed_count INTEGER DEFAULT 0,
-    
-    -- Производительность
-    avg_delivery_time INTEGER DEFAULT 0, -- миллисекунды
-    
-    created_at TIMESTAMP DEFAULT NOW(),
-    
-    UNIQUE(date, hour, notification_type, channel)
-);
+  @Column({ default: true })
+  purchases: boolean;
 
--- Индексы для производительности
-CREATE INDEX idx_notifications_user_created ON notifications(user_id, created_at DESC);
-CREATE INDEX idx_notifications_status ON notifications(status, created_at) WHERE status IN ('pending', 'processing');
-CREATE INDEX idx_notifications_scheduled ON notifications(scheduled_at) WHERE scheduled_at IS NOT NULL AND status = 'pending';
-CREATE INDEX idx_notifications_expires ON notifications(expires_at) WHERE expires_at IS NOT NULL;
-CREATE INDEX idx_notifications_type ON notifications(type, created_at DESC);
-CREATE INDEX idx_notifications_group ON notifications(group_key, created_at DESC) WHERE group_key IS NOT NULL;
+  @Column({ default: true })
+  systemNotifications: boolean;
 
-CREATE INDEX idx_delivery_attempts_notification ON delivery_attempts(notification_id, attempt_number);
-CREATE INDEX idx_delivery_attempts_status ON delivery_attempts(status, created_at) WHERE status = 'pending';
-CREATE INDEX idx_delivery_attempts_channel ON delivery_attempts(channel, created_at DESC);
-
-CREATE INDEX idx_user_devices_user_active ON user_devices(user_id, is_active) WHERE is_active = TRUE;
-CREATE INDEX idx_user_devices_token ON user_devices(device_token);
-
-CREATE INDEX idx_user_subscriptions_user ON user_subscriptions(user_id, is_active) WHERE is_active = TRUE;
-CREATE INDEX idx_user_subscriptions_type ON user_subscriptions(subscription_type, target_id);
-
-CREATE INDEX idx_delivery_stats_date_type ON delivery_stats(date DESC, notification_type, channel);
-
--- Триггеры для автоматического обновления статистики
-CREATE OR REPLACE FUNCTION update_delivery_stats()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND OLD.status != NEW.status) THEN
-        INSERT INTO delivery_stats (date, hour, notification_type, channel, sent_count, delivered_count, opened_count, clicked_count, failed_count)
-        SELECT 
-            DATE(n.created_at),
-            EXTRACT(HOUR FROM n.created_at)::INTEGER,
-            n.type,
-            NEW.channel,
-            CASE WHEN NEW.status = 'sent' THEN 1 ELSE 0 END,
-            CASE WHEN NEW.status = 'delivered' THEN 1 ELSE 0 END,
-            CASE WHEN NEW.opened_at IS NOT NULL THEN 1 ELSE 0 END,
-            CASE WHEN NEW.clicked_at IS NOT NULL THEN 1 ELSE 0 END,
-            CASE WHEN NEW.status = 'failed' THEN 1 ELSE 0 END
-        FROM notifications n
-        WHERE n.id = NEW.notification_id
-        ON CONFLICT (date, hour, notification_type, channel)
-        DO UPDATE SET
-            sent_count = delivery_stats.sent_count + CASE WHEN NEW.status = 'sent' THEN 1 ELSE 0 END,
-            delivered_count = delivery_stats.delivered_count + CASE WHEN NEW.status = 'delivered' THEN 1 ELSE 0 END,
-            opened_count = delivery_stats.opened_count + CASE WHEN NEW.opened_at IS NOT NULL THEN 1 ELSE 0 END,
-            clicked_count = delivery_stats.clicked_count + CASE WHEN NEW.clicked_at IS NOT NULL THEN 1 ELSE 0 END,
-            failed_count = delivery_stats.failed_count + CASE WHEN NEW.status = 'failed' THEN 1 ELSE 0 END;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_update_delivery_stats
-    AFTER INSERT OR UPDATE ON delivery_attempts
-    FOR EACH ROW EXECUTE FUNCTION update_delivery_stats();
+  @UpdateDateColumn()
+  updatedAt: Date;
+}
 ```
 
-## User Flows (Пользовательские сценарии)
 
-### 1. Отправка уведомления
 
-```mermaid
-sequenceDiagram
-    participant MS as Microservice
-    participant K as Kafka
-    participant N as Notification Service
-    participant P as PostgreSQL
-    participant R as Redis
-    participant T as Template Engine
-    participant D as Delivery Channels
+### DTOs
 
-    MS->>K: Публикация события (UserRegistered)
-    K->>N: Получение события
-    N->>N: Определение типа уведомления
-    N->>P: Получение настроек пользователя
-    P->>N: Настройки уведомлений
-    
-    alt Уведомления включены
-        N->>P: Получение шаблона уведомления
-        P->>N: Шаблон для типа уведомления
-        N->>T: Рендеринг шаблона с данными
-        T->>N: Готовое содержимое
-        
-        N->>P: Создание записи уведомления
-        P->>N: ID уведомления
-        N->>R: Добавление в очередь доставки
-        
-        loop Для каждого канала доставки
-            N->>D: Отправка через канал
-            D->>N: Результат доставки
-            N->>P: Обновление статуса попытки
-        end
-        
-    else Уведомления отключены
-        N->>N: Пропуск отправки
-    end
+#### CreateNotificationDto
+```typescript
+export class CreateNotificationDto {
+  @IsUUID()
+  @ApiProperty()
+  userId: string;
+
+  @IsEnum(NotificationType)
+  @ApiProperty()
+  type: NotificationType;
+
+  @IsString()
+  @MaxLength(200)
+  @ApiProperty()
+  title: string;
+
+  @IsString()
+  @MaxLength(1000)
+  @ApiProperty()
+  message: string;
+
+  @IsEnum(NotificationPriority)
+  @IsOptional()
+  @ApiProperty()
+  priority?: NotificationPriority;
+
+  @IsArray()
+  @IsEnum(NotificationChannel, { each: true })
+  @IsOptional()
+  @ApiProperty()
+  channels?: NotificationChannel[];
+
+  @IsObject()
+  @IsOptional()
+  @ApiProperty()
+  metadata?: Record<string, any>;
+
+  @IsDateString()
+  @IsOptional()
+  @ApiProperty()
+  expiresAt?: Date;
+}
 ```
 
-### 2. Доставка push-уведомления
+#### GetNotificationsDto
+```typescript
+export class GetNotificationsDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  @Type(() => Number)
+  @ApiProperty({ default: 20 })
+  limit?: number = 20;
 
-```mermaid
-sequenceDiagram
-    participant N as Notification Service
-    participant P as PostgreSQL
-    participant FCM as Firebase FCM
-    participant APNS as Apple APNS
-    participant Device as User Device
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  @ApiProperty({ default: 0 })
+  offset?: number = 0;
 
-    N->>P: Получение устройств пользователя
-    P->>N: Список активных устройств
-    
-    loop Для каждого устройства
-        alt Android устройство
-            N->>FCM: Отправка push через FCM
-            FCM->>Device: Доставка уведомления
-            FCM->>N: Подтверждение доставки
-            
-        else iOS устройство
-            N->>APNS: Отправка push через APNS
-            APNS->>Device: Доставка уведомления
-            APNS->>N: Подтверждение доставки
-        end
-        
-        N->>P: Обновление статуса доставки
-        
-        alt Устройство недоступно
-            N->>P: Пометка устройства как неактивного
-        end
-    end
-    
-    Note over Device: Пользователь взаимодействует с уведомлением
-    Device->>N: Webhook о взаимодействии
-    N->>P: Обновление метрик взаимодействия
+  @IsOptional()
+  @IsEnum(NotificationType)
+  @ApiProperty()
+  type?: NotificationType;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  @ApiProperty()
+  isRead?: boolean;
+}
 ```
 
-### 3. Управление настройками уведомлений
+## Error Handling
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant F as Frontend
-    participant N as Notification Service
-    participant P as PostgreSQL
-    participant R as Redis
+### NestJS Exception Filters
 
-    U->>F: Открывает настройки уведомлений
-    F->>N: GET /settings
-    N->>P: Получение настроек пользователя
-    P->>N: Текущие настройки
-    N->>F: 200 OK + настройки
-    F->>U: Отображение настроек
-    
-    U->>F: Изменяет настройки типа уведомлений
-    F->>N: PUT /settings
-    N->>N: Валидация новых настроек
-    N->>P: Обновление настроек в БД
-    P->>N: Подтверждение обновления
-    N->>R: Инвалидация кэша настроек
-    N->>F: 200 OK + обновленные настройки
-    F->>U: Подтверждение сохранения
-    
-    Note over U: Пользователь добавляет новое устройство
-    U->>F: Регистрирует push-токен
-    F->>N: POST /devices
-    N->>P: Сохранение информации об устройстве
-    P->>N: ID устройства
-    N->>F: 201 Created + данные устройства
-    F->>U: Подтверждение регистрации
+#### Custom Exceptions
+```typescript
+export class NotificationNotFoundException extends NotFoundException {
+  constructor(id: string) {
+    super(`Notification with ID ${id} not found`);
+  }
+}
+
+export class EmailDeliveryException extends BadRequestException {
+  constructor(error: string) {
+    super(`Email delivery failed: ${error}`);
+  }
+}
+
+export class PushNotificationException extends BadRequestException {
+  constructor(error: string) {
+    super(`Push notification failed: ${error}`);
+  }
+}
+
+export class NotificationSettingsNotFoundException extends NotFoundException {
+  constructor(userId: string) {
+    super(`Notification settings for user ${userId} not found`);
+  }
+}
 ```
 
-### 4. Обработка массовых уведомлений
+#### Global Exception Filter
+```typescript
+@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
-```mermaid
-sequenceDiagram
-    participant Admin as Admin
-    participant A as Admin Panel
-    participant N as Notification Service
-    participant P as PostgreSQL
-    participant Q as Queue System
-    participant W as Workers
+    const status = exception instanceof HttpException 
+      ? exception.getStatus() 
+      : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    Admin->>A: Создает массовую рассылку
-    A->>N: POST /internal/send/broadcast
-    N->>N: Валидация параметров рассылки
-    N->>P: Получение целевой аудитории
-    P->>N: Список пользователей
-    
-    N->>N: Разбивка на батчи (1000 пользователей)
-    
-    loop Для каждого батча
-        N->>Q: Добавление батча в очередь
-        Q->>W: Обработка батча воркером
-        W->>P: Создание уведомлений для батча
-        W->>Q: Добавление в очередь доставки
-    end
-    
-    N->>A: 202 Accepted + ID рассылки
-    A->>Admin: Подтверждение запуска рассылки
-    
-    Note over W: Параллельная обработка доставки
-    loop Воркеры доставки
-        W->>Q: Получение уведомлений из очереди
-        W->>W: Доставка через соответствующие каналы
-        W->>P: Обновление статистики доставки
-    end
-    
-    Note over Admin: Мониторинг прогресса
-    Admin->>A: Проверяет статус рассылки
-    A->>N: GET /admin/broadcasts/:id/stats
-    N->>P: Получение статистики рассылки
-    P->>N: Метрики доставки
-    N->>A: 200 OK + статистика
-    A->>Admin: Отображение прогресса
+    const message = exception instanceof HttpException
+      ? exception.getResponse()
+      : 'Internal server error';
+
+    this.logger.error(`${request.method} ${request.url}`, exception);
+
+    response.status(status).json({
+      statusCode: status,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      message,
+    });
+  }
+}
 ```
 
-Этот дизайн обеспечивает надежную, масштабируемую и гибкую систему уведомлений для российской игровой платформы с поддержкой всех популярных каналов доставки и соблюдением пользовательских предпочтений.
+### Validation
+
+#### Pipes
+```typescript
+@Injectable()
+export class NotificationValidationPipe implements PipeTransform {
+  transform(value: any, metadata: ArgumentMetadata) {
+    // Custom validation logic
+    return value;
+  }
+}
+```
+
+## Testing Strategy
+
+### Jest Configuration
+```typescript
+// jest.config.js
+module.exports = {
+  moduleFileExtensions: ['js', 'json', 'ts'],
+  rootDir: 'src',
+  testRegex: '.*\\.spec\\.ts$',
+  transform: {
+    '^.+\\.(t|j)s$': 'ts-jest',
+  },
+  collectCoverageFrom: [
+    '**/*.(t|j)s',
+    '!**/*.spec.ts',
+    '!**/node_modules/**',
+  ],
+  coverageDirectory: '../coverage',
+  testEnvironment: 'node',
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+};
+```
+
+### Unit Tests
+```typescript
+describe('NotificationService', () => {
+  let service: NotificationService;
+  let repository: Repository<Notification>;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        NotificationService,
+        {
+          provide: getRepositoryToken(Notification),
+          useClass: Repository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<NotificationService>(NotificationService);
+    repository = module.get<Repository<Notification>>(getRepositoryToken(Notification));
+  });
+
+  it('should create notification', async () => {
+    // Test implementation
+  });
+});
+```
+
+### Integration Tests
+```typescript
+describe('NotificationController (e2e)', () => {
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [NotificationModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
+
+  it('/notifications (POST)', () => {
+    return request(app.getHttpServer())
+      .post('/notifications')
+      .send(createNotificationDto)
+      .expect(201);
+  });
+});
+```
+
+### Mock Services
+```typescript
+export const mockEmailService = {
+  sendEmail: jest.fn(),
+  sendNotificationEmail: jest.fn(),
+};
+```
+
+## Performance & Scalability
+
+### Caching Strategy
+- Redis для кеширования настроек пользователей
+- Базовое кеширование для MVP
+
+### Database Optimization
+- Индексы на userId и createdAt
+- Базовая оптимизация для MVP
+
+## Security
+
+### Authentication & Authorization
+- JWT токены для аутентификации
+- Базовая авторизация для MVP

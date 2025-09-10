@@ -1,407 +1,178 @@
-# План реализации Game Catalog Service
+# Implementation Plan - Game Catalog Service
 
-## Задачи реализации
+- [ ] 1. Set up NestJS project structure and core interfaces
+  - Create NestJS project with TypeScript configuration
+  - Set up project structure: modules, controllers, services, entities, DTOs
+  - Configure ESLint, Prettier, and Jest testing framework
+  - Create base interfaces for Game and GameService
+  - _Requirements: 5.1, 5.2_
 
-- [ ] 1. Настройка проекта и базовой инфраструктуры
-  - Создать структуру проекта с модульной архитектурой
-  - Настроить TypeScript, ESLint, Prettier, Jest для тестирования
-  - Создать Dockerfile для development и production
-  - Настроить docker-compose с PostgreSQL, Elasticsearch, Redis для локальной разработки
-  - Создать базовые конфигурационные файлы (.env, tsconfig.json)
-  - Настроить базовый GitHub Actions workflow для CI
-  - _Требования: Все требования_
+- [ ] 2. Configure database and ORM setup
+  - Set up TypeORM with PostgreSQL connection
+  - Configure Redis for caching
+  - Create database configuration module
+  - Set up migration system and database connection utilities
+  - _Requirements: 5.1, 5.2_
 
-- [ ] 1.1. Завершение конфигурации окружения
-  - Настроить конфигурацию для всех сред (development, staging, production)
-  - Добавить валидацию переменных окружения при запуске
-  - Настроить подключения к Elasticsearch и Redis
-  - Добавить конфигурацию для S3-совместимого хранилища
-  - Настроить Kafka подключение для событий
-  - Создать скрипты для инициализации всех сервисов
-  - _Требования: 6.3, 9.1, 9.2, 9.3_
+- [ ] 3. Create core data models and DTOs
+- [ ] 3.1 Implement Game entity with TypeORM decorators
+  - Create Game entity with all required fields (id, title, description, price, etc.)
+  - Add TypeORM decorators and database constraints
+  - Implement validation using class-validator
+  - _Requirements: 1.1, 1.2, 2.1, 2.2_
 
-- [ ] 2. Создание схемы базы данных и миграций
-  - Создать TypeORM миграции для всех сущностей (games, categories, tags, screenshots, videos, discounts, game_translations, dlc, preorders, demos, editions, bundles, franchises)
-  - Настроить индексы для оптимизации производительности поиска
-  - Создать связующие таблицы для many-to-many отношений (game_categories, game_tags)
-  - Настроить полнотекстовый поиск в PostgreSQL с поддержкой русского языка
-  - Создать скрипты для инициализации базы данных
-  - _Требования: 1.1, 2.1, 6.1, 9.1, 9.2, 9.3_
+- [ ] 3.2 Create DTOs for API requests and responses
+  - Implement GetGamesDto with pagination parameters
+  - Create GameResponseDto for API responses
+  - Add SearchGamesDto for search functionality
+  - Implement validation pipes for all DTOs
+  - _Requirements: 1.1, 3.1, 4.1_
 
-- [ ] 2.1. Оптимизация базы данных и дополнительные миграции
-  - Добавить недостающие индексы для производительности (поиск по статусу, дате, цене)
-  - Создать составные индексы для сложных запросов
-  - Добавить ограничения целостности данных (foreign keys, check constraints)
-  - Реализовать партиционирование для больших таблиц (если необходимо)
-  - Настроить автоматическое обновление статистики PostgreSQL
-  - Создать процедуры для очистки устаревших данных
-  - _Требования: 9.1, 9.2, 9.3_
+- [ ] 4. Implement core business logic services
+- [ ] 4.1 Create GameService with CRUD operations
+  - Implement getAllGames method with pagination
+  - Create getGameById method with error handling
+  - Add business logic for game availability checks
+  - Write comprehensive unit tests for GameService
+  - _Requirements: 1.1, 1.2, 2.1, 4.1_
 
-- [ ] 3. Реализация базовых доменных моделей
-  - Создать интерфейсы и типы для Game, Category, Tag, Screenshot
-  - Реализовать доменные объекты с валидацией
-  - Создать value objects для Price, Rating, SystemRequirements
-  - Написать unit тесты для доменных моделей
-  - _Требования: 1.1, 1.2, 1.3, 3.1, 3.2_
+- [ ] 4.2 Implement SearchService for game search functionality
+  - Create searchGames method with PostgreSQL full-text search
+  - Implement pagination for search results
+  - Add error handling for empty search results
+  - Write unit tests for search functionality
+  - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 4. Завершение реализации репозиториев
+- [ ] 5. Create REST API controllers
+- [ ] 5.1 Implement GameController with HTTP endpoints
+  - Create GET /games endpoint with pagination
+  - Implement GET /games/:id endpoint for game details
+  - Add proper HTTP status codes and error responses
+  - Integrate Swagger documentation with decorators
+  - _Requirements: 1.1, 1.2, 2.1, 2.2, 4.1, 4.2_
 
+- [ ] 5.2 Add SearchController for search endpoints
+  - Create GET /games/search endpoint
+  - Implement query parameter validation
+  - Add proper error handling for search operations
+  - Document search API with Swagger
+  - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - Создать CategoryRepository, TagRepository, ScreenshotRepository, VideoRepository
-  - Реализовать DiscountRepository, DlcRepository, PreorderRepository
-  - Добавить BundleRepository, FranchiseRepository, DemoRepository
-  - Реализовать Redis адаптер для кэширования
-  - Написать integration тесты для репозиториев с использованием testcontainers
-  - _Требования: 2.1, 2.2, 6.1, 6.2, 9.1, 9.4_
+- [ ] 6. Implement caching and performance optimization
+  - Add Redis caching interceptor for frequently accessed games
+  - Implement cache invalidation strategies
+  - Optimize database queries with proper indexing
+  - Add performance monitoring and logging
+  - _Requirements: 5.3, 5.4_
 
-- [ ] 5. Создание DTO и валидации
-  - Создать CreateGameDto, UpdateGameDto с полной валидацией
-  - Реализовать SearchQueryDto с фильтрами и сортировкой
-  - Создать DTOs для всех новых функций (предзаказы, демо, бандлы, франшизы)
-  - Добавить валидацию файлов для медиа контента
-  - Написать unit тесты для валидации DTOs
-  - _Требования: 1.1, 1.2, 3.1, 3.3_
+- [ ] 7. Add middleware, guards, and interceptors
+- [ ] 7.1 Implement validation and error handling middleware
+  - Create global validation pipe for DTO validation
+  - Add global exception filter for consistent error responses
+  - Implement request logging interceptor
+  - _Requirements: All requirements_
 
-- [ ] 6. Завершение базовых сервисов
+- [ ] 7.2 Add caching interceptor and response transformation
+  - Implement cache interceptor for GET endpoints
+  - Create response transformation interceptor
+  - Add request timeout handling
+  - _Requirements: 5.3, 5.4_
 
-  - Завершить реализацию CategoryService и TagService
-  - Реализовать MediaService для работы с файлами
-  - Добавить недостающую бизнес-логику в GameService
-  - Написать unit и integration тесты для всех сервисов
-  - _Требования: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 3.3, 3.4_
+- [ ] 8. Write comprehensive tests
+- [ ] 8.1 Create unit tests for services and controllers
+  - Write unit tests for GameService with 100% coverage
+  - Create unit tests for SearchService
+  - Test all controller endpoints with mocked services
+  - _Requirements: All requirements_
 
-- [ ] 7. Базовая реализация системы поиска
+- [ ] 8.2 Implement integration and e2e tests
+  - Create integration tests for database operations
+  - Write e2e tests for complete API workflows
+  - Test error scenarios and edge cases
+  - Set up test database and data seeding
+  - _Requirements: All requirements_
 
+- [ ] 9. Configure Docker and deployment
+- [ ] 9.1 Create Docker configuration
+  - Write multi-stage Dockerfile for production
+  - Create docker-compose.yml for local development
+  - Configure environment variables and secrets
+  - _Requirements: 5.1, 5.2_
 
-  - Настроить Elasticsearch с русской морфологией
-  - Реализовать полнотекстовый поиск по названию, описанию, тегам
-  - Реализовать базовую фильтрацию по цене, тегам, категориям
-  - Реализовать базовую сортировку
-  - _Требования: 2.1, 2.2, 2.3, 2.4, 9.1_
+- [ ] 9.2 Add health checks and monitoring
+  - Implement /health endpoint for service monitoring
+  - Add database connection health checks
+  - Configure logging and metrics collection
+  - Create Kubernetes deployment manifests
+  - _Requirements: 5.1, 5.2, 5.4_
 
-- [ ] 8. Расширение системы поиска и фильтрации
-  - Базовый SearchService с Elasticsearch реализован
-  - Настроить Elasticsearch с русской морфологией и анализаторами
-  - Добавить автодополнение поисковых запросов с completion suggester
-  - Реализовать фильтрацию по рейтингу, дате выхода, статусу
-  - Реализовать сортировку по популярности, рейтингу, дате
-  - Добавить поиск по похожим играм (more like this)
-  - Реализовать кэширование результатов поиска в Redis
-  - Добавить поисковую аналитику и метрики
-  - Написать unit и integration тесты для всех поисковых функций
-  - _Требования: 2.1, 2.2, 2.3, 2.4, 9.1, 13.1, 13.2, 13.3_
+- [ ] 10. Production readiness and documentation
+  - Complete Swagger API documentation
+  - Add README with setup and deployment instructions
+  - Configure production environment variables
+  - Perform final testing and code review
+  - _Requirements: All requirements_
 
-- [ ] 9. Интеграция с Preorder Service
-  - Создать PreorderServiceClient для API вызовов
-  - Реализовать получение статуса предзаказов для отображения в каталоге
-  - Добавить обработку событий preorder.fulfilled для обновления статуса игр
-  - Реализовать перенаправление запросов на оформление предзаказов
-  - Написать integration тесты с mock Preorder Service
-  - _Требования: 21.1, 21.2, 21.3, 21.4, 21.5_
+## Technical Stack
 
-- [ ] 10. Реализация системы демо-версий
-  - Создан базовый DemoService с CRUD операциями
-  - Реализовать поддержку разных типов демо (временное, контентное, облачное)
-  - Добавить перенос прогресса из демо в полную версию
-  - Реализовать ограничения по времени и контенту
-  - Реализовать отслеживание конверсии демо в покупки
-  - Написать unit и integration тесты
-  - _Требования: 22.1, 22.2, 22.3, 22.4, 22.5_
+- **Framework**: NestJS with TypeScript
+- **Runtime**: Node.js 18+
+- **Database**: PostgreSQL 14+ (primary), Redis (cache)
+- **ORM**: TypeORM
+- **Message Queue**: Apache Kafka (future)
+- **Testing**: Jest + Supertest
+- **Documentation**: Swagger/OpenAPI (auto-generation)
+- **Containerization**: Docker + Kubernetes
 
-- [ ] 11. Реализация системы бандлов и наборов
-  - Создан базовый BundleService с CRUD операциями
-  - Реализовать динамический расчет скидок на основе уже купленных игр
-  - Добавить отображение экономии от покупки набора
-  - Реализовать проверку уже купленных игр в бандле
-  - Реализовать умные бандлы на основе AI рекомендаций
-  - Написать unit и integration тесты
-  - _Требования: 24.1, 24.2, 24.3, 24.4, 24.5_
+## API Endpoints
 
-- [ ] 12. Реализация системы франшиз
-  - Создан базовый FranchiseService с CRUD операциями
-  - Реализовать группировку игр по хронологии
-  - Реализовать уведомления подписчиков о новых играх
-  - Добавить прогрессивные скидки для бандлов франшизы
-  - Реализовать связи между оригиналами и ремастерами
-  - Написать unit и integration тесты
-  - _Требования: 29.1, 29.2, 29.3, 29.4, 29.5_
+```typescript
+GET    /games                      // List games with pagination (?page=1&limit=20)
+GET    /games/:id                  // Get game details by ID
+GET    /games/search               // Search games (?q=query&page=1&limit=20)
+GET    /health                     // Health check endpoint
+```
 
-- [ ] 13. Реализация системы изданий игр
-  - Создан базовый EditionService с CRUD операциями
-  - Реализовать сравнительную таблицу всех версий игры
-  - Добавить расчет доплаты при апгрейде между изданиями
-  - Реализовать отображение ограниченных изданий
-  - Написать unit и integration тесты
-  - _Требования: 28.1, 28.2, 28.3, 28.4, 28.5_
+## Database Schema
 
-- [ ] 14. Реализация системы DLC и дополнительного контента
-  - Создан базовый DlcService с CRUD операциями
-  - Реализовать проверку совместимости с изданиями игры
-  - Реализовать проверку зависимостей при покупке DLC
-  - Добавить управление сезонными пропусками
-  - Реализовать отображение экономии от сезонного пропуска
-  - Написать unit и integration тесты
-  - _Требования: 17.1, 17.2, 17.3, 17.4, 27.1, 27.2, 27.3, 27.4, 27.5_
+```sql
+CREATE TABLE games (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    short_description VARCHAR(500),
+    price DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'RUB',
+    genre VARCHAR(100),
+    developer VARCHAR(255),
+    publisher VARCHAR(255),
+    release_date DATE,
+    images TEXT[], -- Array of image URLs
+    system_requirements JSONB, -- System requirements object
+    available BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+CREATE INDEX idx_games_title_search ON games USING gin(to_tsvector('russian', title));
+CREATE INDEX idx_games_available ON games(available);
+CREATE INDEX idx_games_genre ON games(genre);
+CREATE INDEX idx_games_price ON games(price);
+```
 
-- [ ] 15. Реализация системы рекомендаций
-  - Создан базовый RecommendationService с поиском похожих игр
-  - Реализовать ML алгоритмы для персональных рекомендаций
-  - Добавить рекомендации на основе предпочтений пользователя
-  - Реализовать популярные и трендовые игры
-  - Написать unit и integration тесты
-  - _Требования: 7.1, 7.2, 7.3, 7.4_
+## Success Criteria
 
+### Functional Requirements:
+1. ✅ Users can browse game catalog with pagination
+2. ✅ Users can view detailed game information
+3. ✅ Users can search games by title
+4. ✅ API provides data to other microservices
 
-- [ ] 16. Реализация системы скидок и базовых промо-акций
-  - Создан базовый PromotionService с CRUD операциями для скидок
-  - Реализовать автоматическое применение скидок к ценам игр
-  - Реализовать временные скидки с автоматической активацией/деактивацией
-  - Добавить интеграцию с Notification Service для событий о скидках
-  - Реализовать региональные скидки для российского рынка
-  - Написать unit и integration тесты
-  - _Требования: 11.1, 11.2, 11.3, 11.4, 20.1, 20.2, 20.3, 20.4_
-
-- [ ] 17. Реализация системы модерации
-  - Создать ModerationService для проверки игр
-  - Реализовать очередь модерации с приоритизацией
-  - Добавить одобрение и отклонение игр с комментариями
-
-  - Реализовать автоматические проверки контента на соответствие российскому законодательству
-  - Написать unit и integration тесты
-  - _Требования: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 15.1, 15.2, 15.3, 15.4_
-
-- [ ] 18. Реализация базовой аналитики и интеграции с Analytics Service
-  - Создан базовый AnalyticsService с отслеживанием просмотров
-  - Реализовать сбор базовых метрик (просмотры, клики, поисковые запросы)
-  - Добавить публикацию событий в Analytics Service для детальной аналитики
-  - Реализовать простую статистику для разработчиков (просмотры, wishlist)
-  - Написать unit и integration тесты
-  - _Требования: 10.1, 10.2, 10.3, 10.4_
-
-- [ ] 19. Реализация загрузки и управления медиа контентом
-  - Создан полнофункциональный MediaService с S3 интеграцией
-  - Реализована загрузка файлов в S3-совместимое хранилище
-  - Добавлена валидация форматов и размеров файлов
-  - Реализована генерация thumbnails для изображений
-  - Написать unit и integration тесты
-  - _Требования: 3.3, 3.4_
-
-- [ ] 20. Реализация системы мультиязычности
-  - Создан базовый LocalizationService для управления переводами
-  - Реализовано хранение локализованного контента
-  - Добавить автоматическое определение языка пользователя
-  - Реализовать fallback на язык по умолчанию
-  - Написать unit и integration тесты
-  - _Требования: 13.1, 13.2, 13.3, 13.4, 18.1, 18.2, 18.3, 18.4_
-
-- [ ] 21. Реализация интеграции с внешними источниками
-  - Создан базовый SteamApiService с mock данными
-  - Реализовать полную интеграцию со Steam API
-  - Реализовать импорт игр из внешних источников
-  - Добавить синхронизацию метаданных и цен
-  - Реализовать обработку недоступности внешних сервисов
-  - Написать integration тесты с моками внешних API
-  - _Требования: 12.1, 12.2, 12.3, 12.4_
-
-- [ ] 22. Реализация системы версионирования игр
-  - Создать VersionService для управления версиями игр
-  - Реализовать создание новых релизов
-  - Добавить историю обновлений
-  - Реализовать уведомления об обновлениях
-  - Написать unit и integration тесты
-  - _Требования: 14.1, 14.2, 14.3, 14.4, 23.1, 23.2, 23.3, 23.4, 23.5, 30.1, 30.2, 30.3, 30.4, 30.5_
-
-- [ ] 23. Реализация системы системных требований
-  - Создать RequirementsService для управления системными требованиями
-  - Реализовать хранение требований для разных платформ
-  - Добавить проверку совместимости с конфигурацией пользователя
-  - Реализовать предупреждения о несовместимости
-  - Написать unit и integration тесты
-  - _Требования: 19.1, 19.2, 19.3, 19.4_
-
-- [ ] 24. Интеграция с Game Keys Service
-  - Создать GameKeysServiceClient для API вызовов
-  - Реализовать проверку поддержки активации ключей для отображения в каталоге
-  - Добавить перенаправление пользователей в Game Keys Service для активации
-  - Обработать события key.activated для обновления статистики игр
-  - Написать integration тесты с mock Game Keys Service
-  - _Требования: 25.1, 25.2, 25.3, 25.4, 25.5_
-
-- [ ] 25. Интеграция с Greenlight Service
-  - Создать GreenlightServiceClient для API вызовов
-  - Реализовать отправку игр на голосование в Greenlight Service
-  - Добавить получение и отображение статуса "Greenlight Graduate" в каталоге
-  - Обработать события greenlight.approved/rejected для обновления статуса игр
-  - Написать integration тесты с mock Greenlight Service
-  - _Требования: 26.1, 26.2, 26.3, 26.4, 26.5_
-
-- [ ] 26. Базовые REST API контроллеры
-
-
-  - Создать основные контроллеры для всех модулей
-  - Реализовать базовые CRUD эндпоинты для игр
-  - Добавить базовую валидацию входящих данных
-  - Реализовать базовый поисковый эндпоинт
-  - _Требования: 1.1, 2.1, 3.1, 4.1, 6.1, 6.4_
-
-- [ ] 27. Завершение REST API контроллеров
-  - Добавить недостающие эндпоинты для модерации (approve, reject, queue)
-  - Реализовать эндпоинты для поиска с автодополнением
-  - Добавить эндпоинты для получения похожих игр
-  - Реализовать полную валидацию входящих данных и обработку ошибок
-  - Добавить rate limiting и CORS настройки
-  - Написать integration тесты для всех новых эндпоинтов
-  - _Требования: 1.1, 2.1, 3.1, 4.1, 6.1, 6.4_
-
-- [ ] 27.1. Реализация аутентификации и авторизации
-  - JWT стратегия аутентификации реализована в User Service
-  - Роли и права доступа (developer, admin, moderator) реализованы в User Service
-  - Middleware для проверки прав доступа реализован в User Service
-  - Защита от CSRF атак реализована в User Service
-  - Логирование попыток доступа и безопасности реализовано в User Service
-  - Тесты для всех сценариев аутентификации написаны в User Service
-  - _Требования: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4_
-  - **Примечание:** Аутентификация и авторизация полностью реализованы в User Service
-
-- [ ] 28. Реализация системы событий и интеграции
-  - Создан базовый EventPublisherService с логированием
-  - Настроить интеграцию с Apache Kafka
-  - Реализовать события GamePublished, GameUpdated, GameViewed, PreorderCreated, DemoPlayed
-  - Добавить retry механизм для недоставленных событий
-  - Написать integration тесты для событий
-  - _Требования: 6.3, 10.2, 11.4, 14.2, 21-30 (интеграция с другими сервисами)_
-
-- [ ] 29. Завершение системы кэширования
-  - Настроить Redis подключение и конфигурацию
-  - Реализовать кэширование результатов поиска с TTL
-  - Добавить кэширование каталога игр и пагинации
-  - Реализовать кэширование детальной информации об играх
-  - Добавить кэширование для предзаказов, демо, бандлов
-  - Реализовать умную инвалидацию кэша при обновлениях
-  - Добавить метрики производительности кэша
-  - Написать тесты для всех стратегий кэширования
-  - _Требования: 9.1, 9.4, 2.1_
-
-- [ ] 30. Реализация системы мониторинга и метрик
-  - Настроить Prometheus метрики для производительности API
-  - Добавить health check эндпоинты для всех зависимостей (PostgreSQL, Elasticsearch, Redis)
-  - Реализовать экспорт метрик поиска, просмотров и операций CRUD
-  - Добавить метрики использования кэша и производительности
-  - Настроить логирование структурированных логов
-  - Реализовать трассировку запросов для отладки
-  - Написать тесты для health check эндпоинтов
-  - _Требования: 9.1, 9.2, 9.3_
-
-- [ ] 31. Создание API документации
-  - Создать OpenAPI 3.0 спецификацию для всех эндпоинтов
-  - Настроить автоматическую генерацию документации с Swagger
-  - Добавить примеры запросов и ответов
-  - Создать SDK для интеграции с другими сервисами
-  - Написать руководство по интеграции для разработчиков
-  - _Требования: 6.1, 6.4_
-
-- [ ] 32. Написание comprehensive тестов
-  - Создать unit тесты для всех сервисов (покрытие 90%+)
-  - Написать integration тесты для всех API эндпоинтов
-  - Создать e2e тесты для основных пользовательских сценариев
-  - Настроить тестирование с testcontainers для PostgreSQL и Elasticsearch
-  - Создать тесты производительности для поиска и каталога
-  - Добавить тесты для Redis кэширования
-  - Создать mock тесты для внешних интеграций (Steam API)
-  - _Требования: Все требования_
-
-- [ ] 33. Написание нагрузочных тестов
-  - Создать k6 скрипты для нагрузочного тестирования поиска
-  - Реализовать тесты для 10,000 одновременных запросов каталога
-  - Добавить тесты производительности Elasticsearch
-  - Настроить stress тестирование с graceful degradation
-  - Создать отчеты по производительности
-  - _Требования: 9.1, 9.2, 9.3_
-
-- [ ] 34. Настройка CI/CD пайплайна
-  - Расширить GitHub Actions workflow для всех модулей
-  - Добавить автоматическую проверку покрытия кода (90%+)
-  - Настроить автоматическую сборку и push Docker образов
-  - Настроить автоматический деплой в staging через Docker
-  - Реализовать blue-green deployment для production
-  - Добавить автоматические security сканы Docker образов
-  - _Требования: Все требования_
-
-- [ ] 35. Оптимизация Docker и настройка Kubernetes
-  - Оптимизировать Dockerfile для production (multi-stage build)
-  - Настроить Kubernetes deployment и service манифесты
-  - Добавить HorizontalPodAutoscaler для автомасштабирования
-  - Настроить ConfigMap и Secret для конфигурации
-  - Создать helm chart для упрощения деплоя
-  - Настроить health checks и readiness probes
-  - _Требования: 9.2, 9.3_
-
-- [ ] 36. Реализация системы резервного копирования
-  - Настроить автоматические backup PostgreSQL и Elasticsearch
-  - Реализовать процедуры восстановления данных
-  - Добавить проверку целостности резервных копий
-  - Настроить мониторинг процессов backup
-  - Протестировать процедуры disaster recovery
-  - _Требования: 16.1, 16.2, 16.3, 16.4_
-
-- [ ] 37. Финальное интеграционное тестирование
-  - Провести end-to-end тестирование всех пользовательских сценариев
-  - Выполнить интеграционное тестирование с другими сервисами
-  - Провести нагрузочное тестирование всех новых эндпоинтов
-  - Выполнить тестирование совместимости старых и новых функций
-  - Создать финальный отчет о готовности к production
-  - _Требования: Все требования (1-30)_- [ ] 
-38. Реализация системы статусов жизненного цикла игр
-  - Создать enum GameLifecycleStatus с валидацией переходов между статусами
-  - Реализовать GameLifecycleService для управления статусами
-  - Добавить API эндпоинты для получения и обновления статуса игры
-  - Реализовать автоматические уведомления при смене статуса через события
-  - Добавить валидацию разрешенных переходов статусов (alpha → beta → early_access → released)
-  - Создать roadmap функциональность для early access игр
-  - Написать unit и integration тесты для системы статусов
-  - _Требования: 31.1, 31.2, 31.3, 31.4, 31.5_
-
-- [ ] 39. Расширенная система промо-акций и скидок
-  - Создать модели данных для промо-акций (PromotionInfo, сезонные акции)
-  - Реализовать PromotionService для управления скидками и акциями
-  - Добавить API эндпоинты для создания и управления промо-акциями (админ)
-  - Реализовать автоматическое применение скидок к ценам игр
-  - Добавить логику выбора наиболее выгодной скидки при наложении нескольких
-  - Создать систему автоматического окончания акций по времени
-  - Реализовать специальные метки для участвующих в акциях игр
-  - Написать unit и integration тесты для системы промо-акций
-  - _Требования: 32.1, 32.2, 32.3, 32.4, 32.5_
-
-- [ ] 40. Интеграция с Coupon Service
-  - Создать CouponServiceClient для API вызовов
-  - Реализовать получение применимых купонов для игр из Coupon Service
-  - Добавить API эндпоинты для проверки и применения купонов
-  - Реализовать отображение потенциальной экономии от купонов в каталоге
-  - Добавить обработку ошибок при недоступности Coupon Service
-  - Реализовать кэширование информации о купонах с коротким TTL
-  - Написать integration тесты с mock Coupon Service
-  - _Требования: 33.1, 33.2, 33.3, 33.4, 33.5_
-
-- [ ] 41. Обновление схемы базы данных для новых функций
-
-
-
-  - Создать миграции для добавления поля lifecycle_status в таблицу games
-  - Создать таблицы для промо-акций (promotions, game_promotions)
-  - Добавить индексы для оптимизации запросов по статусам и акциям
-  - Создать таблицу game_roadmaps для early access игр
-  - Удалить устаревшие таблицы для вынесенного функционала (preorders, greenlight)
-  - Обновить существующие индексы для новых полей
-  - Написать тесты для всех миграций
-  - _Требования: 31.1, 32.1, 33.1_
-
-- [ ] 42. Обновление поиска и фильтрации для новых функций
-  - Добавить фильтрацию по статусу жизненного цикла игры
-  - Реализовать поиск игр с активными промо-акциями
-  - Добавить сортировку по размеру скидки
-  - Обновить Elasticsearch mapping для новых полей
-  - Реализовать фильтрацию early access игр с roadmap
-  - Добавить поиск по типу промо-акции (сезонная, flash, weekend)
-  - Написать тесты для новых фильтров и сортировок
-  - _Требования: 31.1, 32.1, 32.2_
+### Technical Requirements:
+1. ✅ API response time < 200ms
+2. ✅ Support for 1000+ games in catalog
+3. ✅ Proper pagination implementation
+4. ✅ Docker deployment ready
+5. ✅ Test coverage 100%
+6. ✅ Kubernetes deployment manifests
+7. ✅ Production-ready configuration
