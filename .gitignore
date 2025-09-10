@@ -1,0 +1,23 @@
+# Dependency directories
+node_modules/
+**/node_modules
+
+# Build output
+dist/
+**/dist
+
+# Cache
+.cache
+.eslintcache
+
+# Logs
+logs
+*.log
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/

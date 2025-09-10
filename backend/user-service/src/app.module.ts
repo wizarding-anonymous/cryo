@@ -1,0 +1,60 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { IntegrationsModule } from './integrations/integrations.module';
+
+@Module({
+  imports: [
+    // --- Global Config Module ---
+    // Loads environment variables from .env file and makes them available application-wide.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+
+    // --- TypeORM Module (PostgreSQL) ---
+    // Asynchronously configures the database connection using variables from ConfigService.
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('POSTGRES_HOST'),
+        port: parseInt(configService.get<string>('POSTGRES_PORT'), 10),
+        username: configService.get<string>('POSTGRES_USER'),
+        password: configService.get<string>('POSTGRES_PASSWORD'),
+        database: configService.get<string>('POSTGRES_DB'),
+        autoLoadEntities: true, // Automatically load all entities registered with forFeature
+        synchronize: true, // DEV only: automatically creates DB schema. Disable in production and use migrations.
+      }),
+    }),
+
+    // --- Cache Module (Redis) ---
+    // Asynchronously configures the Redis cache connection.
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        // Using dynamic import for cache-manager-redis-store to handle potential CJS/ESM module issues.
+        const { redisStore } = await import('cache-manager-redis-store');
+        return {
+          store: redisStore,
+          socket: {
+            host: configService.get('REDIS_HOST'),
+            port: parseInt(configService.get('REDIS_PORT'), 10),
+          },
+        };
+      },
+    }),
+
+    // --- Custom Modules ---
+    IntegrationsModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}

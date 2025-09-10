@@ -1,0 +1,61 @@
+version: '3.8'
+
+# This docker-compose file is for development and testing purposes.
+# It sets up the user-service application along with its dependencies:
+# a PostgreSQL database and a Redis cache.
+
+services:
+  # User Service Application
+  # Builds the service from the local Dockerfile.
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    networks:
+      - my-network
+
+  # PostgreSQL Database
+  # Uses the official PostgreSQL 15 image.
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_user_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - my-network
+
+  # Redis Cache
+  # Uses the official Redis 7 image.
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - my-network
+
+# Volumes for data persistence
+volumes:
+  postgres_data:
+  redis_data:
+
+# Network for inter-service communication
+networks:
+  my-network:
+    driver: bridge
