@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { TestAppModule } from './test-app.module';
 import { GlobalExceptionFilter } from '../src/common/filters/global-exception.filter';
 import { HttpAdapterHost } from '@nestjs/core';
 import { ResponseInterceptor } from '../src/common/interceptors/response.interceptor';
@@ -11,7 +11,7 @@ describe('Profile and Auth Flow (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
