@@ -1,0 +1,58 @@
+version: '3.8'
+
+# This docker-compose file is for local development and testing purposes.
+# It sets up the game-catalog-service application along with its dependencies:
+# a PostgreSQL database and a Redis cache.
+
+services:
+  # Game Catalog Service Application
+  game-catalog-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: game-catalog-service
+    ports:
+      - "3002:3002"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    networks:
+      - gcs-network # Using a specific network for this service stack
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_gcs_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5433:5432" # Exposing on 5433 to avoid conflict with other potential dbs
+    volumes:
+      - postgres_gcs_data:/var/lib/postgresql/data
+    networks:
+      - gcs-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: redis_gcs_cache
+    ports:
+      - "6380:6379" # Exposing on 6380 to avoid conflict
+    volumes:
+      - redis_gcs_data:/data
+    networks:
+      - gcs-network
+
+# Volumes for data persistence
+volumes:
+  postgres_gcs_data:
+  redis_gcs_data:
+
+# Network for inter-service communication
+networks:
+  gcs-network:
+    driver: bridge
