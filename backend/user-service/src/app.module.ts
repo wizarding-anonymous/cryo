@@ -5,6 +5,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
         password: configService.get<string>('POSTGRES_PASSWORD'),
         database: configService.get<string>('POSTGRES_DB'),
         autoLoadEntities: true, // Automatically load all entities registered with forFeature
-        synchronize: true, // DEV only: automatically creates DB schema. Disable in production and use migrations.
+        synchronize: false, // This is now handled by migrations
       }),
     }),
 
@@ -53,6 +54,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
 
     // --- Custom Modules ---
     IntegrationsModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
