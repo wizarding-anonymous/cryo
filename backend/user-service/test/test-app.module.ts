@@ -64,15 +64,7 @@ import { AppPrometheusModule } from '../src/common/prometheus/prometheus.module'
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    {
-      provide: CACHE_MANAGER,
-      useValue: {
-        get: jest.fn().mockResolvedValue(null),
-        set: jest.fn().mockResolvedValue(undefined),
-        del: jest.fn().mockResolvedValue(undefined),
-        reset: jest.fn().mockResolvedValue(undefined),
-      },
-    },
+
   ],
 })
 export class TestAppModule {}

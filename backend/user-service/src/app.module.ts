@@ -47,20 +47,19 @@ import { AppPrometheusModule } from './common/prometheus/prometheus.module';
     }),
 
     // --- Cache Module (Redis) ---
-    // Asynchronously configures the Redis cache connection.
+    // Asynchronously configures the Redis cache connection for cache-manager v5.
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        // Using dynamic import for cache-manager-redis-store to handle potential CJS/ESM module issues.
+        // The redisStore function is passed as the store factory.
+        // Options like host and port are passed at the top level and are used by NestJS to instantiate the store.
         const { redisStore } = await import('cache-manager-redis-store');
         return {
           store: redisStore,
-          socket: {
-            host: configService.get('REDIS_HOST'),
-            port: parseInt(configService.get('REDIS_PORT'), 10),
-          },
+          host: configService.get('REDIS_HOST'),
+          port: parseInt(configService.get('REDIS_PORT'), 10),
         };
       },
     }),

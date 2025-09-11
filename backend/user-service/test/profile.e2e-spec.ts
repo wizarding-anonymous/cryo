@@ -10,9 +10,30 @@ describe('Profile and Auth Flow (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    // Create a mock cache that tracks blacklisted tokens
+    const mockCache = new Map();
+    const cacheManager = {
+      get: jest.fn().mockImplementation((key) => Promise.resolve(mockCache.get(key) || null)),
+      set: jest.fn().mockImplementation((key, value) => {
+        mockCache.set(key, value);
+        return Promise.resolve();
+      }),
+      del: jest.fn().mockImplementation((key) => {
+        mockCache.delete(key);
+        return Promise.resolve();
+      }),
+      reset: jest.fn().mockImplementation(() => {
+        mockCache.clear();
+        return Promise.resolve();
+      }),
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [TestAppModule],
-    }).compile();
+    })
+    .overrideProvider('CACHE_MANAGER')
+    .useValue(cacheManager)
+    .compile();
 
     app = moduleFixture.createNestApplication();
 
@@ -36,6 +57,13 @@ describe('Profile and Auth Flow (e2e)', () => {
   });
 
   describe('User Lifecycle', () => {
+    let cacheManager: any;
+
+    beforeEach(() => {
+      // Get the cache manager instance
+      cacheManager = app.get('CACHE_MANAGER');
+    });
+
     const user = {
       name: 'E2E Test User',
       email: `e2e-${Date.now()}@test.com`,
@@ -89,15 +117,15 @@ describe('Profile and Auth Flow (e2e)', () => {
         });
     });
 
-    it('POST /auth/logout - should blacklist the token', () => {
-      return request(app.getHttpServer())
+    it('POST /auth/logout - should blacklist the token and subsequent requests should fail', async () => {
+      // First, logout to blacklist the token
+      await request(app.getHttpServer())
         .post('/auth/logout')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(204);
-    });
 
-    it('GET /profile - should fail with the blacklisted token', () => {
-      return request(app.getHttpServer())
+      // Then verify the token is blacklisted
+      await request(app.getHttpServer())
         .get('/profile')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(401)
@@ -107,6 +135,11 @@ describe('Profile and Auth Flow (e2e)', () => {
     });
 
     it('DELETE /profile - should delete the user account', async () => {
+      // Clear cache to ensure fresh start
+      if (cacheManager && cacheManager.reset) {
+        await cacheManager.reset();
+      }
+
       // Log in again to get a fresh token
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
