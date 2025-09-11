@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { IntegrationsModule } from './integrations/integrations.module';
@@ -10,6 +12,13 @@ import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
+    // --- Throttler Module for Rate Limiting ---
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 60, // 60 requests per minute
+      },
+    ]),
     // --- Global Config Module ---
     // Loads environment variables from .env file and makes them available application-wide.
     ConfigModule.forRoot({
@@ -59,6 +68,13 @@ import { AuthModule } from './auth/auth.module';
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Apply the ThrottlerGuard globally to all routes
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
