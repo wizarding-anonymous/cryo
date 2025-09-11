@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 
 interface SecurityEvent {
   userId: string;
-  type: 'LOGIN_SUCCESS' | 'LOGIN_FAILURE' | 'PASSWORD_CHANGE';
+  type:
+    | 'LOGIN_SUCCESS'
+    | 'LOGIN_FAILURE'
+    | 'PASSWORD_CHANGE'
+    | 'USER_REGISTRATION';
   ipAddress: string;
   timestamp: Date;
   details?: Record<string, any>;

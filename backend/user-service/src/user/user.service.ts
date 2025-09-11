@@ -3,14 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
-import { UpdateProfileDto } from './dto/update-profile.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { SecurityClient } from '../integrations/security/security.client';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly securityClient: SecurityClient,
   ) {}
 
   /**
@@ -39,7 +40,18 @@ export class UserService {
       email,
       password: hashedPassword,
     });
-    return this.userRepository.save(newUser);
+
+    const savedUser = await this.userRepository.save(newUser);
+
+    // Log a security event for the new user creation.
+    this.securityClient.logSecurityEvent({
+      userId: savedUser.id,
+      type: 'USER_REGISTRATION', // A custom type for this event
+      ipAddress: '::1', // Mock IP address for now
+      timestamp: new Date(),
+    });
+
+    return savedUser;
   }
 
   /**
@@ -61,25 +73,15 @@ export class UserService {
   }
 
   /**
-   * Updates a user's profile information.
-   * @param id - The ID of the user to update.
-   * @param updateProfileDto - The data to update.
-   * @returns The updated user.
+   * Deletes a user from the database.
+   * @param id - The ID of the user to delete.
+   * @returns A promise that resolves when the user is deleted.
    * @throws NotFoundException if the user does not exist.
    */
-  async updateProfile(
-    id: string,
-    updateProfileDto: UpdateProfileDto,
-  ): Promise<User> {
-    const userToUpdate = await this.userRepository.preload({
-      id: id,
-      ...updateProfileDto,
-    });
-
-    if (!userToUpdate) {
+  async delete(id: string): Promise<void> {
+    const result = await this.userRepository.delete(id);
+    if (result.affected === 0) {
       throw new NotFoundException(`Пользователь с ID ${id} не найден`);
     }
-
-    return this.userRepository.save(userToUpdate);
   }
 }

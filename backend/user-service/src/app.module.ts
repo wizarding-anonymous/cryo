@@ -9,6 +9,9 @@ import { AppService } from './app.service';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
+import { ProfileModule } from './profile/profile.module';
+import { HealthModule } from './health/health.module';
+import { AppPrometheusModule } from './common/prometheus/prometheus.module';
 
 @Module({
   imports: [
@@ -66,6 +69,9 @@ import { AuthModule } from './auth/auth.module';
     IntegrationsModule,
     UserModule,
     AuthModule,
+    ProfileModule,
+    HealthModule,
+    AppPrometheusModule,
   ],
   controllers: [AppController],
   providers: [

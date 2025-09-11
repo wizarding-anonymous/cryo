@@ -1,15 +1,20 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { UserService } from '../user/user.service';
 import { RegisterDto } from './dto/register.dto';
 import { User } from '../user/entities/user.entity';
+import { NotificationClient } from '../integrations/notification/notification.client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly notificationClient: NotificationClient,
   ) {}
 
   /**
@@ -31,6 +36,9 @@ export class AuthService {
 
     // The UserService is now responsible for hashing and creating the user.
     const newUser = await this.userService.create({ name, email, password });
+
+    // Send a welcome notification. This is a non-blocking call.
+    this.notificationClient.sendWelcomeNotification(newUser.id, newUser.email);
 
     // Generate tokens and log the user in
     const tokens = await this.generateTokens(newUser);
@@ -90,5 +98,21 @@ export class AuthService {
    */
   private async comparePassword(password: string, hash: string): Promise<boolean> {
     return bcrypt.compare(password, hash);
+  }
+
+  /**
+   * Logs a user out by blacklisting their JWT.
+   * @param accessToken The JWT to blacklist.
+   */
+  async logout(accessToken: string): Promise<void> {
+    const decoded = this.jwtService.decode(accessToken) as { exp: number };
+    if (!decoded) {
+      return; // Token is invalid, nothing to do
+    }
+    const ttl = decoded.exp * 1000 - Date.now();
+    if (ttl > 0) {
+      // Use the token as the key. 'jti' claim is often used for this, but this is simpler for MVP.
+      await this.cacheManager.set(accessToken, 'blacklisted', ttl);
+    }
   }
 }
