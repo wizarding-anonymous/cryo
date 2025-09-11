@@ -1,0 +1,71 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { HttpModule } from '@nestjs/axios';
+
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { DatabaseConfig } from './config/database.config';
+import { CacheConfig } from './config/cache.config';
+import { JwtConfig } from './config/jwt.config';
+import { ThrottlerConfig } from './config/throttler.config';
+import { envValidationSchema } from './config/env.validation';
+
+// Modules
+import { OrderModule } from './modules/order/order.module';
+import { PaymentModule } from './modules/payment/payment.module';
+import { HealthModule } from './modules/health/health.module';
+
+@Module({
+  imports: [
+    // Configuration
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+      envFilePath: ['.env.local', '.env'],
+    }),
+
+    // Database
+    TypeOrmModule.forRootAsync({
+      useClass: DatabaseConfig,
+    }),
+
+    // Cache
+    CacheModule.registerAsync({
+      useClass: CacheConfig,
+      isGlobal: true,
+    }),
+
+    // JWT
+    JwtModule.registerAsync({
+      useClass: JwtConfig,
+      global: true,
+    }),
+
+    // Passport
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+
+    // HTTP Client
+    HttpModule.register({
+      timeout: 5000,
+      maxRedirects: 5,
+    }),
+
+    // Rate limiting
+    ThrottlerModule.forRootAsync({
+      useClass: ThrottlerConfig,
+    }),
+
+    // Feature modules
+    OrderModule,
+    PaymentModule,
+    HealthModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}

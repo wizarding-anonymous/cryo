@@ -57,7 +57,10 @@ export class ProfileController {
   @Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete the authenticated user's account" })
-  @ApiResponse({ status: 204, description: 'User account successfully deleted.' })
+  @ApiResponse({
+    status: 204,
+    description: 'User account successfully deleted.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async deleteProfile(@Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;

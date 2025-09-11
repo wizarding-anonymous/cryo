@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: gaming-platform
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "user_service_db"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  JWT_EXPIRES_IN: "1h"

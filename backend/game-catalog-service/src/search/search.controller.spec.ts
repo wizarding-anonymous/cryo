@@ -1,10 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Reflector } from '@nestjs/core';
 import { SearchController } from './search.controller';
 import { SearchService } from './search.service';
 import { SearchGamesDto } from '../dto/search-games.dto';
 
 const mockSearchService = {
   searchGames: jest.fn(),
+};
+
+const mockCacheManager = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
 };
 
 describe('SearchController', () => {
@@ -19,6 +27,11 @@ describe('SearchController', () => {
           provide: SearchService,
           useValue: mockSearchService,
         },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
+        },
+        Reflector,
       ],
     }).compile();
 

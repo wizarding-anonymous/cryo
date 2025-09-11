@@ -13,7 +13,11 @@ describe('Profile and Auth Flow (e2e)', () => {
     // Create a mock cache that tracks blacklisted tokens
     const mockCache = new Map();
     const cacheManager = {
-      get: jest.fn().mockImplementation((key) => Promise.resolve(mockCache.get(key) || null)),
+      get: jest
+        .fn()
+        .mockImplementation((key) =>
+          Promise.resolve(mockCache.get(key) || null),
+        ),
       set: jest.fn().mockImplementation((key, value) => {
         mockCache.set(key, value);
         return Promise.resolve();
@@ -31,9 +35,9 @@ describe('Profile and Auth Flow (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [TestAppModule],
     })
-    .overrideProvider('CACHE_MANAGER')
-    .useValue(cacheManager)
-    .compile();
+      .overrideProvider('CACHE_MANAGER')
+      .useValue(cacheManager)
+      .compile();
 
     app = moduleFixture.createNestApplication();
 
@@ -90,7 +94,7 @@ describe('Profile and Auth Flow (e2e)', () => {
         .expect(200)
         .then((res) => {
           expect(res.body.data).toHaveProperty('accessToken');
-          accessToken = res.body.data.accessToken;
+          accessToken = res.body.data.accessToken as string;
         });
     });
 
@@ -130,14 +134,14 @@ describe('Profile and Auth Flow (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(401)
         .then((res) => {
-            expect(res.body.error.code).toEqual('UNAUTHENTICATED');
+          expect(res.body.error.code).toEqual('UNAUTHENTICATED');
         });
     });
 
     it('DELETE /profile - should delete the user account', async () => {
       // Clear cache to ensure fresh start
-      if (cacheManager && cacheManager.reset) {
-        await cacheManager.reset();
+      if (cacheManager && 'reset' in cacheManager) {
+        await (cacheManager.reset as () => Promise<void>)();
       }
 
       // Log in again to get a fresh token
@@ -145,7 +149,7 @@ describe('Profile and Auth Flow (e2e)', () => {
         .post('/auth/login')
         .send({ email: user.email, password: user.password });
 
-      const freshToken = loginRes.body.data.accessToken;
+      const freshToken = loginRes.body.data.accessToken as string;
 
       // Delete the account
       await request(app.getHttpServer())

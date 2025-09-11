@@ -59,13 +59,13 @@ describe('SearchService', () => {
       const searchGamesDto: SearchGamesDto = { page: 2, limit: 5 };
       (mockQueryBuilder.getManyAndCount as jest.Mock).mockResolvedValue([[], 0]);
 
+      // Reset mocks before this test
+      jest.clearAllMocks();
+
       await service.searchGames(searchGamesDto);
 
       expect(repository.createQueryBuilder).toHaveBeenCalledWith('game');
-      expect(mockQueryBuilder.where).not.toHaveBeenCalledWith(
-        expect.stringContaining('to_tsvector'),
-        expect.any(Object),
-      );
+      expect(mockQueryBuilder.where).not.toHaveBeenCalled();
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('game.available = :available', { available: true });
       expect(mockQueryBuilder.skip).toHaveBeenCalledWith(5);
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(5);

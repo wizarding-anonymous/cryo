@@ -41,7 +41,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       const token = authHeader.split(' ')[1];
       const isBlacklisted = await this.cacheManager.get(token);
       if (isBlacklisted) {
-        throw new UnauthorizedException('Токен недействителен (в черном списке)');
+        throw new UnauthorizedException(
+          'Токен недействителен (в черном списке)',
+        );
       }
     }
 

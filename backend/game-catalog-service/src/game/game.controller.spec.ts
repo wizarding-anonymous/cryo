@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Reflector } from '@nestjs/core';
 import { GameController } from './game.controller';
 import { GameService } from './game.service';
 import { CreateGameDto } from '../dto/create-game.dto';
@@ -14,6 +16,12 @@ const mockGameService = {
   deleteGame: jest.fn(),
 };
 
+const mockCacheManager = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+};
+
 describe('GameController', () => {
   let controller: GameController;
   let service: GameService;
@@ -26,6 +34,11 @@ describe('GameController', () => {
           provide: GameService,
           useValue: mockGameService,
         },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
+        },
+        Reflector,
       ],
     }).compile();
 

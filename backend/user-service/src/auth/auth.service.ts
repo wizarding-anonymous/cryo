@@ -38,7 +38,10 @@ export class AuthService {
     const newUser = await this.userService.create({ name, email, password });
 
     // Send a welcome notification. This is a non-blocking call.
-    this.notificationClient.sendWelcomeNotification(newUser.id, newUser.email);
+    void this.notificationClient.sendWelcomeNotification(
+      newUser.id,
+      newUser.email,
+    );
 
     // Generate tokens and log the user in
     const tokens = await this.generateTokens(newUser);
@@ -58,7 +61,10 @@ export class AuthService {
    * @param pass - The user's plain text password.
    * @returns The user object (without password) if validation is successful, otherwise null.
    */
-  async validateUser(email: string, pass: string): Promise<Omit<User, 'password'> | null> {
+  async validateUser(
+    email: string,
+    pass: string,
+  ): Promise<Omit<User, 'password'> | null> {
     const user = await this.userService.findByEmail(email);
     if (user && (await this.comparePassword(pass, user.password))) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -96,7 +102,10 @@ export class AuthService {
    * @param hash The hashed password to compare against.
    * @returns A promise that resolves to true if they match, false otherwise.
    */
-  private async comparePassword(password: string, hash: string): Promise<boolean> {
+  private async comparePassword(
+    password: string,
+    hash: string,
+  ): Promise<boolean> {
     return bcrypt.compare(password, hash);
   }
 
@@ -105,8 +114,8 @@ export class AuthService {
    * @param accessToken The JWT to blacklist.
    */
   async logout(accessToken: string): Promise<void> {
-    const decoded = this.jwtService.decode(accessToken) as { exp: number };
-    if (!decoded) {
+    const decoded = this.jwtService.decode(accessToken);
+    if (!decoded || !decoded.exp) {
       return; // Token is invalid, nothing to do
     }
     const ttl = decoded.exp * 1000 - Date.now();

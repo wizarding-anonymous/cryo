@@ -11,14 +11,14 @@ describe('AppController (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [TestAppModule],
     })
-    .overrideProvider('CACHE_MANAGER')
-    .useValue({
-      get: jest.fn().mockResolvedValue(null), // Always return null (not blacklisted)
-      set: jest.fn().mockResolvedValue(undefined),
-      del: jest.fn().mockResolvedValue(undefined),
-      reset: jest.fn().mockResolvedValue(undefined),
-    })
-    .compile();
+      .overrideProvider('CACHE_MANAGER')
+      .useValue({
+        get: jest.fn().mockResolvedValue(null), // Always return null (not blacklisted)
+        set: jest.fn().mockResolvedValue(undefined),
+        del: jest.fn().mockResolvedValue(undefined),
+        reset: jest.fn().mockResolvedValue(undefined),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();

@@ -53,19 +53,30 @@ describe('ProfileService', () => {
   describe('getProfile', () => {
     it('should return a user profile without the password', async () => {
       const userId = 'a-uuid';
-      const user = { id: userId, name: 'Test', email: 'test@example.com', password: 'hashed_password' };
+      const user = {
+        id: userId,
+        name: 'Test',
+        email: 'test@example.com',
+        password: 'hashed_password',
+      };
       mockUserService.findById.mockResolvedValue(user);
 
       const result = await service.getProfile(userId);
 
       expect(mockUserService.findById).toHaveBeenCalledWith(userId);
-      expect(result).toEqual({ id: userId, name: 'Test', email: 'test@example.com' });
+      expect(result).toEqual({
+        id: userId,
+        name: 'Test',
+        email: 'test@example.com',
+      });
       expect(result).not.toHaveProperty('password');
     });
 
     it('should throw NotFoundException if user not found', async () => {
       mockUserService.findById.mockResolvedValue(null);
-      await expect(service.getProfile('a-uuid')).rejects.toThrow(NotFoundException);
+      await expect(service.getProfile('a-uuid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -81,14 +92,19 @@ describe('ProfileService', () => {
 
       const result = await service.updateProfile(userId, updateDto);
 
-      expect(mockUserRepository.preload).toHaveBeenCalledWith({ id: userId, ...updateDto });
+      expect(mockUserRepository.preload).toHaveBeenCalledWith({
+        id: userId,
+        ...updateDto,
+      });
       expect(mockUserRepository.save).toHaveBeenCalledWith(userToUpdate);
       expect(result).not.toHaveProperty('password');
     });
 
     it('should throw NotFoundException if user to update is not found', async () => {
       mockUserRepository.preload.mockResolvedValue(null);
-      await expect(service.updateProfile('a-uuid', {})).rejects.toThrow(NotFoundException);
+      await expect(service.updateProfile('a-uuid', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

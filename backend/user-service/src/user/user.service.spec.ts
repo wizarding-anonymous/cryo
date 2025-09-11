@@ -52,7 +52,11 @@ describe('UserService', () => {
 
   describe('create', () => {
     it('should hash the password and create a new user', async () => {
-      const createUserDto = { name: 'Test', email: 'test@example.com', password: 'password' };
+      const createUserDto = {
+        name: 'Test',
+        email: 'test@example.com',
+        password: 'password',
+      };
       const hashedPassword = 'hashed_password';
       const userEntity = { ...createUserDto, password: hashedPassword };
       const savedUser = { id: 'a-uuid', ...userEntity };
@@ -64,7 +68,9 @@ describe('UserService', () => {
       const result = await service.create(createUserDto);
 
       expect(bcrypt.hash).toHaveBeenCalledWith(createUserDto.password, 10);
-      expect(mockUserRepository.create).toHaveBeenCalledWith(expect.objectContaining({ password: hashedPassword }));
+      expect(mockUserRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ password: hashedPassword }),
+      );
       expect(mockUserRepository.save).toHaveBeenCalledWith(userEntity);
       expect(mockSecurityClient.logSecurityEvent).toHaveBeenCalled();
       expect(result).toEqual(savedUser);
@@ -79,7 +85,9 @@ describe('UserService', () => {
 
       const result = await service.findByEmail(email);
 
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({ where: { email } });
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: { email },
+      });
       expect(result).toEqual(user);
     });
 

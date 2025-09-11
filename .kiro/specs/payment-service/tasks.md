@@ -6,7 +6,9 @@
 
 ## Tasks
 
-- [ ] 1. Настройка проекта и базовой инфраструктуры
+- [x] 1. Настройка проекта и базовой инфраструктуры
+
+
   - Создать новый проект с `nest new payment-service`
   - Установить зависимости: @nestjs/typeorm, @nestjs/jwt, @nestjs/passport, @nestjs/axios, @nestjs/cache-manager, class-validator, class-transformer
   - Настроить TypeScript, ESLint, Prettier, Jest (встроенные в NestJS)
@@ -14,6 +16,8 @@
   - Настроить docker-compose с PostgreSQL и Redis
   - Создать конфигурационные модули NestJS
   - _Requirements: Все требования_
+
+
 
 - [ ] 2. Настройка базы данных и кеширования
   - Настроить TypeORM модуль в NestJS с PostgreSQL

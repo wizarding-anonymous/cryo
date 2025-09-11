@@ -30,9 +30,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
     status: 201,
-    description: 'User successfully registered. Returns the user and access token.',
+    description:
+      'User successfully registered. Returns the user and access token.',
   })
-  @ApiResponse({ status: 409, description: 'User with this email already exists.' })
+  @ApiResponse({
+    status: 409,
+    description: 'User with this email already exists.',
+  })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
@@ -46,7 +50,10 @@ export class AuthController {
     description: 'User successfully logged in. Returns an access token.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async login(@Body() loginDto: LoginDto, @Request() req: { user: Omit<User, 'password'> }) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Request() req: { user: Omit<User, 'password'> },
+  ) {
     // loginDto is used for swagger documentation, req.user is populated by LocalStrategy
     return this.authService.login(req.user);
   }

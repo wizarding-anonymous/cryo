@@ -55,8 +55,17 @@ describe('AuthService', () => {
 
   describe('register', () => {
     it('should register a new user successfully and return a token', async () => {
-      const registerDto = { name: 'Test User', email: 'test@example.com', password: 'password123' };
-      const createdUser: User = { id: 'a-uuid', ...registerDto, createdAt: new Date(), updatedAt: new Date() };
+      const registerDto = {
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+      };
+      const createdUser: User = {
+        id: 'a-uuid',
+        ...registerDto,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       mockUserService.findByEmail.mockResolvedValue(null);
       mockUserService.create.mockResolvedValue(createdUser);
@@ -64,19 +73,32 @@ describe('AuthService', () => {
 
       const result = await service.register(registerDto);
 
-      expect(mockUserService.findByEmail).toHaveBeenCalledWith(registerDto.email);
+      expect(mockUserService.findByEmail).toHaveBeenCalledWith(
+        registerDto.email,
+      );
       expect(mockUserService.create).toHaveBeenCalledWith(registerDto);
-      expect(mockNotificationClient.sendWelcomeNotification).toHaveBeenCalledWith(createdUser.id, createdUser.email);
-      expect(mockJwtService.signAsync).toHaveBeenCalledWith({ sub: createdUser.id, email: createdUser.email });
+      expect(
+        mockNotificationClient.sendWelcomeNotification,
+      ).toHaveBeenCalledWith(createdUser.id, createdUser.email);
+      expect(mockJwtService.signAsync).toHaveBeenCalledWith({
+        sub: createdUser.id,
+        email: createdUser.email,
+      });
       expect(result).toHaveProperty('accessToken', 'mock_access_token');
       expect(result.user).not.toHaveProperty('password');
     });
 
     it('should throw a ConflictException if the email already exists', async () => {
-      const registerDto = { name: 'Test User', email: 'test@example.com', password: 'password123' };
+      const registerDto = {
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+      };
       mockUserService.findByEmail.mockResolvedValue({} as User); // Simulate user found
 
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -85,7 +107,14 @@ describe('AuthService', () => {
       const email = 'test@example.com';
       const plainPassword = 'password123';
       const hashedPassword = await bcrypt.hash(plainPassword, 10);
-      const user: User = { id: 'a-uuid', email, password: hashedPassword, name: 'Test User', createdAt: new Date(), updatedAt: new Date() };
+      const user: User = {
+        id: 'a-uuid',
+        email,
+        password: hashedPassword,
+        name: 'Test User',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       mockUserService.findByEmail.mockResolvedValue(user);
 
@@ -97,7 +126,10 @@ describe('AuthService', () => {
 
     it('should return null if the user is not found', async () => {
       mockUserService.findByEmail.mockResolvedValue(null);
-      const result = await service.validateUser('notfound@example.com', 'password123');
+      const result = await service.validateUser(
+        'notfound@example.com',
+        'password123',
+      );
       expect(result).toBeNull();
     });
 
@@ -106,7 +138,14 @@ describe('AuthService', () => {
       const plainPassword = 'password123';
       const wrongPassword = 'wrong_password';
       const hashedPassword = await bcrypt.hash(plainPassword, 10);
-      const user: User = { id: 'a-uuid', email, password: hashedPassword, name: 'Test User', createdAt: new Date(), updatedAt: new Date() };
+      const user: User = {
+        id: 'a-uuid',
+        email,
+        password: hashedPassword,
+        name: 'Test User',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       mockUserService.findByEmail.mockResolvedValue(user);
 
@@ -119,24 +158,28 @@ describe('AuthService', () => {
     it('should add the token to the cache blacklist with the correct TTL', async () => {
       const token = 'some.jwt.token';
       const now = Date.now();
-      const exp = (now / 1000) + 3600; // Expires in 1 hour
+      const exp = now / 1000 + 3600; // Expires in 1 hour
       const decoded = { exp };
       mockJwtService.decode.mockReturnValue(decoded);
 
       await service.logout(token);
 
       expect(mockJwtService.decode).toHaveBeenCalledWith(token);
-      const expectedTtl = (decoded.exp * 1000) - now;
+      const expectedTtl = decoded.exp * 1000 - now;
       // Check that the TTL is approximately correct
-      expect(mockCacheManager.set).toHaveBeenCalledWith(token, 'blacklisted', expect.any(Number));
-      const actualTtl = mockCacheManager.set.mock.calls[0][2];
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        token,
+        'blacklisted',
+        expect.any(Number),
+      );
+      const actualTtl = mockCacheManager.set.mock.calls[0][2] as number;
       expect(actualTtl).toBeGreaterThan(expectedTtl - 1000); // Allow for small delay
       expect(actualTtl).toBeLessThanOrEqual(expectedTtl);
     });
 
     it('should not add to cache if token is already expired', async () => {
       const token = 'some.jwt.token';
-      const exp = (Date.now() / 1000) - 3600; // Expired 1 hour ago
+      const exp = Date.now() / 1000 - 3600; // Expired 1 hour ago
       const decoded = { exp };
       mockJwtService.decode.mockReturnValue(decoded);
 

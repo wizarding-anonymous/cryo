@@ -1,0 +1,78 @@
+version: '3.8'
+
+# This docker-compose file is for development and testing purposes.
+# It sets up the payment-service application along with its dependencies:
+# PostgreSQL database and Redis cache.
+
+services:
+  # Payment Service Application
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: payment-service
+    ports:
+      - "3003:3003"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run start:dev
+    networks:
+      - payment-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_payment_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-payment_service}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - payment-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: redis_payment_cache
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - payment-network
+
+  # Redis Commander (Optional - for Redis GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8082:8081"
+    depends_on:
+      - redis
+    networks:
+      - payment-network
+
+# Volumes for data persistence
+volumes:
+  postgres_data:
+  redis_data:
+
+# Network for inter-service communication
+networks:
+  payment-network:
+    driver: bridge

@@ -44,7 +44,7 @@ export class UserService {
     const savedUser = await this.userRepository.save(newUser);
 
     // Log a security event for the new user creation.
-    this.securityClient.logSecurityEvent({
+    void this.securityClient.logSecurityEvent({
       userId: savedUser.id,
       type: 'USER_REGISTRATION', // A custom type for this event
       ipAddress: '::1', // Mock IP address for now

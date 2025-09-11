@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CacheModule, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from '../src/app.controller';
@@ -10,11 +10,15 @@ import { IntegrationsModule } from '../src/integrations/integrations.module';
 import { UserModule } from '../src/user/user.module';
 import { AuthModule } from '../src/auth/auth.module';
 import { ProfileModule } from '../src/profile/profile.module';
-import { HealthModule } from '../src/health/health.module';
+import { TestHealthModule } from './test-health.module';
 import { AppPrometheusModule } from '../src/common/prometheus/prometheus.module';
+import { TestConfigModule } from './test-config.module';
 
 @Module({
   imports: [
+    // --- Test Config Module (without startup validation) ---
+    TestConfigModule,
+    
     // --- Throttler Module for Rate Limiting ---
     ThrottlerModule.forRoot([
       {
@@ -22,15 +26,9 @@ import { AppPrometheusModule } from '../src/common/prometheus/prometheus.module'
         limit: 60, // 60 requests per minute
       },
     ]),
-    // --- Global Config Module ---
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env.test',
-    }),
 
     // --- TypeORM Module (PostgreSQL) ---
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
@@ -54,7 +52,7 @@ import { AppPrometheusModule } from '../src/common/prometheus/prometheus.module'
     UserModule,
     AuthModule,
     ProfileModule,
-    HealthModule,
+    TestHealthModule,
     AppPrometheusModule,
   ],
   controllers: [AppController],
@@ -64,7 +62,6 @@ import { AppPrometheusModule } from '../src/common/prometheus/prometheus.module'
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-
   ],
 })
 export class TestAppModule {}

@@ -20,10 +20,11 @@ export class ResponseInterceptor<T>
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<StandardResponse<T>> {
-    const statusCode = context.switchToHttp().getResponse().statusCode;
+    const response = context.switchToHttp().getResponse();
+    const statusCode = response.statusCode;
 
     return next.handle().pipe(
-      map((data) => ({
+      map((data: T) => ({
         statusCode,
         data,
       })),

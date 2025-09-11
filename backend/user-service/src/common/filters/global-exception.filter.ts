@@ -9,7 +9,7 @@ import {
 import { HttpAdapterHost } from '@nestjs/core';
 
 // A simple mapping from HTTP status to a custom error code string
-const getErrorCode = (status: number): string => {
+const getErrorCode = (status: HttpStatus): string => {
   switch (status) {
     case HttpStatus.BAD_REQUEST:
       return 'VALIDATION_ERROR';
@@ -42,14 +42,30 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    let exceptionResponse: any = isHttpException
+    const exceptionResponse = isHttpException
       ? exception.getResponse()
       : 'Internal server error';
 
     // For class-validator errors, the response is an object with a 'message' array
-    const errorMessage = Array.isArray(exceptionResponse.message)
-      ? exceptionResponse.message.join(', ')
-      : exceptionResponse.message || exceptionResponse;
+    let errorMessage: string;
+    if (
+      typeof exceptionResponse === 'object' &&
+      exceptionResponse !== null &&
+      'message' in exceptionResponse
+    ) {
+      const message = (exceptionResponse as { message: unknown }).message;
+      if (Array.isArray(message)) {
+        errorMessage = message.map(String).join(', ');
+      } else {
+        errorMessage =
+          typeof message === 'string' ? message : JSON.stringify(message);
+      }
+    } else {
+      errorMessage =
+        typeof exceptionResponse === 'string'
+          ? exceptionResponse
+          : JSON.stringify(exceptionResponse);
+    }
 
     this.logger.error(
       `[${httpStatus}] ${errorMessage}`,
@@ -60,9 +76,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       error: {
         code: getErrorCode(httpStatus),
         message: errorMessage,
-        details: Array.isArray(exceptionResponse.message)
-          ? { fields: exceptionResponse.message }
-          : {},
+        details: (() => {
+          if (
+            typeof exceptionResponse === 'object' &&
+            exceptionResponse !== null &&
+            'message' in exceptionResponse
+          ) {
+            const message = (exceptionResponse as { message: unknown }).message;
+            if (Array.isArray(message)) {
+              return { fields: message };
+            }
+          }
+          return {};
+        })(),
       },
     };
 

@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -12,54 +11,66 @@ import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { HealthModule } from './health/health.module';
 import { AppPrometheusModule } from './common/prometheus/prometheus.module';
+import { AppConfigModule } from './config/config.module';
+import { AppConfigService } from './config/config.service';
 
 @Module({
   imports: [
-    // --- Throttler Module for Rate Limiting ---
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minute
-        limit: 60, // 60 requests per minute
-      },
-    ]),
     // --- Global Config Module ---
-    // Loads environment variables from .env file and makes them available application-wide.
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
+    AppConfigModule,
+
+    // --- Throttler Module for Rate Limiting ---
+    ThrottlerModule.forRootAsync({
+      inject: [AppConfigService],
+      useFactory: (configService: AppConfigService) => [
+        {
+          ttl: configService.throttleConfig.ttl,
+          limit: configService.throttleConfig.limit,
+        },
+      ],
     }),
 
     // --- TypeORM Module (PostgreSQL) ---
-    // Asynchronously configures the database connection using variables from ConfigService.
+    // Asynchronously configures the database connection using variables from AppConfigService.
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('POSTGRES_HOST'),
-        port: parseInt(configService.get<string>('POSTGRES_PORT'), 10),
-        username: configService.get<string>('POSTGRES_USER'),
-        password: configService.get<string>('POSTGRES_PASSWORD'),
-        database: configService.get<string>('POSTGRES_DB'),
-        autoLoadEntities: true, // Automatically load all entities registered with forFeature
-        synchronize: false, // This is now handled by migrations
-      }),
+      inject: [AppConfigService],
+      useFactory: (configService: AppConfigService) => {
+        const dbConfig = configService.databaseConfig;
+        return {
+          type: 'postgres',
+          host: dbConfig.host,
+          port: dbConfig.port,
+          username: dbConfig.username,
+          password: dbConfig.password,
+          database: dbConfig.database,
+          autoLoadEntities: true, // Automatically load all entities registered with forFeature
+          synchronize: false, // This is now handled by migrations
+          extra: {
+            max: dbConfig.maxConnections,
+            connectionTimeoutMillis: dbConfig.connectionTimeout,
+          },
+        };
+      },
     }),
 
     // --- Cache Module (Redis) ---
     // Asynchronously configures the Redis cache connection for cache-manager v5.
     CacheModule.registerAsync({
       isGlobal: true,
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
+      inject: [AppConfigService],
+      useFactory: async (configService: AppConfigService) => {
         // The redisStore function is passed as the store factory.
         // Options like host and port are passed at the top level and are used by NestJS to instantiate the store.
         const { redisStore } = await import('cache-manager-redis-store');
+        const redisConfig = configService.redisConfig;
         return {
           store: redisStore,
-          host: configService.get('REDIS_HOST'),
-          port: parseInt(configService.get('REDIS_PORT'), 10),
+          host: redisConfig.host,
+          port: redisConfig.port,
+          password: redisConfig.password,
+          db: redisConfig.db,
+          retryDelayOnFailover: redisConfig.retryDelay,
+          maxRetriesPerRequest: redisConfig.maxRetries,
         };
       },
     }),
