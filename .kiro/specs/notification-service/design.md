@@ -40,6 +40,15 @@ graph TB
         EmailProvider[Russian Email Provider]
     end
     
+    subgraph "MVP Integration Services"
+        PaymentService[Payment Service]
+        SocialService[Social Service]
+        AchievementService[Achievement Service]
+        ReviewService[Review Service]
+        GameCatalogService[Game Catalog Service]
+        LibraryService[Library Service]
+    end
+    
     subgraph "Database Layer"
         PostgreSQL[(PostgreSQL 14+)]
         Redis[(Redis Cache)]
@@ -96,6 +105,22 @@ export class NotificationController {
   async createNotification(
     @Body() createDto: CreateNotificationDto
   ): Promise<NotificationDto>
+
+  @Post('webhook/payment')
+  @ApiOperation({ summary: 'Webhook для Payment Service' })
+  async handlePaymentEvent(@Body() eventDto: PaymentEventDto): Promise<void>
+
+  @Post('webhook/social')
+  @ApiOperation({ summary: 'Webhook для Social Service' })
+  async handleSocialEvent(@Body() eventDto: SocialEventDto): Promise<void>
+
+  @Post('webhook/achievement')
+  @ApiOperation({ summary: 'Webhook для Achievement Service' })
+  async handleAchievementEvent(@Body() eventDto: AchievementEventDto): Promise<void>
+
+  @Post('webhook/review')
+  @ApiOperation({ summary: 'Webhook для Review Service' })
+  async handleReviewEvent(@Body() eventDto: ReviewEventDto): Promise<void>
 
   @Put(':id/read')
   @ApiOperation({ summary: 'Отметить как прочитанное' })

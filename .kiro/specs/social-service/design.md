@@ -75,9 +75,11 @@ graph TB
         end
     end
     
-    subgraph "External Services (NestJS)"
+    subgraph "External MVP Services (NestJS)"
         UserService[User Service]
         NotificationService[Notification Service]
+        AchievementService[Achievement Service]
+        ReviewService[Review Service]
     end
     
     subgraph "Infrastructure"
@@ -121,8 +123,15 @@ graph TB
     CacheService --> Redis
     
     FriendsService --> UserService
+    FriendsService --> AchievementService
     MessagingService --> NotificationService
     StatusService --> UserService
+    
+    subgraph "MVP Integration Services"
+        AchievementService[Achievement Service]
+        NotificationService[Notification Service]
+        ReviewService[Review Service]
+    end
 ```
 
 ## Components and Interfaces
@@ -215,6 +224,11 @@ export class StatusController {
 ```typescript
 @Injectable()
 export class FriendsService {
+  constructor(
+    private achievementService: AchievementService,
+    private notificationService: NotificationService,
+  ) {}
+
   async sendFriendRequest(fromUserId: string, toUserId: string): Promise<Friendship>
   async acceptFriendRequest(requestId: string, userId: string): Promise<Friendship>
   async declineFriendRequest(requestId: string, userId: string): Promise<void>
@@ -223,6 +237,10 @@ export class FriendsService {
   async getFriendRequests(userId: string): Promise<Friendship[]>
   async checkFriendship(userId1: string, userId2: string): Promise<boolean>
   async searchUsers(query: string, currentUserId: string): Promise<UserSearchResult[]>
+  
+  // MVP Integration methods
+  async notifyFirstFriendAchievement(userId: string): Promise<void>
+  async getFriendsForAchievements(userId: string): Promise<string[]>
 }
 ```
 

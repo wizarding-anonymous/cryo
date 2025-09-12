@@ -26,9 +26,16 @@ graph TB
         PaymentService[Payment Service]
         OrderService[Order Service]
         PaymentProviderService[Payment Provider Service]
+        LibraryIntegrationService[Library Integration Service]
+        GameCatalogIntegrationService[Game Catalog Integration Service]
         AuthGuard[JWT Auth Guard]
         ValidationPipe[Validation Pipe]
         CacheInterceptor[Cache Interceptor]
+    end
+    
+    subgraph "External Services"
+        LibraryService[Library Service]
+        GameCatalogService[Game Catalog Service]
     end
     
     subgraph "Mock Payment Systems"
@@ -56,7 +63,11 @@ graph TB
     PaymentProviderService --> TBankMock
     PaymentService --> PostgreSQL
     PaymentService --> Redis
+    PaymentService --> LibraryIntegrationService
     OrderService --> PostgreSQL
+    OrderService --> GameCatalogIntegrationService
+    LibraryIntegrationService --> LibraryService
+    GameCatalogIntegrationService --> GameCatalogService
 ```
 
 ## NestJS Architecture
@@ -179,6 +190,16 @@ export class OrderController {
 - `getPaymentStatus(provider, externalId)` - Проверка статуса у провайдера
 - `handleWebhook(provider, data)` - Обработка webhook от провайдера
 
+#### LibraryIntegrationService
+- `addGameToLibrary(userId, gameId, orderId)` - Добавление игры в библиотеку пользователя
+- `checkLibraryServiceHealth()` - Проверка доступности Library Service
+- `retryAddGameToLibrary(userId, gameId, orderId)` - Повторная попытка добавления с retry логикой
+
+#### GameCatalogIntegrationService
+- `validateGame(gameId)` - Проверка существования и доступности игры
+- `getGameInfo(gameId)` - Получение информации об игре (название, цена)
+- `checkGameCatalogServiceHealth()` - Проверка доступности Game Catalog Service
+
 ## Data Models
 
 ### Order Entity
@@ -273,24 +294,130 @@ interface PaymentWebhookDto {
 
 ## Testing Strategy
 
-### Unit Tests
+### Unit Tests (Месяц 1-3)
 - OrderService методы (создание, получение, обновление статуса)
 - PaymentService методы (создание, обработка, подтверждение)
 - PaymentProviderService методы (mock провайдеры)
 - Валидация DTO классов с class-validator
 
-### Integration Tests
+### Integration Tests (Месяц 1-3)
 - REST API endpoints с supertest
 - Database операции с TypeORM
 - Mock платежные провайдеры
 - Webhook обработка
 
-### E2E Tests
+### E2E Tests (Месяц 1-3)
 - Полный цикл создания заказа и платежа
 - Обработка webhook от платежных систем
 - Сценарии ошибок и отмен
 
-### Test Coverage
-- Минимум 90% покрытие кода
-- Все критические пути покрыты тестами
-- Mock внешние зависимости
+### Integration Testing Strategy (Месяц 4)
+
+#### End-to-End Testing
+- Полный цикл покупки: выбор игры → создание заказа → платеж → добавление в библиотеку
+- Тестирование всех интеграций с Game Catalog Service и Library Service
+- Проверка работы всех российских платежных систем (Сбербанк, ЮMoney, Тинькофф)
+- Тестирование отказоустойчивости при недоступности внешних сервисов
+
+#### Load Testing Strategy (Месяц 4)
+- Нагрузочное тестирование на 1000+ одновременных платежей
+- Stress testing для операций создания и обработки заказов
+- Тестирование производительности PostgreSQL и Redis под нагрузкой
+- Проверка автомасштабирования при пиковых нагрузках (распродажи)
+
+#### Security Testing Strategy (Месяц 4)
+- Пентестинг всех платежных API эндпоинтов
+- Тестирование защиты от fraud и подозрительных транзакций
+- Проверка PCI DSS compliance для обработки платежных данных
+- Валидация безопасности webhook эндпоинтов
+- Тестирование защиты от повторных платежей и race conditions
+
+### Production Readiness Strategy (Месяц 4)
+
+#### Monitoring and Observability
+```typescript
+// Prometheus metrics для мониторинга
+@Injectable()
+export class PaymentMetricsService {
+  private readonly paymentCounter = new Counter({
+    name: 'payments_total',
+    help: 'Total number of payments',
+    labelNames: ['status', 'provider']
+  });
+
+  private readonly paymentDuration = new Histogram({
+    name: 'payment_duration_seconds',
+    help: 'Payment processing duration',
+    labelNames: ['provider']
+  });
+
+  recordPayment(status: string, provider: string) {
+    this.paymentCounter.inc({ status, provider });
+  }
+
+  recordPaymentDuration(provider: string, duration: number) {
+    this.paymentDuration.observe({ provider }, duration);
+  }
+}
+```
+
+#### Health Checks
+```typescript
+@Controller('health')
+export class HealthController {
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly libraryIntegrationService: LibraryIntegrationService,
+    private readonly gameCatalogIntegrationService: GameCatalogIntegrationService
+  ) {}
+
+  @Get()
+  async checkHealth() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      services: {
+        database: await this.checkDatabase(),
+        redis: await this.checkRedis(),
+        libraryService: await this.libraryIntegrationService.checkHealth(),
+        gameCatalogService: await this.gameCatalogIntegrationService.checkHealth()
+      }
+    };
+  }
+}
+```
+
+#### Error Handling and Alerting
+```typescript
+@Injectable()
+export class PaymentAlertService {
+  async sendCriticalAlert(error: PaymentError, context: any) {
+    // Отправка алертов в Slack/Email при критических ошибках платежей
+    await this.notificationService.sendAlert({
+      level: 'critical',
+      service: 'payment-service',
+      error: error.message,
+      context,
+      timestamp: new Date()
+    });
+  }
+
+  async sendPaymentFailureAlert(paymentId: string, reason: string) {
+    // Уведомление о неудачных платежах
+    await this.notificationService.sendAlert({
+      level: 'warning',
+      type: 'payment_failure',
+      paymentId,
+      reason,
+      timestamp: new Date()
+    });
+  }
+}
+```
+
+### Test Coverage Requirements
+- **Месяц 1-3**: Минимум 90% покрытие кода
+- **Месяц 4**: 100% покрытие критических путей платежей
+- Все интеграции покрыты тестами
+- Mock внешние зависимости для unit тестов
+- Реальные интеграции для E2E тестов
