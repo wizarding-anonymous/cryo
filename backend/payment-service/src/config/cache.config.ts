@@ -8,11 +8,19 @@ export class CacheConfig implements CacheOptionsFactory {
   constructor(private configService: ConfigService) {}
 
   createCacheOptions(): CacheModuleOptions {
+    const redisHost = this.configService.get<string>('REDIS_HOST');
+    const redisPort = this.configService.get<number>('REDIS_PORT');
+    const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
+    
+    console.log(`Redis config: ${redisHost}:${redisPort}`);
+    
     return {
       store: redisStore as any,
-      host: this.configService.get<string>('REDIS_HOST'),
-      port: this.configService.get<number>('REDIS_PORT'),
-      password: this.configService.get<string>('REDIS_PASSWORD'),
+      socket: {
+        host: redisHost,
+        port: redisPort,
+      },
+      password: redisPassword || undefined,
       ttl: 300, // 5 minutes default TTL
       max: 1000, // Maximum number of items in cache
     };

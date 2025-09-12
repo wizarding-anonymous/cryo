@@ -4,7 +4,6 @@ import { HttpModule } from '@nestjs/axios';
 import { HealthController } from './health.controller';
 import { GameCatalogIntegrationModule } from '../../integrations/game-catalog/game-catalog.module';
 import { LibraryIntegrationModule } from '../../integrations/library/library.module';
-import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 @Module({
   imports: [
@@ -12,9 +11,6 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
     HttpModule,
     GameCatalogIntegrationModule,
     LibraryIntegrationModule,
-    PrometheusModule.register({
-      controller: HealthController,
-    }),
   ],
   controllers: [HealthController],
 })

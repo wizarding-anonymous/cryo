@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LibraryIntegrationModule } from '../../integrations/library/library.module';
+import { MetricsModule } from '../../common/metrics/metrics.module';
 import { PaymentController } from './payment.controller';
 import { MockPaymentController } from './mock-payment.controller';
 import { WebhookController } from './webhook.controller';
@@ -9,28 +10,19 @@ import { Payment } from './entities/payment.entity';
 import { OrderModule } from '../order/order.module';
 import { PaymentProviderService } from './payment-provider.service';
 import { PaymentProviderFactory } from './payment-provider.factory';
-import { SberbankMockProvider } from './providers/sberbank.provider';
-import { YMoneyMockProvider } from './providers/ymoney.provider';
-import { TinkoffMockProvider } from './providers/tinkoff.provider';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Payment]),
     OrderModule,
     LibraryIntegrationModule,
+    MetricsModule,
   ],
   controllers: [PaymentController, MockPaymentController, WebhookController],
   providers: [
     PaymentService,
     PaymentProviderService,
     PaymentProviderFactory,
-    // The providers themselves are not directly injected anymore,
-    // but the factory needs them to be available in the DI container
-    // if they had dependencies. For now, they are simple classes.
-    // We list them here so NestJS is aware of them.
-    SberbankMockProvider,
-    YMoneyMockProvider,
-    TinkoffMockProvider,
   ],
   exports: [PaymentService],
 })
