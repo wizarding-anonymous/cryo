@@ -33,5 +33,5 @@ COPY --from=builder /usr/src/app/dist ./dist
 EXPOSE 3002
 
 # Command to run the application
-# Note: The entrypoint in dist is dist/main.js, not dist/src/main.js
-CMD ["node", "dist/main.js"]
+# Note: The entrypoint in dist is dist/src/main.js
+CMD ["node", "dist/src/main.js"]

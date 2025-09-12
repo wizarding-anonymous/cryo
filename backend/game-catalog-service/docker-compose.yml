@@ -17,7 +17,7 @@ services:
       - postgres
       - redis
     env_file:
-      - .env
+      - .env.docker
     networks:
       - gcs-network # Using a specific network for this service stack
 

@@ -53,26 +53,13 @@ import { AppConfigService } from './config/config.service';
       },
     }),
 
-    // --- Cache Module (Redis) ---
-    // Asynchronously configures the Redis cache connection for cache-manager v5.
-    CacheModule.registerAsync({
+    // --- Cache Module (Memory Store) ---
+    // Use memory store for cache-manager to avoid Redis compatibility issues
+    // Redis is still used directly for JWT blacklist and other operations
+    CacheModule.register({
       isGlobal: true,
-      inject: [AppConfigService],
-      useFactory: async (configService: AppConfigService) => {
-        // The redisStore function is passed as the store factory.
-        // Options like host and port are passed at the top level and are used by NestJS to instantiate the store.
-        const { redisStore } = await import('cache-manager-redis-store');
-        const redisConfig = configService.redisConfig;
-        return {
-          store: redisStore,
-          host: redisConfig.host,
-          port: redisConfig.port,
-          password: redisConfig.password,
-          db: redisConfig.db,
-          retryDelayOnFailover: redisConfig.retryDelay,
-          maxRetriesPerRequest: redisConfig.maxRetries,
-        };
-      },
+      ttl: 300, // 5 minutes default TTL
+      max: 1000, // Maximum number of items in cache
     }),
 
     // --- Custom Modules ---

@@ -189,68 +189,68 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import { MigrationInterface, QueryRunner, Table, TableIndex } from "typeorm";</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export class C</span></span>reateUserTable1757528167000 implements MigrationInterface {
-<span class="cstat-no" title="statement not covered" >    name = 'CreateUserTable1757528167000';</span>
+<span class="cstat-no" title="statement not covered" >  name = 'CreateUserTable1757528167000';</span>
 &nbsp;
-    public <span class="fstat-no" title="function not covered" >async </span>up(queryRunner: QueryRunner): Promise&lt;void&gt; {
-<span class="cstat-no" title="statement not covered" >        await queryRunner.createTable(</span>
-            new Table({
-                name: "users",
-                columns: [
-                    {
-                        name: "id",
-                        type: "uuid",
-                        isPrimary: true,
-                        isGenerated: true,
-                        generationStrategy: "uuid",
-                    },
-                    {
-                        name: "email",
-                        type: "varchar",
-                        isUnique: true,
-                        length: "255",
-                    },
-                    {
-                        name: "password",
-                        type: "varchar",
-                    },
-                    {
-                        name: "name",
-                        type: "varchar",
-                        length: "100",
-                    },
-                    {
-                        name: "created_at",
-                        type: "timestamp with time zone",
-                        default: "now()",
-                    },
-                    {
-                        name: "updated_at",
-                        type: "timestamp with time zone",
-                        default: "now()",
-                    },
-                ],
-            }),
-            true, // if not exist
-        );
+  public <span class="fstat-no" title="function not covered" >async </span>up(queryRunner: QueryRunner): Promise&lt;void&gt; {
+<span class="cstat-no" title="statement not covered" >    await queryRunner.createTable(</span>
+      new Table({
+        name: 'users',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            isGenerated: true,
+            generationStrategy: 'uuid',
+          },
+          {
+            name: 'email',
+            type: 'varchar',
+            isUnique: true,
+            length: '255',
+          },
+          {
+            name: 'password',
+            type: 'varchar',
+          },
+          {
+            name: 'name',
+            type: 'varchar',
+            length: '100',
+          },
+          {
+            name: 'created_at',
+            type: 'timestamp with time zone',
+            default: 'now()',
+          },
+          {
+            name: 'updated_at',
+            type: 'timestamp with time zone',
+            default: 'now()',
+          },
+        ],
+      }),
+      true, // if not exist
+    );
 &nbsp;
-        // Although isUnique in the column definition creates a unique constraint,
-        // creating a separate index is often good practice for performance.
-<span class="cstat-no" title="statement not covered" >        await queryRunner.createIndex(</span>
-            "users",
-            new TableIndex({
-                name: "IDX_USER_EMAIL",
-                columnNames: ["email"],
-                isUnique: true,
-            }),
-        );
-    }
+    // Although isUnique in the column definition creates a unique constraint,
+    // creating a separate index is often good practice for performance.
+<span class="cstat-no" title="statement not covered" >    await queryRunner.createIndex(</span>
+      'users',
+      new TableIndex({
+        name: 'IDX_USER_EMAIL',
+        columnNames: ['email'],
+        isUnique: true,
+      }),
+    );
+  }
 &nbsp;
-    public <span class="fstat-no" title="function not covered" >async </span>down(queryRunner: QueryRunner): Promise&lt;void&gt; {
-<span class="cstat-no" title="statement not covered" >        await queryRunner.dropTable("users");</span>
-    }
+  public <span class="fstat-no" title="function not covered" >async </span>down(queryRunner: QueryRunner): Promise&lt;void&gt; {
+<span class="cstat-no" title="statement not covered" >    await queryRunner.dropTable('users');</span>
+  }
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -259,7 +259,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-11T05:43:39.372Z
+                at 2025-09-12T13:43:04.021Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

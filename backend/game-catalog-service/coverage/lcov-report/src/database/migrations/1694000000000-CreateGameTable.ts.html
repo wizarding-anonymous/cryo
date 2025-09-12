@@ -15,41 +15,41 @@
         }
     </style>
 </head>
-
+    
 <body>
 <div class='wrapper'>
     <div class='pad1'>
         <h1><a href="../../../index.html">All files</a> / <a href="index.html">src/database/migrations</a> 1694000000000-CreateGameTable.ts</h1>
         <div class='clearfix'>
-
+            
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
                 <span class='fraction'>0/14</span>
             </div>
-
-
+        
+            
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
                 <span class='fraction'>0/0</span>
             </div>
-
-
+        
+            
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
                 <span class='fraction'>0/3</span>
             </div>
-
-
+        
+            
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
                 <span class='fraction'>0/14</span>
             </div>
-
-
+        
+            
         </div>
         <p class="quiet">
             Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
@@ -346,59 +346,59 @@
     // Insert sample data for testing
 <span class="cstat-no" title="statement not covered" >    await queryRunner.query(`</span>
       INSERT INTO "games" (
-        "title",
-        "description",
-        "shortDescription",
-        "price",
-        "currency",
-        "genre",
-        "developer",
-        "publisher",
-        "releaseDate",
-        "images",
-        "systemRequirements",
+        "title", 
+        "description", 
+        "shortDescription", 
+        "price", 
+        "currency", 
+        "genre", 
+        "developer", 
+        "publisher", 
+        "releaseDate", 
+        "images", 
+        "systemRequirements", 
         "available"
-      ) VALUES
+      ) VALUES 
       (
-        'Cyberpunk 2077',
-        'Cyberpunk 2077 — это приключенческая ролевая игра с открытым миром, действие которой происходит в Найт-Сити, мегаполисе, одержимом властью, гламуром и модификациями тела.',
-        'Приключенческая RPG в мире киберпанка',
-        2999.00,
-        'RUB',
-        'RPG',
-        'CD Projekt RED',
-        'CD Projekt',
-        '2020-12-10',
-        ARRAY['https://example.com/cyberpunk1.jpg', 'https://example.com/cyberpunk2.jpg'],
-        '{"minimum": "OS: Windows 10 64-bit, Processor: Intel Core i5-3570K or AMD FX-8310, Memory: 8 GB RAM", "recommended": "OS: Windows 10 64-bit, Processor: Intel Core i7-4790 or AMD Ryzen 3 3200G, Memory: 12 GB RAM"}',
+        'Cyberpunk 2077', 
+        'Cyberpunk 2077 — это приключенческая ролевая игра с открытым миром, действие которой происходит в Найт-Сити, мегаполисе, одержимом властью, гламуром и модификациями тела.', 
+        'Приключенческая RPG в мире киберпанка', 
+        2999.00, 
+        'RUB', 
+        'RPG', 
+        'CD Projekt RED', 
+        'CD Projekt', 
+        '2020-12-10', 
+        ARRAY['https://example.com/cyberpunk1.jpg', 'https://example.com/cyberpunk2.jpg'], 
+        '{"minimum": "OS: Windows 10 64-bit, Processor: Intel Core i5-3570K or AMD FX-8310, Memory: 8 GB RAM", "recommended": "OS: Windows 10 64-bit, Processor: Intel Core i7-4790 or AMD Ryzen 3 3200G, Memory: 12 GB RAM"}', 
         true
       ),
       (
-        'The Witcher 3: Wild Hunt',
-        'Ведьмак 3: Дикая Охота — это сюжетно-ориентированная ролевая игра с открытым миром, действие которой происходит в визуально потрясающей фэнтезийной вселенной.',
-        'Эпическая RPG в мире фэнтези',
-        1499.00,
-        'RUB',
-        'RPG',
-        'CD Projekt RED',
-        'CD Projekt',
-        '2015-05-19',
-        ARRAY['https://example.com/witcher1.jpg', 'https://example.com/witcher2.jpg'],
-        '{"minimum": "OS: Windows 7 64-bit, Processor: Intel CPU Core i5-2500K 3.3GHz, Memory: 6 GB RAM", "recommended": "OS: Windows 10 64-bit, Processor: Intel CPU Core i7 3770 3,4 GHz, Memory: 8 GB RAM"}',
+        'The Witcher 3: Wild Hunt', 
+        'Ведьмак 3: Дикая Охота — это сюжетно-ориентированная ролевая игра с открытым миром, действие которой происходит в визуально потрясающей фэнтезийной вселенной.', 
+        'Эпическая RPG в мире фэнтези', 
+        1499.00, 
+        'RUB', 
+        'RPG', 
+        'CD Projekt RED', 
+        'CD Projekt', 
+        '2015-05-19', 
+        ARRAY['https://example.com/witcher1.jpg', 'https://example.com/witcher2.jpg'], 
+        '{"minimum": "OS: Windows 7 64-bit, Processor: Intel CPU Core i5-2500K 3.3GHz, Memory: 6 GB RAM", "recommended": "OS: Windows 10 64-bit, Processor: Intel CPU Core i7 3770 3,4 GHz, Memory: 8 GB RAM"}', 
         true
       ),
       (
-        'Red Dead Redemption 2',
-        'Red Dead Redemption 2 — это эпическая история о жизни в Америке на заре современной эпохи.',
-        'Вестерн-экшен в открытом мире',
-        3499.00,
-        'RUB',
-        'Action',
-        'Rockstar Games',
-        'Rockstar Games',
-        '2019-11-05',
-        ARRAY['https://example.com/rdr1.jpg', 'https://example.com/rdr2.jpg'],
-        '{"minimum": "OS: Windows 7 SP1 64bit, Processor: Intel Core i5-2500K / AMD FX-6300, Memory: 8 GB RAM", "recommended": "OS: Windows 10 64bit, Processor: Intel Core i7-4770K / AMD Ryzen 5 1500X, Memory: 12 GB RAM"}',
+        'Red Dead Redemption 2', 
+        'Red Dead Redemption 2 — это эпическая история о жизни в Америке на заре современной эпохи.', 
+        'Вестерн-экшен в открытом мире', 
+        3499.00, 
+        'RUB', 
+        'Action', 
+        'Rockstar Games', 
+        'Rockstar Games', 
+        '2019-11-05', 
+        ARRAY['https://example.com/rdr1.jpg', 'https://example.com/rdr2.jpg'], 
+        '{"minimum": "OS: Windows 7 SP1 64bit, Processor: Intel Core i5-2500K / AMD FX-6300, Memory: 8 GB RAM", "recommended": "OS: Windows 10 64bit, Processor: Intel Core i7-4770K / AMD Ryzen 5 1500X, Memory: 12 GB RAM"}', 
         true
       )
     `);
@@ -418,7 +418,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-12T07:59:26.634Z
+                at 2025-09-12T13:33:23.895Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
@@ -430,3 +430,4 @@
         <script src="../../../block-navigation.js"></script>
     </body>
 </html>
+    

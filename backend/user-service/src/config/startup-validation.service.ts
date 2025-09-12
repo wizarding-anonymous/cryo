@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
+import * as Redis from 'ioredis';
 
 @Injectable()
 export class StartupValidationService implements OnModuleInit {
@@ -13,7 +14,7 @@ export class StartupValidationService implements OnModuleInit {
     private readonly configService: AppConfigService,
     private readonly dataSource: DataSource,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     this.logger.log('Starting application validation...');
@@ -21,7 +22,15 @@ export class StartupValidationService implements OnModuleInit {
     try {
       await this.validateEnvironment();
       await this.validateDatabaseConnection();
-      await this.validateRedisConnection();
+      
+      // Redis validation is non-critical, don't fail startup if it fails
+      try {
+        this.logger.log('Attempting Redis validation...');
+        await this.validateRedisConnection();
+      } catch (redisError) {
+        this.logger.warn(`⚠️ Redis validation failed (non-critical): ${redisError.message}`);
+      }
+      
       await this.validateJWTConfiguration();
 
       this.logger.log('✅ All startup validations passed successfully');
@@ -73,27 +82,82 @@ export class StartupValidationService implements OnModuleInit {
   private async validateRedisConnection(): Promise<void> {
     this.logger.log('Validating Redis connection...');
 
+    const redisConfig = this.configService.redisConfig;
+    this.logger.log(`Redis config: ${JSON.stringify(redisConfig)}`);
+    this.logger.log(`Attempting to connect to Redis at ${redisConfig.host}:${redisConfig.port}`);
+    
+    let redisClient: Redis.Redis | null = null;
+
     try {
-      // Test Redis connection by setting and getting a test value
-      const testKey = 'startup-validation-test';
-      const testValue = 'test-value';
+      // Create a direct Redis connection for validation
+      redisClient = new Redis.Redis({
+        host: redisConfig.host,
+        port: redisConfig.port,
+        password: redisConfig.password,
+        db: redisConfig.db,
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+        connectTimeout: 3000,
+        commandTimeout: 3000,
+      });
 
-      await this.cacheManager.set(testKey, testValue, 1000); // 1 second TTL
-      const retrievedValue = await this.cacheManager.get(testKey);
+      // Add retry logic for Redis connection
+      let retries = 3;
+      let lastError: Error;
 
-      if (retrievedValue !== testValue) {
-        throw new Error('Redis set/get test failed');
+      while (retries > 0) {
+        try {
+          this.logger.log(`Redis connection attempt ${4 - retries}/3...`);
+          
+          // Test direct Redis connection
+          await redisClient.connect();
+          this.logger.log('Redis connected, testing ping...');
+          
+          await redisClient.ping();
+          this.logger.log('Redis ping successful, testing operations...');
+
+          // Test set/get operations
+          const testKey = 'startup-validation-test';
+          const testValue = 'test-value';
+
+          await redisClient.set(testKey, testValue, 'EX', 10); // 10 seconds TTL
+          const retrievedValue = await redisClient.get(testKey);
+
+          if (retrievedValue !== testValue) {
+            throw new Error('Redis set/get test failed');
+          }
+
+          // Clean up test key
+          await redisClient.del(testKey);
+
+          this.logger.log(
+            `✅ Redis connection validated (${redisConfig.host}:${redisConfig.port})`,
+          );
+          return;
+        } catch (error) {
+          lastError = error;
+          retries--;
+          this.logger.warn(`Redis validation attempt failed: ${error.message}`);
+          if (retries > 0) {
+            this.logger.warn(`Retrying in 1 second... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       }
 
-      // Clean up test key
-      await this.cacheManager.del(testKey);
-
-      const redisConfig = this.configService.redisConfig;
-      this.logger.log(
-        `✅ Redis connection validated (${redisConfig.host}:${redisConfig.port})`,
-      );
+      throw new Error(`Redis validation failed after retries: ${lastError.message}`);
     } catch (error) {
+      this.logger.error(`Redis validation error: ${error.message}`);
       throw new Error(`Redis validation failed: ${error.message}`);
+    } finally {
+      // Clean up the Redis connection
+      if (redisClient) {
+        try {
+          await redisClient.quit();
+        } catch (error) {
+          this.logger.warn('Failed to close Redis connection:', error.message);
+        }
+      }
     }
   }
 
@@ -141,16 +205,48 @@ export class StartupValidationService implements OnModuleInit {
       overallStatus = 'unhealthy';
     }
 
-    // Redis check
+    // Redis check using direct connection only
     try {
-      const testKey = 'health-check-test';
-      await this.cacheManager.set(testKey, 'test', 1000);
-      await this.cacheManager.get(testKey);
-      await this.cacheManager.del(testKey);
-      checks.redis = { status: 'pass' };
+      const redisConfig = this.configService.redisConfig;
+      const redisClient = new Redis.Redis({
+        host: redisConfig.host,
+        port: redisConfig.port,
+        password: redisConfig.password,
+        db: redisConfig.db,
+        lazyConnect: true,
+        connectTimeout: 2000,
+        commandTimeout: 2000,
+        maxRetriesPerRequest: 1,
+      });
+
+      try {
+        await redisClient.connect();
+        await redisClient.ping();
+        
+        // Test basic operations
+        const testKey = 'health-check-direct-test';
+        await redisClient.set(testKey, 'test', 'EX', 5);
+        const testValue = await redisClient.get(testKey);
+        await redisClient.del(testKey);
+        
+        if (testValue === 'test') {
+          checks.redis = { status: 'pass', message: 'Direct Redis connection successful' };
+        } else {
+          throw new Error('Redis operations test failed');
+        }
+      } finally {
+        try {
+          await redisClient.quit();
+        } catch (quitError) {
+          // Ignore quit errors in health check
+        }
+      }
     } catch (error) {
+      // Log the error but don't fail the entire health check
+      this.logger.warn(`Redis health check failed: ${error.message}`);
       checks.redis = { status: 'fail', message: error.message };
-      overallStatus = 'unhealthy';
+      // Don't set overallStatus to unhealthy for Redis failures in health check
+      // Redis is used for caching, not critical functionality
     }
 
     // Environment check

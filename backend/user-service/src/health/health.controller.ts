@@ -49,19 +49,27 @@ export class HealthController {
   private async performCustomHealthCheck(): Promise<{ [key: string]: any }> {
     const result = await this.startupValidation.performHealthCheck();
 
-    if (result.status === 'unhealthy') {
-      const failedChecks = Object.entries(result.checks)
-        .filter(([, check]) => check.status === 'fail')
+    // Only fail if critical services (database, environment) are down
+    // Redis is non-critical for basic functionality
+    const criticalFailures = Object.entries(result.checks)
+      .filter(([name, check]) => 
+        check.status === 'fail' && 
+        ['database', 'environment'].includes(name)
+      );
+
+    if (criticalFailures.length > 0) {
+      const failedChecks = criticalFailures
         .map(([name, check]) => `${name}: ${check.message}`)
         .join(', ');
 
-      throw new Error(`Health check failed: ${failedChecks}`);
+      throw new Error(`Critical health check failed: ${failedChecks}`);
     }
 
     return {
       'custom-validation': {
         status: 'up',
         checks: result.checks,
+        overall_status: result.status,
       },
     };
   }

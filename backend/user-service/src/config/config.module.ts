@@ -9,7 +9,7 @@ import { envValidationSchema } from './env.validation';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
       validationSchema: envValidationSchema,
       validationOptions: {
         allowUnknown: true,
