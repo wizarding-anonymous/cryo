@@ -93,6 +93,7 @@ export class GameController {
 - `GET /games` - Получить список игр с пагинацией
 - `GET /games/:id` - Получить детальную информацию об игре
 - `GET /games/search` - Поиск игр по названию
+- `GET /games/:id/purchase-info` - Получить информацию для покупки (для Payment Service)
 
 ### Services
 
@@ -104,6 +105,10 @@ export class GameController {
 #### SearchService
 - `searchGames(query, page, limit)` - Поиск игр
 - `getGamesByGenre(genre)` - Игры по жанру
+
+#### PurchaseInfoService
+- `getGamePurchaseInfo(gameId)` - Получить информацию для покупки игры
+- `validateGameAvailability(gameId)` - Проверить доступность игры для покупки
 
 ## Data Models
 

@@ -30,8 +30,11 @@ graph TB
         ValidationPipe[Validation Pipe]
     end
     
-    subgraph "External Services"
+    subgraph "External MVP Services"
         LibraryService[Library Service]
+        AchievementService[Achievement Service]
+        NotificationService[Notification Service]
+        GameCatalogService[Game Catalog Service]
     end
     
     subgraph "Database"
@@ -50,8 +53,11 @@ graph TB
     ReviewService --> OwnershipService
     OwnershipService --> LibraryService
     ReviewService --> PostgreSQL
+    ReviewService --> AchievementService
+    ReviewService --> NotificationService
     RatingService --> PostgreSQL
     RatingService --> Redis
+    RatingService --> GameCatalogService
 ```
 
 ## NestJS Architecture
@@ -141,6 +147,8 @@ export class RatingController {
 - `updateReview(reviewId, userId, updateDto)` - Обновить отзыв с проверкой прав
 - `deleteReview(reviewId, userId)` - Удалить отзыв с проверкой прав
 - `getUserReviews(userId)` - Отзывы пользователя
+- `notifyFirstReviewAchievement(userId)` - Уведомить Achievement Service о первом отзыве
+- `notifyNewReview(review)` - Уведомить Notification Service о новом отзыве
 
 #### RatingService
 - `calculateGameRating(gameId)` - Рассчитать рейтинг игры
@@ -272,18 +280,177 @@ export class PaginationDto {
 
 ## Testing Strategy
 
-### Unit Tests
+### Unit Tests (Месяц 1-3)
 - ReviewService методы
 - RatingService методы
 - OwnershipService методы
 - Валидация DTO классов
 
-### Integration Tests
+### Integration Tests (Месяц 1-3)
 - REST API endpoints
 - Database операции TypeORM
 - Расчет рейтингов
 - Интеграция с Library Service
 
-### Test Coverage
-- Минимум 80% покрытие кода
-- Все критические пути покрыты тестами
+### Integration Testing Strategy (Месяц 4)
+
+#### End-to-End Testing
+- Полный цикл: покупка игры → создание отзыва → обновление рейтинга
+- Тестирование интеграций с Library Service, Game Catalog Service, Achievement Service, Notification Service
+- Проверка синхронизации рейтингов между Review Service и Game Catalog Service
+- Тестирование отказоустойчивости при недоступности внешних сервисов
+
+#### Load Testing Strategy (Месяц 4)
+- Нагрузочное тестирование на 1000+ одновременных пользователей создающих отзывы
+- Stress testing для операций расчета рейтингов под высокой нагрузкой
+- Тестирование производительности кеширования рейтингов в Redis
+- Проверка автомасштабирования при массовом создании отзывов
+
+#### Security Testing Strategy (Месяц 4)
+- Пентестинг API эндпоинтов отзывов
+- Тестирование защиты от спама и фейковых отзывов
+- Проверка валидации контента отзывов и защиты от вредоносного содержимого
+- Тестирование защиты от накрутки рейтингов и злоупотреблений системой отзывов
+
+### Production Readiness Strategy (Месяц 4)
+
+#### Monitoring and Analytics
+```typescript
+@Injectable()
+export class ReviewMetricsService {
+  private readonly reviewCounter = new Counter({
+    name: 'reviews_total',
+    help: 'Total number of reviews created',
+    labelNames: ['rating']
+  });
+
+  private readonly ratingDistribution = new Histogram({
+    name: 'rating_distribution',
+    help: 'Distribution of ratings',
+    buckets: [1, 2, 3, 4, 5]
+  });
+
+  recordReview(rating: number) {
+    this.reviewCounter.inc({ rating: rating.toString() });
+    this.ratingDistribution.observe(rating);
+  }
+}
+```
+
+#### Content Moderation System
+```typescript
+@Injectable()
+export class ContentModerationService {
+  async moderateReview(review: CreateReviewDto): Promise<ModerationResult> {
+    // Базовая модерация контента для бета-тестирования
+    const suspiciousWords = ['спам', 'фейк', 'накрутка'];
+    const containsSuspiciousContent = suspiciousWords.some(word => 
+      review.text.toLowerCase().includes(word)
+    );
+
+    return {
+      approved: !containsSuspiciousContent,
+      reason: containsSuspiciousContent ? 'Suspicious content detected' : null,
+      confidence: containsSuspiciousContent ? 0.8 : 0.1
+    };
+  }
+
+  async flagReview(reviewId: string, reason: string) {
+    // Пометка отзыва для ручной модерации
+    await this.reviewRepository.update(reviewId, {
+      flagged: true,
+      flagReason: reason,
+      flaggedAt: new Date()
+    });
+  }
+}
+```
+
+#### Quality Control Dashboard
+```typescript
+@Controller('admin/reviews')
+@UseGuards(AdminAuthGuard)
+export class ReviewAdminController {
+  constructor(
+    private readonly reviewService: ReviewService,
+    private readonly analyticsService: ReviewAnalyticsService
+  ) {}
+
+  @Get('analytics')
+  async getReviewAnalytics() {
+    return {
+      totalReviews: await this.reviewService.getTotalReviewsCount(),
+      ratingDistribution: await this.analyticsService.getRatingDistribution(),
+      topRatedGames: await this.analyticsService.getTopRatedGames(),
+      recentActivity: await this.analyticsService.getRecentActivity(),
+      flaggedReviews: await this.reviewService.getFlaggedReviews()
+    };
+  }
+
+  @Get('flagged')
+  async getFlaggedReviews(@Query() query: PaginationDto) {
+    return this.reviewService.getFlaggedReviews(query);
+  }
+
+  @Post(':id/approve')
+  async approveReview(@Param('id') id: string) {
+    return this.reviewService.approveReview(id);
+  }
+
+  @Delete(':id')
+  async deleteReview(@Param('id') id: string) {
+    return this.reviewService.deleteReview(id);
+  }
+}
+```
+
+#### Feedback and Improvement System
+```typescript
+@Injectable()
+export class ReviewFeedbackService {
+  async collectUserFeedback(userId: string, feedback: ReviewFeedbackDto) {
+    // Сбор обратной связи для улучшения системы отзывов
+    await this.feedbackRepository.save({
+      userId,
+      type: feedback.type,
+      message: feedback.message,
+      rating: feedback.rating,
+      createdAt: new Date()
+    });
+
+    // Отправка уведомления команде разработки
+    if (feedback.rating <= 2) {
+      await this.notificationService.sendDeveloperAlert({
+        type: 'negative_feedback',
+        userId,
+        feedback
+      });
+    }
+  }
+
+  async getImprovementSuggestions(): Promise<ImprovementSuggestion[]> {
+    // Анализ обратной связи для предложений по улучшению
+    const commonIssues = await this.feedbackRepository
+      .createQueryBuilder('feedback')
+      .select('feedback.message')
+      .where('feedback.rating <= 2')
+      .groupBy('feedback.message')
+      .orderBy('COUNT(*)', 'DESC')
+      .limit(10)
+      .getRawMany();
+
+    return commonIssues.map(issue => ({
+      issue: issue.message,
+      priority: this.calculatePriority(issue.count),
+      suggestedAction: this.generateSuggestion(issue.message)
+    }));
+  }
+}
+```
+
+### Test Coverage Requirements
+- **Месяц 1-3**: Минимум 80% покрытие кода
+- **Месяц 4**: 100% покрытие критических путей отзывов и рейтингов
+- Все интеграции покрыты тестами
+- Система модерации покрыта тестами
+- Аналитика и мониторинг покрыты тестами

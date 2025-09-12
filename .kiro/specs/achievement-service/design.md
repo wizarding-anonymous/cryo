@@ -187,11 +187,15 @@ export class ProgressService {
 ```typescript
 @Injectable()
 export class EventService {
-  constructor(private progressService: ProgressService) {}
+  constructor(
+    private progressService: ProgressService,
+    private notificationService: NotificationService,
+  ) {}
 
   async handleGamePurchase(userId: string, gameId: string): Promise<void>
   async handleReviewCreated(userId: string, reviewId: string): Promise<void>
   async handleFriendAdded(userId: string, friendId: string): Promise<void>
+  async notifyAchievementUnlocked(userId: string, achievementId: string): Promise<void>
 }
 ```
 
