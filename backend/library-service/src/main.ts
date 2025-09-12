@@ -3,12 +3,28 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
 import { Transport } from '@nestjs/microservices';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger({
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            winston.format.json(),
+          ),
+        }),
+      ],
+    }),
+  });
   const configService = app.get(ConfigService);
+
+  // Enable graceful shutdown
+  app.enableShutdownHooks();
 
   // Hybrid application setup (for future Kafka integration)
   // app.connectMicroservice({
@@ -93,8 +109,8 @@ async function bootstrap(): Promise<void> {
   const port = configService.get<number>('port') ?? 3000;
   await app.listen(port);
 
-  console.log(`🚀 Library Service is running on: http://localhost:${port}`);
-  console.log(
+  app.get(Logger).log(`🚀 Library Service is running on: http://localhost:${port}`);
+  app.get(Logger).log(
     `📚 Swagger documentation: http://localhost:${port}/${configService.get<string>('swagger.path') ?? 'api/docs'}`,
   );
 }

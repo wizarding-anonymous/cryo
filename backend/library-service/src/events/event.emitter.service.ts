@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Client, ClientKafka } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
+import { GameAddedToLibraryEvent, GameRemovedFromLibraryEvent } from './dto/events.dto';
 
 @Injectable()
 export class EventEmitterService implements OnModuleInit {
@@ -30,13 +31,13 @@ export class EventEmitterService implements OnModuleInit {
   }
 
   async emitGameAddedEvent(userId: string, gameId: string) {
-    const event = { userId, gameId, timestamp: new Date() };
+    const event: GameAddedToLibraryEvent = { userId, gameId, timestamp: new Date() };
     this.logger.log(`Emitting game.added event (placeholder): ${JSON.stringify(event)}`);
     // this.client.emit('game.added', event);
   }
 
   async emitGameRemovedEvent(userId: string, gameId: string) {
-    const event = { userId, gameId, timestamp: new Date() };
+    const event: GameRemovedFromLibraryEvent = { userId, gameId, timestamp: new Date() };
     this.logger.log(`Emitting game.removed event (placeholder): ${JSON.stringify(event)}`);
     // this.client.emit('game.removed', event);
   }
