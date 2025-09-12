@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: library-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: library-service
+  template:
+    metadata:
+      labels:
+        app: library-service
+    spec:
+      containers:
+      - name: library-service
+        image: your-registry/library-service:latest # Placeholder
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: library-service-config
+        - secretRef:
+            name: library-service-secrets
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+      restartPolicy: Always

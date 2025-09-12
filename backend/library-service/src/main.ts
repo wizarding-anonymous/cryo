@@ -4,9 +4,25 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
+import { Transport } from '@nestjs/microservices';
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+
+  // Hybrid application setup (for future Kafka integration)
+  // app.connectMicroservice({
+  //   transport: Transport.KAFKA,
+  //   options: {
+  //     client: {
+  //       brokers: [configService.get('kafka.broker')],
+  //     },
+  //     consumer: {
+  //       groupId: 'library-service-consumer',
+  //     },
+  //   },
+  // });
+  // await app.startAllMicroservices();
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -19,6 +35,15 @@ async function bootstrap(): Promise<void> {
       },
     }),
   );
+
+  // Global interceptors for logging and response transformation
+  app.useGlobalInterceptors(
+    new (require('./common/interceptors/logging.interceptor').LoggingInterceptor)(),
+    new (require('./common/interceptors/transform.interceptor').TransformInterceptor)(),
+  );
+
+  // Global exception filter
+  app.useGlobalFilters(new (require('./common/filters/global-exception.filter').GlobalExceptionFilter)());
 
   // CORS configuration
   app.enableCors({
