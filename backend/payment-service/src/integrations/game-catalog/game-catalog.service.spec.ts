@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GameCatalogIntegrationService } from './game-catalog.service';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { CACHE_MANAGER } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { of, throwError } from 'rxjs';
 import { GamePurchaseInfo } from './dto/game-purchase-info.dto';
 

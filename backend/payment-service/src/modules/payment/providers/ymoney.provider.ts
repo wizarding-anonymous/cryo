@@ -5,7 +5,7 @@ import { PaymentProviderInterface, ProcessPaymentResponse } from '../interfaces/
 import { SimulationConfig } from '../payment-provider.factory';
 
 @Injectable()
-export class YandexMoneyMockProvider implements PaymentProviderInterface {
+export class YMoneyMockProvider implements PaymentProviderInterface {
   constructor(private readonly config: SimulationConfig) {}
 
   private delay(ms: number): Promise<void> {

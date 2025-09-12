@@ -1,4 +1,5 @@
-import { Injectable, Inject, CACHE_MANAGER, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';

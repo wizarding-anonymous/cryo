@@ -1,8 +1,8 @@
-import { WinstonModule } from 'nest-winston';
+import { WinstonModuleOptions } from 'nest-winston';
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 
-export const winstonLogger = WinstonModule.createLogger({
+export const winstonLogger: WinstonModuleOptions = {
   transports: [
     new winston.transports.Console({
       level: process.env.NODE_ENV === 'production' ? 'info' : 'silly',
@@ -39,4 +39,4 @@ export const winstonLogger = WinstonModule.createLogger({
       ),
     }),
   ],
-});
+};

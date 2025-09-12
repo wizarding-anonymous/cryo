@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { PaymentProvider } from '../../common/enums/payment-provider.enum';
 import { PaymentProviderInterface } from './interfaces/payment-provider.interface';
 import { SberbankMockProvider } from './providers/sberbank.provider';
-import { YandexMoneyMockProvider } from './providers/ymoney.provider';
-import { TinkoffMockProvider } from './providers/tbank.provider';
+import { YMoneyMockProvider } from './providers/ymoney.provider';
+import { TinkoffMockProvider } from './providers/tinkoff.provider';
 
 export interface SimulationConfig {
   autoApprove: boolean;
@@ -48,7 +48,7 @@ export class PaymentProviderFactory {
       case PaymentProvider.SBERBANK:
         return new SberbankMockProvider(config);
       case PaymentProvider.YANDEX:
-        return new YandexMoneyMockProvider(config);
+        return new YMoneyMockProvider(config);
       case PaymentProvider.TBANK:
         return new TinkoffMockProvider(config);
       default:

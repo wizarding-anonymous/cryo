@@ -5,7 +5,9 @@ import { PaymentService } from './payment.service';
 import { Payment } from './entities/payment.entity';
 import { OrderService } from '../order/order.service';
 import { PaymentProviderService } from './payment-provider.service';
-import { NotFoundException } from '@nestjs/common';
+import { LibraryIntegrationService } from '../../integrations/library/library.service';
+import { MetricsService } from '../../common/metrics/metrics.service';
+import { NotFoundException, ConflictException } from '@nestjs/common';
 import { Order } from '../order/entities/order.entity';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
@@ -32,6 +34,16 @@ describe('PaymentService', () => {
     processPayment: jest.fn(),
   };
 
+  const mockLibraryService = {
+    addGameToLibrary: jest.fn(),
+  };
+
+  const mockMetricsService = {
+    incrementCounter: jest.fn(),
+    recordHistogram: jest.fn(),
+    recordPayment: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -47,6 +59,14 @@ describe('PaymentService', () => {
         {
           provide: PaymentProviderService,
           useValue: mockPaymentProviderService,
+        },
+        {
+          provide: LibraryIntegrationService,
+          useValue: mockLibraryService,
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();
@@ -87,7 +107,7 @@ describe('PaymentService', () => {
       mockOrderService.getOrder.mockResolvedValue(order);
       const dto = { orderId: 'order1', provider: PaymentProvider.SBERBANK };
 
-      await expect(service.createPayment(dto, 'user1')).rejects.toThrow(NotFoundException);
+      await expect(service.createPayment(dto, 'user1')).rejects.toThrow(ConflictException);
     });
   });
 

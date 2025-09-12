@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { firstValueFrom, timeout, catchError, of, retry, delay } from 'rxjs';
+import { firstValueFrom, timeout, catchError, of, retry } from 'rxjs';
 import { AddGameToLibraryDto } from './dto/add-game-to-library.dto';
 
 @Injectable()
@@ -24,7 +24,7 @@ export class LibraryIntegrationService {
       const response = await firstValueFrom(
         this.httpService.post(url, payload).pipe(
           timeout(8000),
-          retry({ count: 3, delay: 1000 }), // Retry 3 times with a 1-second delay
+          retry(3), // Retry 3 times
           catchError(err => {
             this.logger.error(
               `Error adding game ${payload.gameId} to library: ${err.message}`,

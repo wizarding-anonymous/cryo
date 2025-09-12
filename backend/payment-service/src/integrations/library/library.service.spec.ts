@@ -55,11 +55,18 @@ describe('LibraryIntegrationService', () => {
     });
 
     it('should retry 3 times on failure and then return false', async () => {
-      mockHttpService.post.mockReturnValue(throwError(() => new Error('Service Unavailable')));
+      let subscriptionCount = 0;
+      const errorObservable = throwError(() => {
+        subscriptionCount++;
+        return new Error('Service Unavailable');
+      });
+
+      mockHttpService.post.mockReturnValue(errorObservable);
+
       const result = await service.addGameToLibrary(payload);
       expect(result).toBe(false);
-      // The initial call + 3 retries = 4 total calls
-      expect(httpService.post).toHaveBeenCalledTimes(4);
+      // The initial call + 3 retries = 4 total subscriptions
+      expect(subscriptionCount).toBe(4);
     });
 
     it('should return false if status is not 201', async () => {

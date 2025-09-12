@@ -10,9 +10,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: winstonLogger,
-  });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Setup for templating engine
   app.useStaticAssets(join(__dirname, '..', 'public'));
@@ -28,12 +26,8 @@ async function bootstrap() {
     }),
   );
 
-  // Global filters
-  app.useGlobalFilters(new GlobalExceptionFilter());
-
   // Global interceptors
   app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalInterceptors(new LoggingInterceptor());
 
   // CORS configuration
   app.enableCors({

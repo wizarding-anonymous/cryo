@@ -8,6 +8,9 @@ import { MetricsService } from './metrics.service';
       defaultLabels: {
         app: 'payment-service',
       },
+      defaultMetrics: {
+        enabled: false,
+      },
     }),
   ],
   providers: [

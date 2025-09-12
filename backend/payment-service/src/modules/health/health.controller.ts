@@ -40,8 +40,24 @@ export class HealthController {
         path: '/', 
         thresholdPercent: 0.9 
       }),
-      () => this.gameCatalogService.checkHealth().then(result => ({ 'game-catalog-service': { status: result.status } })),
-      () => this.libraryService.checkHealth().then(result => ({ 'library-service': { status: result.status } })),
+      async () => {
+        const result = await this.gameCatalogService.checkHealth();
+        return { 
+          'game-catalog-service': { 
+            status: result.status === 'up' ? 'up' : 'down',
+            [result.status === 'up' ? 'message' : 'error']: result.status === 'up' ? 'Service is healthy' : 'Service is down'
+          } 
+        };
+      },
+      async () => {
+        const result = await this.libraryService.checkHealth();
+        return { 
+          'library-service': { 
+            status: result.status === 'up' ? 'up' : 'down',
+            [result.status === 'up' ? 'message' : 'error']: result.status === 'up' ? 'Service is healthy' : 'Service is down'
+          } 
+        };
+      },
     ]);
   }
 

@@ -10,7 +10,7 @@ import { OrderModule } from '../order/order.module';
 import { PaymentProviderService } from './payment-provider.service';
 import { PaymentProviderFactory } from './payment-provider.factory';
 import { SberbankMockProvider } from './providers/sberbank.provider';
-import { YandexMoneyMockProvider } from './providers/ymoney.provider';
+import { YMoneyMockProvider } from './providers/ymoney.provider';
 import { TinkoffMockProvider } from './providers/tinkoff.provider';
 
 @Module({
@@ -29,7 +29,7 @@ import { TinkoffMockProvider } from './providers/tinkoff.provider';
     // if they had dependencies. For now, they are simple classes.
     // We list them here so NestJS is aware of them.
     SberbankMockProvider,
-    YandexMoneyMockProvider,
+    YMoneyMockProvider,
     TinkoffMockProvider,
   ],
   exports: [PaymentService],
