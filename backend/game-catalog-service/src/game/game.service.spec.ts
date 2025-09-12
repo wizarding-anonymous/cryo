@@ -7,6 +7,7 @@ import { Game } from '../entities/game.entity';
 import { GetGamesDto } from '../dto/get-games.dto';
 import { CreateGameDto } from '../dto/create-game.dto';
 import { UpdateGameDto } from '../dto/update-game.dto';
+import { PurchaseInfoDto } from '../dto/purchase-info.dto';
 
 // Mock TypeORM repository
 const mockGameRepository = () => ({
@@ -74,6 +75,41 @@ describe('GameService', () => {
     it('should throw NotFoundException if game does not exist', async () => {
       (repository.findOneBy as jest.Mock).mockResolvedValue(null);
       await expect(service.getGameById('bad-uuid')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getGameDetails', () => {
+    it('should call getGameById with the provided id', async () => {
+      const getByIdSpy = jest.spyOn(service, 'getGameById').mockResolvedValue(mockGame);
+      const result = await service.getGameDetails('some-uuid');
+      expect(getByIdSpy).toHaveBeenCalledWith('some-uuid');
+      expect(result).toEqual(mockGame);
+    });
+  });
+
+  describe('getGamePurchaseInfo', () => {
+    it('should return a PurchaseInfoDto for an existing game', async () => {
+      const game = new Game();
+      game.id = 'some-uuid';
+      game.title = 'Test Game';
+      game.price = 9.99;
+      game.currency = 'USD';
+      game.available = true;
+
+      const getByIdSpy = jest.spyOn(service, 'getGameById').mockResolvedValue(game);
+      const result = await service.getGamePurchaseInfo('some-uuid');
+
+      expect(getByIdSpy).toHaveBeenCalledWith('some-uuid');
+      expect(result).toBeInstanceOf(PurchaseInfoDto);
+      expect(result.id).toEqual(game.id);
+      expect(result.title).toEqual(game.title);
+      expect(result.price).toEqual(game.price);
+      expect(result.available).toBe(true);
+    });
+
+    it('should re-throw NotFoundException if getGameById throws it', async () => {
+      jest.spyOn(service, 'getGameById').mockRejectedValue(new NotFoundException());
+      await expect(service.getGamePurchaseInfo('bad-uuid')).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -39,10 +39,14 @@ import { HealthModule } from './health/health.module';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
         const { redisStore } = await import('cache-manager-redis-store');
+        const store = await redisStore({
+          socket: {
+            host: configService.get('REDIS_HOST'),
+            port: configService.get('REDIS_PORT'),
+          },
+        });
         return {
-          store: redisStore,
-          host: configService.get('REDIS_HOST'),
-          port: parseInt(configService.get('REDIS_PORT'), 10),
+          store: () => store,
         };
       },
     }),

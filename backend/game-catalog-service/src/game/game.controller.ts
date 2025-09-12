@@ -22,6 +22,7 @@ import { GameService } from './game.service';
 import { CreateGameDto } from '../dto/create-game.dto';
 import { UpdateGameDto } from '../dto/update-game.dto';
 import { GetGamesDto } from '../dto/get-games.dto';
+import { PurchaseInfoDto } from '../dto/purchase-info.dto';
 import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
 import {
   Cache,
@@ -58,6 +59,21 @@ export class GameController {
   @Cache('game_{{params.id}}')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.gameService.getGameById(id);
+  }
+
+  @Get(':id/purchase-info')
+  @ApiOperation({
+    summary: 'Get game purchase info by ID (For Payment Service)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Purchase information for the game.',
+    type: PurchaseInfoDto,
+  })
+  @ApiResponse({ status: 404, description: 'Game not found.' })
+  @ApiParam({ name: 'id', description: 'UUID of the game' })
+  findPurchaseInfo(@Param('id', ParseUUIDPipe) id: string) {
+    return this.gameService.getGamePurchaseInfo(id);
   }
 
   @Patch(':id')

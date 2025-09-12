@@ -7,6 +7,7 @@ import { GetGamesDto } from '../dto/get-games.dto';
 import { GameListResponse } from '../interfaces/game.interface';
 import { CreateGameDto } from '../dto/create-game.dto';
 import { UpdateGameDto } from '../dto/update-game.dto';
+import { PurchaseInfoDto } from '../dto/purchase-info.dto';
 
 @Injectable()
 export class GameService implements IGameService {
@@ -70,5 +71,11 @@ export class GameService implements IGameService {
     if (result.affected === 0) {
       throw new NotFoundException(`Game with ID "${id}" not found`);
     }
+  }
+
+  async getGamePurchaseInfo(id: string): Promise<PurchaseInfoDto> {
+    const game = await this.getGameById(id);
+    // The getGameById method already throws a NotFoundException if the game is not found or unavailable.
+    return new PurchaseInfoDto(game);
   }
 }

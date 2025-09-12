@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/search/search.controller.ts</title>
+    <title>Code coverage report for src/dto/purchase-info.dto.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -15,41 +15,41 @@
         }
     </style>
 </head>
-    
+
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/search</a> search.controller.ts</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/dto</a> purchase-info.dto.ts</h1>
         <div class='clearfix'>
-            
+
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
                 <span class='fraction'>12/12</span>
             </div>
-        
-            
+
+
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
                 <span class='fraction'>0/0</span>
             </div>
-        
-            
+
+
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/2</span>
+                <span class='fraction'>1/1</span>
             </div>
-        
-            
+
+
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>12/12</span>
             </div>
-        
-            
+
+
         </div>
         <p class="quiet">
             Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
@@ -86,50 +86,62 @@
 <a name='L21'></a><a href='#L21'>21</a>
 <a name='L22'></a><a href='#L22'>22</a>
 <a name='L23'></a><a href='#L23'>23</a>
-<a name='L24'></a><a href='#L24'>24</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { SearchService } from './search.service';
-import { SearchGamesDto } from '../dto/search-games.dto';
-import { GameListResponse } from '../interfaces/game.interface';
-import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { ApiProperty } from '@nestjs/swagger';
 import { Game } from '../entities/game.entity';
 &nbsp;
-@ApiTags('Games')
-@Controller('games')
-@UseInterceptors(HttpCacheInterceptor)
-export class SearchController {
-  constructor(private readonly searchService: SearchService) {}
+export class PurchaseInfoDto {
+  @ApiProperty({ description: 'The UUID of the game.' })
+  id: string;
 &nbsp;
-  @Get('search')
-  @ApiOperation({ summary: 'Search for games by title' })
-  @ApiResponse({ status: 200, description: 'A paginated list of games matching the search criteria.', type: [Game] })
-  async searchGames(
-    @Query() searchGamesDto: SearchGamesDto,
-  ): Promise&lt;GameListResponse&gt; {
-    return this.searchService.searchGames(searchGamesDto);
+  @ApiProperty({ description: 'The title of the game.' })
+  title: string;
+&nbsp;
+  @ApiProperty({ description: 'The price of the game.' })
+  price: number;
+&nbsp;
+  @ApiProperty({ description: 'The currency of the price.' })
+  currency: string;
+&nbsp;
+  @ApiProperty({ description: 'Indicates if the game is available for purchase.' })
+  available: boolean;
+&nbsp;
+  constructor(game: Game) {
+    this.id = game.id;
+    this.title = game.title;
+    this.price = game.price;
+    this.currency = game.currency;
+    this.available = game.available;
   }
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -151,4 +163,3 @@ export class SearchController {
         <script src="../../block-navigation.js"></script>
     </body>
 </html>
-    

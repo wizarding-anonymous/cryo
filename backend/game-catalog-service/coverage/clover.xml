@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1757604812022" clover="3.2.0">
-  <project timestamp="1757604812022" name="All files">
-    <metrics statements="286" coveredstatements="135" conditionals="36" coveredconditionals="8" methods="52" coveredmethods="19" elements="374" coveredelements="162" complexity="0" loc="286" ncloc="286" packages="9" files="22" classes="22"/>
+<coverage generated="1757663966673" clover="3.2.0">
+  <project timestamp="1757663966674" name="All files">
+    <metrics statements="318" coveredstatements="153" conditionals="36" coveredconditionals="8" methods="58" coveredmethods="22" elements="412" coveredelements="183" complexity="0" loc="318" ncloc="318" packages="10" files="24" classes="24"/>
     <package name="src">
       <metrics statements="39" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="7" coveredmethods="0"/>
-      <file name="app.controller.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\app.controller.ts">
+      <file name="app.controller.ts" path="/app/backend/game-catalog-service/src/app.controller.ts">
         <metrics statements="6" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="2" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="2" count="0" type="stmt"/>
@@ -13,7 +13,7 @@
         <line num="9" count="0" type="stmt"/>
         <line num="10" count="0" type="stmt"/>
       </file>
-      <file name="app.module.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\app.module.ts">
+      <file name="app.module.ts" path="/app/backend/game-catalog-service/src/app.module.ts">
         <metrics statements="13" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="2" count="0" type="stmt"/>
@@ -29,13 +29,13 @@
         <line num="42" count="0" type="stmt"/>
         <line num="58" count="0" type="stmt"/>
       </file>
-      <file name="app.service.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\app.service.ts">
+      <file name="app.service.ts" path="/app/backend/game-catalog-service/src/app.service.ts">
         <metrics statements="3" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="4" count="0" type="stmt"/>
         <line num="6" count="0" type="stmt"/>
       </file>
-      <file name="main.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\main.ts">
+      <file name="main.ts" path="/app/backend/game-catalog-service/src/main.ts">
         <metrics statements="17" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="2" count="0" type="stmt"/>
@@ -58,7 +58,7 @@
     </package>
     <package name="src.common.decorators">
       <metrics statements="5" coveredstatements="5" conditionals="0" coveredconditionals="0" methods="2" coveredmethods="2"/>
-      <file name="cache.decorator.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\common\decorators\cache.decorator.ts">
+      <file name="cache.decorator.ts" path="/app/backend/game-catalog-service/src/common/decorators/cache.decorator.ts">
         <metrics statements="5" coveredstatements="5" conditionals="0" coveredconditionals="0" methods="2" coveredmethods="2"/>
         <line num="1" count="2" type="stmt"/>
         <line num="3" count="2" type="stmt"/>
@@ -69,7 +69,7 @@
     </package>
     <package name="src.common.filters">
       <metrics statements="22" coveredstatements="0" conditionals="18" coveredconditionals="0" methods="3" coveredmethods="0"/>
-      <file name="global-exception.filter.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\common\filters\global-exception.filter.ts">
+      <file name="global-exception.filter.ts" path="/app/backend/game-catalog-service/src/common/filters/global-exception.filter.ts">
         <metrics statements="22" coveredstatements="0" conditionals="18" coveredconditionals="0" methods="3" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="9" count="0" type="stmt"/>
@@ -97,7 +97,7 @@
     </package>
     <package name="src.common.interceptors">
       <metrics statements="48" coveredstatements="9" conditionals="10" coveredconditionals="0" methods="8" coveredmethods="1"/>
-      <file name="http-cache.interceptor.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\common\interceptors\http-cache.interceptor.ts">
+      <file name="http-cache.interceptor.ts" path="/app/backend/game-catalog-service/src/common/interceptors/http-cache.interceptor.ts">
         <metrics statements="36" coveredstatements="9" conditionals="10" coveredconditionals="0" methods="5" coveredmethods="1"/>
         <line num="1" count="2" type="stmt"/>
         <line num="8" count="2" type="stmt"/>
@@ -136,7 +136,7 @@
         <line num="85" count="0" type="stmt"/>
         <line num="88" count="0" type="stmt"/>
       </file>
-      <file name="request-logging.interceptor.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\common\interceptors\request-logging.interceptor.ts">
+      <file name="request-logging.interceptor.ts" path="/app/backend/game-catalog-service/src/common/interceptors/request-logging.interceptor.ts">
         <metrics statements="12" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="9" count="0" type="stmt"/>
@@ -152,9 +152,29 @@
         <line num="25" count="0" type="stmt"/>
       </file>
     </package>
+    <package name="src.database.migrations">
+      <metrics statements="14" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="0"/>
+      <file name="1694000000000-CreateGameTable.ts" path="/app/backend/game-catalog-service/src/database/migrations/1694000000000-CreateGameTable.ts">
+        <metrics statements="14" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="0"/>
+        <line num="3" count="0" type="stmt"/>
+        <line num="4" count="0" type="stmt"/>
+        <line num="7" count="0" type="stmt"/>
+        <line num="11" count="0" type="stmt"/>
+        <line num="33" count="0" type="stmt"/>
+        <line num="37" count="0" type="stmt"/>
+        <line num="41" count="0" type="stmt"/>
+        <line num="45" count="0" type="stmt"/>
+        <line num="50" count="0" type="stmt"/>
+        <line num="111" count="0" type="stmt"/>
+        <line num="112" count="0" type="stmt"/>
+        <line num="113" count="0" type="stmt"/>
+        <line num="114" count="0" type="stmt"/>
+        <line num="115" count="0" type="stmt"/>
+      </file>
+    </package>
     <package name="src.dto">
-      <metrics statements="51" coveredstatements="32" conditionals="0" coveredconditionals="0" methods="7" coveredmethods="0"/>
-      <file name="create-game.dto.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\dto\create-game.dto.ts">
+      <metrics statements="63" coveredstatements="44" conditionals="0" coveredconditionals="0" methods="8" coveredmethods="1"/>
+      <file name="create-game.dto.ts" path="/app/backend/game-catalog-service/src/dto/create-game.dto.ts">
         <metrics statements="20" coveredstatements="18" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="15" count="1" type="stmt"/>
@@ -177,7 +197,7 @@
         <line num="95" count="1" type="stmt"/>
         <line num="100" count="1" type="stmt"/>
       </file>
-      <file name="game-response.dto.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\dto\game-response.dto.ts">
+      <file name="game-response.dto.ts" path="/app/backend/game-catalog-service/src/dto/game-response.dto.ts">
         <metrics statements="15" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="6" count="0" type="stmt"/>
         <line num="23" count="0" type="stmt"/>
@@ -195,7 +215,7 @@
         <line num="35" count="0" type="stmt"/>
         <line num="36" count="0" type="stmt"/>
       </file>
-      <file name="get-games.dto.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\dto\get-games.dto.ts">
+      <file name="get-games.dto.ts" path="/app/backend/game-catalog-service/src/dto/get-games.dto.ts">
         <metrics statements="8" coveredstatements="6" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="0"/>
         <line num="1" count="2" type="stmt"/>
         <line num="2" count="2" type="stmt"/>
@@ -206,7 +226,22 @@
         <line num="23" count="0" type="stmt"/>
         <line num="27" count="2" type="stmt"/>
       </file>
-      <file name="search-games.dto.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\dto\search-games.dto.ts">
+      <file name="purchase-info.dto.ts" path="/app/backend/game-catalog-service/src/dto/purchase-info.dto.ts">
+        <metrics statements="12" coveredstatements="12" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="1" count="2" type="stmt"/>
+        <line num="4" count="2" type="stmt"/>
+        <line num="6" count="2" type="stmt"/>
+        <line num="9" count="2" type="stmt"/>
+        <line num="12" count="2" type="stmt"/>
+        <line num="15" count="2" type="stmt"/>
+        <line num="18" count="2" type="stmt"/>
+        <line num="21" count="1" type="stmt"/>
+        <line num="22" count="1" type="stmt"/>
+        <line num="23" count="1" type="stmt"/>
+        <line num="24" count="1" type="stmt"/>
+        <line num="25" count="1" type="stmt"/>
+      </file>
+      <file name="search-games.dto.ts" path="/app/backend/game-catalog-service/src/dto/search-games.dto.ts">
         <metrics statements="5" coveredstatements="5" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="2" count="1" type="stmt"/>
@@ -214,7 +249,7 @@
         <line num="5" count="1" type="stmt"/>
         <line num="13" count="1" type="stmt"/>
       </file>
-      <file name="update-game.dto.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\dto\update-game.dto.ts">
+      <file name="update-game.dto.ts" path="/app/backend/game-catalog-service/src/dto/update-game.dto.ts">
         <metrics statements="3" coveredstatements="3" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="2" count="1" type="stmt"/>
@@ -223,7 +258,7 @@
     </package>
     <package name="src.entities">
       <metrics statements="24" coveredstatements="21" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="0"/>
-      <file name="game.entity.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\entities\game.entity.ts">
+      <file name="game.entity.ts" path="/app/backend/game-catalog-service/src/entities/game.entity.ts">
         <metrics statements="24" coveredstatements="21" conditionals="0" coveredconditionals="0" methods="3" coveredmethods="0"/>
         <line num="1" count="4" type="stmt"/>
         <line num="9" count="4" type="stmt"/>
@@ -252,9 +287,9 @@
       </file>
     </package>
     <package name="src.game">
-      <metrics statements="51" coveredstatements="44" conditionals="6" coveredconditionals="6" methods="13" coveredmethods="12"/>
-      <file name="game.controller.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\game\game.controller.ts">
-        <metrics statements="21" coveredstatements="21" conditionals="0" coveredconditionals="0" methods="6" coveredmethods="6"/>
+      <metrics statements="57" coveredstatements="50" conditionals="6" coveredconditionals="6" methods="15" coveredmethods="14"/>
+      <file name="game.controller.ts" path="/app/backend/game-catalog-service/src/game/game.controller.ts">
+        <metrics statements="24" coveredstatements="23" conditionals="0" coveredconditionals="0" methods="7" coveredmethods="6"/>
         <line num="1" count="1" type="stmt"/>
         <line num="15" count="1" type="stmt"/>
         <line num="21" count="1" type="stmt"/>
@@ -263,21 +298,24 @@
         <line num="24" count="1" type="stmt"/>
         <line num="25" count="1" type="stmt"/>
         <line num="26" count="1" type="stmt"/>
-        <line num="30" count="1" type="stmt"/>
-        <line num="35" count="1" type="stmt"/>
-        <line num="36" count="6" type="stmt"/>
-        <line num="42" count="1" type="stmt"/>
+        <line num="27" count="1" type="stmt"/>
+        <line num="31" count="1" type="stmt"/>
+        <line num="36" count="1" type="stmt"/>
+        <line num="37" count="6" type="stmt"/>
         <line num="43" count="1" type="stmt"/>
-        <line num="49" count="1" type="stmt"/>
+        <line num="44" count="1" type="stmt"/>
         <line num="50" count="1" type="stmt"/>
-        <line num="59" count="1" type="stmt"/>
+        <line num="51" count="1" type="stmt"/>
         <line num="60" count="1" type="stmt"/>
-        <line num="68" count="1" type="stmt"/>
-        <line num="72" count="1" type="stmt"/>
-        <line num="81" count="1" type="stmt"/>
-        <line num="82" count="1" type="stmt"/>
+        <line num="61" count="1" type="stmt"/>
+        <line num="75" count="1" type="stmt"/>
+        <line num="76" count="0" type="stmt"/>
+        <line num="84" count="1" type="stmt"/>
+        <line num="88" count="1" type="stmt"/>
+        <line num="97" count="1" type="stmt"/>
+        <line num="98" count="1" type="stmt"/>
       </file>
-      <file name="game.module.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\game\game.module.ts">
+      <file name="game.module.ts" path="/app/backend/game-catalog-service/src/game/game.module.ts">
         <metrics statements="6" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="2" count="0" type="stmt"/>
@@ -286,37 +324,40 @@
         <line num="5" count="0" type="stmt"/>
         <line num="12" count="0" type="stmt"/>
       </file>
-      <file name="game.service.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\game\game.service.ts">
-        <metrics statements="24" coveredstatements="23" conditionals="6" coveredconditionals="6" methods="7" coveredmethods="6"/>
+      <file name="game.service.ts" path="/app/backend/game-catalog-service/src/game/game.service.ts">
+        <metrics statements="27" coveredstatements="27" conditionals="6" coveredconditionals="6" methods="8" coveredmethods="8"/>
         <line num="1" count="2" type="stmt"/>
         <line num="2" count="2" type="stmt"/>
         <line num="3" count="2" type="stmt"/>
         <line num="4" count="2" type="stmt"/>
-        <line num="12" count="2" type="stmt"/>
-        <line num="15" count="9" type="stmt"/>
-        <line num="19" count="1" type="stmt"/>
+        <line num="10" count="2" type="stmt"/>
+        <line num="13" count="2" type="stmt"/>
+        <line num="16" count="12" type="stmt"/>
         <line num="20" count="1" type="stmt"/>
-        <line num="22" count="1" type="stmt"/>
-        <line num="31" count="1" type="stmt"/>
-        <line num="41" count="2" type="stmt"/>
-        <line num="42" count="2" type="cond" truecount="2" falsecount="0"/>
-        <line num="43" count="1" type="stmt"/>
-        <line num="45" count="1" type="stmt"/>
-        <line num="49" count="0" type="stmt"/>
-        <line num="53" count="1" type="stmt"/>
+        <line num="21" count="1" type="stmt"/>
+        <line num="23" count="1" type="stmt"/>
+        <line num="32" count="1" type="stmt"/>
+        <line num="42" count="2" type="stmt"/>
+        <line num="43" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="44" count="1" type="stmt"/>
+        <line num="46" count="1" type="stmt"/>
+        <line num="50" count="1" type="stmt"/>
         <line num="54" count="1" type="stmt"/>
-        <line num="58" count="2" type="stmt"/>
-        <line num="62" count="2" type="cond" truecount="2" falsecount="0"/>
-        <line num="63" count="1" type="stmt"/>
-        <line num="65" count="1" type="stmt"/>
-        <line num="69" count="2" type="stmt"/>
-        <line num="70" count="2" type="cond" truecount="2" falsecount="0"/>
-        <line num="71" count="1" type="stmt"/>
+        <line num="55" count="1" type="stmt"/>
+        <line num="59" count="2" type="stmt"/>
+        <line num="63" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="64" count="1" type="stmt"/>
+        <line num="66" count="1" type="stmt"/>
+        <line num="70" count="2" type="stmt"/>
+        <line num="71" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="72" count="1" type="stmt"/>
+        <line num="77" count="2" type="stmt"/>
+        <line num="79" count="1" type="stmt"/>
       </file>
     </package>
     <package name="src.health">
       <metrics statements="16" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="5" coveredmethods="0"/>
-      <file name="health.controller.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\health\health.controller.ts">
+      <file name="health.controller.ts" path="/app/backend/game-catalog-service/src/health/health.controller.ts">
         <metrics statements="11" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="5" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="2" count="0" type="stmt"/>
@@ -330,7 +371,7 @@
         <line num="24" count="0" type="stmt"/>
         <line num="26" count="0" type="stmt"/>
       </file>
-      <file name="health.module.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\health\health.module.ts">
+      <file name="health.module.ts" path="/app/backend/game-catalog-service/src/health/health.module.ts">
         <metrics statements="5" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="2" count="0" type="stmt"/>
@@ -341,7 +382,7 @@
     </package>
     <package name="src.search">
       <metrics statements="30" coveredstatements="24" conditionals="2" coveredconditionals="2" methods="4" coveredmethods="4"/>
-      <file name="search.controller.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\search\search.controller.ts">
+      <file name="search.controller.ts" path="/app/backend/game-catalog-service/src/search/search.controller.ts">
         <metrics statements="10" coveredstatements="10" conditionals="0" coveredconditionals="0" methods="2" coveredmethods="2"/>
         <line num="1" count="1" type="stmt"/>
         <line num="2" count="1" type="stmt"/>
@@ -354,7 +395,7 @@
         <line num="18" count="1" type="stmt"/>
         <line num="21" count="1" type="stmt"/>
       </file>
-      <file name="search.module.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\search\search.module.ts">
+      <file name="search.module.ts" path="/app/backend/game-catalog-service/src/search/search.module.ts">
         <metrics statements="6" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
         <line num="2" count="0" type="stmt"/>
@@ -363,7 +404,7 @@
         <line num="5" count="0" type="stmt"/>
         <line num="12" count="0" type="stmt"/>
       </file>
-      <file name="search.service.ts" path="C:\Users\Oleg\Documents\GitHub\cryo\backend\game-catalog-service\src\search\search.service.ts">
+      <file name="search.service.ts" path="/app/backend/game-catalog-service/src/search/search.service.ts">
         <metrics statements="14" coveredstatements="14" conditionals="2" coveredconditionals="2" methods="2" coveredmethods="2"/>
         <line num="1" count="2" type="stmt"/>
         <line num="2" count="2" type="stmt"/>

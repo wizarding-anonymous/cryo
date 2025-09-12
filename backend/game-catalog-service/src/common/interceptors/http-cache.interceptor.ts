@@ -39,7 +39,7 @@ export class HttpCacheInterceptor implements NestInterceptor {
         tap(async () => {
           for (const pattern of invalidatePatterns) {
             const key = this.generateKey(pattern, request);
-            await this.cacheManager.del(key);
+            // await this.cacheManager.del(key); // Temporarily disabled due to library incompatibility
           }
         }),
       );

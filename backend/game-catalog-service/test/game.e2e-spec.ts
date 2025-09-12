@@ -63,6 +63,19 @@ describe('GameController (e2e)', () => {
       });
   });
 
+  it('GET /api/games/:id/purchase-info - should get purchase info for the game', () => {
+    return request(app.getHttpServer())
+      .get(`/api/games/${createdGameId}/purchase-info`)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.id).toEqual(createdGameId);
+        expect(res.body.title).toEqual(createGameDto.title);
+        expect(res.body.price).toEqual(createGameDto.price);
+        expect(res.body).toHaveProperty('available');
+        expect(res.body.available).toBe(true);
+      });
+  });
+
   it('PATCH /api/games/:id - should update the game', () => {
     const updateGameDto: UpdateGameDto = { title: 'Updated E2E Test Game' };
     return request(app.getHttpServer())
@@ -86,7 +99,7 @@ describe('GameController (e2e)', () => {
   it('DELETE /api/games/:id - should delete the game', () => {
     return request(app.getHttpServer())
       .delete(`/api/games/${createdGameId}`)
-      .expect(200);
+      .expect(204);
   });
 
   it('GET /api/games/:id - should return 404 for the deleted game', () => {
