@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { ValidationPipe } from '@nestjs/common';
-import { logger } from './config/winston.config';
+import { winstonLogger } from './config/logger.config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -8,7 +10,14 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { logger });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: winstonLogger,
+  });
+
+  // Setup for templating engine
+  app.useStaticAssets(join(__dirname, '..', 'public'));
+  app.setBaseViewsDir(join(__dirname, '..', 'views'));
+  app.setViewEngine('hbs');
 
   // Global pipes
   app.useGlobalPipes(

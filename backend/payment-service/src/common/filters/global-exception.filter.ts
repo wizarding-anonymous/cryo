@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AlsService } from '../als/als.service';
+import { BaseHttpException } from '../exceptions/base-http.exception';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -20,14 +21,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    const correlationId = this.alsService.get('correlationId');
     let status: number;
-    let message: string;
-    let error: string;
+    let errorResponse: any;
 
-    if (exception instanceof HttpException) {
+    if (exception instanceof BaseHttpException) {
+      status = exception.getStatus();
+      const payload = exception.getResponse();
+      errorResponse = { error: payload };
+    } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
+      let message: string;
+      let error: string;
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
         error = exception.name;
@@ -35,35 +41,28 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message = (exceptionResponse as any).message || exception.message;
         error = (exceptionResponse as any).error || exception.name;
       }
+      errorResponse = {
+        error: {
+          code: error.toUpperCase().replace(/ /g, '_'),
+          message,
+        },
+      };
     } else {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
-      message = 'Internal server error';
-      error = 'InternalServerError';
-      
-      // Log unexpected errors
+      errorResponse = {
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An unexpected internal server error occurred.',
+        },
+      };
       this.logger.error(
-        `Unexpected error: ${exception}`,
+        `[${correlationId}] Unexpected error: ${exception}`,
         exception instanceof Error ? exception.stack : undefined,
       );
     }
 
-    const errorResponse = {
-      statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      method: request.method,
-      error: {
-        name: error,
-        message: Array.isArray(message) ? message : [message],
-      },
-    };
-
-    const correlationId = this.alsService.get('correlationId');
-    errorResponse['correlationId'] = correlationId;
-
-    // Log error details
     this.logger.error(
-      `[${correlationId}] ${request.method} ${request.url} - ${status} - ${message}`,
+      `[${correlationId}] ${request.method} ${request.url} - ${status} - ${JSON.stringify(errorResponse)}`,
     );
 
     response.status(status).json(errorResponse);

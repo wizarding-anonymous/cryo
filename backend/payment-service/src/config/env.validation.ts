@@ -36,5 +36,15 @@ export const envValidationSchema = Joi.object({
 
   // External services
   USER_SERVICE_URL: Joi.string().default('http://localhost:3001'),
+  GAME_CATALOG_SERVICE_URL: Joi.string().default('http://localhost:3002'),
   LIBRARY_SERVICE_URL: Joi.string().default('http://localhost:3004'),
+
+  // Payment Simulation
+  PAYMENT_MODE: Joi.string()
+    .valid('simulation', 'sandbox', 'production')
+    .default('simulation'),
+  PAYMENT_AUTO_APPROVE: Joi.boolean().default(true),
+  PAYMENT_DELAY_MS: Joi.number().default(1000),
+  PAYMENT_SUCCESS_RATE: Joi.number().min(0).max(1).default(0.95),
+  ENABLED_PROVIDERS: Joi.string().default('sberbank,yandex_money,tinkoff'),
 });

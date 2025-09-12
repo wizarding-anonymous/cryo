@@ -5,7 +5,7 @@ import { PaymentProviderInterface, ProcessPaymentResponse } from '../interfaces/
 import { SimulationConfig } from '../payment-provider.factory';
 
 @Injectable()
-export class SberbankMockProvider implements PaymentProviderInterface {
+export class TinkoffMockProvider implements PaymentProviderInterface {
   constructor(private readonly config: SimulationConfig) {}
 
   private delay(ms: number): Promise<void> {
@@ -16,10 +16,8 @@ export class SberbankMockProvider implements PaymentProviderInterface {
     await this.delay(this.config.delayMs);
 
     const success = Math.random() < this.config.successRate;
-    const externalId = `sber_mock_${uuidv4()}`;
+    const externalId = `tinkoff_mock_${uuidv4()}`;
 
-    // In a real scenario, this URL would be a redirect to the payment gateway.
-    // For the mock, it points to a mock UI endpoint we will create.
     const paymentUrl = success
       ? `/mock/payment/success/${payment.id}`
       : `/mock/payment/failure/${payment.id}`;
@@ -31,14 +29,10 @@ export class SberbankMockProvider implements PaymentProviderInterface {
   }
 
   async getPaymentStatus(externalId: string): Promise<{ status: string; providerResponse: any }> {
-    // This would query Sberbank's API in a real implementation.
-    // For the mock, we can assume it's still processing or completed based on some logic.
     return Promise.resolve({ status: 'completed', providerResponse: { externalId, mock: true } });
   }
 
   handleWebhook(data: any): { externalId: string; status: string } {
-    // This would parse and validate a real webhook from Sberbank.
-    // For the mock, we just extract the data.
     const { externalId, status } = data;
     return { externalId, status };
   }

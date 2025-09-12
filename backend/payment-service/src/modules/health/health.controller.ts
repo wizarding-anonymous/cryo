@@ -7,6 +7,8 @@ import {
   MemoryHealthIndicator,
   DiskHealthIndicator,
 } from '@nestjs/terminus';
+import { GameCatalogIntegrationService } from '../../integrations/game-catalog/game-catalog.service';
+import { LibraryIntegrationService } from '../../integrations/library/library.service';
 
 @ApiTags('Health')
 @Controller('health')
@@ -16,6 +18,8 @@ export class HealthController {
     private db: TypeOrmHealthIndicator,
     private memory: MemoryHealthIndicator,
     private disk: DiskHealthIndicator,
+    private gameCatalogService: GameCatalogIntegrationService,
+    private libraryService: LibraryIntegrationService,
   ) {}
 
   @Get()
@@ -36,6 +40,8 @@ export class HealthController {
         path: '/', 
         thresholdPercent: 0.9 
       }),
+      () => this.gameCatalogService.checkHealth().then(result => ({ 'game-catalog-service': { status: result.status } })),
+      () => this.libraryService.checkHealth().then(result => ({ 'library-service': { status: result.status } })),
     ]);
   }
 

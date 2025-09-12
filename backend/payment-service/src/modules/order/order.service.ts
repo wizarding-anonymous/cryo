@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { OrderNotFoundException } from '../../common/exceptions/order-not-found.exception';
+import { GameCatalogIntegrationService } from '../../integrations/game-catalog/game-catalog.service';
 import { Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -8,24 +10,41 @@ import { OrderStatus } from '../../common/enums/order-status.enum';
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    private readonly gameCatalogService: GameCatalogIntegrationService,
   ) {}
 
   async createOrder(createOrderDto: CreateOrderDto, userId: string): Promise<Order> {
-    const { gameId, gameName, amount } = createOrderDto;
+    const { gameId } = createOrderDto;
 
+    // Step 1: Validate the game with the Game Catalog Service
+    this.logger.log(`Validating game ${gameId} with Game Catalog Service.`);
+    const gameInfo = await this.gameCatalogService.getGamePurchaseInfo(gameId);
+
+    if (!gameInfo) {
+      throw new BadRequestException(`Game with ID ${gameId} could not be found.`);
+    }
+
+    if (!gameInfo.available) {
+      throw new BadRequestException(`Game '${gameInfo.title}' is not available for purchase.`);
+    }
+
+    // Step 2: Create the order with authoritative data
     const newOrder = this.orderRepository.create({
       userId,
       gameId,
-      gameName,
-      amount,
-      currency: 'RUB',
+      gameName: gameInfo.title,
+      amount: gameInfo.price,
+      currency: gameInfo.currency,
       status: OrderStatus.PENDING,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes expiry
     });
 
+    this.logger.log(`Creating order for game '${gameInfo.title}' for user ${userId}.`);
     return this.orderRepository.save(newOrder);
   }
 
@@ -51,10 +70,14 @@ export class OrderService {
     return { data, total };
   }
 
-  async getOrder(id: string, userId: string): Promise<Order> {
-    const order = await this.orderRepository.findOne({ where: { id, userId } });
+  async getOrder(id: string, userId?: string): Promise<Order> {
+    const whereClause: any = { id };
+    if (userId) {
+      whereClause.userId = userId;
+    }
+    const order = await this.orderRepository.findOne({ where: whereClause });
     if (!order) {
-      throw new NotFoundException(`Order with ID #${id} not found for this user.`);
+      throw new OrderNotFoundException(id);
     }
     return order;
   }

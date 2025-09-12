@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { WinstonModule } from 'nest-winston';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -10,6 +11,7 @@ import { HttpModule } from '@nestjs/axios';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseConfig } from './config/database.config';
+import { winstonLogger } from './config/logger.config';
 import { CacheConfig } from './config/cache.config';
 import { JwtConfig } from './config/jwt.config';
 import { ThrottlerConfig } from './config/throttler.config';
@@ -18,9 +20,11 @@ import { envValidationSchema } from './config/env.validation';
 // Modules
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './common/auth/auth.module';
 import { AlsModule } from './common/als/als.module';
+import { MetricsModule } from './common/metrics/metrics.module';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 
 @Module({
@@ -31,6 +35,9 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
       validationSchema: envValidationSchema,
       envFilePath: ['.env.local', '.env'],
     }),
+
+    // Logging
+    WinstonModule.forRoot(winstonLogger),
 
     // Database
     TypeOrmModule.forRootAsync({
@@ -66,12 +73,12 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     // Feature modules
     AuthModule,
     AlsModule,
+    MetricsModule,
     OrderModule,
     PaymentModule,
     HealthModule,
+    AdminModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
