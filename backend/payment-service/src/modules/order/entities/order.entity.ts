@@ -4,13 +4,16 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
+import { OrderStatus } from '../../../common/enums/order-status.enum';
 
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ name: 'user_id' })
   userId: string;
 
@@ -26,12 +29,13 @@ export class Order {
   @Column({ default: 'RUB' })
   currency: string;
 
+  @Index()
   @Column({
     type: 'enum',
-    enum: ['pending', 'paid', 'cancelled', 'expired'],
-    default: 'pending',
+    enum: OrderStatus,
+    default: OrderStatus.PENDING,
   })
-  status: string;
+  status: OrderStatus;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

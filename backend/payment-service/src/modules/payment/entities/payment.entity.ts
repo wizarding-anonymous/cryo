@@ -6,14 +6,18 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Order } from '../../order/entities/order.entity';
+import { PaymentProvider } from '../../../common/enums/payment-provider.enum';
+import { PaymentStatus } from '../../../common/enums/payment-status.enum';
 
 @Entity('payments')
 export class Payment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ name: 'order_id' })
   orderId: string;
 
@@ -21,6 +25,7 @@ export class Payment {
   @JoinColumn({ name: 'order_id' })
   order: Order;
 
+  @Index()
   @Column({ name: 'external_id', nullable: true })
   externalId: string;
 
@@ -32,16 +37,17 @@ export class Payment {
 
   @Column({
     type: 'enum',
-    enum: ['sberbank', 'yandex', 'tbank'],
+    enum: PaymentProvider,
   })
-  provider: string;
+  provider: PaymentProvider;
 
+  @Index()
   @Column({
     type: 'enum',
-    enum: ['pending', 'processing', 'completed', 'failed', 'cancelled'],
-    default: 'pending',
+    enum: PaymentStatus,
+    default: PaymentStatus.PENDING,
   })
-  status: string;
+  status: PaymentStatus;
 
   @Column({ name: 'provider_response', type: 'jsonb', nullable: true })
   providerResponse: any;

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -19,6 +19,9 @@ import { envValidationSchema } from './config/env.validation';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { HealthModule } from './modules/health/health.module';
+import { AuthModule } from './common/auth/auth.module';
+import { AlsModule } from './common/als/als.module';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 
 @Module({
   imports: [
@@ -61,6 +64,8 @@ import { HealthModule } from './modules/health/health.module';
     }),
 
     // Feature modules
+    AuthModule,
+    AlsModule,
     OrderModule,
     PaymentModule,
     HealthModule,
@@ -68,4 +73,8 @@ import { HealthModule } from './modules/health/health.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}

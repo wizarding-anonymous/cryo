@@ -7,10 +7,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { AlsService } from '../als/als.service';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
+
+  constructor(private readonly alsService: AlsService) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -55,9 +58,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       },
     };
 
+    const correlationId = this.alsService.get('correlationId');
+    errorResponse['correlationId'] = correlationId;
+
     // Log error details
     this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${message}`,
+      `[${correlationId}] ${request.method} ${request.url} - ${status} - ${message}`,
     );
 
     response.status(status).json(errorResponse);
