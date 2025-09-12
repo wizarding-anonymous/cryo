@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { OrderService } from '../order/order.service';
+import { PaymentProviderService } from './payment-provider.service';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 
@@ -13,6 +14,7 @@ export class PaymentService {
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
     private readonly orderService: OrderService,
+    private readonly paymentProviderService: PaymentProviderService,
   ) {}
 
   async createPayment(createPaymentDto: CreatePaymentDto, userId: string): Promise<Payment> {
