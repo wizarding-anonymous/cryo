@@ -1,18 +1,16 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { LibraryGame } from './entities/library-game.entity';
-import { LibraryQueryDto, AddGameToLibraryDto, SearchLibraryDto } from './dto/request.dto';
+import { LibraryQueryDto, AddGameToLibraryDto } from './dto/request.dto';
 import { LibraryResponseDto, OwnershipResponseDto, LibraryGameDto, GameDetailsDto } from './dto/response.dto';
 import { GameCatalogClient } from '../clients/game-catalog.client';
 import { CacheService } from '../cache/cache.service';
 import { EventEmitterService } from '../events/event.emitter.service';
+import { LibraryRepository } from './repositories/library.repository';
 
 @Injectable()
 export class LibraryService {
   constructor(
-    @InjectRepository(LibraryGame)
-    private readonly libraryRepository: Repository<LibraryGame>,
+    private readonly libraryRepository: LibraryRepository,
     private readonly gameCatalogClient: GameCatalogClient,
     private readonly cacheService: CacheService,
     private readonly eventEmitter: EventEmitterService,
@@ -22,35 +20,32 @@ export class LibraryService {
     userId: string,
     queryDto: LibraryQueryDto,
   ): Promise<LibraryResponseDto> {
-    const cacheKey = `user-library:${userId}:${JSON.stringify(queryDto)}`;
-    return this.cacheService.getOrSet(cacheKey, async () => {
-      const [games, total] = await this.libraryRepository.findAndCount({
-        where: { userId },
-        skip: (queryDto.page - 1) * queryDto.limit,
-        take: queryDto.limit,
-        order: { [queryDto.sortBy]: queryDto.sortOrder },
-      });
+    const [games, total] = await this.libraryRepository.findUserLibrary(
+      userId,
+      queryDto,
+    );
 
-      const enrichedGames = await this.enrichWithGameDetails(games);
+    const enrichedGames = await this.enrichWithGameDetails(games);
 
-      return {
-        games: enrichedGames,
-        pagination: {
-          total,
-          page: queryDto.page,
-          limit: queryDto.limit,
-          totalPages: Math.ceil(total / queryDto.limit),
-        },
-      };
-    }, 300); // Cache for 5 minutes
+    return {
+      games: enrichedGames,
+      pagination: {
+        total,
+        page: queryDto.page,
+        limit: queryDto.limit,
+        totalPages: Math.ceil(total / queryDto.limit),
+      },
+    };
   }
 
   async addGameToLibrary(
     dto: AddGameToLibraryDto,
   ): Promise<LibraryGame> {
-    const existingEntry = await this.libraryRepository.findOne({
-      where: { userId: dto.userId, gameId: dto.gameId },
-    });
+    const existingEntry =
+      await this.libraryRepository.findOneByUserIdAndGameId(
+        dto.userId,
+        dto.gameId,
+      );
 
     if (existingEntry) {
       throw new ConflictException('Game already exists in the library.');
@@ -76,9 +71,10 @@ export class LibraryService {
     userId: string,
     gameId: string,
   ): Promise<OwnershipResponseDto> {
-    const entry = await this.libraryRepository.findOne({
-      where: { userId, gameId },
-    });
+    const entry = await this.libraryRepository.findOneByUserIdAndGameId(
+      userId,
+      gameId,
+    );
 
     if (!entry) {
       return { owns: false };
@@ -106,14 +102,16 @@ export class LibraryService {
   }
 
   private async invalidateUserLibraryCache(userId: string) {
-    // This is a simple invalidation. A more robust solution would
-    // involve pattern-based key deletion if the cache supported it,
-    // or tracking all related keys. For now, we assume we can't
-    // easily delete all paginated versions, so this is a placeholder.
-    // A better approach would be to use tagged caching.
-    const cacheKeyPattern = `user-library:${userId}:*`;
-    // Since we can't delete by pattern easily, this is a conceptual note.
-    // In a real app, we'd have a strategy for this.
+    const userCacheKeysKey = `user-cache-keys:${userId}`;
+    const keysToDelete = await this.cacheService.get<string[]>(userCacheKeysKey);
+
+    if (keysToDelete && keysToDelete.length > 0) {
+      for (const key of keysToDelete) {
+        await this.cacheService.del(key);
+      }
+    }
+
+    await this.cacheService.del(userCacheKeysKey);
   }
 
   private async enrichWithGameDetails(libraryGames: LibraryGame[]): Promise<LibraryGameDto[]> {

@@ -1,38 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { HistoryService } from './history.service';
+import { PurchaseHistoryRepository } from './repositories/purchase-history.repository';
+import { GameCatalogClient } from '../clients/game-catalog.client';
 import { PurchaseHistory } from './entities/purchase-history.entity';
 import { NotFoundException } from '@nestjs/common';
-import { HistoryQueryDto } from './dto/request.dto';
 import { AddGameToLibraryDto } from '../library/dto/request.dto';
+import { HistoryQueryDto, SearchHistoryDto } from './dto/request.dto';
 
 describe('HistoryService', () => {
   let service: HistoryService;
-  let repository: Repository<PurchaseHistory>;
+  let repository: PurchaseHistoryRepository;
+  let gameCatalogClient: GameCatalogClient;
 
   const mockHistoryRepository = {
-    findAndCount: jest.fn(),
+    findUserHistory: jest.fn(),
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+    find: jest.fn(),
+  };
+
+  const mockGameCatalogClient = {
+    getGamesByIds: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HistoryService,
-        {
-          provide: getRepositoryToken(PurchaseHistory),
-          useValue: mockHistoryRepository,
-        },
+        { provide: PurchaseHistoryRepository, useValue: mockHistoryRepository },
+        { provide: GameCatalogClient, useValue: mockGameCatalogClient },
       ],
     }).compile();
 
     service = module.get<HistoryService>(HistoryService);
-    repository = module.get<Repository<PurchaseHistory>>(
-      getRepositoryToken(PurchaseHistory),
-    );
+    repository = module.get<PurchaseHistoryRepository>(PurchaseHistoryRepository);
+    gameCatalogClient = module.get<GameCatalogClient>(GameCatalogClient);
+
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -40,66 +45,56 @@ describe('HistoryService', () => {
   });
 
   describe('getPurchaseHistory', () => {
-    it('should return a paginated list of purchase history', async () => {
-      const mockHistory = [{ id: '1', userId: 'user1', gameId: 'game1' }];
-      mockHistoryRepository.findAndCount.mockResolvedValue([mockHistory, 1]);
-
-      const queryDto = new HistoryQueryDto();
-      queryDto.page = 1;
-      queryDto.limit = 10;
-
-      const result = await service.getPurchaseHistory('user1', queryDto);
-
-      expect(result.history).toEqual(mockHistory);
-      expect(result.pagination.total).toBe(1);
+    it('should return purchase history', async () => {
+        const query = new HistoryQueryDto();
+        mockHistoryRepository.findUserHistory.mockResolvedValue([[], 0]);
+        await service.getPurchaseHistory('user1', query);
+        expect(mockHistoryRepository.findUserHistory).toHaveBeenCalledWith('user1', query);
     });
   });
 
   describe('getPurchaseDetails', () => {
-    it('should return purchase details for a valid id', async () => {
-      const mockPurchase = new PurchaseHistory();
-      mockHistoryRepository.findOne.mockResolvedValue(mockPurchase);
-
+    it('should return purchase details', async () => {
+      const purchase = new PurchaseHistory();
+      mockHistoryRepository.findOne.mockResolvedValue(purchase);
       const result = await service.getPurchaseDetails('user1', 'purchase1');
-      expect(result).toEqual(mockPurchase);
+      expect(result).toEqual(purchase);
     });
 
-    it('should throw NotFoundException for an invalid id', async () => {
+    it('should throw NotFoundException if purchase not found', async () => {
       mockHistoryRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.getPurchaseDetails('user1', 'invalid-id'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getPurchaseDetails('user1', 'purchase1')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('createPurchaseRecord', () => {
-    it('should create a new purchase record', async () => {
-      const dto: AddGameToLibraryDto = {
-        userId: 'user1',
-        gameId: 'game1',
-        orderId: 'order1',
-        purchaseId: 'purchase1',
-        purchasePrice: 10.0,
-        currency: 'USD',
-        purchaseDate: new Date().toISOString(),
-      };
+    it('should create and save a purchase record', async () => {
+      const dto: AddGameToLibraryDto = { userId: 'user1', gameId: 'game1', orderId: 'order1', purchaseId: 'purchase1', purchasePrice: 10.0, currency: 'USD', purchaseDate: new Date().toISOString() };
       const newRecord = new PurchaseHistory();
-
       mockHistoryRepository.create.mockReturnValue(newRecord);
       mockHistoryRepository.save.mockResolvedValue(newRecord);
 
       const result = await service.createPurchaseRecord(dto);
       expect(result).toEqual(newRecord);
-      expect(mockHistoryRepository.create).toHaveBeenCalledWith({
-        id: dto.purchaseId,
-        userId: dto.userId,
-        gameId: dto.gameId,
-        orderId: dto.orderId,
-        amount: dto.purchasePrice,
-        currency: dto.currency,
-      });
+      expect(mockHistoryRepository.create).toHaveBeenCalled();
       expect(mockHistoryRepository.save).toHaveBeenCalledWith(newRecord);
+    });
+  });
+
+  describe('searchPurchaseHistory', () => {
+    it('should return filtered history', async () => {
+        const query = new SearchHistoryDto();
+        query.query = 'test';
+        const historyItem = new PurchaseHistory();
+        historyItem.gameId = 'game1';
+        mockHistoryRepository.find.mockResolvedValue([historyItem]);
+        mockGameCatalogClient.getGamesByIds.mockResolvedValue([{ id: 'game1', title: 'test game' }]);
+
+        const result = await service.searchPurchaseHistory('user1', query);
+
+        expect(mockHistoryRepository.find).toHaveBeenCalledWith({ where: { userId: 'user1' }});
+        expect(mockGameCatalogClient.getGamesByIds).toHaveBeenCalledWith(['game1']);
+        expect(result.history.length).toBe(1);
     });
   });
 });

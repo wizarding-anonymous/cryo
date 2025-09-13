@@ -7,6 +7,7 @@ import {
 } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { MetricsController } from './metrics.controller';
 import { LibraryModule } from './library/library.module';
 import { HistoryModule } from './history/history.module';
 import { HealthModule } from './health/health.module';
@@ -15,9 +16,11 @@ import { AuthModule } from './auth/auth.module';
 import { ClientsModule } from './clients/clients.module';
 import { AppCacheModule } from './cache/cache.module';
 import { EventsModule } from './events/events.module';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 @Module({
   imports: [
+    PrometheusModule.register(),
     AuthModule,
     ConfigModule,
     ClientsModule,
@@ -56,7 +59,7 @@ import { EventsModule } from './events/events.module';
     HistoryModule,
     HealthModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, MetricsController],
   providers: [AppService],
 })
 export class AppModule {}

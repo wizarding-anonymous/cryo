@@ -8,14 +8,27 @@ import {
   Param,
   UseGuards,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor } from '../common/interceptors/cache.interceptor';
+import { CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { LibraryService } from './library.service';
 import { SearchService } from './search.service';
 import { LibraryQueryDto, SearchLibraryDto, AddGameToLibraryDto } from './dto/request.dto';
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // To be created in a later step
-// import { OwnershipGuard } from '../auth/guards/ownership.guard'; // To be created in a later step
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../auth/guards/ownership.guard';
+import { RolesGuard, Roles } from '../auth/guards/role.guard'; // Assuming RolesGuard is the name
 
-// @UseGuards(JwtAuthGuard) // To be enabled later
+// Define a type for authenticated requests
+interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+    username: string;
+    roles: string[];
+  };
+}
+
+@UseGuards(JwtAuthGuard)
 @Controller('library')
 export class LibraryController {
   constructor(
@@ -24,37 +37,40 @@ export class LibraryController {
   ) {}
 
   @Get('my')
-  // @UseGuards(OwnershipGuard) // To be enabled later
-  getMyLibrary(@Req() request, @Query() query: LibraryQueryDto) {
-    // const userId = request.user.id;
-    const userId = 'placeholder-user-id'; // Placeholder until auth is integrated
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300) // 5 minutes
+  getMyLibrary(@Req() request: AuthenticatedRequest, @Query() query: LibraryQueryDto) {
+    const userId = request.user.id;
     return this.libraryService.getUserLibrary(userId, query);
   }
 
   @Get('my/search')
-  searchMyLibrary(@Req() request, @Query() query: SearchLibraryDto) {
-    // const userId = request.user.id;
-    const userId = 'placeholder-user-id'; // Placeholder
+  searchMyLibrary(@Req() request: AuthenticatedRequest, @Query() query: SearchLibraryDto) {
+    const userId = request.user.id;
     return this.searchService.searchUserLibrary(userId, query);
   }
 
   @Get('ownership/:gameId')
-  checkOwnership(@Req() request, @Param('gameId') gameId: string) {
-    // const userId = request.user.id;
-    const userId = 'placeholder-user-id'; // Placeholder
+  @UseGuards(OwnershipGuard)
+  checkOwnership(@Req() request: AuthenticatedRequest, @Param('gameId') gameId: string) {
+    const userId = request.user.id;
     return this.libraryService.checkGameOwnership(userId, gameId);
   }
 
   // --- Internal Endpoints --- //
+  // These should be protected by an internal-only guard or network policies in a real scenario
+  // For now, let's assume an admin role is needed.
 
   @Post('add')
-  // This should be protected by an internal-only guard or network policies in a real scenario
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'internal-service')
   addGameToLibrary(@Body() dto: AddGameToLibraryDto) {
     return this.libraryService.addGameToLibrary(dto);
   }
 
   @Delete('remove')
-  // This should be protected as well
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'internal-service')
   removeGameFromLibrary(@Body() body: { userId: string; gameId: string }) {
     return this.libraryService.removeGameFromLibrary(body.userId, body.gameId);
   }

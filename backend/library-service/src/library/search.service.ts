@@ -1,45 +1,63 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
-import { LibraryGame } from './entities/library-game.entity';
+import { LibraryRepository } from './repositories/library.repository';
 import { SearchLibraryDto } from './dto/request.dto';
+import { GameCatalogClient } from '../clients/game-catalog.client';
+import { LibraryResponseDto, LibraryGameDto, GameDetailsDto } from './dto/response.dto';
+import { LibraryGame } from './entities/library-game.entity';
 
 @Injectable()
 export class SearchService {
   constructor(
-    @InjectRepository(LibraryGame)
-    private readonly libraryRepository: Repository<LibraryGame>,
+    private readonly libraryRepository: LibraryRepository,
+    private readonly gameCatalogClient: GameCatalogClient,
   ) {}
 
-  /**
-   * Performs a basic search in the user's library.
-   * NOTE: Currently searches by gameId. A full-featured search on game title,
-   * developer, and tags requires a JOIN with data from GameCatalogService,
-   * which will be implemented in a later step. Advanced features like full-text
-   * search and fuzzy matching would require database-specific setup (e.g., tsvector)
-   * or a dedicated search engine.
-   */
   async searchUserLibrary(
     userId: string,
     searchDto: SearchLibraryDto,
-  ): Promise<LibraryGame[]> {
-    // This is a simplified search. A real implementation would be more complex.
-    // We are searching by gameId here as a placeholder for a real search implementation.
-    // A proper search would likely involve querying the Game Catalog service first
-    // to get a list of gameIds matching the query, then querying the library.
-    const [games] = await this.libraryRepository.findAndCount({
-      where: {
-        userId,
-        // A real-world scenario would not use ILIKE on a UUID.
-        // This is a placeholder for a more complex search logic.
-        // gameId: ILike(`%${searchDto.query}%`),
-      },
-      skip: (searchDto.page - 1) * searchDto.limit,
-      take: searchDto.limit,
-      order: { [searchDto.sortBy]: searchDto.sortOrder },
+  ): Promise<LibraryResponseDto> {
+    // 1. Get all game entries from the user's library
+    const allLibraryGames = await this.libraryRepository.find({ where: { userId } });
+    if (allLibraryGames.length === 0) {
+      return { games: [], pagination: { total: 0, page: 1, limit: searchDto.limit, totalPages: 0 } };
+    }
+
+    // 2. Get enriched details for all library games
+    const gameIds = allLibraryGames.map((game) => game.gameId);
+    const gameDetails = await this.gameCatalogClient.getGamesByIds(gameIds);
+    const gameDetailsMap = new Map<string, GameDetailsDto>();
+    gameDetails.forEach((detail) => gameDetailsMap.set(detail.id, detail));
+
+    const enrichedLibraryGames = allLibraryGames.map((game) =>
+      LibraryGameDto.fromEntity(game, gameDetailsMap.get(game.gameId)),
+    );
+
+    // 3. Perform in-memory search on enriched data
+    const query = searchDto.query.toLowerCase();
+    const filteredGames = enrichedLibraryGames.filter((game) => {
+      if (!game.gameDetails) return false;
+      const title = game.gameDetails.title?.toLowerCase() || '';
+      const developer = game.gameDetails.developer?.toLowerCase() || '';
+      const publisher = game.gameDetails.publisher?.toLowerCase() || '';
+      return title.includes(query) || developer.includes(query) || publisher.includes(query);
     });
 
-    // In a full implementation, you would then enrich these games with details.
-    return games;
+    // 4. Apply pagination to the filtered results
+    const total = filteredGames.length;
+    const page = searchDto.page || 1;
+    const limit = searchDto.limit || 10;
+    const totalPages = Math.ceil(total / limit);
+    const startIndex = (page - 1) * limit;
+    const paginatedGames = filteredGames.slice(startIndex, startIndex + limit);
+
+    return {
+      games: paginatedGames,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
   }
 }

@@ -1,31 +1,30 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { PurchaseHistory } from './entities/purchase-history.entity';
 import { HistoryQueryDto, SearchHistoryDto } from './dto/request.dto';
 import { HistoryResponseDto } from './dto/response.dto';
-import { AddGameToLibraryDto } from '../library/dto/request.dto'; // Re-using for purchase record creation
+import { AddGameToLibraryDto } from '../library/dto/request.dto';
+import { PurchaseHistoryRepository } from './repositories/purchase-history.repository';
+import { GameCatalogClient } from '../clients/game-catalog.client';
+import { GameDetailsDto } from '../library/dto/response.dto';
 
 @Injectable()
 export class HistoryService {
   constructor(
-    @InjectRepository(PurchaseHistory)
-    private readonly historyRepository: Repository<PurchaseHistory>,
+    private readonly historyRepository: PurchaseHistoryRepository,
+    private readonly gameCatalogClient: GameCatalogClient,
   ) {}
 
   async getPurchaseHistory(
     userId: string,
     queryDto: HistoryQueryDto,
   ): Promise<HistoryResponseDto> {
-    const [history, total] = await this.historyRepository.findAndCount({
-      where: { userId },
-      skip: (queryDto.page - 1) * queryDto.limit,
-      take: queryDto.limit,
-      order: { [queryDto.sortBy]: queryDto.sortOrder },
-    });
+    const [history, total] = await this.historyRepository.findUserHistory(
+      userId,
+      queryDto,
+    );
 
     return {
-      history: history, // Will be mapped to DTOs
+      history: history, // In a real app, this would be mapped to a DTO
       pagination: {
         total,
         page: queryDto.page,
@@ -49,8 +48,6 @@ export class HistoryService {
     return purchase;
   }
 
-  // This DTO is not specified in design.md but is needed for this method.
-  // I will use AddGameToLibraryDto as it contains all the necessary fields.
   async createPurchaseRecord(
     dto: AddGameToLibraryDto,
   ): Promise<PurchaseHistory> {
@@ -61,7 +58,7 @@ export class HistoryService {
       orderId: dto.orderId,
       amount: dto.purchasePrice,
       currency: dto.currency,
-      // other fields like paymentMethod could be added
+      paymentMethod: 'card', // Placeholder
     });
     return this.historyRepository.save(newRecord);
   }
@@ -70,9 +67,38 @@ export class HistoryService {
     userId: string,
     searchDto: SearchHistoryDto,
   ): Promise<HistoryResponseDto> {
-    // Similar to SearchService, a full-text search would be more complex.
-    // This is a placeholder for a more advanced search.
-    // For now, we will just return the normal paginated history.
-    return this.getPurchaseHistory(userId, searchDto);
+    const allHistory = await this.historyRepository.find({ where: { userId } });
+    if (allHistory.length === 0) {
+      return { history: [], pagination: { total: 0, page: 1, limit: searchDto.limit, totalPages: 0 } };
+    }
+
+    const gameIds = [...new Set(allHistory.map((item) => item.gameId))];
+    const gameDetails = await this.gameCatalogClient.getGamesByIds(gameIds);
+    const gameDetailsMap = new Map<string, GameDetailsDto>();
+    gameDetails.forEach((detail) => gameDetailsMap.set(detail.id, detail));
+
+    const query = searchDto.query.toLowerCase();
+    const filteredHistory = allHistory.filter((item) => {
+      const details = gameDetailsMap.get(item.gameId);
+      if (!details) return false;
+      return details.title.toLowerCase().includes(query);
+    });
+
+    const total = filteredHistory.length;
+    const page = searchDto.page || 1;
+    const limit = searchDto.limit || 10;
+    const totalPages = Math.ceil(total / limit);
+    const startIndex = (page - 1) * limit;
+    const paginatedHistory = filteredHistory.slice(startIndex, startIndex + limit);
+
+    return {
+      history: paginatedHistory,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
   }
 }

@@ -27,18 +27,18 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
 
   // Hybrid application setup (for future Kafka integration)
-  // app.connectMicroservice({
-  //   transport: Transport.KAFKA,
-  //   options: {
-  //     client: {
-  //       brokers: [configService.get('kafka.broker')],
-  //     },
-  //     consumer: {
-  //       groupId: 'library-service-consumer',
-  //     },
-  //   },
-  // });
-  // await app.startAllMicroservices();
+  app.connectMicroservice({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        brokers: [configService.get('kafka.broker', 'localhost:9092')],
+      },
+      consumer: {
+        groupId: 'library-service-consumer',
+      },
+    },
+  });
+  await app.startAllMicroservices();
 
   // Global validation pipe
   app.useGlobalPipes(

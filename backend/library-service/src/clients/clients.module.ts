@@ -3,6 +3,7 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GameCatalogClient } from './game-catalog.client';
 import { UserServiceClient } from './user.client';
+import { PaymentServiceClient } from './payment-service.client';
 
 @Module({
   imports: [

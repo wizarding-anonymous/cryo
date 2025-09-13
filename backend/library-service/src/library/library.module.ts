@@ -4,11 +4,13 @@ import { LibraryGame } from './entities/library-game.entity';
 import { LibraryService } from './library.service';
 import { SearchService } from './search.service';
 import { LibraryController } from './library.controller';
+import { LibraryRepository } from './repositories/library.repository';
+import { ClientsModule } from '../clients/clients.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([LibraryGame])],
+  imports: [TypeOrmModule.forFeature([LibraryGame]), ClientsModule],
   controllers: [LibraryController],
-  providers: [LibraryService, SearchService],
+  providers: [LibraryService, SearchService, LibraryRepository],
   exports: [LibraryService, SearchService],
 })
 export class LibraryModule {}

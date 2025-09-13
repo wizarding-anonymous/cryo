@@ -41,7 +41,7 @@ export class PurchaseHistory {
   })
   status: PurchaseStatus;
 
-  @Column('varchar', { length: 100, nullable: true })
+  @Column('varchar', { length: 100 })
   paymentMethod: string;
 
   @Column('jsonb', { nullable: true })

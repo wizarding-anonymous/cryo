@@ -4,8 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, retry, catchError, of } from 'rxjs';
 
 @Injectable()
-export class UserServiceClient {
-  private readonly logger = new Logger(UserServiceClient.name);
+export class PaymentServiceClient {
+  private readonly logger = new Logger(PaymentServiceClient.name);
   private readonly baseUrl: string;
   private readonly retryAttempts = 3;
   private readonly retryDelay = 300;
@@ -14,21 +14,22 @@ export class UserServiceClient {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.baseUrl = this.configService.get('services.user.url');
+    this.baseUrl = this.configService.get('services.payment.url');
   }
 
-  async doesUserExist(userId: string): Promise<boolean> {
-    const url = `${this.baseUrl}/users/${userId}/exists`;
+  // Placeholder method as this client is not actively used by library-service
+  async getPaymentStatus(orderId: string): Promise<{ status: string }> {
+    const url = `${this.baseUrl}/orders/${orderId}/status`;
 
-    const request$ = this.httpService.get<{ exists: boolean }>(url).pipe(
+    const request$ = this.httpService.get<{ status: string }>(url).pipe(
       retry({ count: this.retryAttempts, delay: this.retryDelay }),
       catchError(error => {
-        this.logger.error(`Failed to check existence for user ${userId} after ${this.retryAttempts} attempts: ${error.message}`);
-        return of({ data: { exists: false } });
+        this.logger.error(`Failed to get payment status for order ${orderId}: ${error.message}`);
+        return of({ data: { status: 'unknown' } });
       }),
     );
 
     const response = await firstValueFrom(request$);
-    return response.data.exists === true;
+    return response.data;
   }
 }
