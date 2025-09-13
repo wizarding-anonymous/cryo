@@ -5,9 +5,14 @@ import { HistoryService } from './history.service';
 import { HistoryController } from './history.controller';
 import { PurchaseHistoryRepository } from './repositories/purchase-history.repository';
 import { ClientsModule } from '../clients/clients.module';
+import { AppCacheModule } from '../cache/cache.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([PurchaseHistory]), ClientsModule],
+  imports: [
+    TypeOrmModule.forFeature([PurchaseHistory]), 
+    ClientsModule,
+    AppCacheModule
+  ],
   controllers: [HistoryController],
   providers: [HistoryService, PurchaseHistoryRepository],
   exports: [HistoryService],

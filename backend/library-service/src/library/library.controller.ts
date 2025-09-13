@@ -17,7 +17,7 @@ import { SearchService } from './search.service';
 import { LibraryQueryDto, SearchLibraryDto, AddGameToLibraryDto } from './dto/request.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../auth/guards/ownership.guard';
-import { RolesGuard, Roles } from '../auth/guards/role.guard'; // Assuming RolesGuard is the name
+import { RoleGuard, Roles } from '../auth/guards/role.guard';
 
 // Define a type for authenticated requests
 interface AuthenticatedRequest extends Request {
@@ -62,14 +62,14 @@ export class LibraryController {
   // For now, let's assume an admin role is needed.
 
   @Post('add')
-  @UseGuards(RolesGuard)
+  @UseGuards(RoleGuard)
   @Roles('admin', 'internal-service')
   addGameToLibrary(@Body() dto: AddGameToLibraryDto) {
     return this.libraryService.addGameToLibrary(dto);
   }
 
   @Delete('remove')
-  @UseGuards(RolesGuard)
+  @UseGuards(RoleGuard)
   @Roles('admin', 'internal-service')
   removeGameFromLibrary(@Body() body: { userId: string; gameId: string }) {
     return this.libraryService.removeGameFromLibrary(body.userId, body.gameId);
