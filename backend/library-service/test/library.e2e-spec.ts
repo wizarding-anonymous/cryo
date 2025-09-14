@@ -149,6 +149,30 @@ describe('Library Service E2E with Database', () => {
       expect(searchResponse.body.games[0].gameId).toBe(testGameId);
     });
 
+    it('should return empty results for a search with no matches', async () => {
+      // Add a game first
+      await request(app.getHttpServer())
+        .post('/api/library/add')
+        .send({
+          userId: testUserId,
+          gameId: testGameId,
+          orderId: testOrderId,
+          purchaseId: randomUUID(),
+          purchasePrice: 29.99,
+          currency: 'USD',
+          purchaseDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // Search for something that doesn't exist
+      const searchResponse = await request(app.getHttpServer())
+        .get('/api/library/my/search?query=NonExistentGame')
+        .set('Authorization', `Bearer ${validToken}`)
+        .expect(200);
+
+      expect(searchResponse.body.games).toHaveLength(0);
+    });
+
     it('should handle pagination correctly', async () => {
       // Add multiple games
       const gameIds = [];
@@ -303,6 +327,72 @@ describe('Library Service E2E with Database', () => {
         .expect(200);
 
       expect(ownershipResponse.body.owns).toBe(false);
+    });
+
+    it('should return an error when adding a game for a non-existent user', async () => {
+      mockUserClient.doesUserExist.mockResolvedValue(false);
+
+      await request(app.getHttpServer())
+        .post('/api/library/add')
+        .send({
+          userId: testUserId,
+          gameId: testGameId,
+          orderId: testOrderId,
+          purchaseId: randomUUID(),
+          purchasePrice: 29.99,
+          currency: 'USD',
+          purchaseDate: new Date().toISOString(),
+        })
+        .expect(404); // Not Found
+
+      // Reset mock for other tests
+      mockUserClient.doesUserExist.mockResolvedValue(true);
+    });
+  });
+
+  describe('Security and Authorization', () => {
+    it('should prevent a user from accessing another user\'s library', async () => {
+      const otherUserId = randomUUID();
+      const otherUserGameId = randomUUID();
+
+      // Add a game for the main test user
+      await request(app.getHttpServer())
+        .post('/api/library/add')
+        .send({
+          userId: testUserId,
+          gameId: testGameId,
+          orderId: randomUUID(),
+          purchaseId: randomUUID(),
+          purchasePrice: 10.00,
+          currency: 'USD',
+          purchaseDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // Add a game for another user
+      await request(app.getHttpServer())
+        .post('/api/library/add')
+        .send({
+          userId: otherUserId,
+          gameId: otherUserGameId,
+          orderId: randomUUID(),
+          purchaseId: randomUUID(),
+          purchasePrice: 20.00,
+          currency: 'EUR',
+          purchaseDate: new Date().toISOString(),
+        })
+        .expect(201);
+
+      // Fetch the library for the main test user
+      const response = await request(app.getHttpServer())
+        .get('/api/library/my')
+        .set('Authorization', `Bearer ${validToken}`) // Token belongs to testUserId
+        .expect(200);
+
+      // Assert that the main user sees only their own game
+      expect(response.body.games).toHaveLength(1);
+      expect(response.body.games[0].gameId).toBe(testGameId);
+      expect(response.body.games[0].userId).toBe(testUserId);
     });
   });
 

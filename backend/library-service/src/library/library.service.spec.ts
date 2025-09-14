@@ -106,6 +106,19 @@ describe('LibraryService', () => {
       expect(result.games[0].gameDetails).toBeUndefined();
       expect(result.pagination.total).toBe(1);
     });
+
+    it('should use cache to retrieve user library', async () => {
+      const mockGames = [{ id: '1', userId: 'user1', gameId: 'game1' }];
+      const queryDto = new LibraryQueryDto();
+      const cacheKey = `library_user1_page_1_limit_20_purchaseDate_desc`;
+
+      mockCacheService.getOrSet.mockResolvedValue({ games: mockGames, pagination: { total: 1 } });
+
+      await service.getUserLibrary('user1', queryDto);
+
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith(cacheKey, expect.any(Function), 300);
+      expect(mockLibraryRepository.findUserLibrary).not.toHaveBeenCalled();
+    });
   });
 
   describe('addGameToLibrary', () => {
@@ -131,6 +144,16 @@ describe('LibraryService', () => {
 
       await expect(service.addGameToLibrary(dto)).rejects.toThrow(ConflictException);
       expect(mockCacheService.del).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emitGameAddedEvent).not.toHaveBeenCalled();
+    });
+
+    it('should not emit event if database save fails', async () => {
+      const dto: AddGameToLibraryDto = { userId: 'user1', gameId: 'game1', orderId: 'order1', purchaseId: 'purchase1', purchasePrice: 10.0, currency: 'USD', purchaseDate: new Date().toISOString() };
+
+      mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(null);
+      mockLibraryRepository.save.mockRejectedValue(new Error('DB error'));
+
+      await expect(service.addGameToLibrary(dto)).rejects.toThrow('DB error');
       expect(mockEventEmitter.emitGameAddedEvent).not.toHaveBeenCalled();
     });
   });
@@ -173,6 +196,13 @@ describe('LibraryService', () => {
     it('should throw a NotFoundException if the game is not in the library', async () => {
       mockLibraryRepository.delete.mockResolvedValue({ affected: 0, raw: {} });
       await expect(service.removeGameFromLibrary('user1', 'game1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should not emit event if database delete fails', async () => {
+      mockLibraryRepository.delete.mockRejectedValue(new Error('DB error'));
+
+      await expect(service.removeGameFromLibrary('user1', 'game1')).rejects.toThrow('DB error');
+      expect(mockEventEmitter.emitGameRemovedEvent).not.toHaveBeenCalled();
     });
   });
 });
