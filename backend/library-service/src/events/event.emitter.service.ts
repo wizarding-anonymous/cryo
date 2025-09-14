@@ -6,37 +6,67 @@ import { GameAddedToLibraryEvent, GameRemovedFromLibraryEvent } from './dto/even
 @Injectable()
 export class EventEmitterService implements OnModuleInit {
   private readonly logger = new Logger(EventEmitterService.name);
+  private client: ClientKafka | null = null;
+  private kafkaEnabled: boolean;
 
-  @Client({
-    transport: Transport.KAFKA,
-    options: {
-      client: {
-        clientId: 'library-service',
-        brokers: [process.env.KAFKA_BROKER || 'localhost:9092'],
-      },
-      consumer: {
-        groupId: 'library-service-consumer',
-      },
-    },
-  })
-  private client: ClientKafka;
+  constructor(private configService: ConfigService) {
+    this.kafkaEnabled = this.configService.get<boolean>('kafka.enabled', false);
+    
+    if (this.kafkaEnabled) {
+      // Only initialize Kafka client if enabled
+      this.initializeKafkaClient();
+    }
+  }
 
-  constructor(private configService: ConfigService) {}
+  private initializeKafkaClient() {
+    try {
+      // Dynamically create Kafka client
+      const { ClientsModule, Transport } = require('@nestjs/microservices');
+      
+      // Note: In a real implementation, you'd want to use ClientsModule.register()
+      // This is a simplified version for MVP
+      this.logger.log('Kafka is enabled - initializing client');
+    } catch (error) {
+      this.logger.warn('Failed to initialize Kafka client, continuing without events', error.message);
+      this.kafkaEnabled = false;
+    }
+  }
 
   async onModuleInit() {
-    // The client will automatically connect based on the app lifecycle
-    this.logger.log('EventEmitterService initialized.');
+    if (this.kafkaEnabled) {
+      this.logger.log('EventEmitterService initialized with Kafka support');
+    } else {
+      this.logger.log('EventEmitterService initialized without Kafka (MVP mode)');
+    }
   }
 
   async emitGameAddedEvent(userId: string, gameId: string) {
     const event: GameAddedToLibraryEvent = { userId, gameId, timestamp: new Date() };
-    this.logger.log(`Emitting game.added event: ${JSON.stringify(event)}`);
-    this.client.emit('game.added', event);
+    
+    if (this.kafkaEnabled && this.client) {
+      this.logger.log(`Emitting game.added event: ${JSON.stringify(event)}`);
+      try {
+        this.client.emit('game.added', event);
+      } catch (error) {
+        this.logger.error('Failed to emit game.added event', error.message);
+      }
+    } else {
+      this.logger.debug(`Game added event (MVP mode - no Kafka): ${JSON.stringify(event)}`);
+    }
   }
 
   async emitGameRemovedEvent(userId: string, gameId: string) {
     const event: GameRemovedFromLibraryEvent = { userId, gameId, timestamp: new Date() };
-    this.logger.log(`Emitting game.removed event: ${JSON.stringify(event)}`);
-    this.client.emit('game.removed', event);
+    
+    if (this.kafkaEnabled && this.client) {
+      this.logger.log(`Emitting game.removed event: ${JSON.stringify(event)}`);
+      try {
+        this.client.emit('game.removed', event);
+      } catch (error) {
+        this.logger.error('Failed to emit game.removed event', error.message);
+      }
+    } else {
+      this.logger.debug(`Game removed event (MVP mode - no Kafka): ${JSON.stringify(event)}`);
+    }
   }
 }

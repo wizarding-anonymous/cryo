@@ -28,8 +28,10 @@ describe('LibraryService', () => {
   };
 
   const mockCacheService = {
-    getOrSet: jest.fn(),
+    get: jest.fn(),
+    set: jest.fn(),
     del: jest.fn(),
+    getOrSet: jest.fn(),
   };
 
   const mockEventEmitter = {
@@ -77,6 +79,33 @@ describe('LibraryService', () => {
       expect(mockLibraryRepository.findUserLibrary).toHaveBeenCalledWith('user1', queryDto);
       expect(mockGameCatalogClient.getGamesByIds).toHaveBeenCalledWith(['game1']);
     });
+
+    it('should return empty library when user has no games', async () => {
+      const queryDto = new LibraryQueryDto();
+
+      mockLibraryRepository.findUserLibrary.mockResolvedValue([[], 0]);
+
+      const result = await service.getUserLibrary('user1', queryDto);
+
+      expect(result.games).toEqual([]);
+      expect(result.pagination.total).toBe(0);
+      // getGamesByIds should not be called when there are no games
+      expect(mockGameCatalogClient.getGamesByIds).not.toHaveBeenCalled();
+    });
+
+    it('should handle missing game details gracefully', async () => {
+      const mockGames = [{ id: '1', userId: 'user1', gameId: 'game1' }];
+      const queryDto = new LibraryQueryDto();
+
+      mockLibraryRepository.findUserLibrary.mockResolvedValue([mockGames, 1]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
+
+      const result = await service.getUserLibrary('user1', queryDto);
+
+      expect(result.games).toHaveLength(1);
+      expect(result.games[0].gameDetails).toBeUndefined();
+      expect(result.pagination.total).toBe(1);
+    });
   });
 
   describe('addGameToLibrary', () => {
@@ -108,9 +137,27 @@ describe('LibraryService', () => {
 
   describe('checkGameOwnership', () => {
     it('should return true if the user owns the game', async () => {
-      mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(new LibraryGame());
+      const mockGame = new LibraryGame();
+      mockGame.purchaseDate = new Date();
+      mockGame.purchasePrice = 29.99;
+      mockGame.currency = 'USD';
+      
+      mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(mockGame);
       const result = await service.checkGameOwnership('user1', 'game1');
+      
       expect(result.owns).toBe(true);
+      expect(result.purchaseDate).toEqual(mockGame.purchaseDate);
+      expect(result.purchasePrice).toBe(mockGame.purchasePrice);
+      expect(result.currency).toBe(mockGame.currency);
+    });
+
+    it('should return false if the user does not own the game', async () => {
+      mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(null);
+      const result = await service.checkGameOwnership('user1', 'game1');
+      expect(result.owns).toBe(false);
+      expect(result.purchaseDate).toBeUndefined();
+      expect(result.purchasePrice).toBeUndefined();
+      expect(result.currency).toBeUndefined();
     });
   });
 

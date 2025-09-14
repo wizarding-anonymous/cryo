@@ -1,0 +1,51 @@
+[
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/api/payments/.*",
+      "pathParameters": {
+        "paymentId": [".*"]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "id": "payment-123",
+        "orderId": "order-456",
+        "userId": "user-123",
+        "amount": 29.99,
+        "currency": "USD",
+        "status": "completed",
+        "paymentMethod": "credit_card",
+        "createdAt": "2023-01-01T12:00:00Z",
+        "completedAt": "2023-01-01T12:01:00Z",
+        "items": [
+          {
+            "gameId": "game-123",
+            "title": "Test Game",
+            "price": 29.99,
+            "currency": "USD"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "POST",
+      "path": "/api/payments/webhook"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "received": true
+      }
+    }
+  }
+]

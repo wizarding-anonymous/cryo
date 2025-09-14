@@ -23,6 +23,14 @@ export const dataSourceOptions: DataSourceOptions = {
   migrations: [join(__dirname, 'src/migrations/*{.ts,.js}')],
   migrationsTableName: 'migrations',
   synchronize: false, // Never true in production with migrations
+  logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
+  // Connection pooling configuration
+  extra: {
+    max: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '20', 10),
+    min: parseInt(process.env.DATABASE_MIN_CONNECTIONS || '5', 10),
+    acquireTimeoutMillis: parseInt(process.env.DATABASE_ACQUIRE_TIMEOUT || '60000', 10),
+    idleTimeoutMillis: parseInt(process.env.DATABASE_IDLE_TIMEOUT || '600000', 10),
+  },
 };
 
 const AppDataSource = new DataSource(dataSourceOptions);

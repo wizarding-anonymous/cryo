@@ -1,14 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import * as request from 'supertest';
+import { TestAppModule } from './test-app.module';
 import { GameCatalogClient } from '../src/clients/game-catalog.client';
 import { JwtService } from '@nestjs/jwt';
+import { randomUUID } from 'crypto';
 
 describe('Library Service (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
   let validToken: string;
+  let testUserId: string;
 
   const mockGameCatalogClient = {
     getGamesByIds: jest.fn(),
@@ -17,11 +19,11 @@ describe('Library Service (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     })
-    .overrideProvider(GameCatalogClient)
-    .useValue(mockGameCatalogClient)
-    .compile();
+      .overrideProvider(GameCatalogClient)
+      .useValue(mockGameCatalogClient)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
@@ -29,7 +31,8 @@ describe('Library Service (e2e)', () => {
     await app.init();
 
     jwtService = app.get(JwtService);
-    validToken = jwtService.sign({ sub: 'user-id-123', username: 'testuser', roles: ['user'] });
+    testUserId = randomUUID(); // Генерируем валидный UUID для тестов
+    validToken = jwtService.sign({ sub: testUserId, username: 'testuser', roles: ['user'] });
   });
 
   afterAll(async () => {
@@ -48,38 +51,38 @@ describe('Library Service (e2e)', () => {
     });
 
     it('GET /api/library/my - should return user library', () => {
-        // We don't need to mock the repository because for e2e, we want to hit the real DB.
-        // But we do need to mock the HTTP client.
-        mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
+      // We don't need to mock the repository because for e2e, we want to hit the real DB.
+      // But we do need to mock the HTTP client.
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
 
-        return request(app.getHttpServer())
-            .get('/api/library/my')
-            .set('Authorization', `Bearer ${validToken}`)
-            .expect(200);
+      return request(app.getHttpServer())
+        .get('/api/library/my')
+        .set('Authorization', `Bearer ${validToken}`)
+        .expect(200);
     });
 
     it('GET /api/library/my/search - should return search results', () => {
-        mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
 
-        return request(app.getHttpServer())
-            .get('/api/library/my/search?query=test')
-            .set('Authorization', `Bearer ${validToken}`)
-            .expect(200);
+      return request(app.getHttpServer())
+        .get('/api/library/my/search?query=test')
+        .set('Authorization', `Bearer ${validToken}`)
+        .expect(200);
     });
   });
 
   describe('HistoryController', () => {
     it('GET /api/library/history - should fail without auth token', () => {
-        return request(app.getHttpServer())
-          .get('/api/library/history')
-          .expect(401);
+      return request(app.getHttpServer())
+        .get('/api/library/history')
+        .expect(401);
     });
 
     it('GET /api/library/history - should return user history', () => {
-        return request(app.getHttpServer())
-            .get('/api/library/history')
-            .set('Authorization', `Bearer ${validToken}`)
-            .expect(200);
+      return request(app.getHttpServer())
+        .get('/api/library/history')
+        .set('Authorization', `Bearer ${validToken}`)
+        .expect(200);
     });
   });
 

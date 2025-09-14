@@ -58,22 +58,47 @@ describe('SearchService', () => {
     });
 
     it('should return games filtered by developer', async () => {
-        const libraryGames = [{ gameId: '1' }, { gameId: '2' }] as LibraryGame[];
-        const gameDetails = [
-          { id: '1', title: 'Action Game', developer: 'Dev A' },
-          { id: '2', title: 'Another Game', developer: 'Super Dev' },
-        ];
-        mockLibraryRepository.find.mockResolvedValue(libraryGames);
-        mockGameCatalogClient.getGamesByIds.mockResolvedValue(gameDetails);
+      const libraryGames = [{ gameId: '1' }, { gameId: '2' }] as LibraryGame[];
+      const gameDetails = [
+        { id: '1', title: 'Action Game', developer: 'Dev A' },
+        { id: '2', title: 'Another Game', developer: 'Super Dev' },
+      ];
+      mockLibraryRepository.find.mockResolvedValue(libraryGames);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue(gameDetails);
 
-        const searchDto = new SearchLibraryDto();
-        searchDto.query = 'Super';
+      const searchDto = new SearchLibraryDto();
+      searchDto.query = 'Super';
 
-        const result = await service.searchUserLibrary('user1', searchDto);
+      const result = await service.searchUserLibrary('user1', searchDto);
 
-        expect(result.games.length).toBe(1);
-        expect(result.games[0].gameDetails.developer).toBe('Super Dev');
-      });
+      expect(result.games.length).toBe(1);
+      expect(result.games[0].gameDetails.developer).toBe('Super Dev');
+    });
+
+    it('should handle empty library', async () => {
+      mockLibraryRepository.find.mockResolvedValue([]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
+
+      const searchDto = new SearchLibraryDto();
+      searchDto.query = 'anything';
+
+      const result = await service.searchUserLibrary('user1', searchDto);
+      expect(result.games).toEqual([]);
+      expect(result.pagination.total).toBe(0);
+    });
+
+    it('should handle case insensitive search', async () => {
+      const libraryGames = [{ gameId: '1' }] as LibraryGame[];
+      const gameDetails = [{ id: '1', title: 'Action Game', developer: 'Dev A' }];
+      mockLibraryRepository.find.mockResolvedValue(libraryGames);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue(gameDetails);
+
+      const searchDto = new SearchLibraryDto();
+      searchDto.query = 'action';
+
+      const result = await service.searchUserLibrary('user1', searchDto);
+      expect(result.games.length).toBe(1);
+    });
 
     it('should return an empty array if no games match', async () => {
       const libraryGames = [{ gameId: '1' }] as LibraryGame[];

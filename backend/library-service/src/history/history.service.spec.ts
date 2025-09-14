@@ -45,11 +45,26 @@ describe('HistoryService', () => {
   });
 
   describe('getPurchaseHistory', () => {
-    it('should return purchase history', async () => {
-        const query = new HistoryQueryDto();
-        mockHistoryRepository.findUserHistory.mockResolvedValue([[], 0]);
-        await service.getPurchaseHistory('user1', query);
-        expect(mockHistoryRepository.findUserHistory).toHaveBeenCalledWith('user1', query);
+    it('should return purchase history with pagination', async () => {
+      const query = new HistoryQueryDto();
+      const mockHistory = [new PurchaseHistory()];
+      mockHistoryRepository.findUserHistory.mockResolvedValue([mockHistory, 1]);
+      
+      const result = await service.getPurchaseHistory('user1', query);
+      
+      expect(result.history).toEqual(mockHistory);
+      expect(result.pagination.total).toBe(1);
+      expect(mockHistoryRepository.findUserHistory).toHaveBeenCalledWith('user1', query);
+    });
+
+    it('should return empty history for user with no purchases', async () => {
+      const query = new HistoryQueryDto();
+      mockHistoryRepository.findUserHistory.mockResolvedValue([[], 0]);
+      
+      const result = await service.getPurchaseHistory('user1', query);
+      
+      expect(result.history).toEqual([]);
+      expect(result.pagination.total).toBe(0);
     });
   });
 
@@ -82,19 +97,44 @@ describe('HistoryService', () => {
   });
 
   describe('searchPurchaseHistory', () => {
-    it('should return filtered history', async () => {
-        const query = new SearchHistoryDto();
-        query.query = 'test';
-        const historyItem = new PurchaseHistory();
-        historyItem.gameId = 'game1';
-        mockHistoryRepository.find.mockResolvedValue([historyItem]);
-        mockGameCatalogClient.getGamesByIds.mockResolvedValue([{ id: 'game1', title: 'test game' }]);
+    it('should return filtered history by game title', async () => {
+      const query = new SearchHistoryDto();
+      query.query = 'test';
+      const historyItem = new PurchaseHistory();
+      historyItem.gameId = 'game1';
+      mockHistoryRepository.find.mockResolvedValue([historyItem]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([{ id: 'game1', title: 'test game' }]);
 
-        const result = await service.searchPurchaseHistory('user1', query);
+      const result = await service.searchPurchaseHistory('user1', query);
 
-        expect(mockHistoryRepository.find).toHaveBeenCalledWith({ where: { userId: 'user1' }});
-        expect(mockGameCatalogClient.getGamesByIds).toHaveBeenCalledWith(['game1']);
-        expect(result.history.length).toBe(1);
+      expect(mockHistoryRepository.find).toHaveBeenCalledWith({ where: { userId: 'user1' }});
+      expect(mockGameCatalogClient.getGamesByIds).toHaveBeenCalledWith(['game1']);
+      expect(result.history.length).toBe(1);
+    });
+
+    it('should return empty results when no matches found', async () => {
+      const query = new SearchHistoryDto();
+      query.query = 'nonexistent';
+      const historyItem = new PurchaseHistory();
+      historyItem.gameId = 'game1';
+      mockHistoryRepository.find.mockResolvedValue([historyItem]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([{ id: 'game1', title: 'different game' }]);
+
+      const result = await service.searchPurchaseHistory('user1', query);
+
+      expect(result.history.length).toBe(0);
+    });
+
+    it('should handle empty purchase history', async () => {
+      const query = new SearchHistoryDto();
+      query.query = 'test';
+      mockHistoryRepository.find.mockResolvedValue([]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
+
+      const result = await service.searchPurchaseHistory('user1', query);
+
+      expect(result.history).toEqual([]);
+      expect(result.pagination.total).toBe(0);
     });
   });
 });

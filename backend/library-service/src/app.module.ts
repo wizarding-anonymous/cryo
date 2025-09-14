@@ -39,18 +39,25 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
         synchronize: configService.get('database.synchronize'),
         logging: configService.get('database.logging'),
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
-        migrationsRun: false,
+        migrationsRun: process.env.NODE_ENV === 'production', // Auto-run migrations in production
+        migrationsTableName: 'migrations',
+        // Connection pooling for better performance
+        extra: {
+          max: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '20', 10),
+          min: parseInt(process.env.DATABASE_MIN_CONNECTIONS || '5', 10),
+          acquireTimeoutMillis: parseInt(process.env.DATABASE_ACQUIRE_TIMEOUT || '60000', 10),
+          idleTimeoutMillis: parseInt(process.env.DATABASE_IDLE_TIMEOUT || '600000', 10),
+        },
       }),
       inject: [ConfigService],
     }),
     CacheModule.registerAsync({
       imports: [NestConfigModule],
       useFactory: (configService: ConfigService) => ({
-        store: 'redis',
-        host: configService.get('redis.host'),
-        port: configService.get('redis.port'),
-        password: configService.get('redis.password'),
         ttl: configService.get('redis.ttl'),
+        max: 100, // Maximum number of items in cache
+        // For now, use in-memory cache. Redis can be added later when needed
+        // This ensures the service works without Redis dependency for MVP
       }),
       inject: [ConfigService],
       isGlobal: true,

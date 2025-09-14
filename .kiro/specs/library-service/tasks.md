@@ -25,6 +25,10 @@
   - _Requirements: 5_
 
 - [ ] 2. Настройка TypeORM и базы данных (единый стек)
+
+
+
+
   - Установить и настроить TypeORM с PostgreSQL 14+ (@nestjs/typeorm)
   - Создать database configuration с валидацией переменных окружения
   - Настроить миграции и синхронизацию схемы для production
@@ -114,10 +118,15 @@
   - Создать GlobalExceptionFilter с @Catch() декоратором
   - Добавить кастомные exception классы (GameNotOwnedException, etc.)
   - Реализовать стандартизированные error responses
+
   - Настроить логирование ошибок с correlation IDs
   - _Requirements: 4_
 
-- [ ] 15. Написание comprehensive unit тестов
+- [x] 15. Написание comprehensive unit тестов
+
+
+
+
   - Создать unit тесты для всех Services (Library, Search, History)
   - Написать тесты для Repository методов с mock данными
   - Добавить тесты для Guards и Interceptors
@@ -139,7 +148,10 @@
   - Настроить Prometheus metrics для мониторинга
   - _Requirements: 5_
 
-- [ ] 18. Настройка Docker контейнеризации (единые стандарты)
+- [x] 18. Настройка Docker контейнеризации (единые стандарты)
+
+
+
   - Создать оптимизированный Dockerfile с multi-stage build для NestJS
   - Настроить docker-compose для development окружения с PostgreSQL 14+ и Redis
   - Добавить mock сервисы для других микросервисов в compose

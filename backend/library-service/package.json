@@ -19,12 +19,25 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:e2e:cov": "jest --config ./test/jest-e2e.json --coverage",
+    "test:e2e:docker": "docker-compose -f docker-compose.test.yml up -d --wait && npm run test:e2e && docker-compose -f docker-compose.test.yml down",
+    "test:db:up": "docker-compose -f docker-compose.test.yml up -d --wait",
+    "test:db:down": "docker-compose -f docker-compose.test.yml down",
     "test:all": "npm run test:cov && npm run test:e2e:cov",
     "test:ci": "jest --ci --coverage --watchAll=false",
     "typeorm": "npm run build && npx typeorm -d ./dist/data-source.js",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
-    "migration:revert": "npm run typeorm -- migration:revert"
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "migration:show": "npm run typeorm -- migration:show",
+    "migration:create": "npm run typeorm -- migration:create",
+    "migration:run:prod": "node scripts/run-migrations.js",
+    "docker:build": "docker build -t library-service .",
+    "docker:build:dev": "docker build --target development -t library-service:dev .",
+    "docker:run": "docker run -p 3000:3000 library-service",
+    "docker:dev": "docker-compose up --build",
+    "docker:dev:down": "docker-compose down",
+    "docker:test": "chmod +x ./scripts/test-with-db.sh && ./scripts/test-with-db.sh",
+    "docker:test:win": "powershell -ExecutionPolicy Bypass -File ./scripts/test-with-db.ps1"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.2",
@@ -53,6 +66,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.26",
+    "uuid": "^13.0.0",
     "winston": "^3.13.0"
   },
   "devDependencies": {
@@ -68,6 +82,7 @@
     "@types/pg": "^8.15.5",
     "@types/redis": "^4.0.10",
     "@types/supertest": "^6.0.3",
+    "@types/uuid": "^10.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",

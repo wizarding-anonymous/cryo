@@ -27,18 +27,30 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
 
   // Hybrid application setup (for future Kafka integration)
-  app.connectMicroservice({
-    transport: Transport.KAFKA,
-    options: {
-      client: {
-        brokers: [configService.get('kafka.broker', 'localhost:9092')],
-      },
-      consumer: {
-        groupId: 'library-service-consumer',
-      },
-    },
-  });
-  await app.startAllMicroservices();
+  // Only enable Kafka if not in test environment and if explicitly enabled
+  const kafkaEnabled = configService.get('kafka.enabled', 'true') === 'true' && process.env.NODE_ENV !== 'test';
+  
+  if (kafkaEnabled) {
+    try {
+      app.connectMicroservice({
+        transport: Transport.KAFKA,
+        options: {
+          client: {
+            brokers: [configService.get('kafka.broker', 'localhost:9092')],
+          },
+          consumer: {
+            groupId: 'library-service-consumer',
+          },
+        },
+      });
+      await app.startAllMicroservices();
+      app.get(Logger).log('🔗 Kafka microservice connected');
+    } catch (error) {
+      app.get(Logger).warn('⚠️ Kafka connection failed, continuing without Kafka', error.message);
+    }
+  } else {
+    app.get(Logger).log('⏭️ Kafka disabled for this environment');
+  }
 
   // Global validation pipe
   app.useGlobalPipes(

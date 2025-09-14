@@ -16,5 +16,7 @@
   "coverageReporters": ["text", "lcov", "html"],
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/src/$1"
-  }
+  },
+  "setupFilesAfterEnv": ["<rootDir>/test-setup.ts"],
+  "testTimeout": 30000
 }

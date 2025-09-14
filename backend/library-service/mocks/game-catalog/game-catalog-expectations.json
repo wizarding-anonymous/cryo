@@ -1,0 +1,74 @@
+[
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/api/games/.*",
+      "pathParameters": {
+        "gameId": [".*"]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "id": "game-123",
+        "title": "Test Game",
+        "developer": "Test Developer",
+        "publisher": "Test Publisher",
+        "description": "A test game for development",
+        "price": 29.99,
+        "currency": "USD",
+        "releaseDate": "2023-01-01",
+        "tags": ["action", "adventure"],
+        "rating": "T",
+        "platforms": ["PC", "PlayStation", "Xbox"],
+        "systemRequirements": {
+          "minimum": {
+            "os": "Windows 10",
+            "processor": "Intel i5",
+            "memory": "8 GB RAM",
+            "graphics": "GTX 1060",
+            "storage": "50 GB"
+          }
+        },
+        "images": {
+          "thumbnail": "https://example.com/thumb.jpg",
+          "screenshots": ["https://example.com/screen1.jpg"]
+        }
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/api/games",
+      "queryStringParameters": {
+        "ids": [".*"]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": [
+        {
+          "id": "game-123",
+          "title": "Test Game 1",
+          "developer": "Test Developer",
+          "price": 29.99,
+          "currency": "USD"
+        },
+        {
+          "id": "game-456",
+          "title": "Test Game 2",
+          "developer": "Another Developer",
+          "price": 39.99,
+          "currency": "USD"
+        }
+      ]
+    }
+  }
+]
