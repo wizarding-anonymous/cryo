@@ -10,6 +10,7 @@ const (
     StatusPaused      DownloadStatus = "paused"
     StatusCompleted   DownloadStatus = "completed"
     StatusFailed      DownloadStatus = "failed"
+    StatusCancelled   DownloadStatus = "cancelled"
 )
 
 type Download struct {

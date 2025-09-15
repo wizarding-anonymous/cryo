@@ -37,22 +37,83 @@ func (m mockLibrary) ListUserGames(ctx context.Context, userID string) ([]string
 
 // Test POST /downloads happy path
 func TestStartDownloadHandler(t *testing.T) {
-    t.Parallel()
-    gin.SetMode(gin.TestMode)
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
 
-    repo := newMemDownloadRepo()
-    svc := services.NewDownloadService(nil, nil, repo, noopFileRepo{}, services.NewStreamService(), mockLibrary{owned: true}, plog.New())
-    r := gin.New()
-    h := NewDownloadHandler(svc, nil)
-    h.RegisterRoutes(r.Group(""))
+	repo := newMemDownloadRepo()
+	svc := services.NewDownloadService(nil, nil, repo, noopFileRepo{}, services.NewStreamService(), mockLibrary{owned: true}, plog.New())
+	r := gin.New()
+	// Mock auth middleware to set user ID
+	r.Use(func(c *gin.Context) {
+		c.Set("auth_user_id", "00000000-0000-0000-0000-000000000001")
+		c.Next()
+	})
+	h := NewDownloadHandler(svc, nil)
+	h.RegisterRoutes(r.Group(""))
 
-    body := map[string]string{"userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "gameId": "0b9a1f93-1c01-4f2f-9a31-0a1f7a1d2a6f"}
-    b, _ := json.Marshal(body)
-    req := httptest.NewRequest(http.MethodPost, "/downloads", bytes.NewReader(b))
-    req.Header.Set("Content-Type", "application/json")
-    w := httptest.NewRecorder()
-    r.ServeHTTP(w, req)
-    if w.Code != http.StatusCreated {
-        t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
-    }
+	body := map[string]string{"gameId": "0b9a1f93-1c01-4f2f-9a31-0a1f7a1d2a6f"}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/downloads", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCancelDownloadHandler(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	repo := newMemDownloadRepo()
+	_ = repo.Create(context.Background(), &models.Download{ID: "dl-to-cancel", UserID: "00000000-0000-0000-0000-000000000002", Status: models.StatusDownloading})
+
+	svc := services.NewDownloadService(nil, nil, repo, noopFileRepo{}, services.NewStreamService(), mockLibrary{owned: true}, plog.New())
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("auth_user_id", "00000000-0000-0000-0000-000000000002")
+		c.Next()
+	})
+	h := NewDownloadHandler(svc, nil)
+	h.RegisterRoutes(r.Group(""))
+
+	req := httptest.NewRequest(http.MethodDelete, "/downloads/dl-to-cancel", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+
+	d, _ := repo.GetByID(context.Background(), "dl-to-cancel")
+	if d.Status != models.StatusCancelled {
+		t.Fatalf("expected status cancelled, got %s", d.Status)
+	}
+}
+
+func TestHandler_Authorization(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	repo := newMemDownloadRepo()
+	_ = repo.Create(context.Background(), &models.Download{ID: "dl-owned-by-user1", UserID: "00000000-0000-0000-0000-000000000011"})
+
+	svc := services.NewDownloadService(nil, nil, repo, noopFileRepo{}, services.NewStreamService(), mockLibrary{owned: true}, plog.New())
+	r := gin.New()
+	// This request is from user2
+	r.Use(func(c *gin.Context) {
+		c.Set("auth_user_id", "00000000-0000-0000-0000-000000000022")
+		c.Next()
+	})
+	h := NewDownloadHandler(svc, nil)
+	h.RegisterRoutes(r.Group(""))
+
+	// Try to access user1's download
+	req := httptest.NewRequest(http.MethodGet, "/downloads/dl-owned-by-user1", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden, got %d", w.Code)
+	}
 }

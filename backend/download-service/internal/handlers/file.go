@@ -1,49 +1,82 @@
 package handlers
 
 import (
-    "net/http"
+	"net/http"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 
-    "download-service/internal/services"
+	derr "download-service/internal/errors"
+	intramw "download-service/internal/middleware"
+	"download-service/internal/services"
 )
 
-type FileHandler struct{ file *services.FileService }
+type FileHandler struct {
+	fileSvc *services.FileService
+	dlSvc   *services.DownloadService
+}
 
-func NewFileHandler(file *services.FileService) *FileHandler { return &FileHandler{file: file} }
+func NewFileHandler(fileSvc *services.FileService, dlSvc *services.DownloadService) *FileHandler {
+	return &FileHandler{fileSvc: fileSvc, dlSvc: dlSvc}
+}
 
-type verifyBody struct{
-    FilePath string `json:"filePath" binding:"required"`
-    ExpectedSize int64 `json:"expectedSize" binding:"required"`
+type verifyBody struct {
+	FilePath     string `json:"filePath" binding:"required"`
+	ExpectedSize int64  `json:"expectedSize" binding:"required"`
 }
 
 func (h *FileHandler) RegisterRoutes(r *gin.RouterGroup) {
-    r.POST("/downloads/:id/verify", h.verify)
-    r.DELETE("/downloads/:id/files/temp", h.cleanup)
+	r.GET("/downloads/:id/url", h.getDownloadURL)
+	r.POST("/downloads/:id/verify", h.verify)
+	r.DELETE("/downloads/:id/files/temp", h.cleanup)
+}
+
+func (h *FileHandler) getDownloadURL(c *gin.Context) {
+	downloadID := c.Param("id")
+	userID, ok := intramw.UserIDFromContext(c)
+	if !ok {
+		httpError(c, derr.AccessDeniedError{Reason: "missing user identity"})
+		return
+	}
+
+	// First, get the download and verify ownership.
+	download, err := h.dlSvc.GetDownload(c.Request.Context(), userID, downloadID)
+	if err != nil {
+		httpError(c, err)
+		return
+	}
+
+	// Now, generate the presigned URL.
+	url, err := h.fileSvc.GetDownloadURL(c.Request.Context(), download)
+	if err != nil {
+		httpError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"url": url})
 }
 
 func (h *FileHandler) verify(c *gin.Context) {
-    var body verifyBody
-    if err := c.ShouldBindJSON(&body); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
-    if err := h.file.VerifyFile(c.Request.Context(), body.FilePath, body.ExpectedSize); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-    c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	var body verifyBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.fileSvc.VerifyFile(c.Request.Context(), body.FilePath, body.ExpectedSize); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 func (h *FileHandler) cleanup(c *gin.Context) {
-    id := c.Param("id")
-    if id == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "missing id"})
-        return
-    }
-    if err := h.file.CleanupFiles(c.Request.Context(), id); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-    c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing id"})
+		return
+	}
+	if err := h.fileSvc.CleanupFiles(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

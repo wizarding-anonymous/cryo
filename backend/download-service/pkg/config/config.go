@@ -28,6 +28,12 @@ type Config struct {
     AuthJwtAudience string
     RateLimitRPS   int
     RateLimitBurst int
+    // S3 Storage
+    S3Endpoint        string
+    S3Region          string
+    S3AccessKeyID     string
+    S3SecretAccessKey string
+    S3Bucket          string
 }
 
 func getenv(key, def string) string {
@@ -68,5 +74,11 @@ func Load() Config {
         AuthJwtAudience: getenv("AUTH_JWT_AUDIENCE", ""),
         RateLimitRPS:   getint("RATE_LIMIT_RPS", 5),
         RateLimitBurst: getint("RATE_LIMIT_BURST", 10),
+        // S3
+        S3Endpoint:        getenv("S3_ENDPOINT", ""),
+        S3Region:          getenv("S3_REGION", "us-east-1"),
+        S3AccessKeyID:     getenv("S3_ACCESS_KEY_ID", ""),
+        S3SecretAccessKey: getenv("S3_SECRET_ACCESS_KEY", ""),
+        S3Bucket:          getenv("S3_BUCKET", ""),
     }
 }

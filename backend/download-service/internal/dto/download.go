@@ -4,16 +4,16 @@ import "download-service/internal/models"
 
 // Requests
 type StartDownloadRequest struct {
-    UserID string `json:"userId" validate:"required,uuid4"`
-    GameID string `json:"gameId" validate:"required,uuid4"`
+    UserID string `json:"userId"` // UserID is optional in body, will be taken from auth token
+    GameID string `json:"gameId" binding:"required"`
 }
 
 type PauseDownloadRequest struct {
-    DownloadID string `json:"downloadId" validate:"required,uuid4"`
+    DownloadID string `json:"downloadId" binding:"required"`
 }
 
 type ResumeDownloadRequest struct {
-    DownloadID string `json:"downloadId" validate:"required,uuid4"`
+    DownloadID string `json:"downloadId" binding:"required"`
 }
 
 // Responses

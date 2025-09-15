@@ -18,6 +18,7 @@ import (
 
     "download-service/internal/cache"
     libclient "download-service/internal/clients/library"
+    s3client "download-service/internal/clients/s3"
     "download-service/internal/handlers"
     "download-service/internal/database"
     intramw "download-service/internal/middleware"
@@ -79,16 +80,28 @@ func main() {
         CBCooldown:          time.Duration(cfg.LibraryCBCooldownMs) * time.Millisecond,
     })
 
+    // Initialize S3 client
+    s3, err := s3client.NewClient(context.Background(), s3client.Options{
+        Endpoint:        cfg.S3Endpoint,
+        Region:          cfg.S3Region,
+        AccessKeyID:     cfg.S3AccessKeyID,
+        SecretAccessKey: cfg.S3SecretAccessKey,
+        Bucket:          cfg.S3Bucket,
+    })
+    if err != nil {
+        logg.Fatalf("s3 client failed: %v", err)
+    }
+
     // Wire repositories and services
     dlRepo := repository.NewDownloadRepository(db)
     dfRepo := repository.NewDownloadFileRepository(db)
     stream := services.NewStreamService()
-    fileSvc := services.NewFileService()
+    fileSvc := services.NewFileService(s3)
     dlSvc := services.NewDownloadService(db, rdb, dlRepo, dfRepo, stream, lib, logg)
 
     // Register HTTP routes with auth + rate limiting
     h := handlers.NewDownloadHandler(dlSvc, rdb)
-    fh := handlers.NewFileHandler(fileSvc)
+    fh := handlers.NewFileHandler(fileSvc, dlSvc)
     api := r.Group("")
     // Auth
     api.Use(intramw.Auth(intramw.AuthOptions{

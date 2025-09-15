@@ -102,6 +102,16 @@ func (ss *StreamService) Pause(downloadID string) {
     ss.mu.Unlock()
 }
 
+func (ss *StreamService) SetSpeed(downloadID string, bytesPerSecond int64) {
+    ss.mu.Lock()
+    defer ss.mu.Unlock()
+    if s, ok := ss.sessions[downloadID]; ok {
+        if bytesPerSecond > 0 {
+            s.speed = bytesPerSecond
+        }
+    }
+}
+
 func (ss *StreamService) Resume(downloadID string) {
     ss.mu.Lock()
     if s, ok := ss.sessions[downloadID]; ok {

@@ -58,8 +58,8 @@ func fmtID(i int) string { return  "dl-" + time.Now().Format("150405") + "-" +  
 
 func TestDownloadService_StartDownload_AccessDenied(t *testing.T) {
     repo := newMemDownloadRepo()
-    svc := NewDownloadService(nil, nil, repo, noopFileRepo{}, NewStreamService(), mockLibrary{owned:false}, logger.New())
-    _, err := svc.StartDownload(context.Background(), "user-1", "game-1")
+    svc := NewDownloadService(nil, nil, repo, noopFileRepo{}, NewStreamService(), mockLibrary{owned: false}, logger.New())
+    _, err := svc.StartDownload(context.Background(), "00000000-0000-0000-0000-000000000001", "00000000-0000-0000-0000-000000000002")
     if err == nil {
         t.Fatal("expected error, got nil")
     }
@@ -72,17 +72,67 @@ func TestDownloadService_StartDownload_AccessDenied(t *testing.T) {
 func TestDownloadService_StartPauseResume(t *testing.T) {
     repo := newMemDownloadRepo()
     stream := NewStreamService()
-    svc := NewDownloadService(nil, nil, repo, noopFileRepo{}, stream, mockLibrary{owned:true}, logger.New())
+    svc := NewDownloadService(nil, nil, repo, noopFileRepo{}, stream, mockLibrary{owned: true}, logger.New())
+    userID := "10000000-0000-0000-0000-000000000001"
+    gameID := "20000000-0000-0000-0000-000000000001"
     // speed up
     svc.defaultTotalSize = 1024 * 1024
     svc.defaultSpeed = 1024 * 1024
-    d, err := svc.StartDownload(context.Background(), "user-1", "00000000-0000-0000-0000-000000000001")
-    if err != nil { t.Fatalf("start: %v", err) }
-    if d.ID == "" { t.Fatal("expected id generated") }
-    if d.Status != models.StatusDownloading { t.Fatalf("expected downloading, got %s", d.Status) }
+    d, err := svc.StartDownload(context.Background(), userID, gameID)
+    if err != nil {
+        t.Fatalf("start: %v", err)
+    }
+    if d.ID == "" {
+        t.Fatal("expected id generated")
+    }
+    if d.Status != models.StatusDownloading {
+        t.Fatalf("expected downloading, got %s", d.Status)
+    }
     // Pause and resume
-    if err := svc.PauseDownload(context.Background(), d.ID); err != nil { t.Fatalf("pause: %v", err) }
-    dd, _ := svc.GetDownload(context.Background(), d.ID)
-    if dd.Status != models.StatusPaused { t.Fatalf("expected paused, got %s", dd.Status) }
-    if err := svc.ResumeDownload(context.Background(), d.ID); err != nil { t.Fatalf("resume: %v", err) }
+    if err := svc.PauseDownload(context.Background(), userID, d.ID); err != nil {
+        t.Fatalf("pause: %v", err)
+    }
+    dd, _ := svc.GetDownload(context.Background(), userID, d.ID)
+    if dd.Status != models.StatusPaused {
+        t.Fatalf("expected paused, got %s", dd.Status)
+    }
+    if err := svc.ResumeDownload(context.Background(), userID, d.ID); err != nil {
+        t.Fatalf("resume: %v", err)
+    }
+}
+
+func TestDownloadService_Actions_AccessDenied(t *testing.T) {
+    repo := newMemDownloadRepo()
+    ownerID := "10000000-0000-0000-0000-000000000011"
+    attackerID := "10000000-0000-0000-0000-000000000022"
+    // ownerID owns this download
+    _ = repo.Create(context.Background(), &models.Download{ID: "dl-1", UserID: ownerID})
+
+    svc := NewDownloadService(nil, nil, repo, noopFileRepo{}, NewStreamService(), mockLibrary{owned: true}, logger.New())
+
+    // attackerID tries to access it
+    _, err := svc.GetDownload(context.Background(), attackerID, "dl-1")
+    if !errors.As(err, &derr.AccessDeniedError{}) {
+        t.Fatalf("expected access denied on GetDownload, got %T", err)
+    }
+
+    err = svc.PauseDownload(context.Background(), attackerID, "dl-1")
+    if !errors.As(err, &derr.AccessDeniedError{}) {
+        t.Fatalf("expected access denied on PauseDownload, got %T", err)
+    }
+
+    err = svc.ResumeDownload(context.Background(), attackerID, "dl-1")
+    if !errors.As(err, &derr.AccessDeniedError{}) {
+        t.Fatalf("expected access denied on ResumeDownload, got %T", err)
+    }
+
+    err = svc.CancelDownload(context.Background(), attackerID, "dl-1")
+    if !errors.As(err, &derr.AccessDeniedError{}) {
+        t.Fatalf("expected access denied on CancelDownload, got %T", err)
+    }
+
+    err = svc.SetDownloadSpeed(context.Background(), attackerID, "dl-1", 123)
+    if !errors.As(err, &derr.AccessDeniedError{}) {
+        t.Fatalf("expected access denied on SetDownloadSpeed, got %T", err)
+    }
 }

@@ -9,31 +9,52 @@ import (
 )
 
 var (
-    httpRequestsTotal = prometheus.NewCounterVec(
-        prometheus.CounterOpts{
-            Name: "http_requests_total",
-            Help: "Total number of HTTP requests.",
-        },
-        []string{"method", "path", "status"},
-    )
-    httpRequestDuration = prometheus.NewHistogramVec(
-        prometheus.HistogramOpts{
-            Name:    "http_request_duration_seconds",
-            Help:    "Histogram of latencies for HTTP requests.",
-            Buckets: prometheus.DefBuckets,
-        },
-        []string{"method", "path"},
-    )
-    httpInFlight = prometheus.NewGauge(
-        prometheus.GaugeOpts{
-            Name: "http_in_flight_requests",
-            Help: "Current number of in-flight HTTP requests.",
-        },
-    )
+	httpRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests.",
+		},
+		[]string{"method", "path", "status"},
+	)
+	httpRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Histogram of latencies for HTTP requests.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "path"},
+	)
+	httpInFlight = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "http_in_flight_requests",
+			Help: "Current number of in-flight HTTP requests.",
+		},
+	)
+
+	downloadsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "downloads_total",
+			Help: "Total number of downloads by status.",
+		},
+		[]string{"status"}, // e.g., started, completed, failed, cancelled
+	)
+	downloadsActive = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "downloads_active",
+			Help: "Current number of active (downloading or paused) downloads.",
+		},
+	)
+	downloadBytesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "download_bytes_total",
+			Help: "Total bytes downloaded by all clients.",
+		},
+	)
 )
 
 func init() {
-    prometheus.MustRegister(httpRequestsTotal, httpRequestDuration, httpInFlight)
+	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration, httpInFlight)
+	prometheus.MustRegister(downloadsTotal, downloadsActive, downloadBytesTotal)
 }
 
 // GinMetrics is a middleware that records Prometheus metrics per request.
