@@ -22,6 +22,7 @@ async function bootstrap(): Promise<void> {
     }),
   });
   const configService = app.get(ConfigService);
+  const logger = new Logger('Bootstrap');
 
   // Enable graceful shutdown
   app.enableShutdownHooks();
@@ -44,12 +45,12 @@ async function bootstrap(): Promise<void> {
         },
       });
       await app.startAllMicroservices();
-      app.get(Logger).log('🔗 Kafka microservice connected');
+      logger.log('🔗 Kafka microservice connected');
     } catch (error) {
-      app.get(Logger).warn('⚠️ Kafka connection failed, continuing without Kafka', error.message);
+      logger.warn('⚠️ Kafka connection failed, continuing without Kafka', error.message);
     }
   } else {
-    app.get(Logger).log('⏭️ Kafka disabled for this environment');
+    logger.log('⏭️ Kafka disabled for this environment');
   }
 
   // Global validation pipe
@@ -119,10 +120,10 @@ async function bootstrap(): Promise<void> {
   );
 
   const port = configService.get<number>('port') ?? 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
-  app.get(Logger).log(`🚀 Library Service is running on: http://localhost:${port}`);
-  app.get(Logger).log(
+  logger.log(`🚀 Library Service is running on: http://localhost:${port}`);
+  logger.log(
     `📚 Swagger documentation: http://localhost:${port}/${configService.get<string>('swagger.path') ?? 'api/docs'}`,
   );
 }

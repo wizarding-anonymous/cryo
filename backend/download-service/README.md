@@ -37,3 +37,24 @@ Service runs on http://localhost:8080 with GET /health and GET /ready endpoints.
 - Integrate Library Service over HTTP
 - Add tests and observability
 
+## Production
+
+- Docker build:
+  - `docker build -t your-registry/download-service:latest .`
+- Kubernetes manifests:
+  - `kubectl apply -f deploy/k8s/deployment.yaml`
+- Probes and metrics:
+  - Liveness: `GET /health`
+  - Readiness: `GET /health/detailed`
+  - Metrics: `GET /metrics` (Prometheus)
+  - pprof: `/debug/pprof` (protected at the ingress level in production)
+
+
+## Testing
+
+- Run unit/integration tests:
+  - `go test ./...`
+- Coverage report:
+  - `make cover` (outputs `coverage.out` and summary)
+- Benchmarks (StreamService):
+  - `make bench`

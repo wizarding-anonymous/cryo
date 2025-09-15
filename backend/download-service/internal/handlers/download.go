@@ -1,24 +1,174 @@
 package handlers
 
 import (
+    "context"
+    "net/http"
+    "strconv"
+
     "github.com/gin-gonic/gin"
+
+    "download-service/internal/cache"
+    "download-service/internal/dto"
+    derr "download-service/internal/errors"
+    "download-service/internal/models"
+    "download-service/internal/services"
+    intramw "download-service/internal/middleware"
+    "download-service/pkg/validate"
+
+    redis "github.com/redis/go-redis/v9"
 )
 
 type DownloadHandler struct {
-    // svc DownloadService // to be plugged in later
+    svc *services.DownloadService
+    rdb *redis.Client
 }
 
-func NewDownloadHandler() *DownloadHandler {
-    return &DownloadHandler{}
+func NewDownloadHandler(svc *services.DownloadService, rdb *redis.Client) *DownloadHandler {
+    return &DownloadHandler{svc: svc, rdb: rdb}
 }
 
 // RegisterRoutes wires download-related routes under the given router group.
 func (h *DownloadHandler) RegisterRoutes(r *gin.RouterGroup) {
-    // Stub routes for future implementation
-    r.POST("/downloads", func(c *gin.Context) { c.JSON(501, gin.H{"error": "not implemented"}) })
-    r.GET("/downloads/:id", func(c *gin.Context) { c.JSON(501, gin.H{"error": "not implemented"}) })
-    r.PUT("/downloads/:id/pause", func(c *gin.Context) { c.JSON(501, gin.H{"error": "not implemented"}) })
-    r.PUT("/downloads/:id/resume", func(c *gin.Context) { c.JSON(501, gin.H{"error": "not implemented"}) })
-    r.GET("/downloads/user/:userId", func(c *gin.Context) { c.JSON(501, gin.H{"error": "not implemented"}) })
+    r.POST("/downloads", h.startDownload)
+    r.GET("/downloads/:id", h.getDownload)
+    r.PUT("/downloads/:id/pause", h.pauseDownload)
+    r.PUT("/downloads/:id/resume", h.resumeDownload)
+    r.GET("/downloads/user/:userId", h.listUserDownloads)
 }
 
+func httpError(c *gin.Context, err error) {
+    switch err.(type) {
+    case derr.ValidationError:
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    case derr.AccessDeniedError:
+        c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+    case derr.DownloadNotFoundError:
+        c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+    default:
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+    }
+}
+
+func (h *DownloadHandler) startDownload(c *gin.Context) {
+    var req dto.StartDownloadRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        httpError(c, derr.ValidationError{Msg: err.Error()})
+        return
+    }
+    if err := validate.Struct(&req); err != nil {
+        httpError(c, derr.ValidationError{Msg: err.Error()})
+        return
+    }
+    // Prefer userId from auth context if present
+    if uid, ok := intramw.UserIDFromContext(c); ok {
+        req.UserID = uid
+    }
+    d, err := h.svc.StartDownload(c.Request.Context(), req.UserID, req.GameID)
+    if err != nil {
+        httpError(c, err)
+        return
+    }
+    c.JSON(http.StatusCreated, dto.FromModel(*d))
+}
+
+func (h *DownloadHandler) getDownload(c *gin.Context) {
+    id := c.Param("id")
+    if id == "" {
+        httpError(c, derr.ValidationError{Msg: "missing id"})
+        return
+    }
+    d, err := h.svc.GetDownload(c.Request.Context(), id)
+    if err != nil {
+        httpError(c, err)
+        return
+    }
+    // Try enrich with cached status
+    if h.rdb != nil {
+        if stat, _ := cache.GetDownloadStatus(context.Background(), h.rdb, id); stat != nil {
+            d.Progress = stat.Progress
+            d.DownloadedSize = stat.DownloadedSize
+            d.TotalSize = stat.TotalSize
+            d.Speed = stat.Speed
+            // status string might reflect paused/downloading
+            d.Status = models.DownloadStatus(stat.Status)
+        }
+    }
+    c.JSON(http.StatusOK, dto.FromModel(*d))
+}
+
+func (h *DownloadHandler) pauseDownload(c *gin.Context) {
+    id := c.Param("id")
+    if id == "" {
+        httpError(c, derr.ValidationError{Msg: "missing id"})
+        return
+    }
+    if err := h.svc.PauseDownload(c.Request.Context(), id); err != nil {
+        httpError(c, err)
+        return
+    }
+    d, err := h.svc.GetDownload(c.Request.Context(), id)
+    if err != nil {
+        httpError(c, err)
+        return
+    }
+    c.JSON(http.StatusOK, dto.FromModel(*d))
+}
+
+func (h *DownloadHandler) resumeDownload(c *gin.Context) {
+    id := c.Param("id")
+    if id == "" {
+        httpError(c, derr.ValidationError{Msg: "missing id"})
+        return
+    }
+    if err := h.svc.ResumeDownload(c.Request.Context(), id); err != nil {
+        httpError(c, err)
+        return
+    }
+    d, err := h.svc.GetDownload(c.Request.Context(), id)
+    if err != nil {
+        httpError(c, err)
+        return
+    }
+    c.JSON(http.StatusOK, dto.FromModel(*d))
+}
+
+func (h *DownloadHandler) listUserDownloads(c *gin.Context) {
+    userID := c.Param("userId")
+    if userID == "" {
+        httpError(c, derr.ValidationError{Msg: "missing userId"})
+        return
+    }
+    limit := 50
+    offset := 0
+    if v := c.Query("limit"); v != "" {
+        if n, err := strconv.Atoi(v); err == nil && n >= 0 && n <= 200 {
+            limit = n
+        }
+    }
+    if v := c.Query("offset"); v != "" {
+        if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+            offset = n
+        }
+    }
+    list, err := h.svc.ListUserDownloads(c.Request.Context(), userID, limit, offset)
+    if err != nil {
+        httpError(c, err)
+        return
+    }
+    // Enrich via cache
+    resp := make([]dto.DownloadResponse, 0, len(list))
+    for i := range list {
+        d := &list[i]
+        if h.rdb != nil {
+            if stat, _ := cache.GetDownloadStatus(context.Background(), h.rdb, d.ID); stat != nil {
+                d.Progress = stat.Progress
+                d.DownloadedSize = stat.DownloadedSize
+                d.TotalSize = stat.TotalSize
+                d.Speed = stat.Speed
+                d.Status = models.DownloadStatus(stat.Status)
+            }
+        }
+        resp = append(resp, dto.FromModel(*d))
+    }
+    c.JSON(http.StatusOK, gin.H{"items": resp, "limit": limit, "offset": offset, "count": len(resp)})
+}

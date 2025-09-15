@@ -18,6 +18,7 @@ import { LibraryQueryDto, SearchLibraryDto, AddGameToLibraryDto } from './dto/re
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../auth/guards/ownership.guard';
 import { RoleGuard, Roles } from '../auth/guards/role.guard';
+import { InternalAuthGuard } from '../auth/guards/internal-auth.guard';
 
 // Define a type for authenticated requests
 interface AuthenticatedRequest extends Request {
@@ -28,7 +29,6 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-@UseGuards(JwtAuthGuard)
 @Controller('library')
 export class LibraryController {
   constructor(
@@ -37,6 +37,7 @@ export class LibraryController {
   ) {}
 
   @Get('my')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300) // 5 minutes
   getMyLibrary(@Req() request: AuthenticatedRequest, @Query() query: LibraryQueryDto) {
@@ -45,13 +46,14 @@ export class LibraryController {
   }
 
   @Get('my/search')
+  @UseGuards(JwtAuthGuard)
   searchMyLibrary(@Req() request: AuthenticatedRequest, @Query() query: SearchLibraryDto) {
     const userId = request.user.id;
     return this.searchService.searchUserLibrary(userId, query);
   }
 
   @Get('ownership/:gameId')
-  @UseGuards(OwnershipGuard)
+  @UseGuards(JwtAuthGuard)
   checkOwnership(@Req() request: AuthenticatedRequest, @Param('gameId') gameId: string) {
     const userId = request.user.id;
     return this.libraryService.checkGameOwnership(userId, gameId);
@@ -62,15 +64,13 @@ export class LibraryController {
   // For now, let's assume an admin role is needed.
 
   @Post('add')
-  @UseGuards(RoleGuard)
-  @Roles('admin', 'internal-service')
+  @UseGuards(InternalAuthGuard)
   addGameToLibrary(@Body() dto: AddGameToLibraryDto) {
     return this.libraryService.addGameToLibrary(dto);
   }
 
   @Delete('remove')
-  @UseGuards(RoleGuard)
-  @Roles('admin', 'internal-service')
+  @UseGuards(InternalAuthGuard)
   removeGameFromLibrary(@Body() body: { userId: string; gameId: string }) {
     return this.libraryService.removeGameFromLibrary(body.userId, body.gameId);
   }

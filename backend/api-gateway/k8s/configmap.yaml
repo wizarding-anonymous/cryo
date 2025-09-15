@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: cryo
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  # Redis
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_KEY_PREFIX: "cryo:gateway:"
+
+  # Defaults for services
+  SERVICE_DEFAULT_TIMEOUT_MS: "5000"
+  SERVICE_DEFAULT_RETRIES: "1"
+
+  # Internal service URLs (ClusterIP services)
+  SERVICE_USER_BASE_URL: "http://user-service:3001"
+  SERVICE_GAME_CATALOG_BASE_URL: "http://game-catalog-service:3002"
+  SERVICE_PAYMENT_BASE_URL: "http://payment-service:3003"
+  SERVICE_LIBRARY_BASE_URL: "http://library-service:3004"
+  SERVICE_NOTIFICATION_BASE_URL: "http://notification-service:3005"
+  SERVICE_REVIEW_BASE_URL: "http://review-service:3006"
+  SERVICE_ACHIEVEMENT_BASE_URL: "http://achievement-service:3007"
+  SERVICE_SECURITY_BASE_URL: "http://security-service:3008"
+  SERVICE_SOCIAL_BASE_URL: "http://social-service:3009"
+  SERVICE_DOWNLOAD_BASE_URL: "http://download-service:3010"
+
+  # Rate limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_MAX_REQUESTS: "60"
+
+  # Cache & CORS
+  CACHE_ENABLED: "true"
+  CACHE_TTL_MS: "30000"
+  CORS_ENABLED: "true"
+  CORS_ORIGIN: "*"
+

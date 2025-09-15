@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  security-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: security-service
+    ports:
+      - "3008:3008"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-security_service}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - security-net
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: security-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-security_service}
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - security-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: security-redis
+    ports:
+      - "6382:6379"
+    networks:
+      - security-net
+
+volumes:
+  pgdata:
+
+networks:
+  security-net:
+    driver: bridge

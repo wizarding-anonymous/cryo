@@ -8,13 +8,15 @@ import { LibraryRepository } from './repositories/library.repository';
 import { ClientsModule } from '../clients/clients.module';
 import { AppCacheModule } from '../cache/cache.module';
 import { EventsModule } from '../events/events.module';
+import { HistoryModule } from '../history/history.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([LibraryGame]), 
     ClientsModule,
     AppCacheModule,
-    EventsModule
+    EventsModule,
+    HistoryModule
   ],
   controllers: [LibraryController],
   providers: [LibraryService, SearchService, LibraryRepository],

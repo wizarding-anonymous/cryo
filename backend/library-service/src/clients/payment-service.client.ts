@@ -17,19 +17,30 @@ export class PaymentServiceClient {
     this.baseUrl = this.configService.get('services.payment.url');
   }
 
-  // Placeholder method as this client is not actively used by library-service
-  async getPaymentStatus(orderId: string): Promise<{ status: string }> {
-    const url = `${this.baseUrl}/orders/${orderId}/status`;
+  /**
+   * Fetch order status from Payment Service according to the integration map
+   * GET /api/orders/:id
+   */
+  async getOrderStatus(orderId: string): Promise<{ status: string }> {
+    const url = `${this.baseUrl}/orders/${orderId}`;
 
     const request$ = this.httpService.get<{ status: string }>(url).pipe(
       retry({ count: this.retryAttempts, delay: this.retryDelay }),
-      catchError(error => {
-        this.logger.error(`Failed to get payment status for order ${orderId}: ${error.message}`);
-        return of({ data: { status: 'unknown' } });
+      catchError((error) => {
+        this.logger.error(
+          `Failed to get order status for order ${orderId}: ${error.message}`,
+        );
+        // Preserve error behavior for tests expecting rejection
+        throw error;
       }),
     );
 
     const response = await firstValueFrom(request$);
     return response.data;
+  }
+
+  // Backward-compatible alias if other code uses the old name
+  async getPaymentStatus(orderId: string): Promise<{ status: string }> {
+    return this.getOrderStatus(orderId);
   }
 }

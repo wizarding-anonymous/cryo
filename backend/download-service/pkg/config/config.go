@@ -13,6 +13,21 @@ type Config struct {
     RedisAddr   string
     RedisPass   string
     RedisDB     int
+    // Library Service integration
+    LibraryBaseURL         string
+    LibraryTimeoutMs       int
+    LibraryRetries         int
+    LibraryCBThreshold     int
+    LibraryCBCooldownMs    int
+    LibraryInternalHeader  string
+    LibraryInternalToken   string
+    // Auth & Rate limiting
+    AuthJwtEnabled bool
+    AuthJwtSecret  string
+    AuthJwtIssuer  string
+    AuthJwtAudience string
+    RateLimitRPS   int
+    RateLimitBurst int
 }
 
 func getenv(key, def string) string {
@@ -40,6 +55,18 @@ func Load() Config {
         RedisAddr:   getenv("REDIS_ADDR", "redis:6379"),
         RedisPass:   getenv("REDIS_PASSWORD", ""),
         RedisDB:     getint("REDIS_DB", 0),
+        LibraryBaseURL:        getenv("LIBRARY_BASE_URL", "http://library-service:3000"),
+        LibraryTimeoutMs:      getint("LIBRARY_TIMEOUT_MS", 2000),
+        LibraryRetries:        getint("LIBRARY_RETRIES", 2),
+        LibraryCBThreshold:    getint("LIBRARY_CB_THRESHOLD", 5),
+        LibraryCBCooldownMs:   getint("LIBRARY_CB_COOLDOWN_MS", 10000),
+        LibraryInternalHeader: getenv("LIBRARY_INTERNAL_HEADER", "X-Internal-Token"),
+        LibraryInternalToken:  getenv("LIBRARY_INTERNAL_TOKEN", ""),
+        AuthJwtEnabled: getenv("AUTH_JWT_ENABLED", "true") == "true",
+        AuthJwtSecret:  getenv("AUTH_JWT_SECRET", ""),
+        AuthJwtIssuer:  getenv("AUTH_JWT_ISSUER", ""),
+        AuthJwtAudience: getenv("AUTH_JWT_AUDIENCE", ""),
+        RateLimitRPS:   getint("RATE_LIMIT_RPS", 5),
+        RateLimitBurst: getint("RATE_LIMIT_BURST", 10),
     }
 }
-

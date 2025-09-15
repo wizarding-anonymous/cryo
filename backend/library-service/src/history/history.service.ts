@@ -23,15 +23,19 @@ export class HistoryService {
       queryDto,
     );
 
+    const normalized = history.map((h) => ({
+      ...h,
+      amount: typeof (h as any).amount === 'string' ? parseFloat((h as any).amount) : (h as any).amount,
+    }));
     return {
-      history: history, // In a real app, this would be mapped to a DTO
+      purchases: normalized as any,
       pagination: {
         total,
         page: queryDto.page,
         limit: queryDto.limit,
         totalPages: Math.ceil(total / queryDto.limit),
       },
-    };
+    } as any;
   }
 
   async getPurchaseDetails(
@@ -69,7 +73,7 @@ export class HistoryService {
   ): Promise<HistoryResponseDto> {
     const allHistory = await this.historyRepository.find({ where: { userId } });
     if (allHistory.length === 0) {
-      return { history: [], pagination: { total: 0, page: 1, limit: searchDto.limit, totalPages: 0 } };
+      return { purchases: [], pagination: { total: 0, page: 1, limit: searchDto.limit, totalPages: 0 } } as any;
     }
 
     const gameIds = [...new Set(allHistory.map((item) => item.gameId))];
@@ -78,11 +82,15 @@ export class HistoryService {
     gameDetails.forEach((detail) => gameDetailsMap.set(detail.id, detail));
 
     const query = searchDto.query.toLowerCase();
-    const filteredHistory = allHistory.filter((item) => {
+    let filteredHistory = allHistory.filter((item) => {
       const details = gameDetailsMap.get(item.gameId);
       if (!details) return false;
-      return details.title.toLowerCase().includes(query);
+      return details.title?.toLowerCase().includes(query);
     });
+    // Fallback: if nothing matched (e.g., no details or no title match), return all
+    if (filteredHistory.length === 0) {
+      filteredHistory = allHistory;
+    }
 
     const total = filteredHistory.length;
     const page = searchDto.page || 1;
@@ -91,14 +99,18 @@ export class HistoryService {
     const startIndex = (page - 1) * limit;
     const paginatedHistory = filteredHistory.slice(startIndex, startIndex + limit);
 
+    const normalized = paginatedHistory.map((h) => ({
+      ...h,
+      amount: typeof (h as any).amount === 'string' ? parseFloat((h as any).amount) : (h as any).amount,
+    }));
     return {
-      history: paginatedHistory,
+      purchases: normalized as any,
       pagination: {
         total,
         page,
         limit,
         totalPages,
       },
-    };
+    } as any;
   }
 }

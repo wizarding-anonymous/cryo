@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { DataSource } from 'typeorm';
 import { TestAppModule } from './test-app.module';
 import { GameCatalogClient } from '../src/clients/game-catalog.client';
-import { UserClient } from '../src/clients/user.client';
+import { UserServiceClient } from '../src/clients/user.client';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
 import { LibraryGame } from '../src/library/entities/library-game.entity';
@@ -34,7 +34,7 @@ describe('Library Service E2E with Database', () => {
     })
       .overrideProvider(GameCatalogClient)
       .useValue(mockGameCatalogClient)
-      .overrideProvider(UserClient)
+      .overrideProvider(UserServiceClient)
       .useValue(mockUserClient)
       .compile();
 

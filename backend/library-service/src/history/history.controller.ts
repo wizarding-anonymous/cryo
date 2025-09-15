@@ -14,6 +14,7 @@ import { HistoryQueryDto, SearchHistoryDto } from './dto/request.dto';
 import { AddGameToLibraryDto } from '../library/dto/request.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RoleGuard, Roles } from '../auth/guards/role.guard';
+import { InternalAuthGuard } from '../auth/guards/internal-auth.guard';
 
 // Define a type for authenticated requests
 interface AuthenticatedRequest extends Request {
@@ -63,8 +64,7 @@ export class HistoryController {
     summary: 'Create a purchase record (Internal)',
     description: 'Should only be called by other services like Payment Service.',
   })
-  @UseGuards(RoleGuard)
-  @Roles('admin', 'internal-service')
+  @UseGuards(InternalAuthGuard)
   createPurchaseRecord(@Body() dto: AddGameToLibraryDto) {
     return this.historyService.createPurchaseRecord(dto);
   }

@@ -1,0 +1,53 @@
+replicaCount: 2
+
+image:
+  repository: your-registry/security-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3008
+
+env:
+  NODE_ENV: production
+  PORT: "3008"
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_USER: postgres
+  DB_NAME: security_service
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  SECURITY_LOGIN_PER_MINUTE_IP: "20"
+  SECURITY_LOGIN_PER_MINUTE_USER: "10"
+  SECURITY_TXN_PER_MINUTE_USER: "15"
+  SECURITY_TXN_AMOUNT_THRESHOLD: "10000"
+  SECURITY_ACTIVITY_PER_MINUTE: "60"
+  SECURITY_SUSPICIOUS_EVENTS_WINDOW_MIN: "10"
+  SECURITY_SUSPICIOUS_EVENTS_THRESHOLD: "20"
+  SECURITY_ALERT_RISK_THRESHOLD: "80"
+  SECURITY_BEHAVIOR_WINDOW_DAYS: "7"
+
+secret:
+  DB_PASSWORD: postgres
+  JWT_SECRET: change-me-in-prod
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+livenessProbe:
+  path: /health/live
+  initialDelaySeconds: 15
+  periodSeconds: 10
+
+readinessProbe:
+  path: /health/ready
+  initialDelaySeconds: 10
+  periodSeconds: 5
+

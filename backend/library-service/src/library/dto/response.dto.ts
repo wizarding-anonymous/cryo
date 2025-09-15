@@ -31,6 +31,9 @@ export class LibraryGameDto {
   @ApiProperty({ format: 'uuid' })
   gameId: string;
 
+  @ApiProperty({ format: 'uuid' })
+  userId: string;
+
   @ApiProperty()
   purchaseDate: Date;
 
@@ -50,6 +53,7 @@ export class LibraryGameDto {
     const dto = new LibraryGameDto();
     dto.id = entity.id;
     dto.gameId = entity.gameId;
+    dto.userId = entity.userId;
     dto.purchaseDate = entity.purchaseDate;
     dto.purchasePrice = entity.purchasePrice;
     dto.currency = entity.currency;

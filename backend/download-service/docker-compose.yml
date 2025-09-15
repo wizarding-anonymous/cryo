@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   download-service:
     build: .
@@ -6,7 +5,7 @@ services:
     env_file:
       - .env
     environment:
-      - PORT=${PORT:-8080}
+      - PORT=8080
       - APP_ENV=${APP_ENV:-development}
       - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/downloads?sslmode=disable}
       - REDIS_ADDR=${REDIS_ADDR:-redis:6379}
@@ -27,8 +26,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=downloads
-    ports:
-      - "5434:5432"
+    # ports:
+    #   - "5434:5432"  # expose if you need host access
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -42,8 +41,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: download-redis
-    ports:
-      - "6380:6379"
+    # ports:
+    #   - "6380:6379"  # expose if you need host access
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -58,4 +57,3 @@ volumes:
 networks:
   download-net:
     driver: bridge
-

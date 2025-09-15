@@ -11,8 +11,7 @@ services:
       POSTGRES_PASSWORD: test_password
     ports:
       - "5433:5432"
-    volumes:
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    # No extra init scripts for test DB to avoid conflicts with dev schema
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

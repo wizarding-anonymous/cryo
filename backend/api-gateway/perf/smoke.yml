@@ -1,0 +1,14 @@
+config:
+  target: "{{ $processEnvironment.BASE_URL || 'http://localhost:3001' }}"
+  phases:
+    - duration: 30
+      arrivalRate: 10
+  defaults:
+    headers:
+      Accept: application/json
+scenarios:
+  - name: GET games
+    flow:
+      - get:
+          url: "/api/games?limit=10"
+

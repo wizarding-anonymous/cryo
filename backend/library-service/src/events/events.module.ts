@@ -12,8 +12,14 @@ import { EventEmitterService } from './event.emitter.service';
         useFactory: (configService: ConfigService) => {
           const kafkaEnabled = configService.get<boolean>('kafka.enabled');
           if (!kafkaEnabled) {
-            // Return a dummy configuration if Kafka is disabled
-            return { transport: Transport.TCP, options: {} };
+            // Provide a harmless TCP client config to satisfy types; not used when kafka is disabled
+            return {
+              transport: Transport.TCP,
+              options: {
+                host: '127.0.0.1',
+                port: 65535, // Unused dummy port
+              },
+            };
           }
           return {
             transport: Transport.KAFKA,

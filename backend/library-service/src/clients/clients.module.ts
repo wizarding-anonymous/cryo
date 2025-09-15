@@ -16,7 +16,7 @@ import { PaymentServiceClient } from './payment-service.client';
       inject: [ConfigService],
     }),
   ],
-  providers: [GameCatalogClient, UserServiceClient],
-  exports: [GameCatalogClient, UserServiceClient],
+  providers: [GameCatalogClient, UserServiceClient, PaymentServiceClient],
+  exports: [GameCatalogClient, UserServiceClient, PaymentServiceClient],
 })
 export class ClientsModule {}

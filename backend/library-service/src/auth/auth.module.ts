@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { OwnershipGuard } from './guards/ownership.guard';
 import { RoleGuard } from './guards/role.guard';
+import { InternalAuthGuard } from './guards/internal-auth.guard';
 import { LibraryModule } from '../library/library.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
@@ -21,7 +22,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       inject: [ConfigService],
     }),
   ],
-  providers: [JwtStrategy, JwtAuthGuard, OwnershipGuard, RoleGuard],
-  exports: [JwtAuthGuard, OwnershipGuard, RoleGuard, PassportModule],
+  providers: [JwtStrategy, JwtAuthGuard, OwnershipGuard, RoleGuard, InternalAuthGuard],
+  exports: [JwtAuthGuard, OwnershipGuard, RoleGuard, InternalAuthGuard, PassportModule],
 })
 export class AuthModule {}

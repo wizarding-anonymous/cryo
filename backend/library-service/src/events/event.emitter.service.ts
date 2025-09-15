@@ -10,7 +10,7 @@ export class EventEmitterService implements OnModuleInit {
 
   constructor(
     private readonly configService: ConfigService,
-    @Optional() @Inject('KAFKA_SERVICE') private readonly client: ClientKafka,
+    @Optional() @Inject('KAFKA_SERVICE') private client?: ClientKafka,
   ) {
     this.kafkaEnabled = this.configService.get<boolean>('kafka.enabled', false);
   }
@@ -21,12 +21,14 @@ export class EventEmitterService implements OnModuleInit {
         await this.client.connect();
         this.logger.log('Kafka client connected successfully');
         this.logger.log('EventEmitterService initialized with Kafka support');
+        this.logger.log('EventEmitterService initialized.');
       } catch (error) {
         this.logger.error('Failed to connect Kafka client', error.stack);
         this.kafkaEnabled = false; // Disable if connection fails
       }
     } else {
       this.logger.log('EventEmitterService initialized without Kafka (MVP mode)');
+      this.logger.log('EventEmitterService initialized.');
     }
   }
 
@@ -37,7 +39,7 @@ export class EventEmitterService implements OnModuleInit {
       this.logger.log(`Emitting game.added event: ${JSON.stringify(event)}`);
       this.client.emit('game.added', event);
     } else {
-      this.logger.debug(`Game added event (MVP mode - no Kafka): ${JSON.stringify(event)}`);
+      this.logger.log(`Emitting game.added event (MVP mode - no Kafka): ${JSON.stringify(event)}`);
     }
   }
 
@@ -48,7 +50,7 @@ export class EventEmitterService implements OnModuleInit {
       this.logger.log(`Emitting game.removed event: ${JSON.stringify(event)}`);
       this.client.emit('game.removed', event);
     } else {
-      this.logger.debug(`Game removed event (MVP mode - no Kafka): ${JSON.stringify(event)}`);
+      this.logger.log(`Emitting game.removed event (MVP mode - no Kafka): ${JSON.stringify(event)}`);
     }
   }
 }
