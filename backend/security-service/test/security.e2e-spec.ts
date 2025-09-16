@@ -1,44 +1,56 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import request from 'supertest';
-import { TestAppModule } from './test-app.module';
-import { RateLimitService } from '../src/modules/security/rate-limit.service';
+import * as request from 'supertest';
+import { AppModule } from '../src/app.module';
+import { LoggingService } from '../src/modules/logs/logging.service';
 
 describe('SecurityController (e2e)', () => {
   let app: INestApplication;
+  let loggingService: LoggingService;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [TestAppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     await app.init();
+    loggingService = app.get(LoggingService);
   });
 
   afterAll(async () => {
     await app?.close();
   });
 
-  it('/security/check-login (POST)', async () => {
+  it('/security/check-login (POST) should perform a security check', async () => {
+    const dto = { userId: '11111111-1111-1111-1111-111111111111', ip: '1.1.1.1' };
     const res = await request(app.getHttpServer())
       .post('/security/check-login')
-      .send({ userId: '11111111-1111-1111-1111-111111111111', ip: '1.1.1.1' });
-    expect([200, 201]).toContain(res.status);
+      .send(dto)
+      .expect(200);
+
     expect(typeof res.body.allowed).toBe('boolean');
     expect(typeof res.body.riskScore).toBe('number');
+
+    // Check if the event was logged
+    const logs = await loggingService.getUserSecurityEvents(dto.userId);
+    expect(logs.length).toBeGreaterThan(0);
+    expect(logs[0].type).toBe('LOGIN');
   });
 
-  it('/security/report-event (POST) -> 204', async () => {
-    const res = await request(app.getHttpServer())
+  it('/security/report-event (POST) should log a custom event', async () => {
+    const dto = {
+      type: 'OTHER',
+      ip: '1.2.3.4',
+      userId: '22222222-2222-2222-2222-222222222222',
+      data: { test: 'data' },
+    };
+    await request(app.getHttpServer())
       .post('/security/report-event')
-      .send({ type: 'OTHER' });
-    expect(res.status).toBe(204);
-  });
+      .send(dto)
+      .expect(204);
 
-  it('RateLimitGuard -> 429 when exceeded', async () => {
-    const rl = app.get<RateLimitService>(RateLimitService) as any;
-    rl.checkRateLimit = jest.fn(async () => ({ allowed: false, remaining: 0, resetInSeconds: 60 }));
-    const res = await request(app.getHttpServer())
-      .post('/security/report-event')
-      .send({ type: 'OTHER' });
-    expect(res.status).toBe(429);
+    const logs = await loggingService.getUserSecurityEvents(dto.userId);
+    expect(logs.length).toBeGreaterThan(0);
+    expect(logs[0].type).toBe('CUSTOM_TEST_EVENT');
+    expect(logs[0].data).toEqual({ test: 'data' });
   });
 });

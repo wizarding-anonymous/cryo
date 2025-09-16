@@ -16,6 +16,7 @@ import { SecurityLoggingInterceptor } from './common/interceptors/security-loggi
 import { JwtModule } from '@nestjs/jwt';
 import { HealthController } from './modules/health/health.controller';
 import { MetricsModule } from './common/metrics/metrics.module';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { MetricsModule } from './common/metrics/metrics.module';
     DatabaseModule,
     RedisModule,
     MetricsModule,
+    KafkaModule,
     SecurityModule,
     LogsModule,
     AlertsModule,

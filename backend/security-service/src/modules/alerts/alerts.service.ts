@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SecurityAlert } from '../../entities/security-alert.entity';
@@ -8,13 +8,17 @@ import { PaginatedSecurityAlerts } from '../../dto/responses/paginated-security-
 import { GetAlertsQueryDto } from './dto/get-alerts-query.dto';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import type { Logger } from 'winston';
+import * as winston from 'winston';
 import { SuspiciousActivityResult } from './types/suspicious-activity-result';
 import { BehaviorAnalysis } from './types/behavior-analysis';
 import { MetricsService } from '../../common/metrics/metrics.service';
+import { ClientKafka } from '@nestjs/microservices';
+import { KAFKA_PRODUCER_SERVICE } from '../../kafka/kafka.constants';
+import { SecurityAlertSeverity } from '../../common/enums/security-alert-severity.enum';
+import { EncryptionService } from '../../common/encryption/encryption.service';
 
 @Injectable()
-export class AlertsService {
+export class AlertsService implements OnModuleDestroy {
   constructor(
     @InjectRepository(SecurityAlert)
     private readonly alertsRepo: Repository<SecurityAlert>,
@@ -22,22 +26,40 @@ export class AlertsService {
     private readonly eventsRepo: Repository<SecurityEvent>,
     private readonly config: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: Logger,
+    private readonly logger: winston.Logger,
+    @Inject(KAFKA_PRODUCER_SERVICE)
+    private readonly kafkaClient: ClientKafka,
+    private readonly encryption: EncryptionService,
     @Optional() private readonly metrics?: MetricsService,
   ) {}
 
+  async onModuleDestroy() {
+    await this.kafkaClient.close();
+  }
+
   async createAlert(dto: CreateSecurityAlertDto): Promise<SecurityAlert> {
+    const encryptedData = this.encryption.encrypt(dto.data);
+
     const alert = this.alertsRepo.create({
       type: dto.type,
       severity: dto.severity,
       userId: dto.userId ?? null,
       ip: dto.ip ?? null,
-      data: dto.data ?? null,
+      data: encryptedData as any,
       resolved: false,
     });
     const saved = await this.alertsRepo.save(alert);
     this.logger.warn('Security alert created', { id: saved.id, type: saved.type, severity: saved.severity });
     this.metrics?.recordAlert(String(dto.type), String(dto.severity));
+
+    if (saved.severity === SecurityAlertSeverity.HIGH || saved.severity === SecurityAlertSeverity.CRITICAL) {
+      this.kafkaClient.emit('security.alerts.created', {
+        ...saved,
+        data: this.encryption.decrypt(saved.data as any), // Decrypt for the event
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     return saved;
   }
 
@@ -49,16 +71,27 @@ export class AlertsService {
     qb.orderBy('a.created_at', 'DESC');
 
     const page = query.page ?? 1;
-    const pageSize = query.pageSize ?? 50;
-    qb.skip((page - 1) * pageSize).take(pageSize);
+    const limit = query.pageSize ?? 50;
+    qb.skip((page - 1) * limit).take(limit);
+
     const [items, total] = await qb.getManyAndCount();
-    return { items, page, pageSize, total };
+
+    const decryptedItems = items.map(item => ({
+      ...item,
+      data: this.encryption.decrypt(item.data as any),
+    }));
+
+    return { data: decryptedItems, page, limit, total };
   }
 
   async getActiveAlerts(): Promise<SecurityAlert[]> {
     const items = await this.alertsRepo.find({ where: { resolved: false }, order: { createdAt: 'DESC' }, take: 200 });
     this.metrics?.setActiveAlerts(items.length);
-    return items;
+    // Decrypt data before returning
+    return items.map(item => ({
+      ...item,
+      data: this.encryption.decrypt(item.data as any),
+    }));
   }
 
   async resolveAlert(alertId: string, resolvedBy?: string): Promise<void> {

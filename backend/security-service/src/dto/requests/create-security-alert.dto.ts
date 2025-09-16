@@ -6,23 +6,23 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateSecurityAlertDto {
   @ApiProperty({ enum: SecurityAlertType })
   @IsEnum(SecurityAlertType)
-  type: SecurityAlertType;
+  type!: SecurityAlertType;
 
   @ApiProperty({ enum: SecurityAlertSeverity })
   @IsEnum(SecurityAlertSeverity)
-  severity: SecurityAlertSeverity;
+  severity!: SecurityAlertSeverity;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()
   userId?: string;
 
-  @ApiPropertyOptional({ description: 'IP address' })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsIP()
   ip?: string;
 
-  @ApiPropertyOptional({ type: 'object' })
+  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
   @IsOptional()
   @IsObject()
   data?: Record<string, unknown>;

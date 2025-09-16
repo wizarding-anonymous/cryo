@@ -1,12 +1,12 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import type { Logger } from 'winston';
 import { Inject } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
+import * as winston from 'winston';
 
 @Injectable()
 export class SecurityLoggingInterceptor implements NestInterceptor {
-  constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger) {}
+  constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: winston.Logger) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
@@ -15,6 +15,7 @@ export class SecurityLoggingInterceptor implements NestInterceptor {
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip;
     const userId = req.user?.id ?? null;
     const correlationId = (req.headers['x-correlation-id'] as string) || undefined;
+
     return next.handle().pipe(
       tap({
         next: () => {

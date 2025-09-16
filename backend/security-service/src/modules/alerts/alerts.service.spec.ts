@@ -5,6 +5,9 @@ import { SecurityAlert } from '../../entities/security-alert.entity';
 import { SecurityEvent } from '../../entities/security-event.entity';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { KAFKA_PRODUCER_SERVICE } from '../../kafka/kafka.constants';
+import { EncryptionService } from '../../common/encryption/encryption.service';
+import { MetricsService } from '../../common/metrics/metrics.service';
 
 const alertRepoMock = () => ({
   create: jest.fn((x) => ({ id: 'a1', createdAt: new Date(), ...x })),
@@ -50,7 +53,10 @@ describe('AlertsService', () => {
         { provide: getRepositoryToken(SecurityAlert), useValue: alertsRepo },
         { provide: getRepositoryToken(SecurityEvent), useValue: eventsRepoMock() },
         { provide: ConfigService, useValue: { get: (_: string, d?: any) => d } },
-        { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: { info: jest.fn(), warn: jest.fn() } },
+        { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: { info: jest.fn(), warn: jest.fn(), log: jest.fn() } },
+        { provide: KAFKA_PRODUCER_SERVICE, useValue: { emit: jest.fn() } },
+        { provide: EncryptionService, useValue: { encrypt: (d: any) => JSON.stringify(d), decrypt: (d: any) => JSON.parse(d || '{}') } },
+        { provide: MetricsService, useValue: { recordAlert: jest.fn() } },
       ],
     }).compile();
 

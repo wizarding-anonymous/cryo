@@ -1,17 +1,22 @@
-import { IsIP, IsOptional, IsString, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsIP, IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CheckLoginSecurityDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
-  userId: string;
+  userId!: string;
 
   @ApiProperty({ description: 'Client IP address' })
   @IsIP()
-  ip: string;
+  ip!: string;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   userAgent?: string;
+
+  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  context?: Record<string, any>;
 }

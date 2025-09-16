@@ -26,6 +26,7 @@ export class SecurityController {
   ) {}
 
   @Post('check-login')
+  @HttpCode(200)
   @UseGuards(RateLimitGuard)
   @RateLimit({ name: 'check-login', limit: 60, window: 60, keyBy: 'ip' })
   @ApiOperation({ summary: 'Проверка безопасности входа' })
@@ -34,6 +35,7 @@ export class SecurityController {
   }
 
   @Post('check-transaction')
+  @HttpCode(200)
   @UseGuards(RateLimitGuard)
   @RateLimit({ name: 'check-transaction', limit: 60, window: 60, keyBy: 'user' })
   @ApiOperation({ summary: 'Проверка безопасности транзакции' })
@@ -47,7 +49,12 @@ export class SecurityController {
   @ApiOperation({ summary: 'Логирование security-события' })
   @HttpCode(204)
   async reportSecurityEvent(@Body() dto: ReportSecurityEventDto): Promise<void> {
-    await this.logging.logSecurityEvent(dto);
+    await this.logging.logSecurityEvent({
+      type: dto.type,
+      userId: dto.userId,
+      ip: dto.ip,
+      data: dto.data,
+    });
   }
 
   @Post('block-ip')
@@ -55,18 +62,22 @@ export class SecurityController {
   @UseGuards(AdminGuard)
   @HttpCode(204)
   async blockIP(@Body() dto: BlockIPDto): Promise<void> {
-    await this.security.blockIP(dto.ip, dto.reason, dto.duration);
+    await this.security.blockIP(dto.ip, dto.reason, dto.durationMinutes);
   }
 
   @Get('ip-status/:ip')
   @ApiOperation({ summary: 'Проверить статус IP (заблокирован/нет)' })
   async checkIPStatus(@Param('ip') ip: string): Promise<IPStatusResult> {
     const isBlocked = await this.security.isIPBlocked(ip);
-    let blockedUntil: string | undefined;
+    let reason: string | undefined;
+    let blockedUntil: Date | undefined;
     if (isBlocked) {
       const active = await this.ipBlockRepo.findOne({ where: { ip, isActive: true } });
-      if (active?.blockedUntil) blockedUntil = active.blockedUntil.toISOString();
+      if (active) {
+        reason = active.reason ?? undefined;
+        blockedUntil = active.blockedUntil ?? undefined;
+      }
     }
-    return { ip, isBlocked, blockedUntil };
+    return { isBlocked, reason, blockedUntil };
   }
 }

@@ -1,29 +1,31 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
+import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 
 describe('Security Service - Health (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
+    const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleRef.createNestApplication();
+    app = moduleFixture.createNestApplication();
     await app.init();
   });
 
   afterAll(async () => {
-    await app?.close();
+    await app.close();
   });
 
-  it('/health (GET) should return ok', async () => {
-    const res = await request(app.getHttpServer()).get('/health');
-    expect(res.status).toBe(200);
+  it('/health/live (GET) should return ok', async () => {
+    const res = await request(app.getHttpServer()).get('/health/live').expect(200);
     expect(res.body.status).toBe('ok');
-    expect(res.body.service).toBe('security-service');
+  });
+
+  it('/health/ready (GET) should return ok', async () => {
+    const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
+    expect(res.body.status).toBe('ok');
   });
 });
-

@@ -4,11 +4,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class SecurityCheckResult {
   @ApiProperty()
   @IsBoolean()
-  allowed: boolean;
+  allowed!: boolean;
 
   @ApiProperty({ minimum: 0, maximum: 100 })
   @IsNumber()
-  riskScore: number;
+  riskScore!: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -18,5 +18,5 @@ export class SecurityCheckResult {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  actions?: string[];
+  recommendations?: string[];
 }

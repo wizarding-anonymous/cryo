@@ -5,20 +5,20 @@ import { ApiProperty } from '@nestjs/swagger';
 export class PaginatedSecurityLogs {
   @ApiProperty({ type: [SecurityEvent] })
   @IsArray()
-  items: SecurityEvent[];
-
-  @ApiProperty({ minimum: 1 })
-  @IsInt()
-  @Min(1)
-  page: number;
-
-  @ApiProperty({ minimum: 1 })
-  @IsInt()
-  @Min(1)
-  pageSize: number;
+  data!: SecurityEvent[];
 
   @ApiProperty({ minimum: 0 })
   @IsInt()
   @Min(0)
-  total: number;
+  total!: number;
+
+  @ApiProperty({ minimum: 1 })
+  @IsInt()
+  @Min(1)
+  page!: number;
+
+  @ApiProperty({ minimum: 1 })
+  @IsInt()
+  @Min(1)
+  limit!: number;
 }

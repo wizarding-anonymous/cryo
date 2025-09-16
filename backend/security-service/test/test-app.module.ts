@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { SecurityController } from '../src/modules/security/security.controller';
 import { LogsController } from '../src/modules/logs/logs.controller';
 import { AlertsController } from '../src/modules/alerts/alerts.controller';
+import { HealthController } from '../src/modules/health/health.controller';
 import { SecurityService } from '../src/modules/security/security.service';
 import { LoggingService } from '../src/modules/logs/logging.service';
 import { AlertsService } from '../src/modules/alerts/alerts.service';
@@ -11,9 +13,10 @@ import { AdminGuard } from '../src/common/guards/admin.guard';
 import { AuthGuard } from '../src/common/guards/auth.guard';
 import { AuthService } from '../src/common/auth/auth.service';
 import { Reflector } from '@nestjs/core';
+import { IPBlock } from '../src/entities/ip-block.entity';
 
 @Module({
-  controllers: [SecurityController, LogsController, AlertsController],
+  controllers: [SecurityController, LogsController, AlertsController, HealthController],
   providers: [
     Reflector,
     { provide: SecurityService, useValue: {
@@ -37,7 +40,7 @@ import { Reflector } from '@nestjs/core';
     AdminGuard,
     AuthGuard,
     { provide: AuthService, useValue: { verifyBearerToken: async () => ({ id: 'admin', isAdmin: true }) } },
+    { provide: getRepositoryToken(IPBlock), useValue: { findOne: async () => null } },
   ],
 })
 export class TestAppModule {}
-

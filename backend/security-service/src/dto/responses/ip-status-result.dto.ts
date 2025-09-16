@@ -1,17 +1,18 @@
-import { IsBoolean, IsIP, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDate, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class IPStatusResult {
-  @ApiProperty({ description: 'IP address' })
-  @IsIP()
-  ip: string;
-
   @ApiProperty()
   @IsBoolean()
-  isBlocked: boolean;
+  isBlocked!: boolean;
 
-  @ApiPropertyOptional({ description: 'ISO timestamp until which IP is blocked' })
+  @ApiPropertyOptional({ type: Date })
+  @IsOptional()
+  @IsDate()
+  blockedUntil?: Date;
+
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  blockedUntil?: string;
+  reason?: string;
 }

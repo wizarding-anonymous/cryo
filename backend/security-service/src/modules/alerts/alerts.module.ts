@@ -5,13 +5,21 @@ import { SecurityEvent } from '../../entities/security-event.entity';
 import { AlertsService } from './alerts.service';
 import { AlertsController } from './alerts.controller';
 import { AdminGuard } from '../../common/guards/admin.guard';
-import { AuthService } from '../../common/auth/auth.service';
 import { MetricsModule } from '../../common/metrics/metrics.module';
+import { EncryptionModule } from '../../common/encryption/encryption.module';
+import { KafkaModule } from '../../kafka/kafka.module';
+import { AuthModule } from '../../common/auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SecurityAlert, SecurityEvent]), MetricsModule],
+  imports: [
+    TypeOrmModule.forFeature([SecurityAlert, SecurityEvent]),
+    MetricsModule,
+    EncryptionModule,
+    KafkaModule,
+    AuthModule,
+  ],
   controllers: [AlertsController],
-  providers: [AlertsService, AdminGuard, AuthService],
+  providers: [AlertsService, AdminGuard],
   exports: [AlertsService],
 })
 export class AlertsModule {}

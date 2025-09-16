@@ -7,6 +7,7 @@ import { CheckLoginSecurityDto } from '../../dto/requests/check-login-security.d
 import { CheckTransactionSecurityDto } from '../../dto/requests/check-transaction-security.dto';
 import { SecurityCheckResult } from '../../dto/responses/security-check-result.dto';
 import { SecurityEventType } from '../../common/enums/security-event-type.enum';
+import { CreateSecurityEventDto } from '../../dto/internal/create-security-event.dto';
 import { RateLimitService } from './rate-limit.service';
 import { ConfigService } from '@nestjs/config';
 import { REDIS_CLIENT } from '../../redis/redis.constants';
@@ -34,16 +35,17 @@ export class SecurityService {
         allowed: false,
         riskScore: 100,
         reason: 'IP is blocked',
-        actions: ['BLOCK'],
+        recommendations: ['BLOCK_IP'],
       };
-      await this.logging.logSecurityEvent({
+      const event: CreateSecurityEventDto = {
         type: SecurityEventType.LOGIN,
         userId: dto.userId,
         ip: dto.ip,
         userAgent: dto.userAgent,
-        data: { policy: 'blocked-ip' },
+        data: { policy: 'blocked-ip', context: dto.context },
         riskScore: result.riskScore,
-      });
+      };
+      await this.logging.logSecurityEvent(event);
       return result;
     }
 
@@ -75,16 +77,17 @@ export class SecurityService {
       reason,
     };
 
-    await this.logging.logSecurityEvent({
+    const event: CreateSecurityEventDto = {
       type: SecurityEventType.LOGIN,
       userId: dto.userId,
       ip: dto.ip,
       userAgent: dto.userAgent,
-      data: { rlIp, rlUser },
+      data: { rlIp, rlUser, context: dto.context },
       riskScore: result.riskScore,
-    });
+    };
+    await this.logging.logSecurityEvent(event);
 
-    this.metrics?.recordCheck('login', result.allowed, 0); // duration could be measured externally if needed
+    this.metrics?.recordCheck('login', result.allowed, 0);
 
     return result;
   }
@@ -98,16 +101,16 @@ export class SecurityService {
         allowed: false,
         riskScore: 100,
         reason: 'IP is blocked',
-        actions: ['BLOCK'],
+        recommendations: ['BLOCK_IP'],
       };
-      await this.logging.logSecurityEvent({
+      const event: CreateSecurityEventDto = {
         type: SecurityEventType.TRANSACTION,
         userId: dto.userId,
         ip: dto.ip,
-        userAgent: dto.userAgent,
-        data: { policy: 'blocked-ip', transactionId: dto.transactionId, amount: dto.amount },
+        data: { policy: 'blocked-ip', amount: dto.amount, method: dto.paymentMethod },
         riskScore: result.riskScore,
-      });
+      };
+      await this.logging.logSecurityEvent(event);
       return result;
     }
 
@@ -142,32 +145,33 @@ export class SecurityService {
       reason,
     };
 
-    await this.logging.logSecurityEvent({
+    const event: CreateSecurityEventDto = {
       type: SecurityEventType.TRANSACTION,
       userId: dto.userId,
       ip: dto.ip,
-      userAgent: dto.userAgent,
-      data: { rlTxn, transactionId: dto.transactionId, amount: dto.amount, currency: dto.currency },
+      data: { rlTxn, amount: dto.amount, method: dto.paymentMethod, context: dto.context },
       riskScore: result.riskScore,
-    });
+    };
+    await this.logging.logSecurityEvent(event);
 
     this.metrics?.recordCheck('transaction', result.allowed, 0);
 
     return result;
   }
 
-  async blockIP(ip: string, reason: string, durationSeconds: number): Promise<void> {
+  async blockIP(ip: string, reason: string, durationMinutes: number): Promise<void> {
+    const durationSeconds = durationMinutes * 60;
     const until = new Date(Date.now() + durationSeconds * 1000);
     const entity = this.ipBlockRepo.create({ ip, reason, blockedUntil: until, isActive: true });
     await this.ipBlockRepo.save(entity);
     // Warm redis to speed up checks
     await this.redis.set(this.key(`block:ip:${ip}`), '1', 'EX', durationSeconds);
-    await this.logging.logSecurityEvent({
+    const event: CreateSecurityEventDto = {
       type: SecurityEventType.IP_BLOCK,
       ip,
       data: { reason, blockedUntil: until.toISOString() },
-      riskScore: 0,
-    });
+    };
+    await this.logging.logSecurityEvent(event);
     this.metrics?.recordIpBlock(reason);
   }
 
