@@ -1,4 +1,4 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
@@ -6,7 +6,7 @@ import * as winston from 'winston';
 
 @Injectable()
 export class SecurityLoggingInterceptor implements NestInterceptor {
-  constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: winston.Logger) {}
+  constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
@@ -20,7 +20,7 @@ export class SecurityLoggingInterceptor implements NestInterceptor {
       tap({
         next: () => {
           const res = context.switchToHttp().getResponse();
-          this.logger.info('Security API access', {
+          this.logger.log('Security API access', {
             method,
             url: originalUrl ?? req.url,
             status: res.statusCode,

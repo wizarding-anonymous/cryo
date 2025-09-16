@@ -25,5 +25,4 @@ ENV PORT=3008
 
 EXPOSE 3008
 
-CMD ["node", "dist/main.js"]
-
+CMD ["node", "dist/src/main.js"]

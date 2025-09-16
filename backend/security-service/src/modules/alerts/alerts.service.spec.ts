@@ -53,7 +53,7 @@ describe('AlertsService', () => {
         { provide: getRepositoryToken(SecurityAlert), useValue: alertsRepo },
         { provide: getRepositoryToken(SecurityEvent), useValue: eventsRepoMock() },
         { provide: ConfigService, useValue: { get: (_: string, d?: any) => d } },
-        { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: { info: jest.fn(), warn: jest.fn(), log: jest.fn() } },
+        { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: { log: jest.fn(), warn: jest.fn() } },
         { provide: KAFKA_PRODUCER_SERVICE, useValue: { emit: jest.fn() } },
         { provide: EncryptionService, useValue: { encrypt: (d: any) => JSON.stringify(d), decrypt: (d: any) => JSON.parse(d || '{}') } },
         { provide: MetricsService, useValue: { recordAlert: jest.fn() } },

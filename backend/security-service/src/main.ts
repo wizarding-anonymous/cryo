@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { HttpAdapterHost } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import helmet from 'helmet';
 
 async function bootstrap() {
@@ -22,7 +23,8 @@ async function bootstrap() {
 
   // Global exception filter
   const httpAdapterHost = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
+  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+  app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost, logger));
 
   // Swagger
   const config = new DocumentBuilder()

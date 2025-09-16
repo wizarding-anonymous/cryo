@@ -7,6 +7,7 @@ export class SecurityAlert {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index('security_alert_type_idx')
   @Column({
     type: 'enum',
     enum: SecurityAlertType,
@@ -14,6 +15,7 @@ export class SecurityAlert {
   })
   type!: SecurityAlertType;
 
+  @Index('security_alert_severity_idx')
   @Column({
     type: 'enum',
     enum: SecurityAlertSeverity,
@@ -21,6 +23,7 @@ export class SecurityAlert {
   })
   severity!: SecurityAlertSeverity;
 
+  @Index('security_alert_user_idx')
   @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId!: string | null;
 
@@ -40,6 +43,7 @@ export class SecurityAlert {
   @Column({ name: 'resolved_at', type: 'timestamp with time zone', nullable: true })
   resolvedAt!: Date | null;
 
+  @Index('security_alert_created_at_idx')
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt!: Date;
 }

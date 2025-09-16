@@ -14,6 +14,7 @@ import { REDIS_CLIENT } from '../../redis/redis.constants';
 import type Redis from 'ioredis';
 import { SecurityContext } from './types/security-context';
 import { MetricsService } from '../../common/metrics/metrics.service';
+import { UserServiceClient } from '../../clients/user-service.client';
 
 @Injectable()
 export class SecurityService {
@@ -26,6 +27,7 @@ export class SecurityService {
     @Inject(REDIS_CLIENT)
     private readonly redis: Redis,
     @Optional() private readonly metrics?: MetricsService,
+    @Optional() private readonly users?: UserServiceClient,
   ) {}
 
   async checkLoginSecurity(dto: CheckLoginSecurityDto): Promise<SecurityCheckResult> {
@@ -76,6 +78,22 @@ export class SecurityService {
       riskScore: risk,
       reason,
     };
+
+    // Optional enrichment via User Service (if configured)
+    if (dto.userId && this.users) {
+      try {
+        const info = await this.users.getUserSecurityInfo(dto.userId);
+        if (info?.locked) {
+          result.allowed = false;
+          result.riskScore = 100;
+          result.reason = 'User is locked';
+        } else if (info?.flagged) {
+          result.riskScore = Math.min(99, result.riskScore + 10);
+        }
+      } catch {
+        // ignore client errors
+      }
+    }
 
     const event: CreateSecurityEventDto = {
       type: SecurityEventType.LOGIN,
@@ -176,17 +194,22 @@ export class SecurityService {
   }
 
   async isIPBlocked(ip: string): Promise<boolean> {
-    const cache = await this.redis.get(this.key(`block:ip:${ip}`));
-    if (cache) return true;
+    try {
+      const cache = await this.redis.get(this.key(`block:ip:${ip}`));
+      if (cache) return true;
 
-    const now = new Date();
-    const active = await this.ipBlockRepo.findOne({ where: { ip, isActive: true } });
-    if (!active) return false;
-    if (!active.blockedUntil || active.blockedUntil > now) return true;
-    // expired -> deactivate
-    active.isActive = false;
-    await this.ipBlockRepo.save(active);
-    return false;
+      const now = new Date();
+      const active = await this.ipBlockRepo.findOne({ where: { ip, isActive: true } });
+      if (!active) return false;
+      if (!active.blockedUntil || active.blockedUntil > now) return true;
+      // expired -> deactivate
+      active.isActive = false;
+      await this.ipBlockRepo.save(active);
+      return false;
+    } catch (_e) {
+      // On any storage issue, default to not blocked
+      return false;
+    }
   }
 
   async validateUserActivity(userId: string, activityType: string): Promise<boolean> {
@@ -217,6 +240,17 @@ export class SecurityService {
 
     if (context.amount && context.amount >= this.config.get('SECURITY_TXN_AMOUNT_THRESHOLD', 10000)) {
       score += 20;
+    }
+
+    // Optional: adjust using User Service info
+    if (this.users) {
+      try {
+        const info = await this.users.getUserSecurityInfo(userId);
+        if (info?.locked) return 100;
+        if (info?.flagged) score = Math.min(99, score + 10);
+      } catch {
+        // ignore
+      }
     }
 
     return Math.max(0, Math.min(99, score));

@@ -12,6 +12,7 @@ export class IPBlock {
   @Column({ type: 'varchar', length: 512, nullable: true })
   reason!: string | null;
 
+  @Index('ip_block_blocked_until_idx')
   @Column({ name: 'blocked_until', type: 'timestamp with time zone', nullable: true })
   blockedUntil!: Date | null;
 

@@ -8,7 +8,7 @@ import { PaginatedSecurityAlerts } from '../../dto/responses/paginated-security-
 import { GetAlertsQueryDto } from './dto/get-alerts-query.dto';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import * as winston from 'winston';
+import { LoggerService } from '@nestjs/common';
 import { SuspiciousActivityResult } from './types/suspicious-activity-result';
 import { BehaviorAnalysis } from './types/behavior-analysis';
 import { MetricsService } from '../../common/metrics/metrics.service';
@@ -26,7 +26,7 @@ export class AlertsService implements OnModuleDestroy {
     private readonly eventsRepo: Repository<SecurityEvent>,
     private readonly config: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: winston.Logger,
+    private readonly logger: LoggerService,
     @Inject(KAFKA_PRODUCER_SERVICE)
     private readonly kafkaClient: ClientKafka,
     private readonly encryption: EncryptionService,
@@ -101,7 +101,7 @@ export class AlertsService implements OnModuleDestroy {
     alert.resolvedAt = new Date();
     alert.resolvedBy = resolvedBy ?? null;
     await this.alertsRepo.save(alert);
-    this.logger.info('Security alert resolved', { id: alert.id });
+    this.logger.log('Security alert resolved', { id: alert.id });
   }
 
   async detectSuspiciousActivity(userId: string): Promise<SuspiciousActivityResult> {

@@ -27,11 +27,11 @@ import { IPBlock } from '../src/entities/ip-block.entity';
     } },
     { provide: LoggingService, useValue: {
       logSecurityEvent: async () => ({}),
-      getSecurityLogs: async () => ({ items: [], page: 1, pageSize: 50, total: 0 }),
+      getSecurityLogs: async () => ({ data: [], page: 1, limit: 50, total: 0 }),
       getUserSecurityEvents: async () => ([]),
     } },
     { provide: AlertsService, useValue: {
-      getAlerts: async () => ({ items: [], page: 1, pageSize: 50, total: 0 }),
+      getAlerts: async () => ({ data: [], page: 1, limit: 50, total: 0 }),
       getActiveAlerts: async () => ([]),
       resolveAlert: async () => undefined,
     } },

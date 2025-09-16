@@ -4,8 +4,11 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Inject,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LoggerService } from '@nestjs/common';
 
 const getErrorCode = (status: number): string => {
   switch (status) {
@@ -26,7 +29,10 @@ const getErrorCode = (status: number): string => {
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
+  constructor(
+    private readonly httpAdapterHost: HttpAdapterHost,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const { httpAdapter } = this.httpAdapterHost;
@@ -48,7 +54,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       path: httpAdapter.getRequestUrl(ctx.getRequest()),
     } as const;
 
+    try {
+      this.logger.warn('HTTP exception', {
+        status,
+        message,
+        exception: (exception as any)?.stack || String(exception),
+        path: body.path,
+      });
+    } catch (_) {}
+
+    try {
+      // Fallback console for debugging
+      // eslint-disable-next-line no-console
+      console.error('HTTP exception', status, message, (exception as any)?.stack || String(exception));
+    } catch (_) {}
+
     httpAdapter.reply(ctx.getResponse(), body, status);
   }
 }
-
