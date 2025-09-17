@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { UserServiceClient } from './user-service.client';
+import { NotificationServiceClient } from './notification-service.client';
 
+@Global()
 @Module({
-  providers: [UserServiceClient],
-  exports: [UserServiceClient],
+  providers: [UserServiceClient, NotificationServiceClient],
+  exports: [UserServiceClient, NotificationServiceClient],
 })
 export class ClientsModule {}
 

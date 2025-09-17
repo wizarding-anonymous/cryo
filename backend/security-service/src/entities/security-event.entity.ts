@@ -25,17 +25,17 @@ export class SecurityEvent {
   userId!: string | null;
 
   @Index('security_event_ip_idx')
-  @Column({ type: 'varchar', length: 45, nullable: true })
-  ip!: string | null;
+  @Column({ type: 'varchar', length: 45 })
+  ip!: string;
 
   @Column({ name: 'user_agent', type: 'varchar', length: 512, nullable: true })
   userAgent!: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
-  data!: Record<string, unknown> | null;
+  @Column({ type: 'jsonb' })
+  data!: Record<string, unknown>;
 
-  @Column({ name: 'risk_score', type: 'float', nullable: true })
-  riskScore!: number | null;
+  @Column({ name: 'risk_score', type: 'float', default: 0 })
+  riskScore!: number;
 
   @Index('security_event_created_at_idx')
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })

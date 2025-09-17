@@ -9,18 +9,18 @@ export class IPBlock {
   @Column({ type: 'varchar', length: 45, nullable: false })
   ip!: string;
 
-  @Column({ type: 'varchar', length: 512, nullable: true })
-  reason!: string | null;
+  @Column({ type: 'varchar', length: 512 })
+  reason!: string;
 
   @Index('ip_block_blocked_until_idx')
-  @Column({ name: 'blocked_until', type: 'timestamp with time zone', nullable: true })
-  blockedUntil!: Date | null;
+  @Column({ name: 'blocked_until', type: 'timestamp with time zone' })
+  blockedUntil!: Date;
 
   @Column({ name: 'blocked_by', type: 'uuid', nullable: true })
   blockedBy!: string | null;
 
   @Index('ip_block_active_idx')
-  @Column({ name: 'is_active', type: 'boolean', default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: false })
   isActive!: boolean;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
