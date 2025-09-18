@@ -12,9 +12,7 @@ interface UpdateProgressDto {
 
 @Injectable()
 export class AchievementServiceClient {
-  private readonly baseUrl =
-    process.env.ACHIEVEMENT_SERVICE_URL ||
-    'http://achievement-service:3003/api';
+  private readonly baseUrl = 'http://achievement-service:3003/api';
 
   constructor(private readonly httpService: HttpService) {}
 

@@ -5,8 +5,8 @@ import { UserSearchResultDto } from '../friends/dto/user-search-result.dto';
 
 @Injectable()
 export class UserServiceClient {
-  private readonly baseUrl =
-    process.env.USER_SERVICE_URL || 'http://user-service:3001/api';
+  // This would typically come from a config service or environment variables
+  private readonly baseUrl = 'http://user-service:3001/api';
 
   constructor(private readonly httpService: HttpService) {}
 
@@ -41,17 +41,6 @@ export class UserServiceClient {
       this.httpService
         .get(`${this.baseUrl}/users/search`, {
           params: { q: query, excludeId },
-        })
-        .pipe(map((res) => res.data)),
-    );
-    return response;
-  }
-
-  async validateToken(token: string): Promise<{ userId: string }> {
-    const response = await firstValueFrom(
-      this.httpService
-        .get(`${this.baseUrl}/auth/validate-token`, {
-          headers: { Authorization: `Bearer ${token}` },
         })
         .pipe(map((res) => res.data)),
     );

@@ -13,8 +13,7 @@ interface SendNotificationDto {
 
 @Injectable()
 export class NotificationServiceClient {
-  private readonly baseUrl =
-    process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3003/api';
+  private readonly baseUrl = 'http://notification-service:3003/api';
 
   constructor(private readonly httpService: HttpService) {}
 
