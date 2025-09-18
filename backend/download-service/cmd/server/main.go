@@ -94,15 +94,14 @@ func main() {
 
     // Wire repositories and services
     dlRepo := repository.NewDownloadRepository(db)
-    dfRepo := repository.NewDownloadFileRepository(db)
     stream := services.NewStreamService()
     fileSvc := services.NewFileService(s3)
-    dlSvc := services.NewDownloadService(db, rdb, dlRepo, dfRepo, stream, lib, logg)
+    dlSvc := services.NewDownloadService(db, rdb, dlRepo, stream, lib, logg)
 
     // Register HTTP routes with auth + rate limiting
     h := handlers.NewDownloadHandler(dlSvc, rdb)
     fh := handlers.NewFileHandler(fileSvc, dlSvc)
-    api := r.Group("")
+    api := r.Group("/api")
     // Auth
     api.Use(intramw.Auth(intramw.AuthOptions{
         Enabled:  cfg.AuthJwtEnabled,
@@ -187,3 +186,4 @@ func main() {
 
     logg.Println("Server exiting")
 }
+

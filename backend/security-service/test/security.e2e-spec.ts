@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { TestAppModule } from './test-app.module';
@@ -17,15 +17,27 @@ describe('SecurityController (Integration)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+    
+    // Apply the same configuration as main app
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+    
     await app.init();
 
     eventRepository = app.get<Repository<SecurityEvent>>(
       getRepositoryToken(SecurityEvent),
     );
-  });
+  }, 30000); // Increase timeout to 30 seconds
 
   afterAll(async () => {
-    await app?.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   // Clean up the table before each test

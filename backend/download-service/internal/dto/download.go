@@ -4,16 +4,16 @@ import "download-service/internal/models"
 
 // Requests
 type StartDownloadRequest struct {
-    UserID string `json:"userId"` // UserID is optional in body, will be taken from auth token
-    GameID string `json:"gameId" binding:"required"`
+    UserID string `json:"userId" binding:"omitempty,uuid4"`
+    GameID string `json:"gameId" binding:"required,uuid4"`
 }
 
 type PauseDownloadRequest struct {
-    DownloadID string `json:"downloadId" binding:"required"`
+    DownloadID string `json:"downloadId" binding:"required,uuid4"`
 }
 
 type ResumeDownloadRequest struct {
-    DownloadID string `json:"downloadId" binding:"required"`
+    DownloadID string `json:"downloadId" binding:"required,uuid4"`
 }
 
 // Responses
@@ -44,4 +44,3 @@ func FromModel(d models.Download) DownloadResponse {
         UpdatedAt:      d.UpdatedAt.Unix(),
     }
 }
-

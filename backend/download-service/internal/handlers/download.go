@@ -4,6 +4,7 @@ import (
     "context"
     "net/http"
     "strconv"
+    "time"
 
     "github.com/gin-gonic/gin"
 
@@ -13,6 +14,7 @@ import (
     "download-service/internal/models"
     "download-service/internal/services"
     intramw "download-service/internal/middleware"
+    "download-service/pkg/validate"
 
     redis "github.com/redis/go-redis/v9"
 )
@@ -28,69 +30,64 @@ func NewDownloadHandler(svc *services.DownloadService, rdb *redis.Client) *Downl
 
 // RegisterRoutes wires download-related routes under the given router group.
 func (h *DownloadHandler) RegisterRoutes(r *gin.RouterGroup) {
-	r.POST("/downloads", h.startDownload)
-	r.GET("/downloads/:id", h.getDownload)
-	r.PUT("/downloads/:id/pause", h.pauseDownload)
-	r.PUT("/downloads/:id/resume", h.resumeDownload)
-	r.DELETE("/downloads/:id", h.cancelDownload)
-	r.PUT("/downloads/:id/speed", h.setDownloadSpeed)
-	r.GET("/downloads/user/:userId", h.listUserDownloads)
+    downloads := r.Group("/downloads")
+    downloads.POST("", h.startDownload)
+    downloads.GET("/:id", h.getDownload)
+    downloads.PUT("/:id/pause", h.pauseDownload)
+    downloads.PUT("/:id/resume", h.resumeDownload)
+    downloads.DELETE("/:id", h.cancelDownload)
+    downloads.PUT("/:id/speed", h.setDownloadSpeed)
 
-	r.GET("/library/games", h.listUserLibraryGames)
+    users := r.Group("/users")
+    users.GET("/:userId/downloads", h.listUserDownloads)
 }
 
 func (h *DownloadHandler) setDownloadSpeed(c *gin.Context) {
-	id := c.Param("id")
-	uid, ok := intramw.UserIDFromContext(c)
-	if !ok {
-		httpError(c, derr.AccessDeniedError{Reason: "missing user identity"})
-		return
-	}
-	var req struct {
-		BytesPerSecond int64 `json:"bytesPerSecond"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpError(c, derr.ValidationError{Msg: err.Error()})
-		return
-	}
+    id := c.Param("id")
+    if id == "" {
+        httpError(c, derr.ValidationError{Msg: "missing id"})
+        return
+    }
+    uid, ok := intramw.UserIDFromContext(c)
+    if !ok {
+        httpError(c, derr.AccessDeniedError{Reason: "missing user identity"})
+        return
+    }
+    var req struct {
+        BytesPerSecond int64 `json:"bytesPerSecond" binding:"required,gt=0"`
+    }
+    if err := c.ShouldBindJSON(&req); err != nil {
+        httpError(c, derr.ValidationError{Msg: err.Error()})
+        return
+    }
+    if err := validate.Struct(req); err != nil {
+        httpError(c, derr.ValidationError{Msg: err.Error()})
+        return
+    }
 
-	if err := h.svc.SetDownloadSpeed(c.Request.Context(), uid, id, req.BytesPerSecond); err != nil {
-		httpError(c, err)
-		return
-	}
-	c.Status(http.StatusOK)
-}
-
-func (h *DownloadHandler) listUserLibraryGames(c *gin.Context) {
-	uid, ok := intramw.UserIDFromContext(c)
-	if !ok {
-		httpError(c, derr.AccessDeniedError{Reason: "missing user identity"})
-		return
-	}
-	games, err := h.svc.ListUserLibraryGames(c.Request.Context(), uid)
-	if err != nil {
-		httpError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"games": games})
+    if err := h.svc.SetDownloadSpeed(c.Request.Context(), uid, id, req.BytesPerSecond); err != nil {
+        httpError(c, err)
+        return
+    }
+    c.Status(http.StatusOK)
 }
 
 func (h *DownloadHandler) cancelDownload(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		httpError(c, derr.ValidationError{Msg: "missing id"})
-		return
-	}
-	uid, ok := intramw.UserIDFromContext(c)
-	if !ok {
-		httpError(c, derr.AccessDeniedError{Reason: "missing user identity"})
-		return
-	}
-	if err := h.svc.CancelDownload(c.Request.Context(), uid, id); err != nil {
-		httpError(c, err)
-		return
-	}
-	c.Status(http.StatusNoContent)
+    id := c.Param("id")
+    if id == "" {
+        httpError(c, derr.ValidationError{Msg: "missing id"})
+        return
+    }
+    uid, ok := intramw.UserIDFromContext(c)
+    if !ok {
+        httpError(c, derr.AccessDeniedError{Reason: "missing user identity"})
+        return
+    }
+    if err := h.svc.CancelDownload(c.Request.Context(), uid, id); err != nil {
+        httpError(c, err)
+        return
+    }
+    c.Status(http.StatusNoContent)
 }
 
 func httpError(c *gin.Context, err error) {
@@ -112,7 +109,10 @@ func (h *DownloadHandler) startDownload(c *gin.Context) {
         httpError(c, derr.ValidationError{Msg: err.Error()})
         return
     }
-    // Prefer userId from auth context if present
+    if err := validate.Struct(req); err != nil {
+        httpError(c, derr.ValidationError{Msg: err.Error()})
+        return
+    }
     if uid, ok := intramw.UserIDFromContext(c); ok {
         req.UserID = uid
     }
@@ -126,6 +126,15 @@ func (h *DownloadHandler) startDownload(c *gin.Context) {
     if err != nil {
         httpError(c, err)
         return
+    }
+    if h.rdb != nil {
+        _ = cache.SetDownloadStatus(context.Background(), h.rdb, d.ID, cache.DownloadStatusValue{
+            Status:         string(d.Status),
+            Progress:       d.Progress,
+            DownloadedSize: d.DownloadedSize,
+            TotalSize:      d.TotalSize,
+            Speed:          d.Speed,
+        }, 30*time.Second)
     }
     c.JSON(http.StatusCreated, dto.FromModel(*d))
 }
@@ -146,14 +155,12 @@ func (h *DownloadHandler) getDownload(c *gin.Context) {
         httpError(c, err)
         return
     }
-    // Try enrich with cached status
     if h.rdb != nil {
         if stat, _ := cache.GetDownloadStatus(context.Background(), h.rdb, id); stat != nil {
             d.Progress = stat.Progress
             d.DownloadedSize = stat.DownloadedSize
             d.TotalSize = stat.TotalSize
             d.Speed = stat.Speed
-            // status string might reflect paused/downloading
             d.Status = models.DownloadStatus(stat.Status)
         }
     }
@@ -239,7 +246,6 @@ func (h *DownloadHandler) listUserDownloads(c *gin.Context) {
         httpError(c, err)
         return
     }
-    // Enrich via cache
     resp := make([]dto.DownloadResponse, 0, len(list))
     for i := range list {
         d := &list[i]

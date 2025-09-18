@@ -21,7 +21,6 @@ import (
 type DownloadService struct {
     db       *gorm.DB
     repo     repository.DownloadRepository
-    files    repository.DownloadFileRepository
     rdb      *redis.Client
     stream   *StreamService
     library  lib.Interface
@@ -31,11 +30,10 @@ type DownloadService struct {
     defaultSpeed     int64 // bytes per tick (1s)
 }
 
-func NewDownloadService(db *gorm.DB, rdb *redis.Client, repo repository.DownloadRepository, files repository.DownloadFileRepository, stream *StreamService, library lib.Interface, logger logger.Logger) *DownloadService {
+func NewDownloadService(db *gorm.DB, rdb *redis.Client, repo repository.DownloadRepository, stream *StreamService, library lib.Interface, logger logger.Logger) *DownloadService {
     return &DownloadService{
         db:               db,
         repo:             repo,
-        files:            files,
         rdb:              rdb,
         stream:           stream,
         library:          library,
@@ -57,6 +55,9 @@ func (s *DownloadService) StartDownload(ctx context.Context, userID, gameID stri
         return nil, err
     }
 
+    persistCtx := context.Background()
+    cacheCtx := context.Background()
+
     d := &models.Download{
         UserID:         userID,
         GameID:         gameID,
@@ -75,23 +76,22 @@ func (s *DownloadService) StartDownload(ctx context.Context, userID, gameID stri
     observability.RecordDownloadStatus(observability.StatusStarted)
     observability.IncActiveDownloads()
 
-    // Start streaming simulation; on each tick update DB and Redis.
-    // Use background context so streaming continues after request returns.
     s.stream.Start(context.Background(), d.ID, d.DownloadedSize, d.TotalSize, s.defaultSpeed, func(upd StreamUpdate) bool {
         bytesSinceLastTick := upd.DownloadedSize - d.DownloadedSize
-        observability.AddDownloadedBytes(float64(bytesSinceLastTick))
-        // Update model
+        if bytesSinceLastTick > 0 {
+            observability.AddDownloadedBytes(float64(bytesSinceLastTick))
+        }
         d.DownloadedSize = upd.DownloadedSize
         d.TotalSize = upd.TotalSize
         d.Speed = upd.Speed
-        d.Progress = int(math.Round(float64(d.DownloadedSize) * 100 / float64(d.TotalSize)))
-        // Persist
-        if err := s.repo.Update(ctx, d); err != nil {
-            s.logger.Printf("update progress failed: %v", err)
+        if d.TotalSize > 0 {
+            d.Progress = int(math.Round(float64(d.DownloadedSize) * 100 / float64(d.TotalSize)))
         }
-        // Cache (optional)
+        if err := s.repo.Update(persistCtx, d); err != nil {
+            logger.Error(s.logger, "update progress failed", "error", err, "downloadID", d.ID)
+        }
         if s.rdb != nil {
-            _ = cache.SetDownloadStatus(ctx, s.rdb, d.ID, cache.DownloadStatusValue{
+            _ = cache.SetDownloadStatus(cacheCtx, s.rdb, d.ID, cache.DownloadStatusValue{
                 Status:         string(d.Status),
                 Progress:       d.Progress,
                 DownloadedSize: d.DownloadedSize,
@@ -101,14 +101,13 @@ func (s *DownloadService) StartDownload(ctx context.Context, userID, gameID stri
         }
         return false
     }, func() {
-        // Mark completed
         d.Status = models.StatusCompleted
         d.Progress = 100
-        if err := s.repo.Update(context.Background(), d); err != nil {
+        if err := s.repo.Update(persistCtx, d); err != nil {
             logger.Error(s.logger, "finalize download failed", "error", err, "downloadID", d.ID)
         }
         if s.rdb != nil {
-            _ = cache.DeleteDownloadStatus(context.Background(), s.rdb, d.ID)
+            _ = cache.DeleteDownloadStatus(cacheCtx, s.rdb, d.ID)
         }
         logger.Info(s.logger, "download completed", "downloadID", d.ID)
         observability.RecordDownloadStatus(observability.StatusCompleted)
@@ -136,11 +135,11 @@ func (s *DownloadService) PauseDownload(ctx context.Context, userID, downloadID 
     }
     s.stream.Pause(downloadID)
     d.Status = models.StatusPaused
-    err = s.repo.Update(ctx, d)
-    if err == nil {
-        logger.Info(s.logger, "download paused", "downloadID", d.ID)
+    if err := s.repo.Update(ctx, d); err != nil {
+        return err
     }
-    return err
+    logger.Info(s.logger, "download paused", "downloadID", d.ID)
+    return nil
 }
 
 func (s *DownloadService) ResumeDownload(ctx context.Context, userID, downloadID string) error {
@@ -161,11 +160,11 @@ func (s *DownloadService) ResumeDownload(ctx context.Context, userID, downloadID
     }
     s.stream.Resume(downloadID)
     d.Status = models.StatusDownloading
-    err = s.repo.Update(ctx, d)
-    if err == nil {
-        logger.Info(s.logger, "download resumed", "downloadID", d.ID)
+    if err := s.repo.Update(ctx, d); err != nil {
+        return err
     }
-    return err
+    logger.Info(s.logger, "download resumed", "downloadID", d.ID)
+    return nil
 }
 
 func (s *DownloadService) GetDownload(ctx context.Context, userID, downloadID string) (*models.Download, error) {
@@ -189,66 +188,65 @@ func (s *DownloadService) ListUserDownloads(ctx context.Context, userID string, 
 }
 
 func (s *DownloadService) CancelDownload(ctx context.Context, userID, downloadID string) error {
-	d, err := s.repo.GetByID(ctx, downloadID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return derr.DownloadNotFoundError{ID: downloadID}
-		}
-		return err
-	}
-	if d.UserID != userID {
-		err := derr.AccessDeniedError{Reason: "not owner of download"}
-		logger.Info(s.logger, "cancel download access denied", "error", err, "authUserID", userID, "downloadID", downloadID)
-		return err
-	}
+    d, err := s.repo.GetByID(ctx, downloadID)
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return derr.DownloadNotFoundError{ID: downloadID}
+        }
+        return err
+    }
+    if d.UserID != userID {
+        err := derr.AccessDeniedError{Reason: "not owner of download"}
+        logger.Info(s.logger, "cancel download access denied", "error", err, "authUserID", userID, "downloadID", downloadID)
+        return err
+    }
 
-	// Only cancellable if downloading or paused
-	if d.Status != models.StatusDownloading && d.Status != models.StatusPaused {
-		return nil // Or return an error like "cannot cancel a completed/failed download"
-	}
+    if d.Status != models.StatusDownloading && d.Status != models.StatusPaused {
+        return nil
+    }
 
-	s.stream.Stop(downloadID)
-	d.Status = models.StatusCancelled
+    s.stream.Stop(downloadID)
+    d.Status = models.StatusCancelled
 
-	// Optional: Could also trigger a cleanup of downloaded files here
-	// s.files.CleanupFiles(...)
+    if err := s.repo.Update(ctx, d); err != nil {
+        return err
+    }
 
-	err = s.repo.Update(ctx, d)
-	if err == nil {
-		logger.Info(s.logger, "download cancelled", "downloadID", d.ID)
-		observability.RecordDownloadStatus(observability.StatusCancelled)
-		observability.DecActiveDownloads()
-	}
-	return err
+    logger.Info(s.logger, "download cancelled", "downloadID", d.ID)
+    observability.RecordDownloadStatus(observability.StatusCancelled)
+    observability.DecActiveDownloads()
+    return nil
 }
 
 // ListUserLibraryGames returns a list of game IDs from the user's library.
 func (s *DownloadService) ListUserLibraryGames(ctx context.Context, userID string) ([]string, error) {
-	return s.library.ListUserGames(ctx, userID)
+    return s.library.ListUserGames(ctx, userID)
 }
 
 // SetDownloadSpeed updates the speed for an active download.
 func (s *DownloadService) SetDownloadSpeed(ctx context.Context, userID, downloadID string, bytesPerSecond int64) error {
-	d, err := s.repo.GetByID(ctx, downloadID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return derr.DownloadNotFoundError{ID: downloadID}
-		}
-		return err
-	}
-	if d.UserID != userID {
-		err := derr.AccessDeniedError{Reason: "not owner of download"}
-		logger.Info(s.logger, "set speed access denied", "error", err, "authUserID", userID, "downloadID", downloadID)
-		return err
-	}
+    if bytesPerSecond <= 0 {
+        return derr.ValidationError{Msg: "bytesPerSecond must be positive"}
+    }
 
-	if d.Status != models.StatusDownloading && d.Status != models.StatusPaused {
-		return derr.ValidationError{Msg: "cannot set speed for a download that is not active"}
-	}
+    d, err := s.repo.GetByID(ctx, downloadID)
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return derr.DownloadNotFoundError{ID: downloadID}
+        }
+        return err
+    }
+    if d.UserID != userID {
+        err := derr.AccessDeniedError{Reason: "not owner of download"}
+        logger.Info(s.logger, "set speed access denied", "error", err, "authUserID", userID, "downloadID", downloadID)
+        return err
+    }
 
-	s.stream.SetSpeed(downloadID, bytesPerSecond)
-	logger.Info(s.logger, "download speed set", "downloadID", downloadID, "newSpeedBps", bytesPerSecond)
-	// We could also persist this preference to the database if we wanted it to be sticky.
-	// For now, it only affects the active download session.
-	return nil
+    if d.Status != models.StatusDownloading && d.Status != models.StatusPaused {
+        return derr.ValidationError{Msg: "cannot set speed for a download that is not active"}
+    }
+
+    s.stream.SetSpeed(downloadID, bytesPerSecond)
+    logger.Info(s.logger, "download speed set", "downloadID", downloadID, "newSpeedBps", bytesPerSecond)
+    return nil
 }

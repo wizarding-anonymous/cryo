@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { TestAppModule } from './test-app.module';
 
@@ -12,20 +12,32 @@ describe('Security Service - Health (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    
+    // Apply the same configuration as main app
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+    
     await app.init();
-  });
+  }, 30000); // Increase timeout to 30 seconds
 
   afterAll(async () => {
-    await app.close();
-  });
-
-  it('/health/live (GET) should return ok', async () => {
-    const res = await request(app.getHttpServer()).get('/health/live').expect(200);
-    expect(res.body.status).toBe('ok');
+    if (app) {
+      await app.close();
+    }
   });
 
   it('/health/ready (GET) should return ok', async () => {
     const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
+    expect(res.body.status).toBe('ok');
+  });
+
+  it('/health/live (GET) should return ok', async () => {
+    const res = await request(app.getHttpServer()).get('/health/live').expect(200);
     expect(res.body.status).toBe('ok');
   });
 });

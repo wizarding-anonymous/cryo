@@ -50,7 +50,7 @@ type Interface interface {
 func NewClient(opts Options) *Client {
     hc := opts.HTTPClient
     if hc == nil {
-        hc = &http.Client{Timeout: maxDur(opts.Timeout, 2*time.Second)}
+        hc = &http.Client{Timeout: maxDur(opts.Timeout, 2 * time.Second)}
     }
     return &Client{
         baseURL:    strings.TrimRight(opts.BaseURL, "/"),
@@ -59,7 +59,7 @@ func NewClient(opts Options) *Client {
         hdrValue:   opts.InternalHeaderValue,
         maxRetries: maxInt(opts.MaxRetries, 0),
         cbThresh:   maxInt(opts.CBThreshold, 5),
-        cbCooldown: maxDur(opts.CBCooldown, 10*time.Second),
+        cbCooldown: maxDur(opts.CBCooldown, 10 * time.Second),
     }
 }
 
@@ -85,7 +85,6 @@ func (c *Client) circuitAllows() bool {
         return true
     }
     if time.Now().After(c.reopenAt) {
-        // Half-open: allow a trial request.
         c.circuitOpen = false
         c.failCount = 0
         return true
@@ -139,36 +138,45 @@ func (c *Client) doJSON(ctx context.Context, method, path string, out any) (int,
             c.markFailure()
             return 0, err
         }
-        defer resp.Body.Close()
 
-        // 2xx success
-        if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-            if out != nil {
-                b, _ := io.ReadAll(resp.Body)
-                if len(b) > 0 {
-                    if err := json.Unmarshal(b, out); err != nil {
-                        c.markFailure()
-                        return resp.StatusCode, fmt.Errorf("decode response: %w", err)
-                    }
+        status := resp.StatusCode
+        body, readErr := io.ReadAll(resp.Body)
+        resp.Body.Close()
+
+        if readErr != nil {
+            lastErr = readErr
+            if i < attempts-1 {
+                backoff(i)
+                continue
+            }
+            c.markFailure()
+            return status, readErr
+        }
+
+        switch {
+        case status >= 200 && status < 300:
+            if out != nil && len(body) > 0 {
+                if err := json.Unmarshal(body, out); err != nil {
+                    c.markFailure()
+                    return status, fmt.Errorf("decode response: %w", err)
                 }
             }
             c.markSuccess()
-            return resp.StatusCode, nil
-        }
-
-        // 404/401/etc — don’t retry on 4xx except 408
-        if resp.StatusCode >= 400 && resp.StatusCode < 500 && resp.StatusCode != http.StatusRequestTimeout {
+            return status, nil
+        case status == http.StatusNotFound:
+            c.markSuccess()
+            return status, nil
+        case status >= 400 && status < 500 && status != http.StatusRequestTimeout:
             c.markFailure()
-            return resp.StatusCode, fmt.Errorf("library client: http %d", resp.StatusCode)
+            return status, fmt.Errorf("library client: http %d", status)
+        default:
+            if i < attempts-1 {
+                backoff(i)
+                continue
+            }
+            c.markFailure()
+            return status, fmt.Errorf("library client: http %d", status)
         }
-
-        // 5xx or 408 — retry
-        if i < attempts-1 {
-            backoff(i)
-            continue
-        }
-        c.markFailure()
-        return resp.StatusCode, fmt.Errorf("library client: http %d", resp.StatusCode)
     }
     c.markFailure()
     if lastErr != nil {
@@ -182,7 +190,6 @@ func retriable(err error) bool {
     if errors.As(err, &nerr) {
         return nerr.Temporary() || nerr.Timeout()
     }
-    // connection reset, etc.
     if errors.Is(err, io.EOF) {
         return true
     }
@@ -191,7 +198,8 @@ func retriable(err error) bool {
 
 func backoff(i int) { time.Sleep(time.Duration(150*(1<<i)) * time.Millisecond) }
 
-// DTOs (minimal) for Library Service
+// DTOs for Library Service
+
 type userGamesResponse struct {
     Games []struct {
         GameID string `json:"gameId"`
@@ -199,26 +207,38 @@ type userGamesResponse struct {
 }
 
 type ownershipResponse struct {
-    Owned bool `json:"owned"`
+    Owns         bool       `json:"owns"`
+    PurchaseDate *time.Time `json:"purchaseDate"`
 }
 
-// CheckOwnership checks whether user owns the game.
-// Prefer internal endpoint: GET /api/library/user/:userId/games then check membership.
+// CheckOwnership checks whether user owns the game using the dedicated endpoint, falling back to the games list if needed.
 func (c *Client) CheckOwnership(ctx context.Context, userID, gameID string) (bool, error) {
-    // Try internal endpoint to avoid user JWT requirement.
-    var resp userGamesResponse
-    code, err := c.doJSON(ctx, http.MethodGet, fmt.Sprintf("/api/library/user/%s/games", userID), &resp)
-    if err == nil && (code >= 200 && code < 300) {
-        for _, g := range resp.Games {
-            if g.GameID == gameID {
-                return true, nil
-            }
-        }
+    var resp ownershipResponse
+    code, err := c.doJSON(ctx, http.MethodGet, fmt.Sprintf("/api/library/user/%s/owns/%s", userID, gameID), &resp)
+    if err == nil && code >= 200 && code < 300 {
+        return resp.Owns, nil
+    }
+    if code == http.StatusNotFound {
         return false, nil
     }
-    // Fallback: if internal is unavailable but public ownership endpoint exists and caller can proxy user JWT later.
-    // We return error here to avoid making unauthenticated call to a protected endpoint.
-    return false, err
+    // Fallback to internal list endpoint (expected to be lightweight and reuse circuit breaker).
+    var list userGamesResponse
+    _, fallbackErr := c.doJSON(ctx, http.MethodGet, fmt.Sprintf("/api/library/user/%s/games", userID), &list)
+    if fallbackErr != nil {
+        if err != nil {
+            return false, err
+        }
+        return false, fallbackErr
+    }
+    for _, g := range list.Games {
+        if g.GameID == gameID {
+            return true, nil
+        }
+    }
+    if err != nil {
+        return false, err
+    }
+    return false, nil
 }
 
 // ListUserGames returns list of game IDs owned by the user via internal endpoint.
