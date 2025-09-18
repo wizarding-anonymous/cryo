@@ -1,24 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { FriendDto } from './friend.dto';
-
-class PaginationDto {
-  @ApiProperty()
-  total!: number;
-
-  @ApiProperty()
-  page!: number;
-
-  @ApiProperty()
-  limit!: number;
-
-  @ApiProperty()
-  totalPages!: number;
-}
+import { PaginationDto } from '../../common/dto';
 
 export class FriendsResponseDto {
-  @ApiProperty({ type: [FriendDto] })
+  @ApiProperty({
+    type: [FriendDto],
+    description: 'List of friends',
+  })
   friends!: FriendDto[];
 
-  @ApiProperty({ type: () => PaginationDto })
+  @ApiProperty({
+    type: () => PaginationDto,
+    description: 'Pagination information',
+  })
   pagination!: PaginationDto;
 }
