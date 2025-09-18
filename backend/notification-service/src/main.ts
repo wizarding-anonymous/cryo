@@ -22,6 +22,9 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Enable graceful shutdown
+  app.enableShutdownHooks();
+
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Notification Service API')

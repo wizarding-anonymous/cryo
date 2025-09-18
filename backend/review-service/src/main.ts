@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { validationConfig } from './config/validation.config';
 
 async function bootstrap() {
@@ -14,9 +13,6 @@ async function bootstrap() {
 
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe(validationConfig));
-
-  // Global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter());
 
   // API prefix
   const apiPrefix = configService.get('app.api.prefix')!;

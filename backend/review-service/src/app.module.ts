@@ -6,7 +6,6 @@ import { HttpModule } from '@nestjs/axios';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ReviewsModule } from './reviews/reviews.module';
 
 // Configuration imports
 import databaseConfig from './config/database.config';
@@ -42,9 +41,6 @@ import appConfig from './config/app.config';
       timeout: 5000,
       maxRedirects: 5,
     }),
-
-    // Feature Modules
-    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -117,30 +117,43 @@ http://localhost:3000/api
 
 ```
 src/
-├── app.module.ts          # Главный модуль приложения
+├── app.controller.ts     # Контроллер health-check
+├── app.module.ts         # Главный модуль
 ├── main.ts               # Точка входа
-├── notification/         # Модуль уведомлений
-│   ├── controllers/      # REST контроллеры
-│   ├── services/         # Бизнес-логика
-│   ├── entities/         # TypeORM сущности
-│   └── dto/             # Data Transfer Objects
-├── database/            # Конфигурация базы данных
-└── common/              # Общие утилиты и декораторы
+├── auth/                 # Логика аутентификации
+│   └── jwt-auth.guard.ts # Защитник эндпоинтов
+├── common/               # Общие модули
+│   └── enums/            # Перечисления (enum)
+├── database/             # Конфигурация БД и миграции
+├── entities/             # Сущности TypeORM
+└── notification/         # Основной модуль уведомлений
+    ├── dto/              # Data Transfer Objects
+    ├── templates/        # HTML-шаблоны для email
+    ├── notification.controller.ts
+    ├── notification.module.ts
+    ├── notification.service.ts
+    └── email.service.ts
 ```
 
 ## Переменные окружения
 
-| Переменная | Описание | По умолчанию |
-|------------|----------|--------------|
-| `NODE_ENV` | Режим работы | `development` |
-| `PORT` | Порт приложения | `3000` |
-| `DATABASE_HOST` | Хост PostgreSQL | `localhost` |
-| `DATABASE_PORT` | Порт PostgreSQL | `5433` |
-| `DATABASE_USERNAME` | Пользователь БД | `notification_user` |
-| `DATABASE_PASSWORD` | Пароль БД | `notification_password` |
-| `DATABASE_NAME` | Имя БД | `notification_db` |
+| Переменная | Описание | По умолчанию в .env.example |
+|--------------------|----------------------------------------------------------|--------------------------------------|
+| `NODE_ENV` | Режим работы (`development` или `production`) | `development` |
+| `PORT` | Порт, на котором запускается приложение | `3000` |
+| `CORS_ORIGIN` | Разрешенный источник для CORS | `*` |
+| `JWT_SECRET` | Секретный ключ для валидации JWT токенов | `your-super-secret-jwt-key...` |
+| `DB_HOST` | Хост базы данных PostgreSQL | `localhost` |
+| `DB_PORT` | Порт базы данных PostgreSQL | `5432` |
+| `DB_USERNAME` | Имя пользователя для подключения к БД | `user` |
+| `DB_PASSWORD` | Пароль для подключения к БД | `password` |
+| `DB_DATABASE` | Название базы данных | `notification_db` |
 | `REDIS_HOST` | Хост Redis | `localhost` |
-| `REDIS_PORT` | Порт Redis | `6380` |
+| `REDIS_PORT` | Порт Redis | `6379` |
+| `USER_SERVICE_URL` | URL микросервиса пользователей для интеграции | `http://localhost:3001` |
+| `MAILER_URL` | URL API провайдера для отправки email | `https://api.examplemailer.com/send` |
+| `MAILER_API_KEY` | Ключ API для провайдера email | `your-mailer-api-key` |
+| `MAILER_FROM_EMAIL`| Email-адрес отправителя | `noreply@myplatform.com` |
 
 ## Интеграция с другими сервисами
 
