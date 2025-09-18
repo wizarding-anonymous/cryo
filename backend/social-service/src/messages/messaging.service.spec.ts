@@ -6,6 +6,8 @@ import { FriendsService } from '../friends/friends.service';
 import { Repository } from 'typeorm';
 import { NotFriendsException } from '../common/exceptions/not-friends.exception';
 import { MessageNotFoundException } from '../common/exceptions/message-not-found.exception';
+import { NotificationServiceClient } from '../clients/notification.service.client';
+import { UserServiceClient } from '../clients/user.service.client';
 
 const mockMessageRepository = {
   create: jest.fn(),
@@ -17,6 +19,14 @@ const mockMessageRepository = {
 
 const mockFriendsService = {
   checkFriendship: jest.fn(),
+};
+
+const mockNotificationServiceClient = {
+  sendNotification: jest.fn(),
+};
+
+const mockUserServiceClient = {
+  getUsersByIds: jest.fn(),
 };
 
 describe('MessagingService', () => {
@@ -35,6 +45,14 @@ describe('MessagingService', () => {
         {
           provide: FriendsService,
           useValue: mockFriendsService,
+        },
+        {
+          provide: NotificationServiceClient,
+          useValue: mockNotificationServiceClient,
+        },
+        {
+          provide: UserServiceClient,
+          useValue: mockUserServiceClient,
         },
       ],
     }).compile();
@@ -61,10 +79,11 @@ describe('MessagingService', () => {
     });
 
     it('should send a message successfully if users are friends', async () => {
-      const message = { fromUserId, ...sendMessageDto };
+      const message = { id: 'msg1', fromUserId, ...sendMessageDto };
       mockFriendsService.checkFriendship.mockResolvedValue(true);
       mockMessageRepository.create.mockReturnValue(message);
       mockMessageRepository.save.mockResolvedValue(message);
+      mockNotificationServiceClient.sendNotification.mockResolvedValue(undefined);
 
       const result = await service.sendMessage(fromUserId, sendMessageDto);
       expect(result).toEqual(message);
@@ -74,6 +93,7 @@ describe('MessagingService', () => {
         content: sendMessageDto.content,
       });
       expect(mockMessageRepository.save).toHaveBeenCalledWith(message);
+      expect(mockNotificationServiceClient.sendNotification).toHaveBeenCalled();
     });
   });
 

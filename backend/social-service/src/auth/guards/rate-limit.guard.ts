@@ -39,7 +39,9 @@ export class RateLimitGuard implements CanActivate {
       throw new RateLimitExceededException(MESSAGE_LIMIT);
     }
 
-    const ttl = await this.cacheManager.store.ttl(key);
+    const store: any = (this.cacheManager as any).store;
+    const ttlGetter = typeof store?.ttl === 'function' ? store.ttl.bind(store) : undefined;
+    const ttl = ttlGetter ? await ttlGetter(key) : TIME_WINDOW_SECONDS;
     await this.cacheManager.set(key, currentCount + 1, { ttl } as any);
     return true;
   }

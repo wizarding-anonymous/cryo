@@ -60,6 +60,6 @@ export class Achievement {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @OneToMany(() => UserAchievement, (userAchievement) => userAchievement.achievement)
+  @OneToMany(() => UserAchievement, userAchievement => userAchievement.achievement)
   userAchievements!: UserAchievement[];
 }

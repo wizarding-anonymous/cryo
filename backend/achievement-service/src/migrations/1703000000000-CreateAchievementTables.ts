@@ -29,7 +29,13 @@ export class CreateAchievementTables1703000000000 implements MigrationInterface 
           {
             name: 'type',
             type: 'enum',
-            enum: ['first_purchase', 'first_review', 'first_friend', 'games_purchased', 'reviews_written'],
+            enum: [
+              'first_purchase',
+              'first_review',
+              'first_friend',
+              'games_purchased',
+              'reviews_written',
+            ],
           },
           {
             name: 'condition',
@@ -156,14 +162,26 @@ export class CreateAchievementTables1703000000000 implements MigrationInterface 
     // Create indexes for optimization
     await queryRunner.query(`CREATE INDEX "IDX_achievements_name" ON "achievements" ("name")`);
     await queryRunner.query(`CREATE INDEX "IDX_achievements_type" ON "achievements" ("type")`);
-    
-    await queryRunner.query(`CREATE INDEX "IDX_user_achievements_userId" ON "user_achievements" ("userId")`);
-    await queryRunner.query(`CREATE INDEX "IDX_user_achievements_achievementId" ON "user_achievements" ("achievementId")`);
-    await queryRunner.query(`CREATE UNIQUE INDEX "IDX_user_achievements_userId_achievementId" ON "user_achievements" ("userId", "achievementId")`);
-    
-    await queryRunner.query(`CREATE INDEX "IDX_user_progress_userId" ON "user_progress" ("userId")`);
-    await queryRunner.query(`CREATE INDEX "IDX_user_progress_achievementId" ON "user_progress" ("achievementId")`);
-    await queryRunner.query(`CREATE UNIQUE INDEX "IDX_user_progress_userId_achievementId" ON "user_progress" ("userId", "achievementId")`);
+
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_achievements_userId" ON "user_achievements" ("userId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_achievements_achievementId" ON "user_achievements" ("achievementId")`,
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "IDX_user_achievements_userId_achievementId" ON "user_achievements" ("userId", "achievementId")`,
+    );
+
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_progress_userId" ON "user_progress" ("userId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_progress_achievementId" ON "user_progress" ("achievementId")`,
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "IDX_user_progress_userId_achievementId" ON "user_progress" ("userId", "achievementId")`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -171,11 +189,11 @@ export class CreateAchievementTables1703000000000 implements MigrationInterface 
     await queryRunner.query(`DROP INDEX "IDX_user_progress_userId_achievementId"`);
     await queryRunner.query(`DROP INDEX "IDX_user_progress_achievementId"`);
     await queryRunner.query(`DROP INDEX "IDX_user_progress_userId"`);
-    
+
     await queryRunner.query(`DROP INDEX "IDX_user_achievements_userId_achievementId"`);
     await queryRunner.query(`DROP INDEX "IDX_user_achievements_achievementId"`);
     await queryRunner.query(`DROP INDEX "IDX_user_achievements_userId"`);
-    
+
     await queryRunner.query(`DROP INDEX "IDX_achievements_type"`);
     await queryRunner.query(`DROP INDEX "IDX_achievements_name"`);
 

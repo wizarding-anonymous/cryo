@@ -2,7 +2,7 @@
 FROM node:18-alpine AS development
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Stage 2: Build the application
 FROM node:18-alpine AS builder
@@ -13,10 +13,10 @@ RUN npm run build
 
 # Stage 3: Production image
 FROM node:18-alpine AS production
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
+ENV NODE_ENV=production
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm install --only=production
+RUN npm ci --omit=dev
 COPY --from=builder /usr/src/app/dist ./dist
+EXPOSE 3000
 CMD ["node", "dist/main"]

@@ -26,7 +26,7 @@ export class UserAchievement {
   @CreateDateColumn()
   unlockedAt!: Date;
 
-  @ManyToOne(() => Achievement, (achievement) => achievement.userAchievements)
+  @ManyToOne(() => Achievement, achievement => achievement.userAchievements)
   @JoinColumn({ name: 'achievementId' })
   achievement!: Achievement;
 }

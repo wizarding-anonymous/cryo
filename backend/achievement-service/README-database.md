@@ -1,113 +1,66 @@
-# Database Setup - Achievement Service
+# Achievement Service Database Setup
 
-## Overview
+## Migrations
 
-This document describes the database setup for the Achievement Service, including PostgreSQL and Redis configuration.
+This service uses TypeORM migrations to manage database schema and seed data.
 
-## Prerequisites
+### Available Migrations
 
-- Docker and Docker Compose
-- Node.js 18+
-- PostgreSQL 14+ (if running locally)
-- Redis 7+ (if running locally)
+1. **CreateAchievementTables** - Creates the basic database structure
+2. **SeedBasicAchievements** - Seeds basic achievements for MVP
 
-## Quick Start with Docker
+### Running Migrations
 
-1. Start the development databases:
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
-```
-
-2. Copy environment configuration:
-```bash
-cp .env.example .env
-```
-
-3. Run migrations:
-```bash
+# Run all pending migrations
 npm run migration:run
-```
-
-4. Start the application:
-```bash
-npm run start:dev
-```
-
-## Database Schema
-
-### Tables
-
-#### achievements
-- Stores achievement definitions
-- Includes conditions, points, and metadata
-- Indexed on `name` and `type` for performance
-
-#### user_achievements
-- Tracks unlocked achievements per user
-- Unique constraint on `userId` + `achievementId`
-- Indexed for fast user queries
-
-#### user_progress
-- Tracks progress towards achievements
-- Stores current and target values
-- Unique constraint on `userId` + `achievementId`
-
-### Indexes
-
-Optimized indexes for common query patterns:
-- User-specific queries (`userId`)
-- Achievement lookups (`achievementId`)
-- Composite unique constraints
-
-## Environment Variables
-
-```bash
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=password
-DB_NAME=achievement_service
-
-# Redis Configuration
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_DB=0
-
-# Cache Configuration
-CACHE_TTL=300
-CACHE_MAX_ITEMS=100
-```
-
-## Migration Commands
-
-```bash
-# Run migrations
-npm run migration:run
-
-# Revert last migration
-npm run migration:revert
 
 # Show migration status
 npm run migration:show
 
-# Generate new migration
-npm run migration:generate -- src/migrations/MigrationName
+# Revert last migration
+npm run migration:revert
 ```
 
-## Development
+## Seed Data
 
-The database module is configured to:
-- Auto-run migrations in development
-- Enable query logging in development
-- Use synchronize=false for production safety
-- Support both PostgreSQL and Redis connections
+The `SeedBasicAchievements` migration includes the following achievements:
 
-## Production Notes
+### First-Time Achievements (first_time condition)
+- **Первая покупка** (100 points) - First game purchase
+- **Первый отзыв** (50 points) - First review written
+- **Первый друг** (75 points) - First friend added
 
-- Set `NODE_ENV=production` to disable synchronize
-- Use proper database credentials
-- Configure Redis with authentication
-- Set appropriate cache TTL values
-- Monitor database performance and indexes
+### Count-Based Achievements (count condition)
+- **Коллекционер игр** (200 points) - 5 games purchased
+- **Активный критик** (300 points) - 10 reviews written
+
+### Threshold Achievements (threshold condition)
+- **Библиотекарь** (500 points) - 20 games in library
+- **Эксперт-рецензент** (750 points) - 25 reviews written
+
+### Achievement Condition Types
+
+1. **first_time** - Triggered on first occurrence of an event
+2. **count** - Triggered when reaching exact count
+3. **threshold** - Triggered when reaching or exceeding threshold
+
+### Icon Paths
+
+All achievements include icon paths in the format `/icons/achievements/{name}.svg`:
+- `/icons/achievements/first-purchase.svg`
+- `/icons/achievements/first-review.svg`
+- `/icons/achievements/first-friend.svg`
+- `/icons/achievements/game-collector.svg`
+- `/icons/achievements/active-critic.svg`
+- `/icons/achievements/librarian.svg`
+- `/icons/achievements/expert-reviewer.svg`
+
+## Database Configuration
+
+Configure database connection via environment variables:
+- `DB_HOST` (default: localhost)
+- `DB_PORT` (default: 5432)
+- `DB_USERNAME` (default: postgres)
+- `DB_PASSWORD` (default: password)
+- `DB_NAME` (default: achievement_service)

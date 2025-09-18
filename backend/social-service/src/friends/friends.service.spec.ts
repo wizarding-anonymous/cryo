@@ -5,6 +5,9 @@ import { Friendship } from './entities/friendship.entity';
 import { Repository } from 'typeorm';
 import { FriendshipStatus } from './entities/friendship-status.enum';
 import { AlreadyFriendsException } from '../common/exceptions/already-friends.exception';
+import { UserServiceClient } from '../clients/user.service.client';
+import { NotificationServiceClient } from '../clients/notification.service.client';
+import { AchievementServiceClient } from '../clients/achievement.service.client';
 
 // Mock repository
 const mockFriendshipRepository = {
@@ -14,6 +17,22 @@ const mockFriendshipRepository = {
   findAndCount: jest.fn(),
   remove: jest.fn(),
   findOneBy: jest.fn(),
+  count: jest.fn(),
+};
+
+// Mock clients
+const mockUserServiceClient = {
+  getUsersByIds: jest.fn(),
+  checkUserExists: jest.fn(),
+  searchUsers: jest.fn(),
+};
+
+const mockNotificationServiceClient = {
+  sendNotification: jest.fn(),
+};
+
+const mockAchievementServiceClient = {
+  updateProgress: jest.fn(),
 };
 
 describe('FriendsService', () => {
@@ -27,6 +46,18 @@ describe('FriendsService', () => {
         {
           provide: getRepositoryToken(Friendship),
           useValue: mockFriendshipRepository,
+        },
+        {
+          provide: UserServiceClient,
+          useValue: mockUserServiceClient,
+        },
+        {
+          provide: NotificationServiceClient,
+          useValue: mockNotificationServiceClient,
+        },
+        {
+          provide: AchievementServiceClient,
+          useValue: mockAchievementServiceClient,
         },
       ],
     }).compile();
@@ -71,14 +102,17 @@ describe('FriendsService', () => {
       const fromUserId = 'user1';
       const toUserId = 'user2';
       const newRequest = {
-        fromUserId,
-        toUserId,
+        id: 'req1',
+        userId: fromUserId,
+        friendId: toUserId,
         status: FriendshipStatus.PENDING,
+        requestedBy: fromUserId,
       };
 
       mockFriendshipRepository.findOne.mockResolvedValue(null);
       mockFriendshipRepository.create.mockReturnValue(newRequest);
       mockFriendshipRepository.save.mockResolvedValue(newRequest);
+      mockNotificationServiceClient.sendNotification.mockResolvedValue(undefined);
 
       const result = await service.sendFriendRequest(fromUserId, toUserId);
       expect(result).toEqual(newRequest);
@@ -89,6 +123,7 @@ describe('FriendsService', () => {
         requestedBy: fromUserId,
       });
       expect(mockFriendshipRepository.save).toHaveBeenCalledWith(newRequest);
+      expect(mockNotificationServiceClient.sendNotification).toHaveBeenCalled();
     });
   });
 
@@ -105,14 +140,23 @@ describe('FriendsService', () => {
       };
 
       mockFriendshipRepository.findOneBy.mockResolvedValue(request);
+      mockFriendshipRepository.create.mockReturnValue({
+        userId: request.friendId,
+        friendId: request.userId,
+        status: FriendshipStatus.ACCEPTED,
+        requestedBy: request.requestedBy,
+      });
       mockFriendshipRepository.save.mockImplementation(
         async (entities) => entities,
       );
+      mockFriendshipRepository.count.mockResolvedValue(1);
+      mockAchievementServiceClient.updateProgress.mockResolvedValue(undefined);
 
       const result = await service.acceptFriendRequest(requestId, userId);
 
       expect(result.status).toEqual(FriendshipStatus.ACCEPTED);
       expect(mockFriendshipRepository.save).toHaveBeenCalled();
+      expect(mockAchievementServiceClient.updateProgress).toHaveBeenCalled();
     });
   });
 
@@ -171,13 +215,16 @@ describe('FriendsService', () => {
         { userId, friendId: 'user2', status: FriendshipStatus.ACCEPTED },
       ];
       const total = 1;
+      const friendsInfo = [{ id: 'user2', username: 'friend1' }];
 
       mockFriendshipRepository.findAndCount.mockResolvedValue([friends, total]);
+      mockUserServiceClient.getUsersByIds.mockResolvedValue(friendsInfo);
 
       const result = await service.getFriends(userId, { page: 1, limit: 10 });
 
-      expect(result.friends).toEqual(friends);
+      expect(result.friends).toHaveLength(1);
       expect(result.pagination.total).toEqual(total);
+      expect(mockUserServiceClient.getUsersByIds).toHaveBeenCalledWith(['user2']);
     });
   });
 
