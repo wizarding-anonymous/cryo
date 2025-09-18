@@ -13,7 +13,9 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const authHeader = request.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new UnauthorizedException('Missing or invalid authorization header');
+        throw new UnauthorizedException(
+          'Missing or invalid authorization header',
+        );
       }
 
       const token = authHeader.split(' ')[1];
@@ -23,7 +25,7 @@ export class JwtAuthGuard implements CanActivate {
       // For this implementation, we will simulate a decoded payload from any non-empty token.
 
       if (!token) {
-          throw new UnauthorizedException('Invalid token: token is missing.');
+        throw new UnauthorizedException('Invalid token: token is missing.');
       }
 
       // Simulate a decoded user payload.

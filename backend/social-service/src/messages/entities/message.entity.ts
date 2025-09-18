@@ -10,28 +10,28 @@ import {
 @Entity('messages')
 export class Message {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('uuid')
   @Index()
-  fromUserId: string;
+  fromUserId!: string;
 
   @Column('uuid')
   @Index()
-  toUserId: string;
+  toUserId!: string;
 
   @Column('text')
-  content: string;
+  content!: string;
 
   @Column('boolean', { default: false })
-  isRead: boolean;
+  isRead!: boolean;
 
   @Column('timestamp', { nullable: true })
-  readAt: Date;
+  readAt?: Date;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

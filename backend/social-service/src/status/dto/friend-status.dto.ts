@@ -3,14 +3,14 @@ import { UserStatus } from '../entities/user-status.enum';
 
 export class FriendStatusDto {
   @ApiProperty()
-  userId: string;
+  userId!: string;
 
   @ApiProperty({ enum: UserStatus })
-  status: UserStatus;
+  status!: UserStatus;
 
   @ApiPropertyOptional()
   currentGame?: string;
 
   @ApiProperty()
-  lastSeen: Date;
+  lastSeen!: Date;
 }

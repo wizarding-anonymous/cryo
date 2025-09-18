@@ -3,22 +3,22 @@ import { FriendDto } from './friend.dto';
 
 class PaginationDto {
   @ApiProperty()
-  total: number;
+  total!: number;
 
   @ApiProperty()
-  page: number;
+  page!: number;
 
   @ApiProperty()
-  limit: number;
+  limit!: number;
 
   @ApiProperty()
-  totalPages: number;
+  totalPages!: number;
 }
 
 export class FriendsResponseDto {
   @ApiProperty({ type: [FriendDto] })
-  friends: FriendDto[];
+  friends!: FriendDto[];
 
   @ApiProperty({ type: () => PaginationDto })
-  pagination: PaginationDto;
+  pagination!: PaginationDto;
 }

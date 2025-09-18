@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class SendFriendRequestDto {
   @ApiProperty({
@@ -8,7 +14,7 @@ export class SendFriendRequestDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  toUserId: string;
+  toUserId!: string;
 
   @ApiProperty({
     description: 'Optional message to send with the friend request',

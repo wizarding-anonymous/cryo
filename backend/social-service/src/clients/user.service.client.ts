@@ -15,26 +15,34 @@ export class UserServiceClient {
       return [];
     }
     const response = await firstValueFrom(
-      this.httpService.get(`${this.baseUrl}/users/batch`, {
-        params: { ids: ids.join(',') },
-      }).pipe(map(res => res.data)),
+      this.httpService
+        .get(`${this.baseUrl}/users/batch`, {
+          params: { ids: ids.join(',') },
+        })
+        .pipe(map((res) => res.data)),
     );
     return response.users;
   }
 
   async checkUserExists(userId: string): Promise<boolean> {
     const response = await firstValueFrom(
-      this.httpService.get(`${this.baseUrl}/users/${userId}/exists`)
-        .pipe(map(res => res.data)),
+      this.httpService
+        .get(`${this.baseUrl}/users/${userId}/exists`)
+        .pipe(map((res) => res.data)),
     );
     return response.exists;
   }
 
-  async searchUsers(query: string, excludeId?: string): Promise<UserSearchResultDto[]> {
+  async searchUsers(
+    query: string,
+    excludeId?: string,
+  ): Promise<UserSearchResultDto[]> {
     const response = await firstValueFrom(
-      this.httpService.get(`${this.baseUrl}/users/search`, {
-        params: { q: query, excludeId },
-      }).pipe(map(res => res.data)),
+      this.httpService
+        .get(`${this.baseUrl}/users/search`, {
+          params: { q: query, excludeId },
+        })
+        .pipe(map((res) => res.data)),
     );
     return response;
   }

@@ -6,10 +6,7 @@ import { MessagingService } from './messaging.service';
 import { MessagesController } from './messages.controller';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Message]),
-    FriendsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Message]), FriendsModule],
   controllers: [MessagesController],
   providers: [MessagingService],
   exports: [MessagingService],

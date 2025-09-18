@@ -34,12 +34,14 @@ describe('JwtAuthGuard', () => {
   it('should attach user to request for a valid token', () => {
     const request = { headers: { authorization: 'Bearer valid-token' } };
     const mockContext = {
-        switchToHttp: () => ({ getRequest: () => request }),
+      switchToHttp: () => ({ getRequest: () => request }),
     } as ExecutionContext;
 
     guard.canActivate(mockContext);
     expect((request as any).user).toBeDefined();
-    expect((request as any).user.userId).toEqual('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+    expect((request as any).user.userId).toEqual(
+      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    );
   });
 
   it('should throw UnauthorizedException if no auth header', () => {

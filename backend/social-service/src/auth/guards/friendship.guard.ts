@@ -29,12 +29,15 @@ export class FriendshipGuard implements CanActivate {
     const toUserId = request.body?.toUserId;
 
     if (!toUserId) {
-        // If no user to check against, let it pass.
-        // The controller's DTO validation will catch the missing field if it's required.
-        return true;
+      // If no user to check against, let it pass.
+      // The controller's DTO validation will catch the missing field if it's required.
+      return true;
     }
 
-    const areFriends = await this.friendsService.checkFriendship(fromUserId, toUserId);
+    const areFriends = await this.friendsService.checkFriendship(
+      fromUserId,
+      toUserId,
+    );
 
     if (!areFriends) {
       throw new NotFriendsException();

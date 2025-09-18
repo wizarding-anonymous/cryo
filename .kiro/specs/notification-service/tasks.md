@@ -6,7 +6,12 @@
 
 ## Tasks
 
-- [ ] 1. Настройка NestJS проекта и базовой инфраструктуры
+- [x] 1. Настройка NestJS проекта и базовой инфраструктуры
+
+
+
+
+
   - Создать NestJS проект с CLI: `nest new notification-service`
   - Настроить TypeScript конфигурацию с strict mode
   - Установить зависимости: @nestjs/typeorm, @nestjs/axios, @nestjs/cache-manager
@@ -15,7 +20,12 @@
   - Настроить docker-compose с PostgreSQL и Redis
   - _Requirements: 5_
 
-- [ ] 2. Настройка TypeORM и базы данных
+- [x] 2. Настройка TypeORM и базы данных
+
+
+
+
+
   - Настроить TypeORM модуль с PostgreSQL подключением
   - Создать Notification entity с базовыми полями (id, userId, type, title, message, isRead, priority, channels, timestamps)
   - Создать NotificationSettings entity с простыми настройками

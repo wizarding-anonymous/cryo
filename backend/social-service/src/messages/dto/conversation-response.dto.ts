@@ -3,22 +3,22 @@ import { MessageDto } from './message.dto';
 
 class PaginationDto {
   @ApiProperty()
-  total: number;
+  total!: number;
 
   @ApiProperty()
-  page: number;
+  page!: number;
 
   @ApiProperty()
-  limit: number;
+  limit!: number;
 
   @ApiProperty()
-  totalPages: number;
+  totalPages!: number;
 }
 
 export class ConversationResponseDto {
   @ApiProperty({ type: [MessageDto] })
-  messages: MessageDto[];
+  messages!: MessageDto[];
 
   @ApiProperty({ type: () => PaginationDto })
-  pagination: PaginationDto;
+  pagination!: PaginationDto;
 }

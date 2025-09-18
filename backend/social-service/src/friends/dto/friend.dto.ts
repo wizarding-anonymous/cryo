@@ -4,16 +4,16 @@ import { UserStatus } from '../../status/entities/user-status.enum';
 
 class FriendInfo {
   @ApiProperty()
-  username: string;
+  username!: string;
 
   @ApiPropertyOptional()
   avatar?: string;
 
   @ApiProperty({ enum: UserStatus })
-  onlineStatus: UserStatus;
+  onlineStatus!: UserStatus;
 
   @ApiProperty()
-  lastSeen: Date;
+  lastSeen!: Date;
 
   @ApiPropertyOptional()
   currentGame?: string;
@@ -21,19 +21,19 @@ class FriendInfo {
 
 export class FriendDto {
   @ApiProperty()
-  id: string;
+  id!: string;
 
   @ApiProperty()
-  userId: string;
+  userId!: string;
 
   @ApiProperty()
-  friendId: string;
+  friendId!: string;
 
   @ApiProperty({ enum: FriendshipStatus })
-  status: FriendshipStatus;
+  status!: FriendshipStatus;
 
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiPropertyOptional({ type: () => FriendInfo })
   friendInfo?: FriendInfo;

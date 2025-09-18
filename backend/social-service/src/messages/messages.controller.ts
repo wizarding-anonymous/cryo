@@ -55,7 +55,10 @@ export class MessagesController {
   @Put(':messageId/read')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Mark a message as read' })
-  async markAsRead(@Req() req: AuthRequest, @Param('messageId') messageId: string) {
+  async markAsRead(
+    @Req() req: AuthRequest,
+    @Param('messageId') messageId: string,
+  ) {
     const userId = req.user.userId;
     await this.messagingService.markAsRead(messageId, userId);
   }

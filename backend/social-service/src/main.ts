@@ -8,15 +8,19 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Social Service API')
-    .setDescription('API documentation for the Social Service of the Russian Game Platform')
+    .setDescription(
+      'API documentation for the Social Service of the Russian Game Platform',
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();

@@ -23,8 +23,9 @@ describe('StatusController', () => {
         },
       ],
     })
-    .overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })
-    .compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<StatusController>(StatusController);
     service = module.get<StatusService>(StatusService);
@@ -41,7 +42,10 @@ describe('StatusController', () => {
     it('should call service with correct params', async () => {
       const dto = { currentGame: 'Game1' };
       await controller.setOnlineStatus(mockAuthRequest, dto);
-      expect(service.setOnlineStatus).toHaveBeenCalledWith('user1', dto.currentGame);
+      expect(service.setOnlineStatus).toHaveBeenCalledWith(
+        'user1',
+        dto.currentGame,
+      );
     });
   });
 

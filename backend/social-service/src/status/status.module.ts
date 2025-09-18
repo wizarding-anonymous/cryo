@@ -6,10 +6,7 @@ import { StatusService } from './status.service';
 import { StatusController } from './status.controller';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([OnlineStatus]),
-    FriendsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([OnlineStatus]), FriendsModule],
   controllers: [StatusController],
   providers: [StatusService],
   exports: [StatusService],

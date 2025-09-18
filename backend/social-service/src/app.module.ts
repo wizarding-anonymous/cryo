@@ -1,37 +1,40 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CacheModule } from '@nestjs/cache-manager';
-import * as redisStore from 'cache-manager-redis-store';
 import { FriendsModule } from './friends/friends.module';
 import { MessagesModule } from './messages/messages.module';
 import { StatusModule } from './status/status.module';
 import { HealthModule } from './health/health.module';
 import { ClientsModule } from './clients/clients.module';
+import { CacheConfigModule } from './cache/cache.module';
+import { Friendship } from './friends/entities/friendship.entity';
+import { Message } from './messages/entities/message.entity';
+import { OnlineStatus } from './status/entities/online-status.entity';
 
 @Module({
   imports: [
-    CacheModule.register({
-      isGlobal: true,
-      store: redisStore,
-      host: 'redis', // Using docker service name
-      port: 6379,
-      ttl: 900, // 15 minutes, as per status requirements
-    }),
+    // Database Configuration
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'postgres', // Using docker service name
-      port: 5432,
-      username: 'user',
-      password: 'password',
-      database: 'social_db',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // For MVP, we use synchronize. Migrations would be for production.
+      host: process.env.DATABASE_HOST || 'postgres',
+      port: parseInt(process.env.DATABASE_PORT || '5432'),
+      username: process.env.DATABASE_USERNAME || 'user',
+      password: process.env.DATABASE_PASSWORD || 'password',
+      database: process.env.DATABASE_NAME || 'social_db',
+      entities: [Friendship, Message, OnlineStatus],
+      synchronize: process.env.NODE_ENV !== 'production', // For MVP, we use synchronize. Migrations would be for production.
+      logging: process.env.NODE_ENV === 'development',
+      migrations: ['dist/database/migrations/*.js'],
+      migrationsTableName: 'migrations',
+      migrationsRun: false, // We'll run migrations manually for production
     }),
+    // Cache Configuration (Redis)
+    CacheConfigModule,
+    // Feature Modules
     FriendsModule,
     MessagesModule,
     StatusModule,
     HealthModule,
-    ClientsModule, // Add the new clients module
+    ClientsModule,
   ],
   controllers: [],
   providers: [],

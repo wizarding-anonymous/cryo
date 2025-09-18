@@ -26,10 +26,13 @@ describe('MessagesController', () => {
         },
       ],
     })
-    .overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })
-    .overrideGuard(FriendshipGuard).useValue({ canActivate: () => true })
-    .overrideGuard(RateLimitGuard).useValue({ canActivate: () => true })
-    .compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(FriendshipGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RateLimitGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<MessagesController>(MessagesController);
     service = module.get<MessagingService>(MessagingService);
@@ -62,7 +65,11 @@ describe('MessagesController', () => {
       const friendId = 'user2';
       const query = { page: 1, limit: 50 };
       await controller.getConversation(mockAuthRequest, friendId, query);
-      expect(service.getConversation).toHaveBeenCalledWith('user1', friendId, query);
+      expect(service.getConversation).toHaveBeenCalledWith(
+        'user1',
+        friendId,
+        query,
+      );
     });
   });
 

@@ -50,7 +50,9 @@ describe('StatusService', () => {
     }).compile();
 
     service = module.get<StatusService>(StatusService);
-    repository = module.get<Repository<OnlineStatus>>(getRepositoryToken(OnlineStatus));
+    repository = module.get<Repository<OnlineStatus>>(
+      getRepositoryToken(OnlineStatus),
+    );
     cacheManager = module.get<Cache>(CACHE_MANAGER);
     friendsService = module.get<FriendsService>(FriendsService);
     jest.clearAllMocks();
@@ -97,36 +99,50 @@ describe('StatusService', () => {
       mockStatusRepository.findOneBy.mockResolvedValue(status);
       const result = await service.getUserStatus(userId);
       expect(result).toEqual(status);
-      expect(mockCacheManager.set).toHaveBeenCalledWith(`user-status:${userId}`, status, 900);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        `user-status:${userId}`,
+        status,
+        900,
+      );
     });
 
     it('should return AWAY status if user was last seen more than 15 minutes ago', async () => {
-        const oldDate = new Date(Date.now() - 20 * 60 * 1000); // 20 mins ago
-        const onlineStatus = { userId, status: UserStatus.ONLINE, lastSeen: oldDate };
-        mockCacheManager.get.mockResolvedValue(onlineStatus);
+      const oldDate = new Date(Date.now() - 20 * 60 * 1000); // 20 mins ago
+      const onlineStatus = {
+        userId,
+        status: UserStatus.ONLINE,
+        lastSeen: oldDate,
+      };
+      mockCacheManager.get.mockResolvedValue(onlineStatus);
 
-        const result = await service.getUserStatus(userId);
-        expect(result.status).toEqual(UserStatus.AWAY);
+      const result = await service.getUserStatus(userId);
+      expect(result?.status).toEqual(UserStatus.AWAY);
     });
   });
 
   describe('getFriendsStatus', () => {
-      it("should return friends' statuses", async () => {
-        const userId = 'user1';
-        const friends = [{ friendId: 'user2' }, { friendId: 'user3' }];
-        mockFriendsService.getFriends.mockResolvedValue({ friends });
+    it("should return friends' statuses", async () => {
+      const userId = 'user1';
+      const friends = [{ friendId: 'user2' }, { friendId: 'user3' }];
+      mockFriendsService.getFriends.mockResolvedValue({ friends });
 
-        // Mock getUserStatus to be callable
-        const getUserStatusSpy = jest.spyOn(service, 'getUserStatus')
-            .mockResolvedValueOnce({ userId: 'user2', status: UserStatus.ONLINE, lastSeen: new Date(), currentGame: 'Game2' } as any)
-            .mockResolvedValueOnce(null); // user3 is offline
+      // Mock getUserStatus to be callable
+      const getUserStatusSpy = jest
+        .spyOn(service, 'getUserStatus')
+        .mockResolvedValueOnce({
+          userId: 'user2',
+          status: UserStatus.ONLINE,
+          lastSeen: new Date(),
+          currentGame: 'Game2',
+        } as any)
+        .mockResolvedValueOnce(null); // user3 is offline
 
-        const result = await service.getFriendsStatus(userId);
+      const result = await service.getFriendsStatus(userId);
 
-        expect(result).toHaveLength(2);
-        expect(result[0].status).toEqual(UserStatus.ONLINE);
-        expect(result[1].status).toEqual(UserStatus.OFFLINE);
-        expect(getUserStatusSpy).toHaveBeenCalledTimes(2);
-      });
+      expect(result).toHaveLength(2);
+      expect(result[0].status).toEqual(UserStatus.ONLINE);
+      expect(result[1].status).toEqual(UserStatus.OFFLINE);
+      expect(getUserStatusSpy).toHaveBeenCalledTimes(2);
+    });
   });
 });

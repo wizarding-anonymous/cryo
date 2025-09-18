@@ -27,7 +27,10 @@ export class FriendsController {
 
   @Post('request')
   @ApiOperation({ summary: 'Send a friend request' })
-  async sendFriendRequest(@Req() req: AuthRequest, @Body() dto: SendFriendRequestDto) {
+  async sendFriendRequest(
+    @Req() req: AuthRequest,
+    @Body() dto: SendFriendRequestDto,
+  ) {
     // The design doc implies the user ID comes from the JWT payload
     const fromUserId = req.user.userId;
     return this.friendsService.sendFriendRequest(fromUserId, dto.toUserId);
@@ -35,7 +38,10 @@ export class FriendsController {
 
   @Post('accept/:requestId')
   @ApiOperation({ summary: 'Accept a friend request' })
-  async acceptFriendRequest(@Req() req: AuthRequest, @Param('requestId') requestId: string) {
+  async acceptFriendRequest(
+    @Req() req: AuthRequest,
+    @Param('requestId') requestId: string,
+  ) {
     const userId = req.user.userId;
     return this.friendsService.acceptFriendRequest(requestId, userId);
   }
@@ -43,7 +49,10 @@ export class FriendsController {
   @Post('decline/:requestId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Decline a friend request' })
-  async declineFriendRequest(@Req() req: AuthRequest, @Param('requestId') requestId: string) {
+  async declineFriendRequest(
+    @Req() req: AuthRequest,
+    @Param('requestId') requestId: string,
+  ) {
     const userId = req.user.userId;
     await this.friendsService.declineFriendRequest(requestId, userId);
   }
@@ -51,7 +60,10 @@ export class FriendsController {
   @Delete(':friendId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove a friend' })
-  async removeFriend(@Req() req: AuthRequest, @Param('friendId') friendId: string) {
+  async removeFriend(
+    @Req() req: AuthRequest,
+    @Param('friendId') friendId: string,
+  ) {
     const userId = req.user.userId;
     await this.friendsService.removeFriend(userId, friendId);
   }

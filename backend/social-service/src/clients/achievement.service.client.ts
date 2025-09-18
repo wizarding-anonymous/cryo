@@ -18,7 +18,10 @@ export class AchievementServiceClient {
 
   async updateProgress(dto: UpdateProgressDto): Promise<void> {
     await firstValueFrom(
-      this.httpService.post(`${this.baseUrl}/achievements/progress/update`, dto),
+      this.httpService.post(
+        `${this.baseUrl}/achievements/progress/update`,
+        dto,
+      ),
     );
   }
 }

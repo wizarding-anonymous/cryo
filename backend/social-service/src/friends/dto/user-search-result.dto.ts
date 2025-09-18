@@ -2,10 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UserSearchResultDto {
   @ApiProperty()
-  id: string;
+  id!: string;
 
   @ApiProperty()
-  username: string;
+  username!: string;
 
   @ApiPropertyOptional()
   avatar?: string;

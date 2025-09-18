@@ -55,7 +55,9 @@ describe('MessagingService', () => {
 
     it('should throw NotFriendsException if users are not friends', async () => {
       mockFriendsService.checkFriendship.mockResolvedValue(false);
-      await expect(service.sendMessage(fromUserId, sendMessageDto)).rejects.toThrow(NotFriendsException);
+      await expect(
+        service.sendMessage(fromUserId, sendMessageDto),
+      ).rejects.toThrow(NotFriendsException);
     });
 
     it('should send a message successfully if users are friends', async () => {
@@ -84,7 +86,10 @@ describe('MessagingService', () => {
 
       mockMessageRepository.findAndCount.mockResolvedValue([messages, total]);
 
-      const result = await service.getConversation(userId, friendId, { page: 1, limit: 10 });
+      const result = await service.getConversation(userId, friendId, {
+        page: 1,
+        limit: 10,
+      });
 
       expect(result.messages).toEqual(messages.reverse());
       expect(result.pagination.total).toEqual(total);
@@ -97,17 +102,26 @@ describe('MessagingService', () => {
 
     it('should throw MessageNotFoundException if message does not exist', async () => {
       mockMessageRepository.findOneBy.mockResolvedValue(null);
-      await expect(service.markAsRead(messageId, userId)).rejects.toThrow(MessageNotFoundException);
+      await expect(service.markAsRead(messageId, userId)).rejects.toThrow(
+        MessageNotFoundException,
+      );
     });
 
     it('should throw MessageNotFoundException if message does not belong to the user', async () => {
       const message = { id: messageId, toUserId: 'anotherUser' };
       mockMessageRepository.findOneBy.mockResolvedValue(message);
-      await expect(service.markAsRead(messageId, userId)).rejects.toThrow(MessageNotFoundException);
+      await expect(service.markAsRead(messageId, userId)).rejects.toThrow(
+        MessageNotFoundException,
+      );
     });
 
     it('should mark a message as read successfully', async () => {
-      const message = { id: messageId, toUserId: userId, isRead: false, readAt: null };
+      const message = {
+        id: messageId,
+        toUserId: userId,
+        isRead: false,
+        readAt: null,
+      };
       mockMessageRepository.findOneBy.mockResolvedValue(message);
 
       await service.markAsRead(messageId, userId);
@@ -118,27 +132,27 @@ describe('MessagingService', () => {
     });
 
     it('should not save if message is already read', async () => {
-        const message = { id: messageId, toUserId: userId, isRead: true };
-        mockMessageRepository.findOneBy.mockResolvedValue(message);
+      const message = { id: messageId, toUserId: userId, isRead: true };
+      mockMessageRepository.findOneBy.mockResolvedValue(message);
 
-        await service.markAsRead(messageId, userId);
+      await service.markAsRead(messageId, userId);
 
-        expect(mockMessageRepository.save).not.toHaveBeenCalled();
+      expect(mockMessageRepository.save).not.toHaveBeenCalled();
     });
   });
 
   describe('getUnreadCount', () => {
-      it('should return the count of unread messages', async () => {
-        const userId = 'user1';
-        const count = 5;
-        mockMessageRepository.count.mockResolvedValue(count);
+    it('should return the count of unread messages', async () => {
+      const userId = 'user1';
+      const count = 5;
+      mockMessageRepository.count.mockResolvedValue(count);
 
-        const result = await service.getUnreadCount(userId);
+      const result = await service.getUnreadCount(userId);
 
-        expect(result).toEqual(count);
-        expect(mockMessageRepository.count).toHaveBeenCalledWith({
-            where: { toUserId: userId, isRead: false },
-        });
+      expect(result).toEqual(count);
+      expect(mockMessageRepository.count).toHaveBeenCalledWith({
+        where: { toUserId: userId, isRead: false },
       });
+    });
   });
 });

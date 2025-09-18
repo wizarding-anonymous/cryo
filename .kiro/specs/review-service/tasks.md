@@ -6,7 +6,12 @@
 
 ## Tasks
 
-- [ ] 1. Настройка проекта и базовой инфраструктуры
+- [x] 1. Настройка проекта и базовой инфраструктуры
+
+
+
+
+
   - Создать новый проект с `nest new review-service`
   - Установить зависимости: @nestjs/typeorm, @nestjs/axios, @nestjs/cache-manager, class-validator, class-transformer
   - Настроить TypeScript, ESLint, Prettier, Jest (встроенные в NestJS)
@@ -15,7 +20,12 @@
   - Создать конфигурационные модули NestJS
   - _Requirements: Все требования_
 
-- [ ] 2. Настройка базы данных и кеширования
+- [x] 2. Настройка базы данных и кеширования
+
+
+
+
+
   - Настроить TypeORM модуль в NestJS с PostgreSQL
   - Создать Review и GameRating entities с декораторами TypeORM
   - Настроить систему миграций TypeORM

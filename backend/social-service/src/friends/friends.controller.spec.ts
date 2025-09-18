@@ -32,9 +32,9 @@ describe('FriendsController', () => {
         },
       ],
     })
-    .overrideGuard(JwtAuthGuard)
-    .useValue(mockJwtAuthGuard)
-    .compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtAuthGuard)
+      .compile();
 
     controller = module.get<FriendsController>(FriendsController);
     service = module.get<FriendsService>(FriendsService);
@@ -61,46 +61,52 @@ describe('FriendsController', () => {
     it('should call service with correct params', async () => {
       const requestId = 'req1';
       await controller.acceptFriendRequest(mockAuthRequest, requestId);
-      expect(service.acceptFriendRequest).toHaveBeenCalledWith(requestId, 'user1');
+      expect(service.acceptFriendRequest).toHaveBeenCalledWith(
+        requestId,
+        'user1',
+      );
     });
   });
 
   describe('declineFriendRequest', () => {
     it('should call service with correct params', async () => {
-        const requestId = 'req1';
-        await controller.declineFriendRequest(mockAuthRequest, requestId);
-        expect(service.declineFriendRequest).toHaveBeenCalledWith(requestId, 'user1');
+      const requestId = 'req1';
+      await controller.declineFriendRequest(mockAuthRequest, requestId);
+      expect(service.declineFriendRequest).toHaveBeenCalledWith(
+        requestId,
+        'user1',
+      );
     });
   });
 
   describe('removeFriend', () => {
     it('should call service with correct params', async () => {
-        const friendId = 'user2';
-        await controller.removeFriend(mockAuthRequest, friendId);
-        expect(service.removeFriend).toHaveBeenCalledWith('user1', friendId);
+      const friendId = 'user2';
+      await controller.removeFriend(mockAuthRequest, friendId);
+      expect(service.removeFriend).toHaveBeenCalledWith('user1', friendId);
     });
   });
 
   describe('getFriends', () => {
     it('should call service with correct params', async () => {
-        const query = { page: 1, limit: 10 };
-        await controller.getFriends(mockAuthRequest, query);
-        expect(service.getFriends).toHaveBeenCalledWith('user1', query);
+      const query = { page: 1, limit: 10 };
+      await controller.getFriends(mockAuthRequest, query);
+      expect(service.getFriends).toHaveBeenCalledWith('user1', query);
     });
   });
 
   describe('getFriendRequests', () => {
     it('should call service with correct params', async () => {
-        await controller.getFriendRequests(mockAuthRequest);
-        expect(service.getFriendRequests).toHaveBeenCalledWith('user1');
+      await controller.getFriendRequests(mockAuthRequest);
+      expect(service.getFriendRequests).toHaveBeenCalledWith('user1');
     });
   });
 
   describe('searchUsers', () => {
     it('should call service with correct params', async () => {
-        const query = 'test';
-        await controller.searchUsers(mockAuthRequest, query);
-        expect(service.searchUsers).toHaveBeenCalledWith(query, 'user1');
+      const query = 'test';
+      await controller.searchUsers(mockAuthRequest, query);
+      expect(service.searchUsers).toHaveBeenCalledWith(query, 'user1');
     });
   });
 });

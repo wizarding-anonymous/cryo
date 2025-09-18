@@ -10,21 +10,21 @@ import { UserStatus } from './user-status.enum';
 @Entity('online_status')
 export class OnlineStatus {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('uuid', { unique: true })
   @Index()
-  userId: string;
+  userId!: string;
 
   @Column('enum', { enum: UserStatus })
-  status: UserStatus;
+  status!: UserStatus;
 
   @Column('timestamp')
-  lastSeen: Date;
+  lastSeen!: Date;
 
   @Column('varchar', { length: 100, nullable: true })
-  currentGame: string;
+  currentGame?: string;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

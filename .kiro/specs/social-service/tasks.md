@@ -6,7 +6,12 @@
 
 ## Tasks
 
-- [ ] 1. Настройка NestJS проекта и базовой инфраструктуры
+- [x] 1. Настройка NestJS проекта и базовой инфраструктуры
+
+
+
+
+
   - Создать новый NestJS проект с CLI: `nest new social-service`
   - Настроить TypeScript конфигурацию с strict режимом
   - Установить зависимости: @nestjs/typeorm, @nestjs/axios, @nestjs/cache-manager
@@ -14,7 +19,12 @@
   - Создать базовую структуру модулей (AppModule, FriendsModule, MessagesModule, StatusModule)
   - _Requirements: 5_
 
-- [ ] 2. Настройка TypeORM и базы данных
+- [x] 2. Настройка TypeORM и базы данных
+
+
+
+
+
   - Настроить TypeORM модуль с PostgreSQL подключением
   - Создать Friendship entity с индексами и ограничениями
   - Реализовать Message entity для простых сообщений

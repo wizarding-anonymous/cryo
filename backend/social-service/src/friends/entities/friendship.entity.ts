@@ -12,25 +12,25 @@ import { FriendshipStatus } from './friendship-status.enum';
 @Index(['userId', 'friendId'], { unique: true })
 export class Friendship {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('uuid')
   @Index()
-  userId: string;
+  userId!: string;
 
   @Column('uuid')
   @Index()
-  friendId: string;
+  friendId!: string;
 
   @Column('enum', { enum: FriendshipStatus })
-  status: FriendshipStatus;
+  status!: FriendshipStatus;
 
   @Column('uuid', { nullable: true })
-  requestedBy: string;
+  requestedBy!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

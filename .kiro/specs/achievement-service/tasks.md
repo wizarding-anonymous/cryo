@@ -6,7 +6,16 @@
 
 ## Tasks
 
-- [ ] 1. Настройка NestJS проекта и базовой инфраструктуры
+- [x] 1. Настройка NestJS проекта и базовой инфраструктуры
+
+
+
+
+
+
+
+
+
   - Создать новый NestJS проект с CLI: `nest new achievement-service`
   - Настроить TypeScript конфигурацию с strict режимом
   - Установить и настроить ESLint, Prettier для code style
@@ -14,7 +23,12 @@
   - Создать базовую структуру модулей (AchievementModule)
   - _Requirements: Все требования_
 
-- [ ] 2. Настройка TypeORM и PostgreSQL интеграции
+- [x] 2. Настройка TypeORM и PostgreSQL интеграции
+
+
+
+
+
   - Установить TypeORM, pg, @nestjs/typeorm пакеты
   - Создать database.module.ts с PostgreSQL конфигурацией
   - Настроить Redis для кеширования с @nestjs/cache-manager

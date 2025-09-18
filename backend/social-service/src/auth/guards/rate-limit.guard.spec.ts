@@ -52,7 +52,11 @@ describe('RateLimitGuard', () => {
 
     const canActivate = await guard.canActivate(mockContext);
     expect(canActivate).toBe(true);
-    expect(mockCacheManager.set).toHaveBeenCalledWith(expect.any(String), 1, expect.any(Object));
+    expect(mockCacheManager.set).toHaveBeenCalledWith(
+      expect.any(String),
+      1,
+      expect.any(Object),
+    );
   });
 
   it('should allow subsequent requests under the limit', async () => {
@@ -63,7 +67,9 @@ describe('RateLimitGuard', () => {
 
     const canActivate = await guard.canActivate(mockContext);
     expect(canActivate).toBe(true);
-    expect(mockCacheManager.set).toHaveBeenCalledWith(expect.any(String), 6, { ttl: 30 });
+    expect(mockCacheManager.set).toHaveBeenCalledWith(expect.any(String), 6, {
+      ttl: 30,
+    });
   });
 
   it('should throw RateLimitExceededException when limit is reached', async () => {
@@ -71,7 +77,9 @@ describe('RateLimitGuard', () => {
     const mockContext = createMockExecutionContext(request);
     mockCacheManager.get.mockResolvedValue(20); // Limit is 20
 
-    await expect(guard.canActivate(mockContext)).rejects.toThrow(RateLimitExceededException);
+    await expect(guard.canActivate(mockContext)).rejects.toThrow(
+      RateLimitExceededException,
+    );
   });
 
   it('should allow request if no user is present', async () => {

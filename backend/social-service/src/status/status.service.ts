@@ -32,7 +32,11 @@ export class StatusService {
     };
 
     await this.statusRepository.upsert(statusData, ['userId']);
-    await this.cacheManager.set(this.getCacheKey(userId), statusData, CACHE_TTL_SECONDS);
+    await this.cacheManager.set(
+      this.getCacheKey(userId),
+      statusData,
+      CACHE_TTL_SECONDS,
+    );
   }
 
   async setOfflineStatus(userId: string): Promise<void> {
@@ -40,7 +44,7 @@ export class StatusService {
       userId,
       status: UserStatus.OFFLINE,
       lastSeen: new Date(),
-      currentGame: null,
+      currentGame: undefined,
     };
 
     await this.statusRepository.upsert(statusData, ['userId']);
@@ -48,14 +52,20 @@ export class StatusService {
   }
 
   async getUserStatus(userId: string): Promise<OnlineStatus | null> {
-    const cachedStatus = await this.cacheManager.get<OnlineStatus>(this.getCacheKey(userId));
+    const cachedStatus = await this.cacheManager.get<OnlineStatus>(
+      this.getCacheKey(userId),
+    );
     if (cachedStatus) {
       return this.checkAwayStatus(cachedStatus);
     }
 
     const dbStatus = await this.statusRepository.findOneBy({ userId });
     if (dbStatus) {
-      await this.cacheManager.set(this.getCacheKey(userId), dbStatus, CACHE_TTL_SECONDS);
+      await this.cacheManager.set(
+        this.getCacheKey(userId),
+        dbStatus,
+        CACHE_TTL_SECONDS,
+      );
       return this.checkAwayStatus(dbStatus);
     }
 
@@ -63,12 +73,15 @@ export class StatusService {
   }
 
   async getFriendsStatus(userId: string): Promise<FriendStatusDto[]> {
-    const { friends } = await this.friendsService.getFriends(userId, { page: 1, limit: 1000 }); // Assuming max 1000 friends for now
+    const { friends } = await this.friendsService.getFriends(userId, {
+      page: 1,
+      limit: 1000,
+    }); // Assuming max 1000 friends for now
     if (!friends || friends.length === 0) {
       return [];
     }
 
-    const friendIds = friends.map(f => f.friendId);
+    const friendIds = friends.map((f) => f.friendId);
     const friendStatuses: FriendStatusDto[] = [];
 
     for (const friendId of friendIds) {

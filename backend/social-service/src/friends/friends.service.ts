@@ -1,6 +1,6 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, In, Or, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import { Friendship } from './entities/friendship.entity';
 import { FriendshipStatus } from './entities/friendship-status.enum';
 import { FriendsQueryDto } from './dto/friends-query.dto';
@@ -22,7 +22,10 @@ export class FriendsService {
     private readonly achievementServiceClient: AchievementServiceClient,
   ) {}
 
-  async sendFriendRequest(fromUserId: string, toUserId: string): Promise<Friendship> {
+  async sendFriendRequest(
+    fromUserId: string,
+    toUserId: string,
+  ): Promise<Friendship> {
     if (fromUserId === toUserId) {
       throw new Error('Cannot send a friend request to yourself.');
     }
@@ -49,18 +52,24 @@ export class FriendsService {
 
     // Call notification service
     await this.notificationServiceClient.sendNotification({
-        userId: toUserId,
-        type: 'friend_request',
-        title: 'New Friend Request',
-        message: `You have a new friend request from user ${fromUserId}`,
-        metadata: { fromUserId, requestId: savedRequest.id }
+      userId: toUserId,
+      type: 'friend_request',
+      title: 'New Friend Request',
+      message: `You have a new friend request from user ${fromUserId}`,
+      metadata: { fromUserId, requestId: savedRequest.id },
     });
 
     return savedRequest;
   }
 
-  async acceptFriendRequest(requestId: string, userId: string): Promise<Friendship> {
-    const request = await this.friendshipRepository.findOneBy({ id: requestId, status: FriendshipStatus.PENDING });
+  async acceptFriendRequest(
+    requestId: string,
+    userId: string,
+  ): Promise<Friendship> {
+    const request = await this.friendshipRepository.findOneBy({
+      id: requestId,
+      status: FriendshipStatus.PENDING,
+    });
 
     if (!request || request.friendId !== userId) {
       throw new FriendRequestNotFoundException(requestId);
@@ -69,10 +78,10 @@ export class FriendsService {
     request.status = FriendshipStatus.ACCEPTED;
 
     const reverseFriendship = this.friendshipRepository.create({
-        userId: request.friendId,
-        friendId: request.userId,
-        status: FriendshipStatus.ACCEPTED,
-        requestedBy: request.requestedBy,
+      userId: request.friendId,
+      friendId: request.userId,
+      status: FriendshipStatus.ACCEPTED,
+      requestedBy: request.requestedBy,
     });
 
     await this.friendshipRepository.save([request, reverseFriendship]);
@@ -80,9 +89,9 @@ export class FriendsService {
     const friendCount = await this.getFriendsCount(userId);
     if (friendCount === 1) {
       await this.achievementServiceClient.updateProgress({
-          userId,
-          eventType: 'friend_added',
-          eventData: { friendId: request.userId }
+        userId,
+        eventType: 'friend_added',
+        eventData: { friendId: request.userId },
       });
     }
 
@@ -90,9 +99,15 @@ export class FriendsService {
   }
 
   async declineFriendRequest(requestId: string, userId: string): Promise<void> {
-    const request = await this.friendshipRepository.findOneBy({ id: requestId, status: FriendshipStatus.PENDING });
+    const request = await this.friendshipRepository.findOneBy({
+      id: requestId,
+      status: FriendshipStatus.PENDING,
+    });
 
-    if (!request || (request.friendId !== userId && request.userId !== userId)) {
+    if (
+      !request ||
+      (request.friendId !== userId && request.userId !== userId)
+    ) {
       throw new FriendRequestNotFoundException(requestId);
     }
 
@@ -103,15 +118,15 @@ export class FriendsService {
     const friendship = await this.findFriendship(userId, friendId);
 
     if (!friendship || friendship.status !== FriendshipStatus.ACCEPTED) {
-        throw new NotFriendsException();
+      throw new NotFriendsException();
     }
 
     const reverseFriendship = await this.findFriendship(friendId, userId);
 
     if (reverseFriendship) {
-        await this.friendshipRepository.remove([friendship, reverseFriendship]);
+      await this.friendshipRepository.remove([friendship, reverseFriendship]);
     } else {
-        await this.friendshipRepository.remove(friendship);
+      await this.friendshipRepository.remove(friendship);
     }
   }
 
@@ -119,43 +134,43 @@ export class FriendsService {
     const { page = 1, limit = 20 } = options;
 
     const where: FindOptionsWhere<Friendship> = {
-        userId: userId,
-        status: FriendshipStatus.ACCEPTED,
+      userId: userId,
+      status: FriendshipStatus.ACCEPTED,
     };
 
     const [friends, total] = await this.friendshipRepository.findAndCount({
-        where,
-        take: limit,
-        skip: (page - 1) * limit,
-        order: { createdAt: 'DESC' },
+      where,
+      take: limit,
+      skip: (page - 1) * limit,
+      order: { createdAt: 'DESC' },
     });
 
-    const friendIds = friends.map(f => f.friendId);
+    const friendIds = friends.map((f) => f.friendId);
     const friendsInfo = await this.userServiceClient.getUsersByIds(friendIds);
 
-    const friendsWithInfo = friends.map(f => {
-        const info = friendsInfo.find(fi => fi.id === f.friendId);
-        return { ...f, friendInfo: info };
+    const friendsWithInfo = friends.map((f) => {
+      const info = friendsInfo.find((fi) => fi.id === f.friendId);
+      return { ...f, friendInfo: info };
     });
 
     return {
-        friends: friendsWithInfo,
-        pagination: {
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        }
+      friends: friendsWithInfo,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
   async getFriendRequests(userId: string): Promise<Friendship[]> {
     return this.friendshipRepository.find({
-        where: {
-            friendId: userId,
-            status: FriendshipStatus.PENDING,
-        },
-        order: { createdAt: 'DESC' },
+      where: {
+        friendId: userId,
+        status: FriendshipStatus.PENDING,
+      },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -164,22 +179,28 @@ export class FriendsService {
     return !!friendship && friendship.status === FriendshipStatus.ACCEPTED;
   }
 
-  private async findFriendship(userId1: string, userId2: string): Promise<Friendship | null> {
+  private async findFriendship(
+    userId1: string,
+    userId2: string,
+  ): Promise<Friendship | null> {
     return this.friendshipRepository.findOne({
-        where: [
-            { userId: userId1, friendId: userId2 },
-            { userId: userId2, friendId: userId1 },
-        ],
+      where: [
+        { userId: userId1, friendId: userId2 },
+        { userId: userId2, friendId: userId1 },
+      ],
     });
   }
 
   private async getFriendsCount(userId: string): Promise<number> {
-      return this.friendshipRepository.count({
-          where: { userId, status: FriendshipStatus.ACCEPTED }
-      });
+    return this.friendshipRepository.count({
+      where: { userId, status: FriendshipStatus.ACCEPTED },
+    });
   }
 
-  async searchUsers(query: string, currentUserId: string): Promise<UserSearchResultDto[]> {
+  async searchUsers(
+    query: string,
+    currentUserId: string,
+  ): Promise<UserSearchResultDto[]> {
     return this.userServiceClient.searchUsers(query, currentUserId);
   }
 }

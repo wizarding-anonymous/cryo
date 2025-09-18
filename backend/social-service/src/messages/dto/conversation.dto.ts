@@ -4,25 +4,25 @@ import { UserStatus } from '../../status/entities/user-status.enum';
 
 class ConversationFriendInfo {
   @ApiProperty()
-  username: string;
+  username!: string;
 
   @ApiPropertyOptional()
   avatar?: string;
 
   @ApiProperty({ enum: UserStatus })
-  onlineStatus: UserStatus;
+  onlineStatus!: UserStatus;
 }
 
 export class ConversationDto {
   @ApiProperty()
-  friendId: string;
+  friendId!: string;
 
   @ApiProperty({ type: () => ConversationFriendInfo })
-  friendInfo: ConversationFriendInfo;
+  friendInfo!: ConversationFriendInfo;
 
   @ApiPropertyOptional({ type: () => MessageDto })
   lastMessage?: MessageDto;
 
   @ApiProperty()
-  unreadCount: number;
+  unreadCount!: number;
 }

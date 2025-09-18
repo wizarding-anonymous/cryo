@@ -2,23 +2,23 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class MessageDto {
   @ApiProperty()
-  id: string;
+  id!: string;
 
   @ApiProperty()
-  fromUserId: string;
+  fromUserId!: string;
 
   @ApiProperty()
-  toUserId: string;
+  toUserId!: string;
 
   @ApiProperty()
-  content: string;
+  content!: string;
 
   @ApiProperty()
-  isRead: boolean;
+  isRead!: boolean;
 
   @ApiPropertyOptional()
   readAt?: Date;
 
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
 }
