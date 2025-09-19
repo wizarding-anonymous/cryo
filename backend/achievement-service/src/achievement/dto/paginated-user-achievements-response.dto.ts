@@ -6,29 +6,29 @@ export class PaginatedUserAchievementsResponseDto {
     description: 'Список достижений пользователя',
     type: [UserAchievementResponseDto],
   })
-  achievements: UserAchievementResponseDto[];
+  achievements: UserAchievementResponseDto[] = [];
 
   @ApiProperty({
     description: 'Общее количество достижений',
     example: 50,
   })
-  total: number;
+  total: number = 0;
 
   @ApiProperty({
     description: 'Текущая страница',
     example: 1,
   })
-  page: number;
+  page: number = 1;
 
   @ApiProperty({
     description: 'Количество элементов на странице',
     example: 20,
   })
-  limit: number;
+  limit: number = 20;
 
   @ApiProperty({
     description: 'Общее количество страниц',
     example: 3,
   })
-  totalPages: number;
+  totalPages: number = 0;
 }

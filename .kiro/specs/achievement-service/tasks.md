@@ -167,7 +167,12 @@
   - Протестировать error handling и edge cases
   - _Requirements: Все требования_
 
-- [ ] 13. Настройка Docker контейнеризации
+- [x] 13. Настройка Docker контейнеризации
+
+
+
+
+
   - Создать оптимизированный Dockerfile с multi-stage build
   - Настроить docker-compose.yml с PostgreSQL и Redis сервисами
   - Добавить health check endpoints для Kubernetes readiness/liveness probes
@@ -175,7 +180,12 @@
   - Создать .dockerignore для оптимизации размера образа
   - _Requirements: Все требования_
 
-- [ ] 14. Интеграция с MVP сервисами
+- [x] 14. Интеграция с MVP сервисами
+
+
+
+
+
   - Создать HTTP endpoints для получения событий от Payment Service (покупки)
   - Интегрировать с Review Service для отслеживания создания отзывов
   - Добавить интеграцию с Social Service для отслеживания добавления друзей
@@ -184,7 +194,12 @@
   - Протестировать все интеграции в рамках MVP
   - _Requirements: 4_
 
-- [ ] 15. Подготовка production конфигурации и мониторинга
+- [x] 15. Подготовка production конфигурации и мониторинга
+
+
+
+
+
   - Настроить production конфигурацию с environment variables
   - Добавить structured logging с Winston или встроенным NestJS logger
   - Создать Prometheus metrics endpoints для мониторинга

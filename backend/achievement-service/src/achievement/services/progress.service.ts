@@ -385,4 +385,18 @@ export class ProgressService {
         return false;
     }
   }
+
+  /**
+   * Получение достижения по ID (для уведомлений)
+   */
+  async getAchievementById(achievementId: string): Promise<Achievement | null> {
+    try {
+      return await this.achievementRepository.findOne({
+        where: { id: achievementId },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get achievement ${achievementId}:`, error);
+      return null;
+    }
+  }
 }

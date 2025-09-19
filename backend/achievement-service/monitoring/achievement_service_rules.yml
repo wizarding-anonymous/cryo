@@ -1,0 +1,102 @@
+groups:
+  - name: achievement_service_alerts
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status_code=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected in Achievement Service"
+          description: "Error rate is {{ $value }} errors per second"
+
+      # High response time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time in Achievement Service"
+          description: "95th percentile response time is {{ $value }} seconds"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up{job="achievement-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Achievement Service is down"
+          description: "Achievement Service has been down for more than 1 minute"
+
+      # Database connection issues
+      - alert: DatabaseConnectionIssues
+        expr: database_connections_active < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection issues in Achievement Service"
+          description: "No active database connections detected"
+
+      # High cache miss rate
+      - alert: HighCacheMissRate
+        expr: rate(cache_misses_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High cache miss rate in Achievement Service"
+          description: "Cache miss rate is {{ $value | humanizePercentage }}"
+
+      # Service integration failures
+      - alert: ServiceIntegrationFailures
+        expr: rate(service_errors_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Service integration failures in Achievement Service"
+          description: "Service integration error rate is {{ $value }} errors per second"
+
+      # Circuit breaker open
+      - alert: CircuitBreakerOpen
+        expr: increase(service_calls_total{status="circuit_breaker_open"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Circuit breaker opened for external service"
+          description: "Circuit breaker has opened for external service integration"
+
+      # Low achievement unlock rate (business metric)
+      - alert: LowAchievementUnlockRate
+        expr: rate(achievements_unlocked_total[1h]) < 0.01
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low achievement unlock rate"
+          description: "Achievement unlock rate is {{ $value }} per second over the last hour"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 > 512
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage in Achievement Service"
+          description: "Memory usage is {{ $value }}MB"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage in Achievement Service"
+          description: "CPU usage is {{ $value }}%"

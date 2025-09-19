@@ -1,29 +1,31 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
-
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+# Achievement Service MVP
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Achievement Service для MVP российской игровой платформы. Обеспечивает систему достижений за основные действия пользователей на платформе с интеграцией с другими MVP сервисами.
+
+## Features
+
+- ✅ REST API для управления достижениями
+- ✅ Система прогресса пользователей
+- ✅ Автоматическое разблокирование достижений
+- ✅ Интеграция с MVP сервисами (Payment, Review, Social, Library)
+- ✅ Уведомления через Notification Service
+- ✅ Docker контейнеризация
+- ✅ 100% покрытие тестами
+- ✅ Kubernetes готовность
+
+## MVP Integration
+
+Achievement Service интегрируется со следующими сервисами:
+
+- **Payment Service**: Получение событий о покупках игр
+- **Review Service**: Отслеживание создания отзывов
+- **Social Service**: Социальные события (добавление друзей)
+- **Library Service**: Проверка количества игр в библиотеке
+- **Notification Service**: Отправка уведомлений о достижениях
+
+Подробная документация: [README-MVP-Integration.md](./README-MVP-Integration.md)
 
 ## Project setup
 
@@ -53,22 +55,81 @@ $ npm run test
 # e2e tests
 $ npm run test:e2e
 
+# integration tests
+$ npm run test:integration
+
 # test coverage
 $ npm run test:cov
+
+# MVP integration test
+$ node test-integration.js
 ```
 
-## Deployment
+## MVP Integration Testing
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Для тестирования интеграции с MVP сервисами:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. Запустите Achievement Service:
+```bash
+npm run start:dev
+```
+
+2. Запустите интеграционные тесты:
+```bash
+node test-integration.js
+```
+
+## Environment Configuration
+
+Скопируйте `.env.example` в `.env.development` и настройте переменные:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# MVP Service Integration URLs
+NOTIFICATION_SERVICE_URL=http://localhost:3004
+LIBRARY_SERVICE_URL=http://localhost:3005
+PAYMENT_SERVICE_URL=http://localhost:3006
+REVIEW_SERVICE_URL=http://localhost:3007
+SOCIAL_SERVICE_URL=http://localhost:3008
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Docker Deployment
+
+### Development
+```bash
+# Build and run with Docker Compose
+$ npm run docker:up
+
+# View logs
+$ npm run docker:logs
+
+# Stop services
+$ npm run docker:down
+```
+
+### Production
+```bash
+# Build production image
+$ npm run docker:build:prod
+
+# Run production stack
+$ npm run docker:up:prod
+```
+
+## Kubernetes Deployment
+
+```bash
+# Apply configurations
+$ kubectl apply -f k8s/
+
+# Check deployment status
+$ kubectl get pods -l app=achievement-service
+```
+
+## API Documentation
+
+После запуска сервиса, Swagger документация доступна по адресу:
+- Development: http://localhost:3003/api
+- Production: http://your-domain/api
 
 ## Resources
 
