@@ -1,7 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { HealthResponseDto, HealthStatus } from './dto/health-response.dto';
+import { HealthResponseDto, HealthStatus } from './dto/health-response.dto.js';
 
 @Injectable()
 export class HealthService {
