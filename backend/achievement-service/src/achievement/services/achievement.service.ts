@@ -22,18 +22,23 @@ export class AchievementService {
     private readonly userAchievementRepository: Repository<UserAchievement>,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-  ) {}
+  ) { }
 
   /**
    * Получить все достижения с кешированием через Redis
    */
   async getAllAchievements(): Promise<AchievementResponseDto[]> {
     const cacheKey = 'achievements:all';
-    
-    // Попытка получить из кеша
-    const cached = await this.cacheManager.get<AchievementResponseDto[]>(cacheKey);
-    if (cached) {
-      return cached;
+
+    // Попытка получить из кеша с обработкой ошибок
+    try {
+      const cached = await this.cacheManager.get<AchievementResponseDto[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      // Логируем ошибку кеша, но продолжаем работу
+      console.warn('Cache get error:', error);
     }
 
     // Получение из базы данных
@@ -44,8 +49,13 @@ export class AchievementService {
 
     const result = achievements.map(this.mapToAchievementResponseDto);
 
-    // Сохранение в кеш на 5 минут
-    await this.cacheManager.set(cacheKey, result, 300);
+    // Сохранение в кеш на 5 минут с обработкой ошибок
+    try {
+      await this.cacheManager.set(cacheKey, result, 300);
+    } catch (error) {
+      // Логируем ошибку кеша, но не прерываем выполнение
+      console.warn('Cache set error:', error);
+    }
 
     return result;
   }
@@ -64,17 +74,22 @@ export class AchievementService {
     totalPages: number;
   }> {
     // Валидация и нормализация параметров пагинации
+    const { page, limit, type, unlocked } = options;
     const normalizedPage = Math.max(1, page || 1);
     const normalizedLimit = Math.min(100, Math.max(1, limit || 20));
-    const { type, unlocked } = options;
     const skip = (normalizedPage - 1) * normalizedLimit;
 
     const cacheKey = `user:${userId}:achievements:${JSON.stringify(options)}`;
-    
-    // Попытка получить из кеша
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) {
-      return cached as any;
+
+    // Попытка получить из кеша с обработкой ошибок
+    try {
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) {
+        return cached as any;
+      }
+    } catch (error) {
+      // Логируем ошибку кеша, но продолжаем работу
+      console.warn('Cache get error:', error);
     }
 
     const queryBuilder = this.userAchievementRepository
@@ -102,7 +117,7 @@ export class AchievementService {
           .getRawMany();
 
         const unlockedIds = unlockedAchievementIds.map(item => item.ua_achievementId);
-        
+
         // Получаем все достижения, исключая разблокированные
         const allAchievements = await this.achievementRepository
           .createQueryBuilder('achievement')
@@ -132,8 +147,13 @@ export class AchievementService {
           totalPages: Math.ceil(total / normalizedLimit),
         };
 
-        // Кешируем результат на 2 минуты
-        await this.cacheManager.set(cacheKey, result, 120);
+        // Кешируем результат на 2 минуты с обработкой ошибок
+        try {
+          await this.cacheManager.set(cacheKey, result, 120);
+        } catch (error) {
+          // Логируем ошибку кеша, но не прерываем выполнение
+          console.warn('Cache set error:', error);
+        }
         return result;
       }
     }
@@ -156,8 +176,13 @@ export class AchievementService {
       totalPages: Math.ceil(total / normalizedLimit),
     };
 
-    // Кешируем результат на 2 минуты
-    await this.cacheManager.set(cacheKey, result, 120);
+    // Кешируем результат на 2 минуты с обработкой ошибок
+    try {
+      await this.cacheManager.set(cacheKey, result, 120);
+    } catch (error) {
+      // Логируем ошибку кеша, но не прерываем выполнение
+      console.warn('Cache set error:', error);
+    }
 
     return result;
   }
@@ -214,7 +239,7 @@ export class AchievementService {
    */
   async isAchievementUnlocked(userId: string, achievementId: string): Promise<boolean> {
     const cacheKey = `user:${userId}:achievement:${achievementId}:unlocked`;
-    
+
     // Попытка получить из кеша
     const cached = await this.cacheManager.get<boolean>(cacheKey);
     if (cached !== undefined) {

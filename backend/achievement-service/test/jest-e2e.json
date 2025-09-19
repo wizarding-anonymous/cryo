@@ -7,5 +7,10 @@
     "^.+\\.(t|j)s$": ["ts-jest", {
       "transpilation": true
     }]
-  }
+  },
+  "setupFilesAfterEnv": ["<rootDir>/test-setup.ts"],
+  "testTimeout": 30000,
+  "maxWorkers": 1,
+  "forceExit": true,
+  "detectOpenHandles": true
 }

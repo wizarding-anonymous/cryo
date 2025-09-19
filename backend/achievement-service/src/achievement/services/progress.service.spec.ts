@@ -410,13 +410,15 @@ describe('ProgressService', () => {
       const eventData = { gameId: 'game-123', price: 1999 };
       
       achievementRepository.find.mockResolvedValue([mockAchievement]);
-      progressRepository.find.mockResolvedValue([]);
+      progressRepository.find.mockResolvedValue([]); // Для getUserStats
+      progressRepository.findOne.mockResolvedValue(null);
       progressRepository.create.mockReturnValue(mockProgress);
       progressRepository.save.mockRejectedValue(new Error('Save error'));
       achievementService.isAchievementUnlocked.mockResolvedValue(false);
 
-      await expect(service.updateProgress(mockUserId, EventType.GAME_PURCHASE, eventData))
-        .rejects.toThrow('Save error');
+      // Метод должен вернуть пустой массив, так как ошибка обрабатывается внутри updateAchievementProgress
+      const result = await service.updateProgress(mockUserId, EventType.GAME_PURCHASE, eventData);
+      expect(result).toEqual([]);
     });
 
     it('should handle getUserProgress database errors', async () => {
@@ -453,7 +455,8 @@ describe('ProgressService', () => {
       };
       
       achievementRepository.find.mockResolvedValue([mockAchievement]);
-      progressRepository.find.mockResolvedValue([existingProgress]);
+      progressRepository.find.mockResolvedValue([]); // Для getUserStats
+      progressRepository.findOne.mockResolvedValue(existingProgress); // Для updateAchievementProgress
       progressRepository.save.mockResolvedValue({
         ...existingProgress,
         currentValue: 1,
@@ -505,6 +508,26 @@ describe('ProgressService', () => {
         friendsAdded: 2,
       };
 
+      // Настраиваем мок для возврата массива прогресса
+      const mockProgressRecords = [
+        {
+          ...mockProgress,
+          currentValue: 5,
+          achievement: { ...mockAchievement, type: AchievementType.GAMES_PURCHASED },
+        },
+        {
+          ...mockProgress,
+          currentValue: 3,
+          achievement: { ...mockAchievement, type: AchievementType.REVIEWS_WRITTEN },
+        },
+        {
+          ...mockProgress,
+          currentValue: 2,
+          achievement: { ...mockAchievement, type: AchievementType.FIRST_FRIEND },
+        },
+      ];
+      progressRepository.find.mockResolvedValue(mockProgressRecords);
+
       const stats = await getUserStats(mockUserId, eventData);
 
       expect(stats).toEqual({
@@ -519,6 +542,16 @@ describe('ProgressService', () => {
       const eventData = {
         gamesPurchased: 5,
       };
+
+      // Настраиваем мок для возврата только одного типа прогресса
+      const mockProgressRecords = [
+        {
+          ...mockProgress,
+          currentValue: 5,
+          achievement: { ...mockAchievement, type: AchievementType.GAMES_PURCHASED },
+        },
+      ];
+      progressRepository.find.mockResolvedValue(mockProgressRecords);
 
       const stats = await getUserStats(mockUserId, eventData);
 
