@@ -1,0 +1,159 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # User Service
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-service:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Game Catalog Service
+  - job_name: 'game-catalog-service'
+    static_configs:
+      - targets: ['game-catalog-service:3002']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Library Service
+  - job_name: 'library-service'
+    static_configs:
+      - targets: ['library-service:3003']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Review Service
+  - job_name: 'review-service'
+    static_configs:
+      - targets: ['review-service:3004']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Payment Service
+  - job_name: 'payment-service'
+    static_configs:
+      - targets: ['payment-service:3005']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Notification Service
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:3006']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Social Service
+  - job_name: 'social-service'
+    static_configs:
+      - targets: ['social-service:3007']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Achievement Service
+  - job_name: 'achievement-service'
+    static_configs:
+      - targets: ['achievement-service:3008']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Security Service
+  - job_name: 'security-service'
+    static_configs:
+      - targets: ['security-service:3009']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Download Service
+  - job_name: 'download-service'
+    static_configs:
+      - targets: ['download-service:3010']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PostgreSQL Exporter for all databases
+  - job_name: 'postgres-user'
+    static_configs:
+      - targets: ['postgres-user:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-catalog'
+    static_configs:
+      - targets: ['postgres-catalog:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-library'
+    static_configs:
+      - targets: ['postgres-library:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-review'
+    static_configs:
+      - targets: ['postgres-review:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-payment'
+    static_configs:
+      - targets: ['postgres-payment:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-notification'
+    static_configs:
+      - targets: ['postgres-notification:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-social'
+    static_configs:
+      - targets: ['postgres-social:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-achievement'
+    static_configs:
+      - targets: ['postgres-achievement:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-security'
+    static_configs:
+      - targets: ['postgres-security:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-download'
+    static_configs:
+      - targets: ['postgres-download:5432']
+    scrape_interval: 30s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # Node Exporter (if added)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093

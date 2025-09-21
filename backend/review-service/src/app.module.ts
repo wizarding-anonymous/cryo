@@ -6,6 +6,9 @@ import { HttpModule } from '@nestjs/axios';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ReviewModule } from './review/review.module';
+import { Review } from './entities/review.entity';
+import { GameRating } from './entities/game-rating.entity';
 
 // Configuration imports
 import databaseConfig from './config/database.config';
@@ -41,6 +44,12 @@ import appConfig from './config/app.config';
       timeout: 5000,
       maxRedirects: 5,
     }),
+
+    // TypeORM entities for health check
+    TypeOrmModule.forFeature([Review, GameRating]),
+
+    // Review module
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],

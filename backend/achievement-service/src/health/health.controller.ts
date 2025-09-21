@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { HealthService } from './health.service';
 import { HealthResponseDto } from './dto/health-response.dto';
+import { Public } from '../achievement/decorators';
 
 @Controller('health')
 @ApiTags('health')
@@ -9,6 +10,7 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ 
     summary: 'Общий health check',
     description: 'Проверяет общее состояние сервиса для Kubernetes liveness probe'
@@ -27,6 +29,7 @@ export class HealthController {
   }
 
   @Get('ready')
+  @Public()
   @ApiOperation({ 
     summary: 'Readiness probe',
     description: 'Проверяет готовность сервиса к обработке запросов для Kubernetes readiness probe'
@@ -45,6 +48,7 @@ export class HealthController {
   }
 
   @Get('live')
+  @Public()
   @ApiOperation({ 
     summary: 'Liveness probe',
     description: 'Проверяет жизнеспособность сервиса для Kubernetes liveness probe'

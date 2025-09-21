@@ -13,6 +13,12 @@ describe('Database Integration (PostgreSQL)', () => {
   let gameRatingRepository: Repository<GameRating>;
 
   beforeAll(async () => {
+    // Skip if database is not available
+    if (!process.env.DATABASE_HOST && !process.env.CI) {
+      console.log('Skipping database integration tests - no database configured');
+      return;
+    }
+
     // Этот тест запускается только если PostgreSQL доступен
     const testConfig = {
       type: 'postgres' as const,
@@ -43,7 +49,7 @@ describe('Database Integration (PostgreSQL)', () => {
       console.log('PostgreSQL не доступен, пропускаем интеграционные тесты');
       return;
     }
-  });
+  }, 30000); // 30 second timeout
 
   afterAll(async () => {
     if (module) {

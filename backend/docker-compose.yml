@@ -1,0 +1,451 @@
+version: '3.8'
+
+# Main docker-compose file for all microservices
+# This file orchestrates all backend services and their dependencies
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      - user-service
+      - game-catalog-service
+      - library-service
+      - review-service
+      - payment-service
+      - notification-service
+      - social-service
+      - achievement-service
+      - security-service
+    env_file:
+      - ./api-gateway/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres-user
+      - redis
+    env_file:
+      - ./user-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Game Catalog Service
+  game-catalog-service:
+    build:
+      context: ./game-catalog-service
+      dockerfile: Dockerfile
+    container_name: game-catalog-service
+    ports:
+      - "3002:3002"
+    depends_on:
+      - postgres-catalog
+    env_file:
+      - ./game-catalog-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Library Service
+  library-service:
+    build:
+      context: ./library-service
+      dockerfile: Dockerfile
+    container_name: library-service
+    ports:
+      - "3003:3003"
+    depends_on:
+      - postgres-library
+      - redis
+    env_file:
+      - ./library-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Review Service
+  review-service:
+    build:
+      context: ./review-service
+      dockerfile: Dockerfile
+    container_name: review-service
+    ports:
+      - "3004:3004"
+    depends_on:
+      - postgres-review
+    env_file:
+      - ./review-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    ports:
+      - "3005:3005"
+    depends_on:
+      - postgres-payment
+    env_file:
+      - ./payment-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "3006:3006"
+    depends_on:
+      - postgres-notification
+      - redis
+    env_file:
+      - ./notification-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Social Service
+  social-service:
+    build:
+      context: ./social-service
+      dockerfile: Dockerfile
+    container_name: social-service
+    ports:
+      - "3007:3007"
+    depends_on:
+      - postgres-social
+    env_file:
+      - ./social-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Achievement Service
+  achievement-service:
+    build:
+      context: ./achievement-service
+      dockerfile: Dockerfile
+    container_name: achievement-service
+    ports:
+      - "3008:3008"
+    depends_on:
+      - postgres-achievement
+      - redis
+    env_file:
+      - ./achievement-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Security Service
+  security-service:
+    build:
+      context: ./security-service
+      dockerfile: Dockerfile
+    container_name: security-service
+    ports:
+      - "3009:3009"
+    depends_on:
+      - postgres-security
+      - redis
+    env_file:
+      - ./security-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Download Service (Go)
+  download-service:
+    build:
+      context: ./download-service
+      dockerfile: Dockerfile
+    container_name: download-service
+    ports:
+      - "3010:3010"
+    depends_on:
+      - postgres-download
+      - redis
+    env_file:
+      - ./download-service/.env
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Databases
+  postgres-user:
+    image: postgres:15-alpine
+    container_name: postgres-user-db
+    environment:
+      POSTGRES_USER: user_service
+      POSTGRES_PASSWORD: user_password
+      POSTGRES_DB: user_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-catalog:
+    image: postgres:15-alpine
+    container_name: postgres-catalog-db
+    environment:
+      POSTGRES_USER: catalog_service
+      POSTGRES_PASSWORD: catalog_password
+      POSTGRES_DB: catalog_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_catalog_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-library:
+    image: postgres:15-alpine
+    container_name: postgres-library-db
+    environment:
+      POSTGRES_USER: library_service
+      POSTGRES_PASSWORD: library_password
+      POSTGRES_DB: library_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_library_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-review:
+    image: postgres:15-alpine
+    container_name: postgres-review-db
+    environment:
+      POSTGRES_USER: review_service
+      POSTGRES_PASSWORD: review_password
+      POSTGRES_DB: review_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_review_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-payment:
+    image: postgres:15-alpine
+    container_name: postgres-payment-db
+    environment:
+      POSTGRES_USER: payment_service
+      POSTGRES_PASSWORD: payment_password
+      POSTGRES_DB: payment_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_payment_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-notification:
+    image: postgres:15-alpine
+    container_name: postgres-notification-db
+    environment:
+      POSTGRES_USER: notification_service
+      POSTGRES_PASSWORD: notification_password
+      POSTGRES_DB: notification_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-social:
+    image: postgres:15-alpine
+    container_name: postgres-social-db
+    environment:
+      POSTGRES_USER: social_service
+      POSTGRES_PASSWORD: social_password
+      POSTGRES_DB: social_db
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres_social_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-achievement:
+    image: postgres:15-alpine
+    container_name: postgres-achievement-db
+    environment:
+      POSTGRES_USER: achievement_service
+      POSTGRES_PASSWORD: achievement_password
+      POSTGRES_DB: achievement_db
+    ports:
+      - "5439:5432"
+    volumes:
+      - postgres_achievement_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-security:
+    image: postgres:15-alpine
+    container_name: postgres-security-db
+    environment:
+      POSTGRES_USER: security_service
+      POSTGRES_PASSWORD: security_password
+      POSTGRES_DB: security_db
+    ports:
+      - "5440:5432"
+    volumes:
+      - postgres_security_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-download:
+    image: postgres:15-alpine
+    container_name: postgres-download-db
+    environment:
+      POSTGRES_USER: download_service
+      POSTGRES_PASSWORD: download_password
+      POSTGRES_DB: download_db
+    ports:
+      - "5441:5432"
+    volumes:
+      - postgres_download_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Monitoring Services
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3100:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Log Management
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: logstash
+    volumes:
+      - ./logging/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044"
+    depends_on:
+      - elasticsearch
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+# Volumes for data persistence
+volumes:
+  postgres_user_data:
+  postgres_catalog_data:
+  postgres_library_data:
+  postgres_review_data:
+  postgres_payment_data:
+  postgres_notification_data:
+  postgres_social_data:
+  postgres_achievement_data:
+  postgres_security_data:
+  postgres_download_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+
+# Network for inter-service communication
+networks:
+  microservices-network:
+    driver: bridge

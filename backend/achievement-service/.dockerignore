@@ -213,5 +213,5 @@ scripts/
 .eslintrc*
 .prettierrc*
 jest.config*
-tsconfig*
-nest-cli.json
+# tsconfig* - нужен для сборки
+# nest-cli.json - нужен для сборки

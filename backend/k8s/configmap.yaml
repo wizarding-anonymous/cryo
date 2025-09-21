@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microservices-config
+  namespace: microservices
+data:
+  # Database configurations
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+  
+  # Redis configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # Service discovery
+  API_GATEWAY_URL: "http://api-gateway-service:3000"
+  USER_SERVICE_URL: "http://user-service:3001"
+  GAME_CATALOG_SERVICE_URL: "http://game-catalog-service:3002"
+  LIBRARY_SERVICE_URL: "http://library-service:3003"
+  REVIEW_SERVICE_URL: "http://review-service:3004"
+  PAYMENT_SERVICE_URL: "http://payment-service:3005"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:3006"
+  SOCIAL_SERVICE_URL: "http://social-service:3007"
+  ACHIEVEMENT_SERVICE_URL: "http://achievement-service:3008"
+  SECURITY_SERVICE_URL: "http://security-service:3009"
+  DOWNLOAD_SERVICE_URL: "http://download-service:3010"
+  
+  # Logging
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  
+  # Monitoring
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+  
+  # Environment
+  NODE_ENV: "production"

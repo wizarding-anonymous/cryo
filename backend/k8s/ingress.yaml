@@ -1,0 +1,156 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: microservices-ingress
+  namespace: microservices
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts:
+        - api.yourdomain.com
+      secretName: microservices-tls
+  rules:
+    - host: api.yourdomain.com
+      http:
+        paths:
+          # Main API Gateway
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 3000
+          
+          # Direct service access
+          - path: /api/users
+            pathType: Prefix
+            backend:
+              service:
+                name: user-service
+                port:
+                  number: 3001
+          
+          - path: /api/games
+            pathType: Prefix
+            backend:
+              service:
+                name: game-catalog-service
+                port:
+                  number: 3002
+          
+          - path: /api/library
+            pathType: Prefix
+            backend:
+              service:
+                name: library-service
+                port:
+                  number: 3003
+          
+          - path: /api/reviews
+            pathType: Prefix
+            backend:
+              service:
+                name: review-service
+                port:
+                  number: 3004
+          
+          - path: /api/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: 3005
+          
+          - path: /api/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 3006
+          
+          - path: /api/social
+            pathType: Prefix
+            backend:
+              service:
+                name: social-service
+                port:
+                  number: 3007
+          
+          - path: /api/achievements
+            pathType: Prefix
+            backend:
+              service:
+                name: achievement-service
+                port:
+                  number: 3008
+          
+          - path: /api/security
+            pathType: Prefix
+            backend:
+              service:
+                name: security-service
+                port:
+                  number: 3009
+          
+          - path: /api/downloads
+            pathType: Prefix
+            backend:
+              service:
+                name: download-service
+                port:
+                  number: 3010
+
+---
+# Monitoring ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ingress
+  namespace: microservices
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: monitoring-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'Authentication Required - Monitoring'
+spec:
+  tls:
+    - hosts:
+        - monitoring.yourdomain.com
+      secretName: monitoring-tls
+  rules:
+    - host: monitoring.yourdomain.com
+      http:
+        paths:
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus-service
+                port:
+                  number: 9090
+          
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  number: 3000
+          
+          - path: /kibana
+            pathType: Prefix
+            backend:
+              service:
+                name: kibana-service
+                port:
+                  number: 5601

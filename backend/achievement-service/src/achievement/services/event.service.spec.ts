@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventService } from './event.service';
 import { ProgressService } from './progress.service';
+import { NotificationService } from './notification.service';
+import { LibraryService } from './library.service';
 import { EventType } from '../dto/update-progress.dto';
 import { UserProgressResponseDto, UserAchievementResponseDto } from '../dto';
 import { AchievementType } from '../entities/achievement.entity';
@@ -8,6 +10,8 @@ import { AchievementType } from '../entities/achievement.entity';
 describe('EventService', () => {
   let service: EventService;
   let progressService: jest.Mocked<ProgressService>;
+  let notificationService: jest.Mocked<NotificationService>;
+  let libraryService: jest.Mocked<LibraryService>;
 
   const mockUserProgress: UserProgressResponseDto = {
     id: 'progress-1',
@@ -56,6 +60,18 @@ describe('EventService', () => {
       checkAchievements: jest.fn(),
     };
 
+    const mockNotificationService = {
+      sendAchievementUnlockedNotification: jest.fn(),
+      sendBatchNotifications: jest.fn(),
+    };
+
+    const mockLibraryService = {
+      getUserGameCount: jest.fn(),
+      getUserLibraryStats: jest.fn(),
+      hasGameInLibrary: jest.fn(),
+      getUserGames: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventService,
@@ -63,11 +79,21 @@ describe('EventService', () => {
           provide: ProgressService,
           useValue: mockProgressService,
         },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
+        {
+          provide: LibraryService,
+          useValue: mockLibraryService,
+        },
       ],
     }).compile();
 
     service = module.get<EventService>(EventService);
     progressService = module.get(ProgressService);
+    notificationService = module.get(NotificationService);
+    libraryService = module.get(LibraryService);
   });
 
   it('should be defined', () => {

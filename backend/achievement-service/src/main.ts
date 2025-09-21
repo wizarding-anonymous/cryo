@@ -8,6 +8,12 @@ import compression from 'compression';
 import { AppModule } from './app.module';
 import { GracefulShutdownService } from './graceful-shutdown.service';
 
+// Fix for crypto module in Node.js 18 with TypeORM
+import { webcrypto } from 'node:crypto';
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto as any;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
