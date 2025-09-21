@@ -7,6 +7,7 @@ import { HttpModule } from '@nestjs/axios';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ReviewModule } from './review/review.module';
+import { HealthModule } from './health/health.module';
 import { Review } from './entities/review.entity';
 import { GameRating } from './entities/game-rating.entity';
 
@@ -50,6 +51,9 @@ import appConfig from './config/app.config';
 
     // Review module
     ReviewModule,
+    
+    // Health module
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -79,7 +79,13 @@ export class ServiceMonitorService {
     const serviceTimeout = this.configService.get<number>('services.timeout', 5000);
 
     try {
-      const healthUrl = `${serviceUrl}/health`;
+      // Use correct health endpoints based on service specifications
+      let healthUrl: string;
+      if (serviceName === 'review') {
+        healthUrl = `${serviceUrl}/api/v1/health`;
+      } else {
+        healthUrl = `${serviceUrl}/health`;
+      }
       
       await firstValueFrom(
         this.httpService.get(healthUrl).pipe(

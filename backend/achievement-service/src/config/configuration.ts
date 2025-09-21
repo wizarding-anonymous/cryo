@@ -74,11 +74,11 @@ export default () => ({
   },
   
   services: {
-    notification: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3000',
-    library: process.env.LIBRARY_SERVICE_URL || 'http://localhost:3001',
-    payment: process.env.PAYMENT_SERVICE_URL || 'http://localhost:3002',
-    review: process.env.REVIEW_SERVICE_URL || 'http://localhost:3004',
-    social: process.env.SOCIAL_SERVICE_URL || 'http://localhost:3005',
+    notification: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3006',
+    library: process.env.LIBRARY_SERVICE_URL || 'http://library-service:3003',
+    payment: process.env.PAYMENT_SERVICE_URL || 'http://payment-service:3005',
+    review: process.env.REVIEW_SERVICE_URL || 'http://review-service:3004',
+    social: process.env.SOCIAL_SERVICE_URL || 'http://social-service:3007',
     timeout: parseInt(process.env.SERVICE_TIMEOUT || '5000', 10),
     retryAttempts: parseInt(process.env.SERVICE_RETRY_ATTEMPTS || '3', 10),
     circuitBreakerThreshold: parseInt(process.env.SERVICE_CIRCUIT_BREAKER_THRESHOLD || '5', 10),

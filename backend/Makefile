@@ -32,6 +32,7 @@ help:
 	@echo "  restart    - Restart all services"
 	@echo "  status     - Show status of all services"
 	@echo "  health     - Check health of all services"
+	@echo "  fix-env    - Fix .env files for all services"
 	@echo ""
 	@echo "Detected OS: $(DETECTED_OS)"
 
@@ -146,6 +147,15 @@ ifeq ($(DETECTED_OS),Windows)
 	@powershell -ExecutionPolicy Bypass -File scripts/health-check.ps1
 else
 	@chmod +x scripts/health-check.sh && ./scripts/health-check.sh
+endif
+
+# Fix .env files for all services
+fix-env:
+ifeq ($(DETECTED_OS),Windows)
+	@powershell -ExecutionPolicy Bypass -File scripts/fix-env-files.ps1
+else
+	@echo "Unix version of fix-env script not implemented yet"
+	@echo "Please run: powershell -ExecutionPolicy Bypass -File scripts/fix-env-files.ps1"
 endif
 
 # Database operations

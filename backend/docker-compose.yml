@@ -356,7 +356,7 @@ services:
     networks:
       - microservices-network
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass redis_password
 
   # Monitoring Services
   prometheus:

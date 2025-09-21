@@ -14,8 +14,9 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  // Health endpoint без префикса для совместимости с Docker healthcheck
   @Get('health')
-  @ApiOperation({ summary: 'Health check endpoint' })
+  @ApiOperation({ summary: 'Health check endpoint (legacy)' })
   @ApiResponse({ status: 200, description: 'Service is healthy' })
   getHealth() {
     return this.appService.getHealth();

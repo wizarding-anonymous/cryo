@@ -35,7 +35,7 @@ export class GameCatalogIntegrationService {
       const response = await firstValueFrom(
         this.httpService.get<GamePurchaseInfo>(url).pipe(
           timeout(5000),
-          catchError(err => {
+          catchError((err: any) => {
             this.logger.error(`Error fetching game info for ${gameId}: ${err.message}`);
             return of(null);
           }),
@@ -56,7 +56,7 @@ export class GameCatalogIntegrationService {
   }
 
   async checkHealth(): Promise<{ status: string }> {
-    const url = `${this.gameCatalogUrl}/api/health`;
+    const url = `${this.gameCatalogUrl}/v1/health`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url).pipe(timeout(2000)),

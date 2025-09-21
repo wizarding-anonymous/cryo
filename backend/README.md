@@ -29,23 +29,27 @@
 
 ## Последние обновления
 
-### Исправления инфраструктуры (Сентябрь 2025)
+### Исправления инфраструктуры (22 сентября 2025)
 
-**Исправленные проблемы:**
-- ✅ **notification-service**: Исправлена конфигурация базы данных и добавлен health endpoint
-- ✅ **achievement-service**: Обновлен до Node 20, исправлен healthcheck (IPv6 → IPv4)
-- ✅ **review-service**: Обновлен до Node 20, исправлен health endpoint
-- ✅ **library-service**: Добавлен curl для healthcheck
-- ✅ **social-service**: Обновлен до Node 20, исправлен путь к main.js
-- ✅ **payment-service**: Обновлен до Node 20, добавлен inline healthcheck
+**Текущий статус:**
+- ✅ **Инфраструктура**: PostgreSQL (10 БД), Redis, Prometheus, Grafana работают
+- ✅ **user-service**: Полностью исправлен и работает
+- 🔄 **Остальные сервисы**: В процессе исправления конфигураций
 
-**Health Endpoints:**
-- `notification-service`: `/health`
-- `achievement-service`: `/api/v1/health`
-- `review-service`: `/api/v1/health`
-- `payment-service`: `/api/v1/health`
-- `library-service`: `/api/v1/health`
-- `user-service`: `/api/v1/health`
+**Выявленные системные проблемы:**
+- 🚨 **Конфигурация .env файлов**: Неправильные хосты PostgreSQL и Redis
+- 🚨 **Пароли Redis**: Отсутствуют во всех сервисах
+- ⚠️ **Elasticsearch**: Проблемы с загрузкой образа (403 Forbidden)
+
+**Исправления user-service:**
+- Хост PostgreSQL: `postgres` → `postgres-user-db`
+- Хост Redis: `redis` → `redis-cache`
+- Добавлен пароль Redis: `redis_password`
+- Исправлены учетные данные БД
+
+**Health Endpoints (проверенные):**
+- ✅ `user-service`: `/api/v1/health` - работает
+- 🔄 Остальные сервисы требуют проверки после исправления конфигураций
 
 ## Быстрый старт
 
@@ -221,13 +225,30 @@ kubectl apply -f k8s/ingress.yaml
 
 ### Переменные окружения
 
-Каждый сервис имеет свой `.env` файл. Общие переменные:
+Каждый сервис имеет свой `.env` файл. **ВАЖНО**: После обновления конфигураций:
 
+**Обязательные переменные для каждого сервиса:**
+- `POSTGRES_HOST=postgres-[service]-db` - хост базы данных (НЕ `postgres`)
+- `REDIS_HOST=redis-cache` - хост Redis (НЕ `redis`)
+- `REDIS_PASSWORD=redis_password` - пароль Redis (НЕ пустой)
+- `POSTGRES_USER=[service]_service` - пользователь БД согласно docker-compose.yml
+- `POSTGRES_PASSWORD=[service]_password` - пароль БД согласно docker-compose.yml
+- `POSTGRES_DB=[service]_db` - имя БД согласно docker-compose.yml
+
+**Общие переменные:**
 - `NODE_ENV` - окружение (development/production)
 - `LOG_LEVEL` - уровень логирования
-- `POSTGRES_*` - настройки базы данных
-- `REDIS_*` - настройки Redis
 - `JWT_SECRET` - секрет для JWT токенов
+
+**Пример правильной конфигурации (user-service):**
+```env
+POSTGRES_HOST=postgres-user-db
+POSTGRES_USER=user_service
+POSTGRES_PASSWORD=user_password
+POSTGRES_DB=user_db
+REDIS_HOST=redis-cache
+REDIS_PASSWORD=redis_password
+```
 
 ### Сети
 
@@ -305,16 +326,33 @@ service-name/
    docker-compose ps
    ```
 
-2. **Проблемы с базой данных**
+2. **Ошибки подключения к базе данных**
+   - Проверьте правильность хоста: должен быть `postgres-[service]-db`
+   - Проверьте учетные данные согласно docker-compose.yml
    ```bash
    make logs-postgres-user
-   docker-compose exec postgres-user psql -U user_service -d user_db
+   docker-compose exec postgres-user-db psql -U user_service -d user_db
    ```
 
-3. **Проблемы с сетью**
+3. **Ошибки подключения к Redis**
+   - Проверьте хост: должен быть `redis-cache`
+   - Проверьте пароль: должен быть `redis_password`
+   ```bash
+   docker logs redis-cache
+   docker exec redis-cache redis-cli -a redis_password ping
+   ```
+
+4. **Проблемы с сетью**
    ```bash
    docker network ls
    docker network inspect backend_microservices-network
+   ```
+
+5. **Config validation errors**
+   - Обычно связаны с пустыми или неправильными переменными окружения
+   - Проверьте .env файлы на соответствие шаблону
+   ```bash
+   docker exec [service] env | grep -E "(POSTGRES|REDIS)"
    ```
 
 ### Отладка
