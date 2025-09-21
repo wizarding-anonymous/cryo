@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { Notification } from '../../entities';
+import { Notification } from '../entities';
 import { firstValueFrom } from 'rxjs';
 import * as fs from 'fs/promises';
 import * as path from 'path';

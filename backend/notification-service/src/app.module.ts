@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { NotificationModule } from './notification/notification.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { NotificationModule } from './notification/notification.module';
     }),
     DatabaseModule,
     NotificationModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -5,7 +5,7 @@ import { of } from 'rxjs';
 import * as fs from 'fs/promises';
 
 import { EmailService } from './email.service';
-import { Notification } from '../../entities';
+import { Notification } from '../entities';
 
 jest.mock('fs/promises'); // Mock the fs/promises module
 

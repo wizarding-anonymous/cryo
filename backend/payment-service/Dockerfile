@@ -1,7 +1,7 @@
 # Multi-stage build for production optimization
 
 # Development stage
-FROM node:18-alpine AS development
+FROM node:20-alpine AS development
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=development
@@ -9,7 +9,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 WORKDIR /app
 
 # Create non-root user for security
@@ -34,7 +34,8 @@ EXPOSE 3003
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node dist/health-check.js || exit 1
+  CMD node -e "fetch('http://localhost:3005/health').then(r=>{if(r.ok)process.exit(0);process.exit(1);}).catch(()=>process.exit(1));" || exit 1
 
 # Start the application
 CMD ["node", "dist/main"]
+

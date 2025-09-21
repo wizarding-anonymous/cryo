@@ -32,8 +32,8 @@ import {
   PaginatedNotificationsDto,
   UpdateNotificationSettingsDto,
 } from './dto';
-import { Notification } from '../../entities';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { Notification } from '../entities';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('notifications')
 @ApiBearerAuth()

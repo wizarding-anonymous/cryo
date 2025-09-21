@@ -1,5 +1,5 @@
 # Multi-stage build for production optimization
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -63,7 +63,11 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD node -e "fetch('http://localhost:3004/api/v1/health').then(r=>{if(r.ok)process.exit(0);process.exit(1);}).catch(()=>process.exit(1));" || exit 1
 
 # Start production server
 CMD ["node", "dist/main"]
+
+
+
+

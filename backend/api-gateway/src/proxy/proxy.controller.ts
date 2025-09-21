@@ -11,44 +11,58 @@ import { CorsInterceptor } from '../shared/interceptors/cors.interceptor';
 import { JsonBodyValidationPipe } from '../common/pipes/json-body-validation.pipe';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-@Controller()
+@Controller('api')
 @UseGuards(RateLimitGuard)
 @UseInterceptors(CorsInterceptor, ResponseInterceptor, LoggingInterceptor, CacheInterceptor)
 @ApiTags('Proxy')
 export class ProxyController {
   constructor(private readonly proxyService: ProxyService) {}
 
-  @Get('*')
+  @Get('v1/users/*')
   @UseGuards(OptionalAuthGuard)
-  @ApiOperation({ summary: 'Proxy GET requests to underlying services' })
-  async handleGet(@Req() req: Request, @Res() res: Response): Promise<any> {
-    return this.handle('*', req, res);
+  @ApiOperation({ summary: 'Proxy GET requests to user service' })
+  async handleUserGet(@Req() req: Request, @Res() res: Response): Promise<any> {
+    return this.handle('v1/users/*', req, res);
   }
 
-  @Post('*')
+  @Get('v1/games/*')
+  @UseGuards(OptionalAuthGuard)
+  @ApiOperation({ summary: 'Proxy GET requests to game catalog service' })
+  async handleGameGet(@Req() req: Request, @Res() res: Response): Promise<any> {
+    return this.handle('v1/games/*', req, res);
+  }
+
+  @Get('v1/library/*')
+  @UseGuards(OptionalAuthGuard)
+  @ApiOperation({ summary: 'Proxy GET requests to library service' })
+  async handleLibraryGet(@Req() req: Request, @Res() res: Response): Promise<any> {
+    return this.handle('v1/library/*', req, res);
+  }
+
+  @Post('v1/*')
   @UseGuards(JwtAuthGuard)
   @UsePipes(new JsonBodyValidationPipe())
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Proxy POST requests (auth required)' })
   async handlePost(@Req() req: Request, @Res() res: Response, @Body() _body: any): Promise<any> {
-    return this.handle('*', req, res);
+    return this.handle('v1/*', req, res);
   }
 
-  @Put('*')
+  @Put('v1/*')
   @UseGuards(JwtAuthGuard)
   @UsePipes(new JsonBodyValidationPipe())
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Proxy PUT requests (auth required)' })
   async handlePut(@Req() req: Request, @Res() res: Response, @Body() _body: any): Promise<any> {
-    return this.handle('*', req, res);
+    return this.handle('v1/*', req, res);
   }
 
-  @Delete('*')
+  @Delete('v1/*')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Proxy DELETE requests (auth required)' })
   async handleDelete(@Req() req: Request, @Res() res: Response): Promise<any> {
-    return this.handle('*', req, res);
+    return this.handle('v1/*', req, res);
   }
 
   private async handle(_path: string, req: Request, res: Response): Promise<any> {

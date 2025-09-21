@@ -54,7 +54,7 @@ func main() {
     ginpprof.Register(r, "/debug/pprof")
 
     // Health endpoints
-    r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
+    r.GET("/api/v1/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 
 
     // Initialize database

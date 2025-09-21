@@ -19,75 +19,23 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 30s
 
-  # User Service
-  - job_name: 'user-service'
-    static_configs:
-      - targets: ['user-service:3001']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # Game Catalog Service
-  - job_name: 'game-catalog-service'
-    static_configs:
-      - targets: ['game-catalog-service:3002']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # Library Service
-  - job_name: 'library-service'
-    static_configs:
-      - targets: ['library-service:3003']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # Review Service
-  - job_name: 'review-service'
-    static_configs:
-      - targets: ['review-service:3004']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # Payment Service
+  # Payment Service (has metrics according to specification)
   - job_name: 'payment-service'
     static_configs:
       - targets: ['payment-service:3005']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
-  # Notification Service
-  - job_name: 'notification-service'
-    static_configs:
-      - targets: ['notification-service:3006']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # Social Service
-  - job_name: 'social-service'
-    static_configs:
-      - targets: ['social-service:3007']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # Achievement Service
-  - job_name: 'achievement-service'
-    static_configs:
-      - targets: ['achievement-service:3008']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # Security Service
-  - job_name: 'security-service'
-    static_configs:
-      - targets: ['security-service:3009']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # Download Service
+  # Download Service (has metrics according to specification)
   - job_name: 'download-service'
     static_configs:
       - targets: ['download-service:3010']
     metrics_path: '/metrics'
     scrape_interval: 30s
+
+  # Note: Other services don't have /metrics endpoints in their specifications
+  # This is correct according to the service design documents
+  # Only Payment Service and Download Service are specified to have metrics endpoints
 
   # PostgreSQL Exporter for all databases
   - job_name: 'postgres-user'

@@ -4,7 +4,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { HealthCheckResultDto, ServiceHealthStatusDto } from './dto/health.dto';
 
 @ApiTags('Health')
-@Controller('health')
+@Controller('v1/health')
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 

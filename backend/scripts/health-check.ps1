@@ -135,19 +135,19 @@ function Start-HealthCheck {
     $unhealthyServices = 0
     $startingServices = 0
     
-    # Service definitions
+    # Service definitions with their health endpoints (based on service specifications)
     $services = @{
-        "api-gateway" = 3000
-        "user-service" = 3001
-        "game-catalog-service" = 3002
-        "library-service" = 3003
-        "review-service" = 3004
-        "payment-service" = 3005
-        "notification-service" = 3006
-        "social-service" = 3007
-        "achievement-service" = 3008
-        "security-service" = 3009
-        "download-service" = 3010
+        "api-gateway" = @{ port = 3000; endpoint = "/api/v1/health" }
+        "user-service" = @{ port = 3001; endpoint = "/api/v1/health" }
+        "game-catalog-service" = @{ port = 3002; endpoint = "/api/v1/health" }
+        "library-service" = @{ port = 3003; endpoint = "/api/health" }
+        "review-service" = @{ port = 3004; endpoint = "/api/v1/health" }
+        "payment-service" = @{ port = 3005; endpoint = "/health" }
+        "notification-service" = @{ port = 3006; endpoint = "/health" }
+        "social-service" = @{ port = 3007; endpoint = "/api/v1/health" }
+        "achievement-service" = @{ port = 3008; endpoint = "/api/v1/health" }
+        "security-service" = @{ port = 3009; endpoint = "/api/v1/health" }
+        "download-service" = @{ port = 3010; endpoint = "/api/v1/health" }
     }
     
     $infrastructure = @{
@@ -173,7 +173,9 @@ function Start-HealthCheck {
     
     foreach ($service in $services.GetEnumerator()) {
         $serviceName = $service.Key
-        $port = $service.Value
+        $serviceConfig = $service.Value
+        $port = $serviceConfig.port
+        $endpoint = $serviceConfig.endpoint
         $totalServices++
         
         $containerStatus = Test-Container $serviceName
@@ -183,7 +185,7 @@ function Start-HealthCheck {
         switch ($containerStatus) {
             0 {
                 # Container is running, check HTTP endpoint
-                if (Test-HttpEndpoint $serviceName $port) {
+                if (Test-HttpEndpoint $serviceName $port $endpoint) {
                     Write-Success "Healthy (HTTP OK)"
                     $healthyServices++
                 } else {

@@ -6,7 +6,7 @@ import {
   MemoryHealthIndicator,
 } from '@nestjs/terminus';
 
-@Controller('v1/health')
+@Controller('health')
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
@@ -18,11 +18,10 @@ export class HealthController {
   @HealthCheck()
   check() {
     return this.health.check([
-      // Check the database connection
-      () => this.db.pingCheck('database', { timeout: 300 }),
-      // Check that the heap memory usage is not over 250MB
+      // Database check
+      () => this.db.pingCheck('database', { timeout: 3000 }),
+      // Memory checks
       () => this.memory.checkHeap('memory_heap', 250 * 1024 * 1024),
-      // Check that the RSS memory usage is not over 250MB
       () => this.memory.checkRSS('memory_rss', 250 * 1024 * 1024),
     ]);
   }

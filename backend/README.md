@@ -27,6 +27,26 @@
 - **ELK Stack** - Централизованное логирование
 - **Nginx** - Load balancer для продакшена
 
+## Последние обновления
+
+### Исправления инфраструктуры (Сентябрь 2025)
+
+**Исправленные проблемы:**
+- ✅ **notification-service**: Исправлена конфигурация базы данных и добавлен health endpoint
+- ✅ **achievement-service**: Обновлен до Node 20, исправлен healthcheck (IPv6 → IPv4)
+- ✅ **review-service**: Обновлен до Node 20, исправлен health endpoint
+- ✅ **library-service**: Добавлен curl для healthcheck
+- ✅ **social-service**: Обновлен до Node 20, исправлен путь к main.js
+- ✅ **payment-service**: Обновлен до Node 20, добавлен inline healthcheck
+
+**Health Endpoints:**
+- `notification-service`: `/health`
+- `achievement-service`: `/api/v1/health`
+- `review-service`: `/api/v1/health`
+- `payment-service`: `/api/v1/health`
+- `library-service`: `/api/v1/health`
+- `user-service`: `/api/v1/health`
+
 ## Быстрый старт
 
 ### Предварительные требования

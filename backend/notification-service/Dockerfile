@@ -60,11 +60,11 @@ RUN chown -R nestjs:nodejs /usr/src/app
 USER nestjs
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3006
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node dist/health-check.js || exit 1
+  CMD node -e "require('http').get('http://127.0.0.1:3006/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start the application
 CMD ["node", "dist/main"]

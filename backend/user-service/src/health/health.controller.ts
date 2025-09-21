@@ -8,7 +8,7 @@ import {
 import { StartupValidationService } from '../config/startup-validation.service';
 import { AppConfigService } from '../config/config.service';
 
-@Controller('health')
+@Controller('v1/health')
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,

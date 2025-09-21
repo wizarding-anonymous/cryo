@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
-import { Notification } from '../../entities/notification.entity';
-import { NotificationSettings } from '../../entities/notification-settings.entity';
+import { Notification } from '../entities/notification.entity';
+import { NotificationSettings } from '../entities/notification-settings.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import {
@@ -16,7 +16,7 @@ import {
   PaginatedNotificationsDto,
   UpdateNotificationSettingsDto,
 } from './dto';
-import { NotificationChannel, NotificationType } from '../../common/enums';
+import { NotificationChannel, NotificationType } from '../common/enums';
 import { EmailService } from './email.service';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
