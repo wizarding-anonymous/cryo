@@ -12,6 +12,37 @@ import { GameRating } from '../src/entities/game-rating.entity';
 import { OwnershipService } from '../src/services/ownership.service';
 import { HttpExceptionFilter } from '../src/filters';
 import { validationConfig } from '../src/config/validation.config';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
 
 describe('Review API (e2e)', () => {
     let app: INestApplication;
@@ -60,10 +91,12 @@ describe('Review API (e2e)', () => {
         gameRatingRepository = moduleFixture.get<Repository<GameRating>>(getRepositoryToken(GameRating));
         ownershipService = moduleFixture.get<OwnershipService>(OwnershipService);
         cacheManager = moduleFixture.get<Cache>(CACHE_MANAGER);
-    });
+    }, 30000);
 
     afterAll(async () => {
-        await app.close();
+        if (app) {
+            await app.close();
+        }
     });
 
     beforeEach(async () => {

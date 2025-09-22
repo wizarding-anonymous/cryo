@@ -285,7 +285,7 @@ describe('RatingService', () => {
             cacheManager.del.mockRejectedValue(new Error('Cache error'));
 
             // Should not throw error - the service should handle cache errors gracefully
-            await service.invalidateGameRatingCache('game-456');
+            await expect(service.invalidateGameRatingCache('game-456')).resolves.not.toThrow();
             
             expect(cacheManager.del).toHaveBeenCalledWith('game_rating_game-456');
         });
@@ -307,9 +307,7 @@ describe('RatingService', () => {
 
         it('should handle cache errors gracefully in getGameRating', async () => {
             // Mock cache to throw error, but service should continue with database
-            cacheManager.get.mockImplementation(() => {
-                throw new Error('Cache error');
-            });
+            cacheManager.get.mockRejectedValue(new Error('Cache error'));
             gameRatingRepository.findOne.mockResolvedValue(mockGameRating);
 
             const result = await service.getGameRating('game-456');

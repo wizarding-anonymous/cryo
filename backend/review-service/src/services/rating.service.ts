@@ -22,17 +22,17 @@ export class RatingService {
     private readonly cacheManager: Cache,
     private readonly externalIntegrationService: ExternalIntegrationService,
     private readonly metricsService: MetricsService,
-  ) {}
+  ) { }
 
   async calculateGameRating(gameId: string): Promise<{
     averageRating: number;
     totalReviews: number;
   }> {
     const startTime = Date.now();
-    
+
     try {
       this.metricsService.incrementActiveCalculations();
-      
+
       const result = await this.reviewRepository
         .createQueryBuilder('review')
         .select('AVG(review.rating)', 'averageRating')
@@ -57,7 +57,7 @@ export class RatingService {
   async updateGameRating(gameId: string): Promise<GameRating> {
     const startTime = Date.now();
     this.logger.debug(`Updating rating for game ${gameId}`);
-    
+
     try {
       const { averageRating, totalReviews } = await this.calculateGameRating(gameId);
 
@@ -100,10 +100,17 @@ export class RatingService {
 
   async getGameRating(gameId: string): Promise<GameRating | null> {
     const cacheStartTime = Date.now();
-    
-    // Проверяем кеш
+
+    // Проверяем кеш с обработкой ошибок
     const cacheKey = `game_rating_${gameId}`;
-    const cachedRating = await this.cacheManager.get<GameRating>(cacheKey);
+    let cachedRating: GameRating | undefined;
+
+    try {
+      cachedRating = await this.cacheManager.get<GameRating>(cacheKey);
+    } catch (error) {
+      this.logger.warn(`Cache error for key ${cacheKey}: ${error.message}`);
+      cachedRating = undefined;
+    }
 
     if (cachedRating) {
       const cacheDuration = (Date.now() - cacheStartTime) / 1000;
@@ -123,7 +130,7 @@ export class RatingService {
     // Если рейтинга нет, создаем пустой
     if (!gameRating) {
       const { averageRating, totalReviews } = await this.calculateGameRating(gameId);
-      
+
       if (totalReviews > 0) {
         gameRating = await this.gameRatingRepository.save({
           gameId,
@@ -182,14 +189,19 @@ export class RatingService {
 
   async invalidateGameRatingCache(gameId: string): Promise<void> {
     const cacheKey = `game_rating_${gameId}`;
-    await this.cacheManager.del(cacheKey);
-    this.logger.debug(`Invalidated rating cache for game ${gameId}`);
+    try {
+      await this.cacheManager.del(cacheKey);
+      this.logger.debug(`Invalidated rating cache for game ${gameId}`);
+    } catch (error) {
+      this.logger.warn(`Failed to invalidate cache for game ${gameId}: ${error.message}`);
+      // Don't throw error - cache invalidation failure shouldn't break the flow
+    }
   }
 
   async warmUpRatingCache(gameIds: string[]): Promise<void> {
     this.logger.debug(`Warming up rating cache for ${gameIds.length} games`);
-    
-    const promises = gameIds.map(gameId => 
+
+    const promises = gameIds.map(gameId =>
       this.getGameRating(gameId).catch(error => {
         this.logger.warn(`Failed to warm up rating cache for game ${gameId}`, error);
         return null;
@@ -203,7 +215,7 @@ export class RatingService {
   // Вспомогательные методы для кеша с метриками
   private async setCacheWithMetrics(key: string, value: any): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       await this.cacheManager.set(key, value, this.CACHE_TTL);
       const duration = (Date.now() - startTime) / 1000;
@@ -211,31 +223,19 @@ export class RatingService {
       this.metricsService.recordCacheOperationDuration('set', duration);
     } catch (error) {
       this.metricsService.recordCacheOperation('set', 'error');
-      throw error;
+      this.logger.warn(`Failed to set cache for key ${key}: ${error.message}`);
+      // Don't throw error - cache failure shouldn't break the flow
     }
   }
 
   private async invalidateGameRatingCacheWithMetrics(gameId: string): Promise<void> {
-    const startTime = Date.now();
-    const cacheKey = `game_rating_${gameId}`;
-    
-    try {
-      await this.cacheManager.del(cacheKey);
-      const duration = (Date.now() - startTime) / 1000;
-      this.metricsService.recordCacheOperation('invalidate', 'success');
-      this.metricsService.recordCacheOperationDuration('invalidate', duration);
-      this.logger.debug(`Invalidated cache for game rating ${gameId}`);
-    } catch (error) {
-      this.metricsService.recordCacheOperation('invalidate', 'error');
-      this.logger.error(`Failed to invalidate cache for game ${gameId}`, error);
-      throw error;
-    }
+    return this.invalidateGameRatingCache(gameId);
   }
 
   // Новые методы для расширенной функциональности кеширования
   async preloadPopularGameRatings(): Promise<void> {
     this.logger.debug('Preloading popular game ratings into cache');
-    
+
     // Получаем топ-50 игр по количеству отзывов
     const popularGames = await this.gameRatingRepository.find({
       order: {
@@ -247,7 +247,7 @@ export class RatingService {
 
     const gameIds = popularGames.map(rating => rating.gameId);
     await this.warmUpRatingCache(gameIds);
-    
+
     this.logger.debug(`Preloaded ${gameIds.length} popular game ratings`);
   }
 
@@ -257,11 +257,11 @@ export class RatingService {
     averageCacheOperationTime: number;
   }> {
     const summary = await this.metricsService.getRatingMetricsSummary();
-    
+
     // Вычисляем hit rate из метрик
     const totalCacheOps = summary.totalCacheOperations;
     const hitRate = totalCacheOps > 0 ? (summary.totalCacheOperations * 0.7) / totalCacheOps : 0; // Примерная оценка
-    
+
     return {
       totalCachedRatings: summary.cachedRatingsCount,
       cacheHitRate: hitRate,
@@ -285,7 +285,7 @@ export class RatingService {
     const batchSize = 5;
     for (let i = 0; i < gameIds.length; i += batchSize) {
       const batch = gameIds.slice(i, i + batchSize);
-      
+
       const batchPromises = batch.map(async (gameId) => {
         try {
           await this.updateGameRating(gameId);
@@ -297,7 +297,7 @@ export class RatingService {
       });
 
       await Promise.allSettled(batchPromises);
-      
+
       // Небольшая пауза между батчами
       if (i + batchSize < gameIds.length) {
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -305,7 +305,7 @@ export class RatingService {
     }
 
     const duration = (Date.now() - startTime) / 1000;
-    
+
     this.logger.debug(
       `Bulk rating update completed. Updated: ${updated}/${gameIds.length}, ` +
       `Errors: ${errors}, Duration: ${duration.toFixed(2)}s`
@@ -317,11 +317,11 @@ export class RatingService {
   // Расширенные методы для кеширования и инвалидации
   async invalidateRelatedCaches(gameId: string): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       // Инвалидируем основной кеш рейтинга
       await this.invalidateGameRatingCacheWithMetrics(gameId);
-      
+
       // Инвалидируем связанные кеши (топ игр, статистика)
       const relatedKeys = [
         'top_rated_games',
@@ -329,7 +329,7 @@ export class RatingService {
         `game_rating_history_${gameId}`,
         'popular_games_cache'
       ];
-      
+
       const invalidationPromises = relatedKeys.map(async (key) => {
         try {
           await this.cacheManager.del(key);
@@ -339,12 +339,12 @@ export class RatingService {
           this.logger.warn(`Failed to invalidate cache key ${key}`, error);
         }
       });
-      
+
       await Promise.allSettled(invalidationPromises);
-      
+
       const duration = (Date.now() - startTime) / 1000;
       this.metricsService.recordCacheOperationDuration('bulk_invalidate', duration);
-      
+
       this.logger.debug(`Invalidated all related caches for game ${gameId} in ${duration.toFixed(3)}s`);
     } catch (error) {
       this.logger.error(`Failed to invalidate related caches for game ${gameId}`, error);
@@ -369,7 +369,7 @@ export class RatingService {
       // 1. Топ-20 по количеству отзывов
       // 2. Недавно обновленные рейтинги (последние 24 часа)
       // 3. Игры с высоким рейтингом (>4.0)
-      
+
       const priorityGames = await this.gameRatingRepository
         .createQueryBuilder('rating')
         .select('rating.gameId')
@@ -381,12 +381,12 @@ export class RatingService {
         .getMany();
 
       const gameIds = priorityGames.map(rating => rating.gameId);
-      
+
       // Загружаем в кеш батчами
       const batchSize = 10;
       for (let i = 0; i < gameIds.length; i += batchSize) {
         const batch = gameIds.slice(i, i + batchSize);
-        
+
         const warmupPromises = batch.map(async (gameId) => {
           try {
             await this.getGameRating(gameId);
@@ -398,7 +398,7 @@ export class RatingService {
         });
 
         await Promise.allSettled(warmupPromises);
-        
+
         // Небольшая пауза между батчами
         if (i + batchSize < gameIds.length) {
           await new Promise(resolve => setTimeout(resolve, 25));
@@ -406,7 +406,7 @@ export class RatingService {
       }
 
       const duration = (Date.now() - startTime) / 1000;
-      
+
       this.logger.log(
         `Intelligent cache warmup completed. ` +
         `Warmed: ${warmedGames}/${gameIds.length} games, ` +
@@ -439,15 +439,15 @@ export class RatingService {
     };
   }> {
     const summary = await this.metricsService.getRatingMetricsSummary();
-    
+
     // Вычисляем hit rate из метрик кеша
     const totalCacheOps = summary.totalCacheOperations;
     const estimatedHits = Math.floor(totalCacheOps * 0.75); // Примерная оценка
     const hitRate = totalCacheOps > 0 ? estimatedHits / totalCacheOps : 0;
-    
+
     // Вычисляем операции в минуту (за последний час)
     const calculationsPerMinute = summary.totalCalculations / 60; // Упрощенный расчет
-    
+
     return {
       cacheEfficiency: {
         hitRate: Math.round(hitRate * 100) / 100,
@@ -480,7 +480,7 @@ export class RatingService {
   }> {
     const startTime = Date.now();
     const { priorityGames = [], maxConcurrency = 5, skipRecentlyUpdated = true } = options;
-    
+
     let processed = 0;
     let skipped = 0;
     let errors = 0;
@@ -490,7 +490,7 @@ export class RatingService {
     try {
       // Получаем список игр для обновления
       let gamesToUpdate: string[];
-      
+
       if (priorityGames.length > 0) {
         gamesToUpdate = priorityGames;
       } else {
@@ -505,13 +505,13 @@ export class RatingService {
       // Фильтруем недавно обновленные игры если нужно
       if (skipRecentlyUpdated) {
         const recentThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 минут назад
-        
+
         const recentlyUpdated = await this.gameRatingRepository
           .createQueryBuilder('rating')
           .select('rating.gameId')
           .where('rating.updatedAt > :threshold', { threshold: recentThreshold })
           .getMany();
-        
+
         const recentGameIds = new Set(recentlyUpdated.map(r => r.gameId));
         const originalCount = gamesToUpdate.length;
         gamesToUpdate = gamesToUpdate.filter(gameId => !recentGameIds.has(gameId));
@@ -524,18 +524,18 @@ export class RatingService {
       const batchSize = maxConcurrency;
       for (let i = 0; i < gamesToUpdate.length; i += batchSize) {
         const batch = gamesToUpdate.slice(i, i + batchSize);
-        
+
         const batchPromises = batch.map(async (gameId) => {
           const gameStartTime = Date.now();
-          
+
           try {
             this.metricsService.incrementActiveCalculations();
             await this.updateGameRating(gameId);
-            
+
             const duration = (Date.now() - gameStartTime) / 1000;
             this.metricsService.recordRatingCalculation(gameId, 'bulk_recalculate');
             this.metricsService.recordRatingCalculationDuration(gameId, duration);
-            
+
             processed++;
           } catch (error) {
             errors++;
@@ -546,7 +546,7 @@ export class RatingService {
         });
 
         await Promise.allSettled(batchPromises);
-        
+
         // Адаптивная пауза между батчами
         const pauseTime = Math.min(50 + (errors * 10), 200);
         if (i + batchSize < gamesToUpdate.length) {
@@ -555,7 +555,7 @@ export class RatingService {
       }
 
       const duration = (Date.now() - startTime) / 1000;
-      
+
       this.logger.log(
         `Optimized rating recalculation completed. ` +
         `Processed: ${processed}, Skipped: ${skipped}, ` +

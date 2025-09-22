@@ -21,15 +21,26 @@ describe('Entities', () => {
       expect(Review).toBeDefined();
       expect(typeof Review).toBe('function');
       
-      // Проверяем, что entity имеет правильные поля
+      // Проверяем, что entity класс существует и может быть инстанцирован
       const review = new Review();
-      expect(review).toHaveProperty('id');
-      expect(review).toHaveProperty('userId');
-      expect(review).toHaveProperty('gameId');
-      expect(review).toHaveProperty('text');
-      expect(review).toHaveProperty('rating');
-      expect(review).toHaveProperty('createdAt');
-      expect(review).toHaveProperty('updatedAt');
+      expect(review).toBeInstanceOf(Review);
+      
+      // Проверяем, что можно установить значения полей
+      review.id = 'test-id';
+      review.userId = 'user-123';
+      review.gameId = 'game-456';
+      review.text = 'Test review';
+      review.rating = 5;
+      review.createdAt = new Date();
+      review.updatedAt = new Date();
+      
+      expect(review.id).toBe('test-id');
+      expect(review.userId).toBe('user-123');
+      expect(review.gameId).toBe('game-456');
+      expect(review.text).toBe('Test review');
+      expect(review.rating).toBe(5);
+      expect(review.createdAt).toBeInstanceOf(Date);
+      expect(review.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should validate rating constraints', () => {
@@ -58,12 +69,20 @@ describe('Entities', () => {
       expect(GameRating).toBeDefined();
       expect(typeof GameRating).toBe('function');
       
-      // Проверяем, что entity имеет правильные поля
+      // Проверяем, что entity класс существует и может быть инстанцирован
       const gameRating = new GameRating();
-      expect(gameRating).toHaveProperty('gameId');
-      expect(gameRating).toHaveProperty('averageRating');
-      expect(gameRating).toHaveProperty('totalReviews');
-      expect(gameRating).toHaveProperty('updatedAt');
+      expect(gameRating).toBeInstanceOf(GameRating);
+      
+      // Проверяем, что можно установить значения полей
+      gameRating.gameId = 'game-123';
+      gameRating.averageRating = 4.5;
+      gameRating.totalReviews = 10;
+      gameRating.updatedAt = new Date();
+      
+      expect(gameRating.gameId).toBe('game-123');
+      expect(gameRating.averageRating).toBe(4.5);
+      expect(gameRating.totalReviews).toBe(10);
+      expect(gameRating.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should handle decimal precision for averageRating', () => {

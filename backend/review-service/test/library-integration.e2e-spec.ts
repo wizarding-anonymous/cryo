@@ -9,6 +9,28 @@ import { AppModule } from '../src/app.module';
 import { OwnershipService } from '../src/services/ownership.service';
 import { HttpExceptionFilter } from '../src/filters';
 import { validationConfig } from '../src/config/validation.config';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { describe } from 'node:test';
 
 describe('Library Service Integration (e2e)', () => {
   let app: INestApplication;
@@ -34,10 +56,12 @@ describe('Library Service Integration (e2e)', () => {
 
     // Set up environment variables
     process.env.LIBRARY_SERVICE_URL = 'http://library-service:3001';
-  });
+  }, 30000);
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('Game ownership verification', () => {

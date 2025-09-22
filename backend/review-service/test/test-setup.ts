@@ -7,6 +7,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from '../src/filters';
 import { validationConfig } from '../src/config/validation.config';
 
+// Test setup for E2E tests
+
 // Test database configuration
 export const testDatabaseConfig = {
   type: 'sqlite' as const,

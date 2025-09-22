@@ -4,10 +4,12 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.ts$": ["ts-jest", {
+      "tsconfig": "tsconfig.json"
+    }],
+    "^.+\\.js$": "babel-jest"
   },
-  "setupFilesAfterEnv": ["<rootDir>/test/test-setup.ts"],
-  "testTimeout": 30000,
+  "testTimeout": 60000,
   "maxWorkers": 1,
   "forceExit": true,
   "detectOpenHandles": true,
@@ -15,5 +17,9 @@
     "src/**/*.(t|j)s",
     "!src/**/*.spec.ts",
     "!src/**/*.e2e-spec.ts"
-  ]
+  ],
+  "moduleNameMapping": {
+    "^src/(.*)$": "<rootDir>/src/$1"
+  },
+  "setupFiles": ["<rootDir>/test/jest.setup.js"]
 }

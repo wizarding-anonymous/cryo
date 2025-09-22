@@ -11,6 +11,28 @@ import { Review } from '../src/entities/review.entity';
 import { GameRating } from '../src/entities/game-rating.entity';
 import { HttpExceptionFilter } from '../src/filters';
 import { validationConfig } from '../src/config/validation.config';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { it } from 'node:test';
+import { describe } from 'node:test';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
 
 describe('Rating API (e2e)', () => {
     let app: INestApplication;
@@ -35,10 +57,12 @@ describe('Rating API (e2e)', () => {
         reviewRepository = moduleFixture.get<Repository<Review>>(getRepositoryToken(Review));
         gameRatingRepository = moduleFixture.get<Repository<GameRating>>(getRepositoryToken(GameRating));
         cacheManager = moduleFixture.get<Cache>(CACHE_MANAGER);
-    });
+    }, 30000);
 
     afterAll(async () => {
-        await app.close();
+        if (app) {
+            await app.close();
+        }
     });
 
     beforeEach(async () => {
