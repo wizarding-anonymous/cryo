@@ -3,23 +3,29 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Reflector } from '@nestjs/core';
 import { GameController } from './game.controller';
 import { GameService } from './game.service';
-import { CreateGameDto } from '../dto/create-game.dto';
-import { UpdateGameDto } from '../dto/update-game.dto';
 import { GetGamesDto } from '../dto/get-games.dto';
+import { GameResponseDto } from '../dto/game-response.dto';
+import { GameListResponseDto } from '../dto/game-list-response.dto';
+import { PurchaseInfoDto } from '../dto/purchase-info.dto';
 import { Game } from '../entities/game.entity';
+import { PerformanceInterceptor } from '../common/interceptors/performance.interceptor';
+import { PerformanceMonitoringService } from '../common/services/performance-monitoring.service';
+import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
 
 const mockGameService = {
-  createGame: jest.fn(),
   getAllGames: jest.fn(),
   getGameById: jest.fn(),
-  updateGame: jest.fn(),
-  deleteGame: jest.fn(),
+  getGamePurchaseInfo: jest.fn(),
 };
 
 const mockCacheManager = {
   get: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
+};
+
+const mockPerformanceMonitoringService = {
+  recordEndpointMetrics: jest.fn(),
 };
 
 describe('GameController', () => {
@@ -38,6 +44,18 @@ describe('GameController', () => {
           provide: CACHE_MANAGER,
           useValue: mockCacheManager,
         },
+        {
+          provide: PerformanceInterceptor,
+          useValue: {},
+        },
+        {
+          provide: PerformanceMonitoringService,
+          useValue: mockPerformanceMonitoringService,
+        },
+        {
+          provide: HttpCacheInterceptor,
+          useValue: {},
+        },
         Reflector,
       ],
     }).compile();
@@ -50,60 +68,118 @@ describe('GameController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('create', () => {
-    it('should call gameService.createGame with the correct dto', async () => {
-      const createGameDto: CreateGameDto = { title: 'New Game', price: 100 };
-      const mockGame = new Game();
-      mockGameService.createGame.mockResolvedValue(mockGame);
-
-      const result = await controller.create(createGameDto);
-      expect(service.createGame).toHaveBeenCalledWith(createGameDto);
-      expect(result).toEqual(mockGame);
-    });
-  });
-
-  describe('findAll', () => {
-    it('should call gameService.getAllGames with the correct query', async () => {
+  describe('getGames', () => {
+    it('should return paginated list of games with proper transformation', async () => {
       const getGamesDto: GetGamesDto = { page: 1, limit: 10 };
-      mockGameService.getAllGames.mockResolvedValue({ games: [], total: 0, page: 1, limit: 10, hasNext: false });
+      const mockGame = new Game();
+      mockGame.id = '123e4567-e89b-12d3-a456-426614174000';
+      mockGame.title = 'Test Game';
+      mockGame.price = 1999.99;
+      mockGame.currency = 'RUB';
+      mockGame.available = true;
+      mockGame.createdAt = new Date();
 
-      await controller.findAll(getGamesDto);
+      const mockServiceResponse = {
+        games: [mockGame],
+        total: 1,
+        page: 1,
+        limit: 10,
+        hasNext: false,
+      };
+
+      mockGameService.getAllGames.mockResolvedValue(mockServiceResponse);
+
+      const result = await controller.getGames(getGamesDto);
+
       expect(service.getAllGames).toHaveBeenCalledWith(getGamesDto);
+      expect(result).toBeInstanceOf(GameListResponseDto);
+      expect(result.games).toHaveLength(1);
+      expect(result.games[0]).toBeInstanceOf(GameResponseDto);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+    });
+
+    it('should handle empty results', async () => {
+      const getGamesDto: GetGamesDto = { page: 1, limit: 10 };
+      const mockServiceResponse = {
+        games: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+        hasNext: false,
+      };
+
+      mockGameService.getAllGames.mockResolvedValue(mockServiceResponse);
+
+      const result = await controller.getGames(getGamesDto);
+
+      expect(service.getAllGames).toHaveBeenCalledWith(getGamesDto);
+      expect(result.games).toHaveLength(0);
+      expect(result.total).toBe(0);
     });
   });
 
-  describe('findOne', () => {
-    it('should call gameService.getGameById with the correct id', async () => {
-      const id = 'some-uuid';
+  describe('getGameById', () => {
+    it('should return game details as GameResponseDto', async () => {
+      const id = '123e4567-e89b-12d3-a456-426614174000';
       const mockGame = new Game();
+      mockGame.id = id;
+      mockGame.title = 'Test Game';
+      mockGame.price = 1999.99;
+      mockGame.currency = 'RUB';
+      mockGame.available = true;
+      mockGame.createdAt = new Date();
+
       mockGameService.getGameById.mockResolvedValue(mockGame);
 
-      const result = await controller.findOne(id);
+      const result = await controller.getGameById(id);
+
       expect(service.getGameById).toHaveBeenCalledWith(id);
-      expect(result).toEqual(mockGame);
+      expect(result).toBeInstanceOf(GameResponseDto);
+      expect(result.id).toBe(id);
+      expect(result.title).toBe('Test Game');
+    });
+
+    it('should propagate service errors', async () => {
+      const id = '123e4567-e89b-12d3-a456-426614174000';
+      const error = new Error('Game not found');
+      mockGameService.getGameById.mockRejectedValue(error);
+
+      await expect(controller.getGameById(id)).rejects.toThrow('Game not found');
+      expect(service.getGameById).toHaveBeenCalledWith(id);
     });
   });
 
-  describe('update', () => {
-    it('should call gameService.updateGame with the correct id and dto', async () => {
-      const id = 'some-uuid';
-      const updateGameDto: UpdateGameDto = { title: 'Updated Game' };
-      const mockGame = new Game();
-      mockGameService.updateGame.mockResolvedValue(mockGame);
+  describe('getGamePurchaseInfo', () => {
+    it('should return purchase info for valid game', async () => {
+      const id = '123e4567-e89b-12d3-a456-426614174000';
+      const mockPurchaseInfo = new PurchaseInfoDto({
+        id,
+        title: 'Test Game',
+        price: 1999.99,
+        currency: 'RUB',
+        available: true,
+      } as Game);
 
-      const result = await controller.update(id, updateGameDto);
-      expect(service.updateGame).toHaveBeenCalledWith(id, updateGameDto);
-      expect(result).toEqual(mockGame);
+      mockGameService.getGamePurchaseInfo.mockResolvedValue(mockPurchaseInfo);
+
+      const result = await controller.getGamePurchaseInfo(id);
+
+      expect(service.getGamePurchaseInfo).toHaveBeenCalledWith(id);
+      expect(result).toBeInstanceOf(PurchaseInfoDto);
+      expect(result.id).toBe(id);
+      expect(result.title).toBe('Test Game');
+      expect(result.price).toBe(1999.99);
     });
-  });
 
-  describe('remove', () => {
-    it('should call gameService.deleteGame with the correct id', async () => {
-      const id = 'some-uuid';
-      mockGameService.deleteGame.mockResolvedValue(undefined);
+    it('should propagate service errors for unavailable games', async () => {
+      const id = '123e4567-e89b-12d3-a456-426614174000';
+      const error = new Error('Game not available for purchase');
+      mockGameService.getGamePurchaseInfo.mockRejectedValue(error);
 
-      await controller.remove(id);
-      expect(service.deleteGame).toHaveBeenCalledWith(id);
+      await expect(controller.getGamePurchaseInfo(id)).rejects.toThrow('Game not available for purchase');
+      expect(service.getGamePurchaseInfo).toHaveBeenCalledWith(id);
     });
   });
 });

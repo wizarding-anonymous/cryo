@@ -14,7 +14,9 @@ export class PurchaseInfoDto {
   @ApiProperty({ description: 'The currency of the price.' })
   currency: string;
 
-  @ApiProperty({ description: 'Indicates if the game is available for purchase.' })
+  @ApiProperty({
+    description: 'Indicates if the game is available for purchase.',
+  })
   available: boolean;
 
   constructor(game: Game) {

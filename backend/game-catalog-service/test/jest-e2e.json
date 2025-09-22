@@ -6,5 +6,18 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "setupFilesAfterEnv": ["<rootDir>/setup-e2e.ts"]
+  "setupFilesAfterEnv": ["<rootDir>/setup-e2e.ts"],
+  "testTimeout": 30000,
+  "maxWorkers": 1,
+  "forceExit": true,
+  "detectOpenHandles": true,
+  "collectCoverageFrom": [
+    "src/**/*.(t|j)s",
+    "!src/**/*.spec.ts",
+    "!src/**/*.e2e-spec.ts",
+    "!src/main.ts"
+  ],
+  "coverageDirectory": "../coverage-e2e",
+  "coverageReporters": ["text", "lcov", "html"],
+  "verbose": true
 }

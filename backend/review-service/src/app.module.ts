@@ -8,6 +8,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ReviewModule } from './review/review.module';
 import { HealthModule } from './health/health.module';
+import { WebhookModule } from './webhooks/webhook.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { Review } from './entities/review.entity';
 import { GameRating } from './entities/game-rating.entity';
 
@@ -52,8 +54,14 @@ import appConfig from './config/app.config';
     // Review module
     ReviewModule,
     
+    // Webhook module
+    WebhookModule,
+    
     // Health module
     HealthModule,
+
+    // Metrics module
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

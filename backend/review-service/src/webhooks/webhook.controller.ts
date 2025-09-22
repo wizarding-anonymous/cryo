@@ -15,11 +15,12 @@ import {
   ApiHeader,
 } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
-import { WebhookAuthGuard } from '../guards/webhook-auth.guard';
+import { WebhookAuthGuard } from '../guards';
 import {
   AchievementWebhookDto,
   NotificationWebhookDto,
   GameCatalogWebhookDto,
+  LibraryWebhookDto,
 } from '../dto/webhook.dto';
 
 @ApiTags('webhooks')
@@ -155,6 +156,47 @@ export class WebhookController {
     return {
       success: true,
       message: 'Game catalog webhook processed successfully',
+      timestamp: new Date().toISOString(),
+      data: result,
+    };
+  }
+
+  @Post('library/ownership-change')
+  @UseGuards(WebhookAuthGuard)
+  @ApiOperation({
+    summary: 'Webhook для уведомлений Library Service об изменениях владения играми',
+    description: 'Получает уведомления от Library Service о покупке, возврате или удалении игр из библиотеки',
+  })
+  @ApiHeader({
+    name: 'X-Webhook-Secret',
+    description: 'Секретный ключ для аутентификации webhook',
+    required: true,
+  })
+  @ApiBody({ type: LibraryWebhookDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Webhook успешно обработан',
+    schema: {
+      example: {
+        success: true,
+        message: 'Library webhook processed successfully',
+        timestamp: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  async handleLibraryWebhook(
+    @Body() webhookData: LibraryWebhookDto,
+    @Headers('x-webhook-secret') secret: string,
+  ) {
+    this.logger.debug(`Received library webhook for user ${webhookData.userId}, game ${webhookData.gameId}`);
+
+    const result = await this.webhookService.processLibraryWebhook(webhookData);
+
+    this.logger.log(`Library webhook processed successfully for user ${webhookData.userId}, game ${webhookData.gameId}`);
+
+    return {
+      success: true,
+      message: 'Library webhook processed successfully',
       timestamp: new Date().toISOString(),
       data: result,
     };

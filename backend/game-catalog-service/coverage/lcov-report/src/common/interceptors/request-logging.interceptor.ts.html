@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/14</span>
+                <span class='fraction'>14/14</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/3</span>
+                <span class='fraction'>3/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/12</span>
+                <span class='fraction'>12/12</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -92,7 +92,7 @@
 <a name='L27'></a><a href='#L27'>27</a>
 <a name='L28'></a><a href='#L28'>28</a>
 <a name='L29'></a><a href='#L29'>29</a>
-<a name='L30'></a><a href='#L30'>30</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L30'></a><a href='#L30'>30</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -100,28 +100,28 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import {</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import {
   Injectable,
   NestInterceptor,
   ExecutionContext,
@@ -129,23 +129,23 @@
   Logger,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-<span class="cstat-no" title="statement not covered" >import { tap } from 'rxjs/operators';</span>
+import { tap } from 'rxjs/operators';
 &nbsp;
 @Injectable()
-export <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >class <span class="cstat-no" title="statement not covered" ><span class="cstat-no" title="statement not covered" >R</span>equestLoggingInterceptor </span>implements NestInterceptor {</span></span>
-  private readonly <span class="cstat-no" title="statement not covered" >logger = new Logger('HTTP');</span>
+export class RequestLoggingInterceptor implements NestInterceptor {
+  private readonly logger = new Logger('HTTP');
 &nbsp;
-<span class="fstat-no" title="function not covered" >  intercept(</span>context: ExecutionContext, next: CallHandler): Observable&lt;any&gt; {
-    const request = <span class="cstat-no" title="statement not covered" >context.switchToHttp().getRequest();</span>
-    const { method, originalUrl } = <span class="cstat-no" title="statement not covered" >request;</span>
-    const now = <span class="cstat-no" title="statement not covered" >Date.now();</span>
+  intercept(context: ExecutionContext, next: CallHandler): Observable&lt;any&gt; {
+    const request = context.switchToHttp().getRequest();
+    const { method, originalUrl } = request;
+    const now = Date.now();
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    return next.handle().pipe(</span>
-      tap(<span class="fstat-no" title="function not covered" >() =</span>&gt; {
-        const response = <span class="cstat-no" title="statement not covered" >context.switchToHttp().getResponse();</span>
-        const { statusCode } = <span class="cstat-no" title="statement not covered" >response;</span>
-        const delay = <span class="cstat-no" title="statement not covered" >Date.now() - now;</span>
-<span class="cstat-no" title="statement not covered" >        this.logger.log(`${method} ${originalUrl} ${statusCode} - ${delay}ms`);</span>
+    return next.handle().pipe(
+      tap(() =&gt; {
+        const response = context.switchToHttp().getResponse();
+        const { statusCode } = response;
+        const delay = Date.now() - now;
+        this.logger.log(`${method} ${originalUrl} ${statusCode} - ${delay}ms`);
       }),
     );
   }
@@ -157,7 +157,7 @@ export <span class="cstat-no" title="statement not covered" ><span class="fstat-
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-12T13:33:23.895Z
+                at 2025-09-22T16:09:52.380Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

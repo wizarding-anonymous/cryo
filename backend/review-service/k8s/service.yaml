@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-service
+  namespace: review-service
+  labels:
+    app.kubernetes.io/name: review-service
+    app.kubernetes.io/component: service
+    app.kubernetes.io/part-of: gaming-platform
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3004"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3004
+    targetPort: http
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: review-service
+    app.kubernetes.io/component: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-service-headless
+  namespace: review-service
+  labels:
+    app.kubernetes.io/name: review-service
+    app.kubernetes.io/component: headless-service
+    app.kubernetes.io/part-of: gaming-platform
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http
+    port: 3004
+    targetPort: http
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: review-service
+    app.kubernetes.io/component: api

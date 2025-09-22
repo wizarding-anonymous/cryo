@@ -8,6 +8,7 @@ import {
   AchievementWebhookDto,
   NotificationWebhookDto,
   GameCatalogWebhookDto,
+  LibraryWebhookDto,
 } from '../dto/webhook.dto';
 
 export interface WebhookProcessingResult {
@@ -253,6 +254,75 @@ export class WebhookService {
     }
   }
 
+  async processLibraryWebhook(
+    webhookData: LibraryWebhookDto,
+  ): Promise<WebhookProcessingResult> {
+    try {
+      this.logger.debug(`Processing library webhook: ${JSON.stringify(webhookData)}`);
+
+      // Записываем метрики получения webhook
+      this.metricsService.recordWebhookReceived('library', webhookData.eventType);
+
+      // Обрабатываем различные типы событий библиотеки
+      switch (webhookData.eventType) {
+        case 'GAME_PURCHASED':
+          // При покупке игры инвалидируем кеш владения
+          // Это позволит пользователю сразу оставить отзыв
+          this.logger.log(
+            `Game purchased: User ${webhookData.userId} bought game ${webhookData.gameId}`
+          );
+          break;
+
+        case 'GAME_REMOVED':
+        case 'GAME_REFUNDED':
+          // При удалении или возврате игры проверяем, есть ли отзывы
+          const userReviews = await this.reviewRepository.find({
+            where: {
+              userId: webhookData.userId,
+              gameId: webhookData.gameId,
+            },
+          });
+
+          if (userReviews.length > 0) {
+            this.logger.warn(
+              `User ${webhookData.userId} has ${userReviews.length} reviews for removed/refunded game ${webhookData.gameId}`
+            );
+            
+            // Можем пометить отзывы как требующие проверки
+            // В MVP просто логируем, в будущем можем добавить автоматическое удаление
+          }
+          break;
+
+        default:
+          this.logger.warn(`Unknown library event type: ${webhookData.eventType}`);
+      }
+
+      this.metricsService.recordWebhookProcessed('library', 'success');
+
+      return {
+        processed: true,
+        message: `Library webhook processed for event: ${webhookData.eventType}`,
+        metadata: {
+          userId: webhookData.userId,
+          gameId: webhookData.gameId,
+          eventType: webhookData.eventType,
+          timestamp: webhookData.timestamp,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Failed to process library webhook', error);
+      this.metricsService.recordWebhookProcessed('library', 'error');
+
+      return {
+        processed: false,
+        message: 'Failed to process library webhook',
+        metadata: {
+          error: error.message,
+        },
+      };
+    }
+  }
+
   async getWebhookStatistics(): Promise<{
     achievement: {
       received: number;
@@ -265,6 +335,11 @@ export class WebhookService {
       errors: number;
     };
     gameCatalog: {
+      received: number;
+      processed: number;
+      errors: number;
+    };
+    library: {
       received: number;
       processed: number;
       errors: number;
@@ -288,6 +363,11 @@ export class WebhookService {
         received: summary.webhooksReceived.game_catalog || 0,
         processed: summary.webhooksProcessed.game_catalog || 0,
         errors: summary.webhookErrors.game_catalog || 0,
+      },
+      library: {
+        received: summary.webhooksReceived.library || 0,
+        processed: summary.webhooksProcessed.library || 0,
+        errors: summary.webhookErrors.library || 0,
       },
     };
   }

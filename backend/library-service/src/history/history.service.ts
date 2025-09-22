@@ -28,14 +28,14 @@ export class HistoryService {
       amount: typeof (h as any).amount === 'string' ? parseFloat((h as any).amount) : (h as any).amount,
     }));
     return {
-      purchases: normalized as any,
+      history: normalized as any,
       pagination: {
         total,
         page: queryDto.page,
         limit: queryDto.limit,
         totalPages: Math.ceil(total / queryDto.limit),
       },
-    } as any;
+    };
   }
 
   async getPurchaseDetails(
@@ -73,7 +73,7 @@ export class HistoryService {
   ): Promise<HistoryResponseDto> {
     const allHistory = await this.historyRepository.find({ where: { userId } });
     if (allHistory.length === 0) {
-      return { purchases: [], pagination: { total: 0, page: 1, limit: searchDto.limit, totalPages: 0 } } as any;
+      return { history: [], pagination: { total: 0, page: 1, limit: searchDto.limit, totalPages: 0 } };
     }
 
     const gameIds = [...new Set(allHistory.map((item) => item.gameId))];
@@ -104,13 +104,13 @@ export class HistoryService {
       amount: typeof (h as any).amount === 'string' ? parseFloat((h as any).amount) : (h as any).amount,
     }));
     return {
-      purchases: normalized as any,
+      history: normalized as any,
       pagination: {
         total,
         page,
         limit,
         totalPages,
       },
-    } as any;
+    };
   }
 }

@@ -39,26 +39,26 @@ describe('Library Service E2E with Database', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ 
-      whitelist: true, 
-      forbidNonWhitelisted: true, 
-      transform: true 
+    app.useGlobalPipes(new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true
     }));
     app.setGlobalPrefix('api');
     await app.init();
 
     dataSource = app.get(DataSource);
     jwtService = app.get(JwtService);
-    
+
     // Generate test data
     testUserId = randomUUID();
     testGameId = randomUUID();
     testOrderId = randomUUID();
-    
-    validToken = jwtService.sign({ 
-      sub: testUserId, 
-      username: 'testuser', 
-      roles: ['user'] 
+
+    validToken = jwtService.sign({
+      sub: testUserId,
+      username: 'testuser',
+      roles: ['user']
     });
 
     // Setup mock responses
@@ -85,7 +85,7 @@ describe('Library Service E2E with Database', () => {
     // Clean up test data before each test
     await dataSource.getRepository(LibraryGame).delete({ userId: testUserId });
     await dataSource.getRepository(PurchaseHistory).delete({ userId: testUserId });
-    
+
     // Reset mocks
     mockGameCatalogClient.getGamesByIds.mockClear();
     mockGameCatalogClient.doesGameExist.mockClear();
@@ -179,7 +179,7 @@ describe('Library Service E2E with Database', () => {
       for (let i = 0; i < 5; i++) {
         const gameId = randomUUID();
         gameIds.push(gameId);
-        
+
         await request(app.getHttpServer())
           .post('/api/library/add')
           .send({
@@ -278,10 +278,10 @@ describe('Library Service E2E with Database', () => {
         .set('Authorization', `Bearer ${validToken}`)
         .expect(200);
 
-      expect(historyResponse.body.purchases).toHaveLength(1);
-      expect(historyResponse.body.purchases[0].gameId).toBe(testGameId);
-      expect(historyResponse.body.purchases[0].amount).toBe(29.99);
-      expect(historyResponse.body.purchases[0].status).toBe('completed');
+      expect(historyResponse.body.history).toHaveLength(1);
+      expect(historyResponse.body.history[0].gameId).toBe(testGameId);
+      expect(historyResponse.body.history[0].amount).toBe(29.99);
+      expect(historyResponse.body.history[0].status).toBe('completed');
 
       // Search in history
       const searchHistoryResponse = await request(app.getHttpServer())
@@ -289,7 +289,7 @@ describe('Library Service E2E with Database', () => {
         .set('Authorization', `Bearer ${validToken}`)
         .expect(200);
 
-      expect(searchHistoryResponse.body.purchases).toHaveLength(1);
+      expect(searchHistoryResponse.body.history).toHaveLength(1);
     });
   });
 
@@ -320,7 +320,7 @@ describe('Library Service E2E with Database', () => {
 
     it('should handle non-existent game ownership check', async () => {
       const nonExistentGameId = randomUUID();
-      
+
       const ownershipResponse = await request(app.getHttpServer())
         .get(`/api/library/ownership/${nonExistentGameId}`)
         .set('Authorization', `Bearer ${validToken}`)

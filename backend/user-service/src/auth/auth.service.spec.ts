@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { NotificationClient } from '../integrations/notification/notification.client';
+import { RedisService } from '../common/redis/redis.service';
 import { ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { User } from '../user/entities/user.entity';
@@ -19,9 +19,9 @@ const mockJwtService = {
   decode: jest.fn(),
 };
 
-const mockCacheManager = {
-  set: jest.fn(),
-  get: jest.fn(),
+const mockRedisService = {
+  blacklistToken: jest.fn(),
+  isTokenBlacklisted: jest.fn(),
 };
 
 const mockNotificationClient = {
@@ -37,7 +37,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: UserService, useValue: mockUserService },
         { provide: JwtService, useValue: mockJwtService },
-        { provide: CACHE_MANAGER, useValue: mockCacheManager },
+        { provide: RedisService, useValue: mockRedisService },
         { provide: NotificationClient, useValue: mockNotificationClient },
       ],
     }).compile();
@@ -155,7 +155,7 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    it('should add the token to the cache blacklist with the correct TTL', async () => {
+    it('should add the token to the Redis blacklist with the correct TTL', async () => {
       const token = 'some.jwt.token';
       const now = Date.now();
       const exp = now / 1000 + 3600; // Expires in 1 hour
@@ -167,12 +167,12 @@ describe('AuthService', () => {
       expect(mockJwtService.decode).toHaveBeenCalledWith(token);
       const expectedTtl = decoded.exp * 1000 - now;
       // Check that the TTL is approximately correct
-      expect(mockCacheManager.set).toHaveBeenCalledWith(
+      expect(mockRedisService.blacklistToken).toHaveBeenCalledWith(
         token,
-        'blacklisted',
         expect.any(Number),
       );
-      const actualTtl = mockCacheManager.set.mock.calls[0][2] as number;
+      const actualTtl = mockRedisService.blacklistToken.mock
+        .calls[0][1] as number;
       expect(actualTtl).toBeGreaterThan(expectedTtl - 1000); // Allow for small delay
       expect(actualTtl).toBeLessThanOrEqual(expectedTtl);
     });
@@ -185,7 +185,7 @@ describe('AuthService', () => {
 
       await service.logout(token);
 
-      expect(mockCacheManager.set).not.toHaveBeenCalled();
+      expect(mockRedisService.blacklistToken).not.toHaveBeenCalled();
     });
   });
 });

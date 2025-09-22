@@ -33,7 +33,9 @@ async function bootstrap() {
   // --- Swagger API Documentation ---
   const config = new DocumentBuilder()
     .setTitle('Game Catalog Service API')
-    .setDescription('API documentation for the Game Catalog Service microservice')
+    .setDescription(
+      'API documentation for the Game Catalog Service microservice',
+    )
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);

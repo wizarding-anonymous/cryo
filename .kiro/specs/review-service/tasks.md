@@ -151,7 +151,11 @@
   - Создать health check эндпоинт GET /health для мониторинга
   - _Requirements: Все требования_
 
-- [ ] 10. Интеграция с MVP сервисами
+- [x] 10. Интеграция с MVP сервисами
+
+
+
+
 
 
 
@@ -163,7 +167,13 @@
   - Протестировать все интеграции в рамках MVP
   - _Requirements: 4_
 
-- [ ] 11. Подготовка к production развертыванию MVP
+- [x] 11. Подготовка к production развертыванию MVP
+
+
+
+
+
+
   - Создать оптимизированный Dockerfile
   - Настроить базовые Kubernetes манифесты (Deployment, Service, ConfigMap)
   - Добавить health check endpoints

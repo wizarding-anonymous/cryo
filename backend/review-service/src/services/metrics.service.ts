@@ -1,64 +1,100 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { register, Counter, Histogram, Gauge } from 'prom-client';
 
 @Injectable()
-export class MetricsService {
+export class MetricsService implements OnModuleDestroy {
   private readonly logger = new Logger(MetricsService.name);
 
   // Счетчики для операций с рейтингами
-  private readonly ratingCalculationsCounter = new Counter({
-    name: 'rating_calculations_total',
-    help: 'Total number of rating calculations performed',
-    labelNames: ['game_id', 'operation_type'],
-  });
-
-  private readonly ratingCacheOperationsCounter = new Counter({
-    name: 'rating_cache_operations_total',
-    help: 'Total number of rating cache operations',
-    labelNames: ['operation', 'result'],
-  });
+  private ratingCalculationsCounter: Counter<string>;
+  private ratingCacheOperationsCounter: Counter<string>;
 
   // Гистограммы для времени выполнения
-  private readonly ratingCalculationDuration = new Histogram({
-    name: 'rating_calculation_duration_seconds',
-    help: 'Duration of rating calculations in seconds',
-    labelNames: ['game_id'],
-    buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
-  });
-
-  private readonly ratingCacheOperationDuration = new Histogram({
-    name: 'rating_cache_operation_duration_seconds',
-    help: 'Duration of rating cache operations in seconds',
-    labelNames: ['operation'],
-    buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
-  });
+  private ratingCalculationDuration: Histogram<string>;
+  private ratingCacheOperationDuration: Histogram<string>;
 
   // Gauge для текущих метрик
-  private readonly activeRatingCalculations = new Gauge({
-    name: 'active_rating_calculations',
-    help: 'Number of currently active rating calculations',
-  });
+  private activeRatingCalculations: Gauge<string>;
+  private cachedRatingsCount: Gauge<string>;
+  private averageRatingCalculationTime: Gauge<string>;
 
-  private readonly cachedRatingsCount = new Gauge({
-    name: 'cached_ratings_count',
-    help: 'Number of ratings currently in cache',
-  });
-
-  private readonly averageRatingCalculationTime = new Gauge({
-    name: 'average_rating_calculation_time_seconds',
-    help: 'Average time for rating calculations in seconds',
-  });
+  // Счетчики для webhook операций
+  private webhooksReceivedCounter: Counter<string>;
+  private webhooksProcessedCounter: Counter<string>;
+  private webhookErrorsCounter: Counter<string>;
 
   constructor() {
-    // Регистрируем метрики
-    register.registerMetric(this.ratingCalculationsCounter);
-    register.registerMetric(this.ratingCacheOperationsCounter);
-    register.registerMetric(this.ratingCalculationDuration);
-    register.registerMetric(this.ratingCacheOperationDuration);
-    register.registerMetric(this.activeRatingCalculations);
-    register.registerMetric(this.cachedRatingsCount);
-    register.registerMetric(this.averageRatingCalculationTime);
+    // Очищаем существующие метрики в режиме разработки
+    if (process.env.NODE_ENV !== 'production') {
+      register.clear();
+    }
+
+    // Инициализируем метрики
+    this.initializeMetrics();
   }
+
+  private initializeMetrics(): void {
+    this.ratingCalculationsCounter = new Counter({
+      name: 'rating_calculations_total',
+      help: 'Total number of rating calculations performed',
+      labelNames: ['game_id', 'operation_type'],
+    });
+
+    this.ratingCacheOperationsCounter = new Counter({
+      name: 'rating_cache_operations_total',
+      help: 'Total number of rating cache operations',
+      labelNames: ['operation', 'result'],
+    });
+
+    this.ratingCalculationDuration = new Histogram({
+      name: 'rating_calculation_duration_seconds',
+      help: 'Duration of rating calculations in seconds',
+      labelNames: ['game_id'],
+      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+    });
+
+    this.ratingCacheOperationDuration = new Histogram({
+      name: 'rating_cache_operation_duration_seconds',
+      help: 'Duration of rating cache operations in seconds',
+      labelNames: ['operation'],
+      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
+    });
+
+    this.activeRatingCalculations = new Gauge({
+      name: 'active_rating_calculations',
+      help: 'Number of currently active rating calculations',
+    });
+
+    this.cachedRatingsCount = new Gauge({
+      name: 'cached_ratings_count',
+      help: 'Number of ratings currently in cache',
+    });
+
+    this.averageRatingCalculationTime = new Gauge({
+      name: 'average_rating_calculation_time_seconds',
+      help: 'Average time for rating calculations in seconds',
+    });
+
+    this.webhooksReceivedCounter = new Counter({
+      name: 'webhooks_received_total',
+      help: 'Total number of webhooks received',
+      labelNames: ['service', 'type'],
+    });
+
+    this.webhooksProcessedCounter = new Counter({
+      name: 'webhooks_processed_total',
+      help: 'Total number of webhooks processed',
+      labelNames: ['service', 'status'],
+    });
+
+    this.webhookErrorsCounter = new Counter({
+      name: 'webhook_errors_total',
+      help: 'Total number of webhook processing errors',
+      labelNames: ['service', 'error_type'],
+    });
+  }
+
+
 
   // Методы для отслеживания операций с рейтингами
   recordRatingCalculation(gameId: string, operationType: 'create' | 'update' | 'delete' | 'bulk_recalculate'): void {
@@ -125,7 +161,7 @@ export class MetricsService {
   }> {
     const calculationsMetric = register.getSingleMetric('rating_calculations_total') as Counter<string>;
     const cacheMetric = register.getSingleMetric('rating_cache_operations_total') as Counter<string>;
-    
+
     let totalCalculations = 0;
     let totalCacheOperations = 0;
 
@@ -154,9 +190,74 @@ export class MetricsService {
     };
   }
 
+  // Методы для отслеживания webhook операций
+  recordWebhookReceived(service: string, type: string): void {
+    this.webhooksReceivedCounter.inc({ service, type });
+  }
+
+  recordWebhookProcessed(service: string, status: string): void {
+    this.webhooksProcessedCounter.inc({ service, status });
+  }
+
+  recordWebhookError(service: string, errorType: string): void {
+    this.webhookErrorsCounter.inc({ service, error_type: errorType });
+  }
+
+  // Метод для получения сводной статистики webhook
+  async getWebhookMetricsSummary(): Promise<{
+    webhooksReceived: Record<string, number>;
+    webhooksProcessed: Record<string, number>;
+    webhookErrors: Record<string, number>;
+  }> {
+    const receivedMetric = register.getSingleMetric('webhooks_received_total') as Counter<string>;
+    const processedMetric = register.getSingleMetric('webhooks_processed_total') as Counter<string>;
+    const errorsMetric = register.getSingleMetric('webhook_errors_total') as Counter<string>;
+
+    const webhooksReceived: Record<string, number> = {};
+    const webhooksProcessed: Record<string, number> = {};
+    const webhookErrors: Record<string, number> = {};
+
+    if (receivedMetric) {
+      const receivedData = await receivedMetric.get();
+      receivedData.values.forEach(value => {
+        const service = value.labels.service as string;
+        webhooksReceived[service] = (webhooksReceived[service] || 0) + value.value;
+      });
+    }
+
+    if (processedMetric) {
+      const processedData = await processedMetric.get();
+      processedData.values.forEach(value => {
+        const service = value.labels.service as string;
+        webhooksProcessed[service] = (webhooksProcessed[service] || 0) + value.value;
+      });
+    }
+
+    if (errorsMetric) {
+      const errorsData = await errorsMetric.get();
+      errorsData.values.forEach(value => {
+        const service = value.labels.service as string;
+        webhookErrors[service] = (webhookErrors[service] || 0) + value.value;
+      });
+    }
+
+    return {
+      webhooksReceived,
+      webhooksProcessed,
+      webhookErrors,
+    };
+  }
+
   // Метод для сброса метрик (для тестирования)
   resetMetrics(): void {
     register.clear();
     this.logger.debug('All metrics have been reset');
+  }
+
+  // Метод для безопасного завершения работы
+  onModuleDestroy(): void {
+    if (process.env.NODE_ENV !== 'production') {
+      register.clear();
+    }
   }
 }

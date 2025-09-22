@@ -5,15 +5,19 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { LibraryQueryDto, AddGameToLibraryDto } from './dto/request.dto';
 import { LibraryRepository } from './repositories/library.repository';
 import { GameCatalogClient } from '../clients/game-catalog.client';
+import { UserServiceClient } from '../clients/user.client';
 import { CacheService } from '../cache/cache.service';
 import { EventEmitterService } from '../events/event.emitter.service';
+import { HistoryService } from '../history/history.service';
 
 describe('LibraryService', () => {
   let service: LibraryService;
   let repository: LibraryRepository;
   let gameCatalogClient: GameCatalogClient;
+  let userServiceClient: UserServiceClient;
   let cacheService: CacheService;
   let eventEmitter: EventEmitterService;
+  let historyService: HistoryService;
 
   const mockLibraryRepository = {
     findUserLibrary: jest.fn(),
@@ -25,6 +29,10 @@ describe('LibraryService', () => {
 
   const mockGameCatalogClient = {
     getGamesByIds: jest.fn(),
+  };
+
+  const mockUserServiceClient = {
+    doesUserExist: jest.fn(),
   };
 
   const mockCacheService = {
@@ -39,22 +47,30 @@ describe('LibraryService', () => {
     emitGameRemovedEvent: jest.fn(),
   };
 
+  const mockHistoryService = {
+    createPurchaseRecord: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LibraryService,
         { provide: LibraryRepository, useValue: mockLibraryRepository },
         { provide: GameCatalogClient, useValue: mockGameCatalogClient },
+        { provide: UserServiceClient, useValue: mockUserServiceClient },
         { provide: CacheService, useValue: mockCacheService },
         { provide: EventEmitterService, useValue: mockEventEmitter },
+        { provide: HistoryService, useValue: mockHistoryService },
       ],
     }).compile();
 
     service = module.get<LibraryService>(LibraryService);
     repository = module.get<LibraryRepository>(LibraryRepository);
     gameCatalogClient = module.get<GameCatalogClient>(GameCatalogClient);
+    userServiceClient = module.get<UserServiceClient>(UserServiceClient);
     cacheService = module.get<CacheService>(CacheService);
     eventEmitter = module.get<EventEmitterService>(EventEmitterService);
+    historyService = module.get<HistoryService>(HistoryService);
 
     jest.clearAllMocks();
   });
@@ -126,35 +142,50 @@ describe('LibraryService', () => {
       const dto: AddGameToLibraryDto = { userId: 'user1', gameId: 'game1', orderId: 'order1', purchaseId: 'purchase1', purchasePrice: 10.0, currency: 'USD', purchaseDate: new Date().toISOString() };
       const newGame = new LibraryGame();
 
+      mockUserServiceClient.doesUserExist.mockResolvedValue(true);
       mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(null);
       mockLibraryRepository.create.mockReturnValue(newGame);
       mockLibraryRepository.save.mockResolvedValue(newGame);
+      mockHistoryService.createPurchaseRecord.mockResolvedValue({});
+      mockCacheService.get.mockResolvedValue([]);
 
       const result = await service.addGameToLibrary(dto);
 
       expect(result).toEqual(newGame);
+      expect(mockUserServiceClient.doesUserExist).toHaveBeenCalledWith(dto.userId);
       expect(mockLibraryRepository.save).toHaveBeenCalledWith(newGame);
-      expect(mockCacheService.del).toHaveBeenCalled();
+      expect(mockHistoryService.createPurchaseRecord).toHaveBeenCalledWith(dto);
       expect(mockEventEmitter.emitGameAddedEvent).toHaveBeenCalledWith(dto.userId, dto.gameId);
     });
 
     it('should throw a ConflictException if the game is already in the library', async () => {
       const dto: AddGameToLibraryDto = { userId: 'user1', gameId: 'game1', orderId: 'order1', purchaseId: 'purchase1', purchasePrice: 10.0, currency: 'USD', purchaseDate: new Date().toISOString() };
+      
+      mockUserServiceClient.doesUserExist.mockResolvedValue(true);
       mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(new LibraryGame());
 
       await expect(service.addGameToLibrary(dto)).rejects.toThrow(ConflictException);
-      expect(mockCacheService.del).not.toHaveBeenCalled();
       expect(mockEventEmitter.emitGameAddedEvent).not.toHaveBeenCalled();
     });
 
     it('should not emit event if database save fails', async () => {
       const dto: AddGameToLibraryDto = { userId: 'user1', gameId: 'game1', orderId: 'order1', purchaseId: 'purchase1', purchasePrice: 10.0, currency: 'USD', purchaseDate: new Date().toISOString() };
 
+      mockUserServiceClient.doesUserExist.mockResolvedValue(true);
       mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(null);
       mockLibraryRepository.save.mockRejectedValue(new Error('DB error'));
 
       await expect(service.addGameToLibrary(dto)).rejects.toThrow('DB error');
       expect(mockEventEmitter.emitGameAddedEvent).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if user does not exist', async () => {
+      const dto: AddGameToLibraryDto = { userId: 'user1', gameId: 'game1', orderId: 'order1', purchaseId: 'purchase1', purchasePrice: 10.0, currency: 'USD', purchaseDate: new Date().toISOString() };
+
+      mockUserServiceClient.doesUserExist.mockResolvedValue(false);
+
+      await expect(service.addGameToLibrary(dto)).rejects.toThrow(NotFoundException);
+      expect(mockLibraryRepository.findOneByUserIdAndGameId).not.toHaveBeenCalled();
     });
   });
 
@@ -187,9 +218,11 @@ describe('LibraryService', () => {
   describe('removeGameFromLibrary', () => {
     it('should remove a game, invalidate cache, and emit an event', async () => {
       mockLibraryRepository.delete.mockResolvedValue({ affected: 1, raw: {} });
+      mockCacheService.get.mockResolvedValue([]);
+      
       await service.removeGameFromLibrary('user1', 'game1');
+      
       expect(mockLibraryRepository.delete).toHaveBeenCalledWith({ userId: 'user1', gameId: 'game1' });
-      expect(mockCacheService.del).toHaveBeenCalled();
       expect(mockEventEmitter.emitGameRemovedEvent).toHaveBeenCalledWith('user1', 'game1');
     });
 

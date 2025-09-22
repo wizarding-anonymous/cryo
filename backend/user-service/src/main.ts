@@ -5,9 +5,25 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-import { winstonConfig } from './common/logging/winston.config';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { createWinstonConfig } from './common/logging/winston.config';
 
 async function bootstrap() {
+  // Create Winston configuration based on environment
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const logLevel = process.env.LOG_LEVEL || (nodeEnv === 'production' ? 'info' : 'debug');
+  const logFormat = process.env.LOG_FORMAT as 'json' | 'simple' || (nodeEnv === 'production' ? 'json' : 'simple');
+  const serviceName = process.env.SERVICE_NAME || 'user-service';
+  const serviceVersion = process.env.SERVICE_VERSION || '1.0.0';
+
+  const winstonConfig = createWinstonConfig({
+    level: logLevel,
+    format: logFormat,
+    nodeEnv,
+    serviceName,
+    serviceVersion,
+  });
+
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger(winstonConfig),
   });
@@ -16,9 +32,11 @@ async function bootstrap() {
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
 
-  // Apply global interceptors. The LoggingInterceptor is no longer needed
-  // as Winston now handles request logging.
-  app.useGlobalInterceptors(new ResponseInterceptor());
+  // Apply global interceptors
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new ResponseInterceptor(),
+  );
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(

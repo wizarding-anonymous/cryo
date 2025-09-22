@@ -30,10 +30,10 @@ describe('AppConfigService', () => {
   describe('nodeEnv', () => {
     it('should return NODE_ENV value', () => {
       const mockEnv = 'production';
-      jest.spyOn(configService, 'get').mockReturnValue(mockEnv);
+      const getSpy = jest.spyOn(configService, 'get').mockReturnValue(mockEnv);
 
       expect(service.nodeEnv).toBe(mockEnv);
-      expect(configService.get).toHaveBeenCalledWith('NODE_ENV', {
+      expect(getSpy).toHaveBeenCalledWith('NODE_ENV', {
         infer: true,
       });
     });

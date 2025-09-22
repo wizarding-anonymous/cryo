@@ -13,6 +13,7 @@ import { RatingSchedulerService } from '../services/rating-scheduler.service';
 import { ReviewController } from './review.controller';
 import { RatingController } from './rating.controller';
 import { MetricsController } from './metrics.controller';
+import { ApiController } from './api.controller';
 import { OwnershipGuard } from '../guards';
 
 @Module({
@@ -28,6 +29,7 @@ import { OwnershipGuard } from '../guards';
         ReviewController,
         RatingController,
         MetricsController,
+        ApiController,
     ],
     providers: [
         ReviewService,
