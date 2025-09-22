@@ -15,10 +15,19 @@ export class SearchService {
   ) {}
 
   async searchGames(searchGamesDto: SearchGamesDto): Promise<GameListResponse> {
-    const { q, page, limit, searchType = 'title', minPrice, maxPrice } = searchGamesDto;
+    const {
+      q,
+      page,
+      limit,
+      searchType = 'title',
+      minPrice,
+      maxPrice,
+    } = searchGamesDto;
     const skip = (page - 1) * limit;
 
-    this.logger.log(`Searching games with query: "${q}", page: ${page}, limit: ${limit}, searchType: ${searchType}`);
+    this.logger.log(
+      `Searching games with query: "${q}", page: ${page}, limit: ${limit}, searchType: ${searchType}`,
+    );
 
     try {
       const queryBuilder = this.gameRepository.createQueryBuilder('game');
@@ -59,7 +68,7 @@ export class SearchService {
       };
     } catch (error) {
       this.logger.error(`Error searching games: ${error.message}`, error.stack);
-      
+
       // Return empty results on error to prevent service failure
       return {
         games: [],
@@ -82,19 +91,23 @@ export class SearchService {
       .trim();
 
     // Split into words and join with & for AND search, add :* for prefix matching
-    const words = sanitized.split(' ').filter(word => word.length > 0);
-    
+    const words = sanitized.split(' ').filter((word) => word.length > 0);
+
     if (words.length === 0) {
       return '';
     }
 
-    return words.map(word => `${word}:*`).join(' & ');
+    return words.map((word) => `${word}:*`).join(' & ');
   }
 
   /**
    * Applies PostgreSQL full-text search based on search type
    */
-  private applyFullTextSearch(queryBuilder: any, sanitizedQuery: string, searchType: string): void {
+  private applyFullTextSearch(
+    queryBuilder: any,
+    sanitizedQuery: string,
+    searchType: string,
+  ): void {
     if (!sanitizedQuery) {
       return;
     }
@@ -106,21 +119,21 @@ export class SearchService {
           { query: sanitizedQuery },
         );
         break;
-      
+
       case 'description':
         queryBuilder.andWhere(
           "to_tsvector('russian', COALESCE(game.description, '')) @@ to_tsquery('russian', :query)",
           { query: sanitizedQuery },
         );
         break;
-      
+
       case 'all':
         queryBuilder.andWhere(
           "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '')) @@ to_tsquery('russian', :query)",
           { query: sanitizedQuery },
         );
         break;
-      
+
       default:
         // Default to title search
         queryBuilder.andWhere(

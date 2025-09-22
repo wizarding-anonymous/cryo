@@ -44,7 +44,9 @@ describe('RequestLoggingInterceptor', () => {
       providers: [RequestLoggingInterceptor],
     }).compile();
 
-    interceptor = module.get<RequestLoggingInterceptor>(RequestLoggingInterceptor);
+    interceptor = module.get<RequestLoggingInterceptor>(
+      RequestLoggingInterceptor,
+    );
   });
 
   it('should be defined', () => {
@@ -55,7 +57,10 @@ describe('RequestLoggingInterceptor', () => {
     it('should log GET request with 200 status', (done) => {
       const logSpy = jest.spyOn(interceptor['logger'], 'log');
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result.subscribe(() => {
         expect(logSpy).toHaveBeenCalledWith(
@@ -72,7 +77,10 @@ describe('RequestLoggingInterceptor', () => {
 
       const logSpy = jest.spyOn(interceptor['logger'], 'log');
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result.subscribe(() => {
         expect(logSpy).toHaveBeenCalledWith(
@@ -89,7 +97,10 @@ describe('RequestLoggingInterceptor', () => {
 
       const logSpy = jest.spyOn(interceptor['logger'], 'log');
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result.subscribe(() => {
         expect(logSpy).toHaveBeenCalledWith(
@@ -106,7 +117,10 @@ describe('RequestLoggingInterceptor', () => {
 
       const logSpy = jest.spyOn(interceptor['logger'], 'log');
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result.subscribe(() => {
         expect(logSpy).toHaveBeenCalledWith(
@@ -118,27 +132,31 @@ describe('RequestLoggingInterceptor', () => {
 
     it('should measure and log response time', (done) => {
       const logSpy = jest.spyOn(interceptor['logger'], 'log');
-      
+
       // Mock a delay in the response
       mockCallHandler.handle = jest.fn().mockReturnValue(
-        of('test response').pipe(
+        of('test response')
+          .pipe
           // Simulate some processing time
-        ),
+          (),
       );
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result.subscribe(() => {
         expect(logSpy).toHaveBeenCalledWith(
           expect.stringMatching(/GET \/api\/games 200 - \d+ms/),
         );
-        
+
         // Verify that the logged message contains a time measurement
         const logCall = logSpy.mock.calls[0][0];
         const timeMatch = logCall.match(/(\d+)ms/);
         expect(timeMatch).toBeTruthy();
         expect(parseInt(timeMatch[1])).toBeGreaterThanOrEqual(0);
-        
+
         done();
       });
     });
@@ -147,11 +165,16 @@ describe('RequestLoggingInterceptor', () => {
       mockRequest.originalUrl = '/api/games?page=1&limit=10';
       const logSpy = jest.spyOn(interceptor['logger'], 'log');
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result.subscribe(() => {
         expect(logSpy).toHaveBeenCalledWith(
-          expect.stringMatching(/GET \/api\/games\?page=1&limit=10 200 - \d+ms/),
+          expect.stringMatching(
+            /GET \/api\/games\?page=1&limit=10 200 - \d+ms/,
+          ),
         );
         done();
       });
@@ -161,11 +184,16 @@ describe('RequestLoggingInterceptor', () => {
       mockRequest.originalUrl = '/api/games/search?q=action';
       const logSpy = jest.spyOn(interceptor['logger'], 'log');
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result.subscribe(() => {
         expect(logSpy).toHaveBeenCalledWith(
-          expect.stringMatching(/GET \/api\/games\/search\?q=action 200 - \d+ms/),
+          expect.stringMatching(
+            /GET \/api\/games\/search\?q=action 200 - \d+ms/,
+          ),
         );
         done();
       });
@@ -175,7 +203,10 @@ describe('RequestLoggingInterceptor', () => {
       const testResponse = { id: '1', title: 'Test Game' };
       mockCallHandler.handle = jest.fn().mockReturnValue(of(testResponse));
 
-      const result = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result.subscribe((response) => {
         expect(mockCallHandler.handle).toHaveBeenCalled();

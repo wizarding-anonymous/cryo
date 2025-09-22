@@ -1,8 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext, CallHandler, RequestTimeoutException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  CallHandler,
+  RequestTimeoutException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { of, throwError, delay } from 'rxjs';
-import { TimeoutInterceptor, Timeout, TIMEOUT_METADATA } from './timeout.interceptor';
+import {
+  TimeoutInterceptor,
+  Timeout,
+  TIMEOUT_METADATA,
+} from './timeout.interceptor';
 
 describe('TimeoutInterceptor', () => {
   let interceptor: TimeoutInterceptor;
@@ -59,14 +67,22 @@ describe('TimeoutInterceptor', () => {
   describe('intercept', () => {
     it('should use default timeout when no custom timeout is set', (done) => {
       jest.spyOn(reflector, 'get').mockReturnValue(undefined);
-      jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of('test response'));
+      jest
+        .spyOn(mockCallHandler, 'handle')
+        .mockReturnValue(of('test response'));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
           expect(value).toBe('test response');
-          expect(reflector.get).toHaveBeenCalledWith(TIMEOUT_METADATA, undefined);
+          expect(reflector.get).toHaveBeenCalledWith(
+            TIMEOUT_METADATA,
+            undefined,
+          );
           done();
         },
         error: done,
@@ -76,14 +92,22 @@ describe('TimeoutInterceptor', () => {
     it('should use custom timeout when set via decorator', (done) => {
       const customTimeout = 5000;
       jest.spyOn(reflector, 'get').mockReturnValue(customTimeout);
-      jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of('test response'));
+      jest
+        .spyOn(mockCallHandler, 'handle')
+        .mockReturnValue(of('test response'));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
           expect(value).toBe('test response');
-          expect(reflector.get).toHaveBeenCalledWith(TIMEOUT_METADATA, undefined);
+          expect(reflector.get).toHaveBeenCalledWith(
+            TIMEOUT_METADATA,
+            undefined,
+          );
           done();
         },
         error: done,
@@ -93,11 +117,14 @@ describe('TimeoutInterceptor', () => {
     it('should throw RequestTimeoutException when request times out', (done) => {
       const shortTimeout = 100;
       jest.spyOn(reflector, 'get').mockReturnValue(shortTimeout);
-      jest.spyOn(mockCallHandler, 'handle').mockReturnValue(
-        of('delayed response').pipe(delay(200))
-      );
+      jest
+        .spyOn(mockCallHandler, 'handle')
+        .mockReturnValue(of('delayed response').pipe(delay(200)));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: () => {
@@ -122,9 +149,14 @@ describe('TimeoutInterceptor', () => {
     it('should pass through non-timeout errors', (done) => {
       const customError = new Error('Custom error');
       jest.spyOn(reflector, 'get').mockReturnValue(undefined);
-      jest.spyOn(mockCallHandler, 'handle').mockReturnValue(throwError(() => customError));
+      jest
+        .spyOn(mockCallHandler, 'handle')
+        .mockReturnValue(throwError(() => customError));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: () => {
@@ -141,9 +173,14 @@ describe('TimeoutInterceptor', () => {
     it('should handle request without requestId', (done) => {
       mockRequest.requestId = undefined;
       jest.spyOn(reflector, 'get').mockReturnValue(undefined);
-      jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of('test response'));
+      jest
+        .spyOn(mockCallHandler, 'handle')
+        .mockReturnValue(of('test response'));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -158,7 +195,7 @@ describe('TimeoutInterceptor', () => {
   describe('Timeout decorator', () => {
     it('should set timeout metadata on method', () => {
       const timeoutMs = 5000;
-      
+
       class TestController {
         @Timeout(timeoutMs)
         testMethod() {
@@ -167,14 +204,17 @@ describe('TimeoutInterceptor', () => {
       }
 
       const controller = new TestController();
-      const metadata = Reflect.getMetadata(TIMEOUT_METADATA, controller.testMethod);
-      
+      const metadata = Reflect.getMetadata(
+        TIMEOUT_METADATA,
+        controller.testMethod,
+      );
+
       expect(metadata).toBe(timeoutMs);
     });
 
     it('should set timeout metadata on class', () => {
       const timeoutMs = 10000;
-      
+
       @Timeout(timeoutMs)
       class TestController {
         testMethod() {
@@ -183,7 +223,7 @@ describe('TimeoutInterceptor', () => {
       }
 
       const metadata = Reflect.getMetadata(TIMEOUT_METADATA, TestController);
-      
+
       expect(metadata).toBe(timeoutMs);
     });
   });

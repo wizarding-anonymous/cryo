@@ -93,7 +93,10 @@ export class GameResponseDto {
 
   @ApiProperty({
     description: 'Array of image URLs',
-    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+    example: [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+    ],
     type: [String],
   })
   @Expose()

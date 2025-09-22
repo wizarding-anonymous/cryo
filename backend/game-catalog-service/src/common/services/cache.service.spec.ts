@@ -74,7 +74,11 @@ describe('CacheService', () => {
 
       await service.set('test-key', testValue, 300);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith('test-key', testValue, 300000);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'test-key',
+        testValue,
+        300000,
+      );
     });
 
     it('should handle cache set failures gracefully', async () => {

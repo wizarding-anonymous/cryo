@@ -1,4 +1,10 @@
-import { Controller, Get, Query, Delete, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Delete,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PerformanceMonitoringService } from '../services/performance-monitoring.service';
 import { PerformanceInterceptor } from '../interceptors/performance.interceptor';
@@ -14,13 +20,14 @@ export class PerformanceMonitoringController {
   @Get('stats')
   @ApiOperation({
     summary: 'Get performance statistics',
-    description: 'Retrieve performance statistics for the specified time period'
+    description:
+      'Retrieve performance statistics for the specified time period',
   })
   @ApiQuery({
     name: 'minutes',
     required: false,
     description: 'Time period in minutes (default: 5)',
-    example: 5
+    example: 5,
   })
   @ApiResponse({
     status: 200,
@@ -41,11 +48,11 @@ export class PerformanceMonitoringController {
               endpoint: { type: 'string' },
               avgResponseTime: { type: 'number' },
               count: { type: 'number' },
-            }
-          }
-        }
-      }
-    }
+            },
+          },
+        },
+      },
+    },
   })
   async getPerformanceStats(@Query('minutes') minutes: number = 5) {
     return this.performanceMonitoringService.getPerformanceStats(minutes);
@@ -54,13 +61,14 @@ export class PerformanceMonitoringController {
   @Get('cache-stats')
   @ApiOperation({
     summary: 'Get cache performance statistics',
-    description: 'Retrieve cache performance statistics for the specified time period'
+    description:
+      'Retrieve cache performance statistics for the specified time period',
   })
   @ApiQuery({
     name: 'minutes',
     required: false,
     description: 'Time period in minutes (default: 5)',
-    example: 5
+    example: 5,
   })
   @ApiResponse({
     status: 200,
@@ -73,10 +81,10 @@ export class PerformanceMonitoringController {
         averageResponseTime: { type: 'number' },
         operationBreakdown: {
           type: 'object',
-          additionalProperties: { type: 'number' }
-        }
-      }
-    }
+          additionalProperties: { type: 'number' },
+        },
+      },
+    },
   })
   async getCacheStats(@Query('minutes') minutes: number = 5) {
     return this.performanceMonitoringService.getCacheStats(minutes);
@@ -85,7 +93,7 @@ export class PerformanceMonitoringController {
   @Delete('metrics')
   @ApiOperation({
     summary: 'Clear performance metrics',
-    description: 'Clear all stored performance metrics from memory'
+    description: 'Clear all stored performance metrics from memory',
   })
   @ApiResponse({
     status: 200,
@@ -95,8 +103,8 @@ export class PerformanceMonitoringController {
       properties: {
         success: { type: 'boolean' },
         message: { type: 'string' },
-      }
-    }
+      },
+    },
   })
   async clearMetrics() {
     try {

@@ -100,7 +100,7 @@ describe('GameService', () => {
         page: 1,
         limit: 10,
         sortBy: 'title',
-        sortOrder: 'ASC'
+        sortOrder: 'ASC',
       };
       (repository.findAndCount as jest.Mock).mockResolvedValue([[mockGame], 1]);
 
@@ -157,7 +157,9 @@ describe('GameService', () => {
         .mockResolvedValueOnce(unavailableGame); // Second call for any game
 
       await expect(service.getGameById('unavailable-uuid')).rejects.toThrow(
-        new NotFoundException('Game with ID "unavailable-uuid" is currently unavailable'),
+        new NotFoundException(
+          'Game with ID "unavailable-uuid" is currently unavailable',
+        ),
       );
     });
   });
@@ -206,9 +208,11 @@ describe('GameService', () => {
       const getByIdSpy = jest
         .spyOn(service, 'getGameById')
         .mockResolvedValue(game);
-      
+
       await expect(service.getGamePurchaseInfo('some-uuid')).rejects.toThrow(
-        new NotFoundException('Game with ID "some-uuid" is not available for purchase'),
+        new NotFoundException(
+          'Game with ID "some-uuid" is not available for purchase',
+        ),
       );
       expect(getByIdSpy).toHaveBeenCalledWith('some-uuid');
     });
@@ -228,7 +232,9 @@ describe('GameService', () => {
       const createGameDto: CreateGameDto = { title: 'New Game', price: 100 };
       (repository.create as jest.Mock).mockReturnValue(createGameDto);
       (repository.save as jest.Mock).mockResolvedValue(mockGame);
-      (cacheService.invalidateGameCache as jest.Mock).mockResolvedValue(undefined);
+      (cacheService.invalidateGameCache as jest.Mock).mockResolvedValue(
+        undefined,
+      );
 
       const result = await service.createGame(createGameDto);
       expect(repository.create).toHaveBeenCalledWith(createGameDto);
@@ -243,12 +249,16 @@ describe('GameService', () => {
       const updateGameDto: UpdateGameDto = { title: 'Updated Title' };
       (repository.preload as jest.Mock).mockResolvedValue(mockGame);
       (repository.save as jest.Mock).mockResolvedValue(mockGame);
-      (cacheService.invalidateGameCache as jest.Mock).mockResolvedValue(undefined);
+      (cacheService.invalidateGameCache as jest.Mock).mockResolvedValue(
+        undefined,
+      );
 
       const result = await service.updateGame('some-uuid', updateGameDto);
 
       expect(repository.save).toHaveBeenCalledWith(mockGame);
-      expect(cacheService.invalidateGameCache).toHaveBeenCalledWith('some-uuid');
+      expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(
+        'some-uuid',
+      );
       expect(result).toEqual(mockGame);
     });
 
@@ -264,12 +274,16 @@ describe('GameService', () => {
   describe('deleteGame', () => {
     it('should delete a game successfully', async () => {
       (repository.delete as jest.Mock).mockResolvedValue({ affected: 1 });
-      (cacheService.invalidateGameCache as jest.Mock).mockResolvedValue(undefined);
-      
+      (cacheService.invalidateGameCache as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
       await service.deleteGame('some-uuid');
-      
+
       expect(repository.delete).toHaveBeenCalledWith('some-uuid');
-      expect(cacheService.invalidateGameCache).toHaveBeenCalledWith('some-uuid');
+      expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(
+        'some-uuid',
+      );
     });
 
     it('should throw NotFoundException if game to delete does not exist', async () => {

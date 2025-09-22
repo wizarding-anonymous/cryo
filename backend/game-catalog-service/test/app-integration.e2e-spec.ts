@@ -29,7 +29,7 @@ describe('Application Integration (e2e)', () => {
     images: ['integration1.jpg', 'integration2.jpg'],
     systemRequirements: {
       minimum: 'Minimum system requirements',
-      recommended: 'Recommended system requirements'
+      recommended: 'Recommended system requirements',
     },
     available: true,
     createdAt: new Date(),
@@ -87,14 +87,14 @@ describe('Application Integration (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-    .overrideProvider(getRepositoryToken(Game))
-    .useValue(mockRepository)
-    .overrideProvider(CacheService)
-    .useValue(mockCacheService)
-    .compile();
+      .overrideProvider(getRepositoryToken(Game))
+      .useValue(mockRepository)
+      .overrideProvider(CacheService)
+      .useValue(mockCacheService)
+      .compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Apply the same configuration as main.ts
     app.setGlobalPrefix('api');
     app.useGlobalPipes(
@@ -185,7 +185,10 @@ describe('Application Integration (e2e)', () => {
 
     describe('GET /api/games', () => {
       it('should return paginated games', async () => {
-        gameRepository.findAndCount.mockResolvedValue([mockGames, mockGames.length]);
+        gameRepository.findAndCount.mockResolvedValue([
+          mockGames,
+          mockGames.length,
+        ]);
 
         const response = await request(app.getHttpServer())
           .get('/api/games')
@@ -207,8 +210,11 @@ describe('Application Integration (e2e)', () => {
       });
 
       it('should apply genre filter', async () => {
-        const rpgGames = mockGames.filter(game => game.genre === 'RPG');
-        gameRepository.findAndCount.mockResolvedValue([rpgGames, rpgGames.length]);
+        const rpgGames = mockGames.filter((game) => game.genre === 'RPG');
+        gameRepository.findAndCount.mockResolvedValue([
+          rpgGames,
+          rpgGames.length,
+        ]);
 
         const response = await request(app.getHttpServer())
           .get('/api/games')
@@ -294,7 +300,9 @@ describe('Application Integration (e2e)', () => {
           id: mockGame.id,
           ...updateDto,
         });
-        expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(mockGame.id);
+        expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(
+          mockGame.id,
+        );
       });
 
       it('should return 404 for non-existent game', async () => {
@@ -327,7 +335,9 @@ describe('Application Integration (e2e)', () => {
           .expect(204);
 
         expect(gameRepository.delete).toHaveBeenCalledWith(mockGame.id);
-        expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(mockGame.id);
+        expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(
+          mockGame.id,
+        );
       });
 
       it('should return 404 for non-existent game', async () => {
@@ -375,7 +385,9 @@ describe('Application Integration (e2e)', () => {
     };
 
     beforeEach(() => {
-      gameRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+      gameRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       jest.clearAllMocks();
     });
 
@@ -393,7 +405,7 @@ describe('Application Integration (e2e)', () => {
         expect(response.body.total).toBe(1);
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           "to_tsvector('russian', game.title) @@ to_tsquery('russian', :query)",
-          { query: 'Integration:*' }
+          { query: 'Integration:*' },
         );
       });
 
@@ -407,12 +419,15 @@ describe('Application Integration (e2e)', () => {
 
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           "to_tsvector('russian', COALESCE(game.description, '')) @@ to_tsquery('russian', :query)",
-          { query: 'comprehensive:*' }
+          { query: 'comprehensive:*' },
         );
       });
 
       it('should search across all fields', async () => {
-        mockQueryBuilder.getManyAndCount.mockResolvedValue([mockGames, mockGames.length]);
+        mockQueryBuilder.getManyAndCount.mockResolvedValue([
+          mockGames,
+          mockGames.length,
+        ]);
 
         const response = await request(app.getHttpServer())
           .get('/api/games/search')
@@ -422,13 +437,18 @@ describe('Application Integration (e2e)', () => {
         expect(response.body.games).toHaveLength(mockGames.length);
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '')) @@ to_tsquery('russian', :query)",
-          { query: 'test:*' }
+          { query: 'test:*' },
         );
       });
 
       it('should filter by price range', async () => {
-        const filteredGames = mockGames.filter(game => game.price >= 30 && game.price <= 50);
-        mockQueryBuilder.getManyAndCount.mockResolvedValue([filteredGames, filteredGames.length]);
+        const filteredGames = mockGames.filter(
+          (game) => game.price >= 30 && game.price <= 50,
+        );
+        mockQueryBuilder.getManyAndCount.mockResolvedValue([
+          filteredGames,
+          filteredGames.length,
+        ]);
 
         const response = await request(app.getHttpServer())
           .get('/api/games/search')
@@ -437,11 +457,11 @@ describe('Application Integration (e2e)', () => {
 
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           'game.price >= :minPrice',
-          { minPrice: 30 }
+          { minPrice: 30 },
         );
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           'game.price <= :maxPrice',
-          { maxPrice: 50 }
+          { maxPrice: 50 },
         );
       });
 
@@ -450,35 +470,35 @@ describe('Application Integration (e2e)', () => {
 
         await request(app.getHttpServer())
           .get('/api/games/search')
-          .query({ 
+          .query({
             q: 'adventure',
             minPrice: 20,
             maxPrice: 60,
-            searchType: 'all'
+            searchType: 'all',
           })
           .expect(200);
 
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '')) @@ to_tsquery('russian', :query)",
-          { query: 'adventure:*' }
+          { query: 'adventure:*' },
         );
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           'game.price >= :minPrice',
-          { minPrice: 20 }
+          { minPrice: 20 },
         );
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           'game.price <= :maxPrice',
-          { maxPrice: 60 }
+          { maxPrice: 60 },
         );
       });
 
       it('should validate search parameters', async () => {
         await request(app.getHttpServer())
           .get('/api/games/search')
-          .query({ 
+          .query({
             searchType: 'invalid',
             minPrice: -10,
-            page: 0
+            page: 0,
           })
           .expect(400);
 
@@ -498,7 +518,10 @@ describe('Application Integration (e2e)', () => {
       });
 
       it('should paginate search results', async () => {
-        mockQueryBuilder.getManyAndCount.mockResolvedValue([mockGames.slice(0, 2), 5]);
+        mockQueryBuilder.getManyAndCount.mockResolvedValue([
+          mockGames.slice(0, 2),
+          5,
+        ]);
 
         const response = await request(app.getHttpServer())
           .get('/api/games/search')
@@ -516,11 +539,11 @@ describe('Application Integration (e2e)', () => {
 
   describe('Error Handling', () => {
     it('should handle repository errors gracefully', async () => {
-      gameRepository.findAndCount.mockRejectedValue(new Error('Database connection lost'));
+      gameRepository.findAndCount.mockRejectedValue(
+        new Error('Database connection lost'),
+      );
 
-      await request(app.getHttpServer())
-        .get('/api/games')
-        .expect(500);
+      await request(app.getHttpServer()).get('/api/games').expect(500);
     });
 
     it('should handle cache service errors during game creation', async () => {
@@ -534,7 +557,9 @@ describe('Application Integration (e2e)', () => {
       const newGame = { ...mockGame, ...createGameDto };
       gameRepository.create.mockReturnValue(newGame);
       gameRepository.save.mockResolvedValue(newGame);
-      cacheService.invalidateGameCache.mockRejectedValue(new Error('Cache error'));
+      cacheService.invalidateGameCache.mockRejectedValue(
+        new Error('Cache error'),
+      );
 
       // Should still create the game successfully
       const response = await request(app.getHttpServer())
@@ -555,7 +580,9 @@ describe('Application Integration (e2e)', () => {
         getManyAndCount: jest.fn().mockRejectedValue(new Error('Search error')),
       };
 
-      gameRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+      gameRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       const response = await request(app.getHttpServer())
         .get('/api/games/search')
@@ -595,7 +622,10 @@ describe('Application Integration (e2e)', () => {
     });
 
     it('should return consistent list response format', async () => {
-      gameRepository.findAndCount.mockResolvedValue([mockGames, mockGames.length]);
+      gameRepository.findAndCount.mockResolvedValue([
+        mockGames,
+        mockGames.length,
+      ]);
 
       const response = await request(app.getHttpServer())
         .get('/api/games')

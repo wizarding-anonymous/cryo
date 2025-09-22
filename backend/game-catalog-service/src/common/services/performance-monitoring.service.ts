@@ -31,8 +31,14 @@ export class PerformanceMonitoringService {
   private readonly maxBufferSize = 1000;
 
   constructor(private readonly configService: ConfigService) {
-    this.isEnabled = this.configService.get<boolean>('PERFORMANCE_MONITORING_ENABLED', true);
-    this.slowQueryThreshold = this.configService.get<number>('SLOW_QUERY_THRESHOLD_MS', 500);
+    this.isEnabled = this.configService.get<boolean>(
+      'PERFORMANCE_MONITORING_ENABLED',
+      true,
+    );
+    this.slowQueryThreshold = this.configService.get<number>(
+      'SLOW_QUERY_THRESHOLD_MS',
+      500,
+    );
   }
 
   /**
@@ -47,12 +53,16 @@ export class PerformanceMonitoringService {
 
     // Log slow requests
     if (metrics.responseTime > this.slowQueryThreshold) {
-      this.logger.warn(`Slow request detected: ${metrics.method} ${metrics.endpoint} - ${metrics.responseTime}ms`);
+      this.logger.warn(
+        `Slow request detected: ${metrics.method} ${metrics.endpoint} - ${metrics.responseTime}ms`,
+      );
     }
 
     // Log errors
     if (metrics.status === 'error') {
-      this.logger.error(`Request failed: ${metrics.method} ${metrics.endpoint} - ${metrics.error}`);
+      this.logger.error(
+        `Request failed: ${metrics.method} ${metrics.endpoint} - ${metrics.error}`,
+      );
     }
 
     // Log structured metrics for external monitoring
@@ -71,7 +81,9 @@ export class PerformanceMonitoringService {
     // Log cache performance
     if (metrics.operation === 'get') {
       const status = metrics.hit ? 'HIT' : 'MISS';
-      this.logger.debug(`Cache ${status}: ${metrics.key} (${metrics.responseTime}ms)`);
+      this.logger.debug(
+        `Cache ${status}: ${metrics.key} (${metrics.responseTime}ms)`,
+      );
     }
   }
 
@@ -84,11 +96,19 @@ export class PerformanceMonitoringService {
     slowRequests: number;
     errorRate: number;
     cacheHitRate: number;
-    topSlowEndpoints: Array<{ endpoint: string; avgResponseTime: number; count: number }>;
+    topSlowEndpoints: Array<{
+      endpoint: string;
+      avgResponseTime: number;
+      count: number;
+    }>;
   } {
     const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
-    const recentMetrics = this.metricsBuffer.filter(m => m.timestamp > cutoffTime);
-    const recentCacheMetrics = this.cacheMetricsBuffer.filter(m => m.timestamp > cutoffTime);
+    const recentMetrics = this.metricsBuffer.filter(
+      (m) => m.timestamp > cutoffTime,
+    );
+    const recentCacheMetrics = this.cacheMetricsBuffer.filter(
+      (m) => m.timestamp > cutoffTime,
+    );
 
     if (recentMetrics.length === 0) {
       return {
@@ -103,19 +123,28 @@ export class PerformanceMonitoringService {
 
     // Calculate basic stats
     const totalRequests = recentMetrics.length;
-    const averageResponseTime = recentMetrics.reduce((sum, m) => sum + m.responseTime, 0) / totalRequests;
-    const slowRequests = recentMetrics.filter(m => m.responseTime > this.slowQueryThreshold).length;
-    const errorRequests = recentMetrics.filter(m => m.status === 'error').length;
+    const averageResponseTime =
+      recentMetrics.reduce((sum, m) => sum + m.responseTime, 0) / totalRequests;
+    const slowRequests = recentMetrics.filter(
+      (m) => m.responseTime > this.slowQueryThreshold,
+    ).length;
+    const errorRequests = recentMetrics.filter(
+      (m) => m.status === 'error',
+    ).length;
     const errorRate = (errorRequests / totalRequests) * 100;
 
     // Calculate cache hit rate
-    const cacheGets = recentCacheMetrics.filter(m => m.operation === 'get');
-    const cacheHits = cacheGets.filter(m => m.hit);
-    const cacheHitRate = cacheGets.length > 0 ? (cacheHits.length / cacheGets.length) * 100 : 0;
+    const cacheGets = recentCacheMetrics.filter((m) => m.operation === 'get');
+    const cacheHits = cacheGets.filter((m) => m.hit);
+    const cacheHitRate =
+      cacheGets.length > 0 ? (cacheHits.length / cacheGets.length) * 100 : 0;
 
     // Calculate top slow endpoints
-    const endpointStats = new Map<string, { totalTime: number; count: number }>();
-    recentMetrics.forEach(m => {
+    const endpointStats = new Map<
+      string,
+      { totalTime: number; count: number }
+    >();
+    recentMetrics.forEach((m) => {
       const key = `${m.method} ${m.endpoint}`;
       const existing = endpointStats.get(key) || { totalTime: 0, count: 0 };
       endpointStats.set(key, {
@@ -153,7 +182,9 @@ export class PerformanceMonitoringService {
     operationBreakdown: Record<string, number>;
   } {
     const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
-    const recentMetrics = this.cacheMetricsBuffer.filter(m => m.timestamp > cutoffTime);
+    const recentMetrics = this.cacheMetricsBuffer.filter(
+      (m) => m.timestamp > cutoffTime,
+    );
 
     if (recentMetrics.length === 0) {
       return {
@@ -165,18 +196,24 @@ export class PerformanceMonitoringService {
     }
 
     const totalOperations = recentMetrics.length;
-    const averageResponseTime = recentMetrics.reduce((sum, m) => sum + m.responseTime, 0) / totalOperations;
+    const averageResponseTime =
+      recentMetrics.reduce((sum, m) => sum + m.responseTime, 0) /
+      totalOperations;
 
     // Calculate hit rate for GET operations only
-    const getOperations = recentMetrics.filter(m => m.operation === 'get');
-    const hits = getOperations.filter(m => m.hit);
-    const hitRate = getOperations.length > 0 ? (hits.length / getOperations.length) * 100 : 0;
+    const getOperations = recentMetrics.filter((m) => m.operation === 'get');
+    const hits = getOperations.filter((m) => m.hit);
+    const hitRate =
+      getOperations.length > 0 ? (hits.length / getOperations.length) * 100 : 0;
 
     // Operation breakdown
-    const operationBreakdown = recentMetrics.reduce((acc, m) => {
-      acc[m.operation] = (acc[m.operation] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const operationBreakdown = recentMetrics.reduce(
+      (acc, m) => {
+        acc[m.operation] = (acc[m.operation] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       totalOperations,
@@ -216,7 +253,10 @@ export class PerformanceMonitoringService {
     };
 
     // In production, this could be sent to monitoring systems like Prometheus, DataDog, etc.
-    if (metrics.responseTime > this.slowQueryThreshold || metrics.status === 'error') {
+    if (
+      metrics.responseTime > this.slowQueryThreshold ||
+      metrics.status === 'error'
+    ) {
       this.logger.warn(`Performance alert: ${JSON.stringify(structuredLog)}`);
     } else {
       this.logger.debug(`Performance data: ${JSON.stringify(structuredLog)}`);

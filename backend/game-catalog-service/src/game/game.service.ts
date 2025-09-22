@@ -24,7 +24,7 @@ export class GameService implements IGameService {
 
     // Build where clause with business logic for availability
     const whereClause: any = {};
-    
+
     // Default to showing only available games unless explicitly requested otherwise
     if (available !== undefined) {
       whereClause.available = available;
@@ -68,7 +68,9 @@ export class GameService implements IGameService {
       // Check if game exists but is unavailable for better error messaging
       const unavailableGame = await this.gameRepository.findOneBy({ id });
       if (unavailableGame && !unavailableGame.available) {
-        throw new NotFoundException(`Game with ID "${id}" is currently unavailable`);
+        throw new NotFoundException(
+          `Game with ID "${id}" is currently unavailable`,
+        );
       }
       throw new NotFoundException(`Game with ID "${id}" not found`);
     }
@@ -82,10 +84,10 @@ export class GameService implements IGameService {
   async createGame(createGameDto: CreateGameDto): Promise<Game> {
     const newGame = this.gameRepository.create(createGameDto);
     const savedGame = await this.gameRepository.save(newGame);
-    
+
     // Invalidate relevant caches
     await this.cacheService.invalidateGameCache();
-    
+
     return savedGame;
   }
 
@@ -97,12 +99,12 @@ export class GameService implements IGameService {
     if (!game) {
       throw new NotFoundException(`Game with ID "${id}" not found`);
     }
-    
+
     const updatedGame = await this.gameRepository.save(game);
-    
+
     // Invalidate caches for this specific game and general game lists
     await this.cacheService.invalidateGameCache(id);
-    
+
     return updatedGame;
   }
 
@@ -111,7 +113,7 @@ export class GameService implements IGameService {
     if (result.affected === 0) {
       throw new NotFoundException(`Game with ID "${id}" not found`);
     }
-    
+
     // Invalidate caches for this specific game and general game lists
     await this.cacheService.invalidateGameCache(id);
   }
@@ -120,7 +122,9 @@ export class GameService implements IGameService {
     const game = await this.getGameById(id);
     // Business logic: Additional availability check for purchase operations
     if (!game.available) {
-      throw new NotFoundException(`Game with ID "${id}" is not available for purchase`);
+      throw new NotFoundException(
+        `Game with ID "${id}" is not available for purchase`,
+      );
     }
     // The getGameById method already throws a NotFoundException if the game is not found or unavailable.
     return new PurchaseInfoDto(game);

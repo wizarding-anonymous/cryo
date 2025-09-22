@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CacheService } from './cache.service';
 import { GetGamesDto } from '../../dto/get-games.dto';
@@ -13,14 +19,17 @@ export class CacheWarmingService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly cacheService: CacheService,
   ) {
-    this.isWarmupEnabled = this.configService.get<boolean>('CACHE_WARMUP_ENABLED', true);
+    this.isWarmupEnabled = this.configService.get<boolean>(
+      'CACHE_WARMUP_ENABLED',
+      true,
+    );
   }
 
   async onModuleInit() {
     if (this.isWarmupEnabled) {
       // Delay warmup to allow the application to fully start
       setTimeout(() => {
-        this.warmUpCache().catch(error => {
+        this.warmUpCache().catch((error) => {
           this.logger.error('Cache warmup failed:', error);
         });
       }, 5000);
@@ -37,10 +46,7 @@ export class CacheWarmingService implements OnModuleInit {
     const startTime = Date.now();
 
     try {
-      await Promise.all([
-        this.warmUpGameLists(),
-        this.warmUpPopularSearches(),
-      ]);
+      await Promise.all([this.warmUpGameLists(), this.warmUpPopularSearches()]);
 
       const duration = Date.now() - startTime;
       this.logger.log(`Cache warmup completed in ${duration}ms`);
@@ -69,20 +75,24 @@ export class CacheWarmingService implements OnModuleInit {
 
   private serializeQuery(query: any): string {
     const sortedKeys = Object.keys(query).sort();
-    const pairs = sortedKeys.map(key => `${key}=${query[key]}`);
+    const pairs = sortedKeys.map((key) => `${key}=${query[key]}`);
     return pairs.join('&');
   }
 
   /**
    * Manually trigger cache warmup (useful for admin endpoints)
    */
-  async triggerWarmup(): Promise<{ success: boolean; duration: number; message: string }> {
+  async triggerWarmup(): Promise<{
+    success: boolean;
+    duration: number;
+    message: string;
+  }> {
     const startTime = Date.now();
-    
+
     try {
       await this.warmUpCache();
       const duration = Date.now() - startTime;
-      
+
       return {
         success: true,
         duration,
@@ -90,7 +100,7 @@ export class CacheWarmingService implements OnModuleInit {
       };
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+
       return {
         success: false,
         duration,

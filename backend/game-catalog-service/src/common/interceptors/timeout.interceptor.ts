@@ -17,7 +17,11 @@ export const TIMEOUT_METADATA = 'timeout';
  * @param timeoutMs Timeout in milliseconds
  */
 export const Timeout = (timeoutMs: number) => {
-  return (target: any, _propertyKey?: string, descriptor?: PropertyDescriptor) => {
+  return (
+    target: any,
+    _propertyKey?: string,
+    descriptor?: PropertyDescriptor,
+  ) => {
     if (descriptor) {
       Reflect.defineMetadata(TIMEOUT_METADATA, timeoutMs, descriptor.value);
       return descriptor;
@@ -46,32 +50,37 @@ export class TimeoutInterceptor implements NestInterceptor {
     const startTime = Date.now();
     const requestId = request.requestId || 'unknown';
 
-    this.logger.debug(`[${requestId}] Setting timeout of ${timeoutMs}ms for ${method} ${url}`);
+    this.logger.debug(
+      `[${requestId}] Setting timeout of ${timeoutMs}ms for ${method} ${url}`,
+    );
 
     return next.handle().pipe(
       timeout(timeoutMs),
       catchError((error) => {
         const responseTime = Date.now() - startTime;
-        
+
         if (error instanceof TimeoutError) {
           this.logger.warn(
-            `[${requestId}] Request timeout after ${responseTime}ms (limit: ${timeoutMs}ms) for ${method} ${url}`
+            `[${requestId}] Request timeout after ${responseTime}ms (limit: ${timeoutMs}ms) for ${method} ${url}`,
           );
-          
+
           // Add timeout information to request for monitoring
           request.timedOut = true;
           request.timeoutDuration = timeoutMs;
-          
-          return throwError(() => new RequestTimeoutException({
-            message: `Request timeout after ${timeoutMs}ms`,
-            code: 'REQUEST_TIMEOUT',
-            endpoint: url,
-            method,
-            timeout: timeoutMs,
-            actualDuration: responseTime,
-          }));
+
+          return throwError(
+            () =>
+              new RequestTimeoutException({
+                message: `Request timeout after ${timeoutMs}ms`,
+                code: 'REQUEST_TIMEOUT',
+                endpoint: url,
+                method,
+                timeout: timeoutMs,
+                actualDuration: responseTime,
+              }),
+          );
         }
-        
+
         return throwError(() => error);
       }),
     );

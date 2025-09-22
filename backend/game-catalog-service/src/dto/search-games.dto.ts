@@ -1,4 +1,10 @@
-import { IsOptional, IsString, MinLength, MaxLength, IsIn } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  MinLength,
+  MaxLength,
+  IsIn,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { GetGamesDto } from './get-games.dto';
@@ -38,7 +44,7 @@ export class SearchGamesDto extends GetGamesDto {
     example: 100,
   })
   @IsOptional()
-  @Transform(({ value }) => value ? parseFloat(value) : undefined)
+  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
   minPrice?: number;
 
   @ApiProperty({
@@ -47,6 +53,6 @@ export class SearchGamesDto extends GetGamesDto {
     example: 5000,
   })
   @IsOptional()
-  @Transform(({ value }) => value ? parseFloat(value) : undefined)
+  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
   maxPrice?: number;
 }

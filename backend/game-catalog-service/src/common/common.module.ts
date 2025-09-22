@@ -31,4 +31,4 @@ import { PerformanceMonitoringController } from './controllers/performance-monit
     ResponseTransformationInterceptor,
   ],
 })
-export class CommonModule { }
+export class CommonModule {}

@@ -60,7 +60,7 @@ export const seedTestData = async (): Promise<Game[]> => {
   }
 
   const gameRepository = testDataSource.getRepository(Game);
-  
+
   const testGames = [
     {
       title: 'Test Game 1',
@@ -75,7 +75,7 @@ export const seedTestData = async (): Promise<Game[]> => {
       images: ['test1.jpg'],
       systemRequirements: {
         minimum: 'Test minimum requirements',
-        recommended: 'Test recommended requirements'
+        recommended: 'Test recommended requirements',
       },
       available: true,
     },
@@ -92,7 +92,7 @@ export const seedTestData = async (): Promise<Game[]> => {
       images: ['test2.jpg'],
       systemRequirements: {
         minimum: 'Test minimum requirements 2',
-        recommended: 'Test recommended requirements 2'
+        recommended: 'Test recommended requirements 2',
       },
       available: true,
     },
@@ -109,7 +109,7 @@ export const seedTestData = async (): Promise<Game[]> => {
       images: ['test3.jpg'],
       systemRequirements: {
         minimum: 'Test minimum requirements 3',
-        recommended: 'Test recommended requirements 3'
+        recommended: 'Test recommended requirements 3',
       },
       available: false,
     },

@@ -21,7 +21,7 @@ export class PerformanceInterceptor implements NestInterceptor {
     const startTime = Date.now();
     const request = context.switchToHttp().getRequest();
     const { method, url, query, params } = request;
-    
+
     const requestId = this.generateRequestId();
     request.requestId = requestId;
 
@@ -33,9 +33,9 @@ export class PerformanceInterceptor implements NestInterceptor {
           const responseTime = Date.now() - startTime;
           const responseSize = this.calculateResponseSize(response);
           const cacheHit = request.cacheHit || false;
-          
+
           this.logger.log(
-            `[${requestId}] ${method} ${url} - Completed in ${responseTime}ms (${responseSize} bytes)${cacheHit ? ' [CACHED]' : ''}`
+            `[${requestId}] ${method} ${url} - Completed in ${responseTime}ms (${responseSize} bytes)${cacheHit ? ' [CACHED]' : ''}`,
           );
 
           // Record performance metrics
@@ -51,9 +51,9 @@ export class PerformanceInterceptor implements NestInterceptor {
         },
         error: (error) => {
           const responseTime = Date.now() - startTime;
-          
+
           this.logger.error(
-            `[${requestId}] ${method} ${url} - Failed in ${responseTime}ms: ${error.message}`
+            `[${requestId}] ${method} ${url} - Failed in ${responseTime}ms: ${error.message}`,
           );
 
           // Record error metrics
@@ -78,7 +78,7 @@ export class PerformanceInterceptor implements NestInterceptor {
 
   private calculateResponseSize(response: any): number {
     if (!response) return 0;
-    
+
     try {
       return JSON.stringify(response).length;
     } catch {

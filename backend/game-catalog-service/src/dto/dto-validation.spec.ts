@@ -125,7 +125,7 @@ describe('DTO Validation Tests', () => {
       const dto = plainToClass(CreateGameDto, { price: 59.99 });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(error => error.property === 'title')).toBe(true);
+      expect(errors.some((error) => error.property === 'title')).toBe(true);
     });
 
     it('should fail validation with negative price', async () => {
@@ -135,7 +135,7 @@ describe('DTO Validation Tests', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(error => error.property === 'price')).toBe(true);
+      expect(errors.some((error) => error.property === 'price')).toBe(true);
     });
 
     it('should fail validation with invalid currency length', async () => {
@@ -146,7 +146,7 @@ describe('DTO Validation Tests', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(error => error.property === 'currency')).toBe(true);
+      expect(errors.some((error) => error.property === 'currency')).toBe(true);
     });
 
     it('should use default currency RUB', async () => {
@@ -284,7 +284,7 @@ describe('DTO Validation Tests', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(error => error.property === 'price')).toBe(true);
+      expect(errors.some((error) => error.property === 'price')).toBe(true);
     });
   });
 });

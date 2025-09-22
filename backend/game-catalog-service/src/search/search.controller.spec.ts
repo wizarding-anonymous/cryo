@@ -81,7 +81,7 @@ describe('SearchController', () => {
       mockSearchService.searchGames.mockResolvedValue(mockGameListResponse);
 
       const result = await controller.searchGames(searchGamesDto);
-      
+
       expect(service.searchGames).toHaveBeenCalledWith(searchGamesDto);
       expect(result).toEqual(mockGameListResponse);
     });
@@ -91,7 +91,7 @@ describe('SearchController', () => {
       mockSearchService.searchGames.mockResolvedValue(mockGameListResponse);
 
       const result = await controller.searchGames(searchGamesDto);
-      
+
       expect(service.searchGames).toHaveBeenCalledWith(searchGamesDto);
       expect(result).toEqual(mockGameListResponse);
     });
@@ -100,107 +100,129 @@ describe('SearchController', () => {
       const searchGamesDto: SearchGamesDto = { q: '   ', page: 1, limit: 10 };
 
       await expect(controller.searchGames(searchGamesDto)).rejects.toThrow(
-        new HttpException('Search query cannot be empty', HttpStatus.BAD_REQUEST)
+        new HttpException(
+          'Search query cannot be empty',
+          HttpStatus.BAD_REQUEST,
+        ),
       );
-      
+
       expect(service.searchGames).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when minPrice > maxPrice', async () => {
-      const searchGamesDto: SearchGamesDto = { 
-        q: 'test', 
-        page: 1, 
-        limit: 10, 
-        minPrice: 1000, 
-        maxPrice: 500 
+      const searchGamesDto: SearchGamesDto = {
+        q: 'test',
+        page: 1,
+        limit: 10,
+        minPrice: 1000,
+        maxPrice: 500,
       };
 
       await expect(controller.searchGames(searchGamesDto)).rejects.toThrow(
-        new HttpException('Minimum price cannot be greater than maximum price', HttpStatus.BAD_REQUEST)
+        new HttpException(
+          'Minimum price cannot be greater than maximum price',
+          HttpStatus.BAD_REQUEST,
+        ),
       );
-      
+
       expect(service.searchGames).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for negative minPrice', async () => {
-      const searchGamesDto: SearchGamesDto = { 
-        q: 'test', 
-        page: 1, 
-        limit: 10, 
-        minPrice: -100 
+      const searchGamesDto: SearchGamesDto = {
+        q: 'test',
+        page: 1,
+        limit: 10,
+        minPrice: -100,
       };
 
       await expect(controller.searchGames(searchGamesDto)).rejects.toThrow(
-        new HttpException('Minimum price cannot be negative', HttpStatus.BAD_REQUEST)
+        new HttpException(
+          'Minimum price cannot be negative',
+          HttpStatus.BAD_REQUEST,
+        ),
       );
-      
+
       expect(service.searchGames).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for negative maxPrice', async () => {
-      const searchGamesDto: SearchGamesDto = { 
-        q: 'test', 
-        page: 1, 
-        limit: 10, 
-        maxPrice: -500 
+      const searchGamesDto: SearchGamesDto = {
+        q: 'test',
+        page: 1,
+        limit: 10,
+        maxPrice: -500,
       };
 
       await expect(controller.searchGames(searchGamesDto)).rejects.toThrow(
-        new HttpException('Maximum price cannot be negative', HttpStatus.BAD_REQUEST)
+        new HttpException(
+          'Maximum price cannot be negative',
+          HttpStatus.BAD_REQUEST,
+        ),
       );
-      
+
       expect(service.searchGames).not.toHaveBeenCalled();
     });
 
     it('should handle valid price range filters', async () => {
-      const searchGamesDto: SearchGamesDto = { 
-        q: 'test', 
-        page: 1, 
-        limit: 10, 
-        minPrice: 100, 
-        maxPrice: 1000 
+      const searchGamesDto: SearchGamesDto = {
+        q: 'test',
+        page: 1,
+        limit: 10,
+        minPrice: 100,
+        maxPrice: 1000,
       };
       mockSearchService.searchGames.mockResolvedValue(mockGameListResponse);
 
       const result = await controller.searchGames(searchGamesDto);
-      
+
       expect(service.searchGames).toHaveBeenCalledWith(searchGamesDto);
       expect(result).toEqual(mockGameListResponse);
     });
 
     it('should handle different search types', async () => {
-      const searchGamesDto: SearchGamesDto = { 
-        q: 'test', 
-        page: 1, 
-        limit: 10, 
-        searchType: 'description' 
+      const searchGamesDto: SearchGamesDto = {
+        q: 'test',
+        page: 1,
+        limit: 10,
+        searchType: 'description',
       };
       mockSearchService.searchGames.mockResolvedValue(mockGameListResponse);
 
       const result = await controller.searchGames(searchGamesDto);
-      
+
       expect(service.searchGames).toHaveBeenCalledWith(searchGamesDto);
       expect(result).toEqual(mockGameListResponse);
     });
 
     it('should throw InternalServerErrorException when service throws unexpected error', async () => {
       const searchGamesDto: SearchGamesDto = { q: 'test', page: 1, limit: 10 };
-      mockSearchService.searchGames.mockRejectedValue(new Error('Database connection failed'));
+      mockSearchService.searchGames.mockRejectedValue(
+        new Error('Database connection failed'),
+      );
 
       await expect(controller.searchGames(searchGamesDto)).rejects.toThrow(
-        new HttpException('Search operation failed', HttpStatus.INTERNAL_SERVER_ERROR)
+        new HttpException(
+          'Search operation failed',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        ),
       );
-      
+
       expect(service.searchGames).toHaveBeenCalledWith(searchGamesDto);
     });
 
     it('should re-throw HttpException from service', async () => {
       const searchGamesDto: SearchGamesDto = { q: 'test', page: 1, limit: 10 };
-      const httpException = new HttpException('Service error', HttpStatus.BAD_REQUEST);
+      const httpException = new HttpException(
+        'Service error',
+        HttpStatus.BAD_REQUEST,
+      );
       mockSearchService.searchGames.mockRejectedValue(httpException);
 
-      await expect(controller.searchGames(searchGamesDto)).rejects.toThrow(httpException);
-      
+      await expect(controller.searchGames(searchGamesDto)).rejects.toThrow(
+        httpException,
+      );
+
       expect(service.searchGames).toHaveBeenCalledWith(searchGamesDto);
     });
   });

@@ -26,7 +26,9 @@ export class HealthMonitoringInterceptor implements NestInterceptor {
 
     const { method, url, headers, ip } = request;
     const userAgent = headers['user-agent'] || 'unknown';
-    const requestId = headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const requestId =
+      headers['x-request-id'] ||
+      `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Add request ID to response headers
     response.setHeader('x-request-id', requestId);
@@ -50,14 +52,18 @@ export class HealthMonitoringInterceptor implements NestInterceptor {
 
         // Log performance metrics for slow requests
         if (duration > 1) {
-          this.loggingService.logPerformanceMetrics('http_request', {
-            duration,
-            memoryUsage: process.memoryUsage().heapUsed,
-          }, {
-            requestId,
-            method,
-            url,
-          });
+          this.loggingService.logPerformanceMetrics(
+            'http_request',
+            {
+              duration,
+              memoryUsage: process.memoryUsage().heapUsed,
+            },
+            {
+              requestId,
+              method,
+              url,
+            },
+          );
         }
       }),
       catchError((error) => {

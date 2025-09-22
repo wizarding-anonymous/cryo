@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
+import {
+  HealthIndicator,
+  HealthIndicatorResult,
+  HealthCheckError,
+} from '@nestjs/terminus';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DatabaseConnectionUtil } from './database-connection.util';
@@ -18,8 +22,10 @@ export class DatabaseHealthService extends HealthIndicator {
    */
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     try {
-      const healthResult = await DatabaseConnectionUtil.healthCheck(this.dataSource);
-      
+      const healthResult = await DatabaseConnectionUtil.healthCheck(
+        this.dataSource,
+      );
+
       if (healthResult.status === 'healthy') {
         return this.getStatus(key, true, {
           message: healthResult.message,
@@ -32,7 +38,7 @@ export class DatabaseHealthService extends HealthIndicator {
           this.getStatus(key, false, {
             message: healthResult.message,
             timestamp: healthResult.timestamp,
-          })
+          }),
         );
       }
     } catch (error) {
@@ -41,7 +47,7 @@ export class DatabaseHealthService extends HealthIndicator {
         this.getStatus(key, false, {
           message: error.message,
           timestamp: new Date(),
-        })
+        }),
       );
     }
   }
@@ -63,7 +69,7 @@ export class DatabaseHealthService extends HealthIndicator {
         this.getStatus(key, false, {
           message: error.message,
           timestamp: new Date(),
-        })
+        }),
       );
     }
   }
@@ -75,8 +81,10 @@ export class DatabaseHealthService extends HealthIndicator {
     database: any;
     redis: any;
   }> {
-    const dbStatus = DatabaseConnectionUtil.getConnectionStatus(this.dataSource);
-    
+    const dbStatus = DatabaseConnectionUtil.getConnectionStatus(
+      this.dataSource,
+    );
+
     return {
       database: {
         isConnected: dbStatus.isConnected,

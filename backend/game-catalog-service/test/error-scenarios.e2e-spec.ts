@@ -265,9 +265,9 @@ describe('Error Scenarios and Edge Cases (e2e)', () => {
       });
 
       it('should reject unknown fields in update', async () => {
-        const updateData = { 
+        const updateData = {
           title: 'Updated Title',
-          unknownField: 'should be rejected'
+          unknownField: 'should be rejected',
         };
 
         await request(app.getHttpServer())
@@ -415,9 +415,7 @@ describe('Error Scenarios and Edge Cases (e2e)', () => {
 
   describe('HTTP Method Errors', () => {
     it('should return 405 for unsupported methods on game endpoints', async () => {
-      await request(app.getHttpServer())
-        .put('/api/games')
-        .expect(405);
+      await request(app.getHttpServer()).put('/api/games').expect(405);
     });
 
     it('should return 405 for unsupported methods on specific game endpoints', async () => {
@@ -429,9 +427,7 @@ describe('Error Scenarios and Edge Cases (e2e)', () => {
     });
 
     it('should return 405 for unsupported methods on search endpoints', async () => {
-      await request(app.getHttpServer())
-        .post('/api/games/search')
-        .expect(405);
+      await request(app.getHttpServer()).post('/api/games/search').expect(405);
     });
   });
 
@@ -658,12 +654,12 @@ describe('Error Scenarios and Edge Cases (e2e)', () => {
       const concurrentReads = Array.from({ length: 10 }, () =>
         request(app.getHttpServer())
           .get(`/api/games/${concurrentTestGameId}`)
-          .expect(200)
+          .expect(200),
       );
 
       const responses = await Promise.all(concurrentReads);
-      
-      responses.forEach(response => {
+
+      responses.forEach((response) => {
         expect(response.body.id).toBe(concurrentTestGameId);
         expect(response.body.title).toBe('Concurrent Test Game');
       });
@@ -673,14 +669,15 @@ describe('Error Scenarios and Edge Cases (e2e)', () => {
       const concurrentUpdates = Array.from({ length: 5 }, (_, i) =>
         request(app.getHttpServer())
           .patch(`/api/games/${concurrentTestGameId}`)
-          .send({ title: `Updated Title ${i}` })
+          .send({ title: `Updated Title ${i}` }),
       );
 
       const responses = await Promise.allSettled(concurrentUpdates);
-      
+
       // At least one update should succeed
       const successfulUpdates = responses.filter(
-        result => result.status === 'fulfilled' && result.value.status === 200
+        (result) =>
+          result.status === 'fulfilled' && result.value.status === 200,
       );
       expect(successfulUpdates.length).toBeGreaterThan(0);
     });
@@ -688,18 +685,27 @@ describe('Error Scenarios and Edge Cases (e2e)', () => {
     it('should handle mixed concurrent operations', async () => {
       const mixedOperations = [
         request(app.getHttpServer()).get(`/api/games/${concurrentTestGameId}`),
-        request(app.getHttpServer()).get(`/api/games/${concurrentTestGameId}/purchase-info`),
-        request(app.getHttpServer()).patch(`/api/games/${concurrentTestGameId}`).send({ price: 39.99 }),
-        request(app.getHttpServer()).get('/api/games').query({ page: 1, limit: 5 }),
-        request(app.getHttpServer()).get('/api/games/search').query({ q: 'Concurrent' }),
+        request(app.getHttpServer()).get(
+          `/api/games/${concurrentTestGameId}/purchase-info`,
+        ),
+        request(app.getHttpServer())
+          .patch(`/api/games/${concurrentTestGameId}`)
+          .send({ price: 39.99 }),
+        request(app.getHttpServer())
+          .get('/api/games')
+          .query({ page: 1, limit: 5 }),
+        request(app.getHttpServer())
+          .get('/api/games/search')
+          .query({ q: 'Concurrent' }),
       ];
 
       const responses = await Promise.allSettled(mixedOperations);
-      
+
       // Most operations should succeed
       const successfulOperations = responses.filter(
-        result => result.status === 'fulfilled' && 
-        [200, 201].includes(result.value.status)
+        (result) =>
+          result.status === 'fulfilled' &&
+          [200, 201].includes(result.value.status),
       );
       expect(successfulOperations.length).toBeGreaterThanOrEqual(4);
     });
@@ -708,38 +714,38 @@ describe('Error Scenarios and Edge Cases (e2e)', () => {
   describe('Rate Limiting and Performance', () => {
     it('should handle rapid sequential requests', async () => {
       const rapidRequests = [];
-      
+
       for (let i = 0; i < 20; i++) {
         rapidRequests.push(
           request(app.getHttpServer())
             .get('/api/games')
-            .query({ page: 1, limit: 5 })
+            .query({ page: 1, limit: 5 }),
         );
       }
 
       const responses = await Promise.all(rapidRequests);
-      
+
       // All requests should complete successfully
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect([200, 429]).toContain(response.status); // 200 OK or 429 Too Many Requests
       });
     });
 
     it('should maintain response time under load', async () => {
       const startTime = Date.now();
-      
+
       const loadRequests = Array.from({ length: 10 }, () =>
         request(app.getHttpServer())
           .get('/api/games')
           .query({ page: 1, limit: 10 })
-          .expect(200)
+          .expect(200),
       );
 
       await Promise.all(loadRequests);
-      
+
       const endTime = Date.now();
       const totalTime = endTime - startTime;
-      
+
       // All requests should complete within reasonable time
       expect(totalTime).toBeLessThan(5000); // 5 seconds for 10 concurrent requests
     });

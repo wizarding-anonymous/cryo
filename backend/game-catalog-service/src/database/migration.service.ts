@@ -45,13 +45,15 @@ export class MigrationService {
   }> {
     try {
       const executedMigrations = await this.dataSource.query(
-        'SELECT * FROM migrations ORDER BY timestamp DESC'
+        'SELECT * FROM migrations ORDER BY timestamp DESC',
       );
-      
+
       // Get all migration files
-      const allMigrations = this.dataSource.migrations.map(m => m.name);
-      const executedNames = executedMigrations.map(m => m.name);
-      const pendingMigrations = allMigrations.filter(name => !executedNames.includes(name));
+      const allMigrations = this.dataSource.migrations.map((m) => m.name);
+      const executedNames = executedMigrations.map((m) => m.name);
+      const pendingMigrations = allMigrations.filter(
+        (name) => !executedNames.includes(name),
+      );
 
       return {
         executedMigrations: executedNames,
@@ -76,13 +78,17 @@ export class MigrationService {
         AND table_type = 'BASE TABLE'
       `);
 
-      const tableNames = tables.map(t => t.table_name);
+      const tableNames = tables.map((t) => t.table_name);
       const requiredTables = ['games', 'migrations'];
 
-      const missingTables = requiredTables.filter(table => !tableNames.includes(table));
+      const missingTables = requiredTables.filter(
+        (table) => !tableNames.includes(table),
+      );
 
       if (missingTables.length > 0) {
-        this.logger.error(`Missing required tables: ${missingTables.join(', ')}`);
+        this.logger.error(
+          `Missing required tables: ${missingTables.join(', ')}`,
+        );
         return false;
       }
 
@@ -100,18 +106,20 @@ export class MigrationService {
   async seedDatabase(): Promise<void> {
     try {
       // Check if games table has data
-      const gameCount = await this.dataSource.query('SELECT COUNT(*) FROM games');
-      
+      const gameCount = await this.dataSource.query(
+        'SELECT COUNT(*) FROM games',
+      );
+
       if (parseInt(gameCount[0].count) > 0) {
         this.logger.log('Database already contains data, skipping seed');
         return;
       }
 
       this.logger.log('Seeding database with initial data...');
-      
+
       // The seed data is already included in the migration
       // This method can be extended for additional seeding if needed
-      
+
       this.logger.log('Database seeding completed');
     } catch (error) {
       this.logger.error('Database seeding failed', error);

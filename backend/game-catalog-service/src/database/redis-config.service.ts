@@ -9,12 +9,13 @@ export class RedisConfigService implements CacheOptionsFactory {
   constructor(private configService: ConfigService) {}
 
   async createCacheOptions(): Promise<CacheModuleOptions> {
-    const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
-    
+    const isDevelopment =
+      this.configService.get<string>('NODE_ENV') === 'development';
+
     try {
       // Dynamic import for Redis store
       const { redisStore } = await import('cache-manager-redis-store');
-      
+
       const redisConfig = {
         socket: {
           host: this.configService.get<string>('REDIS_HOST', 'localhost'),
@@ -40,11 +41,14 @@ export class RedisConfigService implements CacheOptionsFactory {
       };
 
       this.logger.log(`Redis cache configured for ${this.getConnectionInfo()}`);
-      
+
       return cacheOptions;
     } catch (error) {
-      this.logger.error('Failed to configure Redis cache, falling back to memory cache', error);
-      
+      this.logger.error(
+        'Failed to configure Redis cache, falling back to memory cache',
+        error,
+      );
+
       // Fallback to memory cache if Redis is not available
       return {
         ttl: 300,
@@ -60,12 +64,14 @@ export class RedisConfigService implements CacheOptionsFactory {
   validateConfig(): boolean {
     const host = this.configService.get<string>('REDIS_HOST');
     const port = this.configService.get<number>('REDIS_PORT');
-    
+
     if (!host || !port) {
-      this.logger.warn('Redis configuration incomplete, will use memory cache as fallback');
+      this.logger.warn(
+        'Redis configuration incomplete, will use memory cache as fallback',
+      );
       return false;
     }
-    
+
     return true;
   }
 
@@ -75,7 +81,7 @@ export class RedisConfigService implements CacheOptionsFactory {
   getConnectionInfo(): string {
     const host = this.configService.get<string>('REDIS_HOST', 'localhost');
     const port = this.configService.get<number>('REDIS_PORT', 6379);
-    
+
     return `${host}:${port}`;
   }
 

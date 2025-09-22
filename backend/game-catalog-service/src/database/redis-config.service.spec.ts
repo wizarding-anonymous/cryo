@@ -53,10 +53,10 @@ describe('RedisConfigService', () => {
     const mockConfigService = {
       get: jest.fn(() => undefined),
     };
-    
+
     const testService = new RedisConfigService(mockConfigService as any);
     const isValid = testService.validateConfig();
-    
+
     expect(isValid).toBe(false);
   });
 
@@ -67,7 +67,7 @@ describe('RedisConfigService', () => {
     });
 
     const options = await service.createCacheOptions();
-    
+
     expect(options).toBeDefined();
     expect(options.ttl).toBe(300);
     expect(options.isGlobal).toBe(true);

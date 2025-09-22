@@ -90,9 +90,15 @@ describe('HealthController', () => {
       };
 
       healthCheckService.check.mockResolvedValue(mockResult);
-      dbHealthIndicator.pingCheck.mockResolvedValue({ database: { status: 'up' } });
-      memoryHealthIndicator.checkHeap.mockResolvedValue({ memory_heap: { status: 'up' } });
-      memoryHealthIndicator.checkRSS.mockResolvedValue({ memory_rss: { status: 'up' } });
+      dbHealthIndicator.pingCheck.mockResolvedValue({
+        database: { status: 'up' },
+      });
+      memoryHealthIndicator.checkHeap.mockResolvedValue({
+        memory_heap: { status: 'up' },
+      });
+      memoryHealthIndicator.checkRSS.mockResolvedValue({
+        memory_rss: { status: 'up' },
+      });
       cacheManager.set.mockResolvedValue(undefined);
       cacheManager.get.mockResolvedValue('test-value');
 
@@ -152,7 +158,9 @@ describe('HealthController', () => {
       };
 
       healthCheckService.check.mockResolvedValue(mockResult);
-      dbHealthIndicator.pingCheck.mockResolvedValue({ database: { status: 'up' } });
+      dbHealthIndicator.pingCheck.mockResolvedValue({
+        database: { status: 'up' },
+      });
       cacheManager.set.mockResolvedValue(undefined);
       cacheManager.get.mockResolvedValue('test-value');
 
@@ -207,7 +215,9 @@ describe('HealthController', () => {
       };
 
       healthCheckService.check.mockResolvedValue(mockResult);
-      memoryHealthIndicator.checkHeap.mockResolvedValue({ memory_heap: { status: 'up' } });
+      memoryHealthIndicator.checkHeap.mockResolvedValue({
+        memory_heap: { status: 'up' },
+      });
 
       const result = await controller.liveness();
 
@@ -268,23 +278,25 @@ describe('HealthController', () => {
     });
 
     it('should handle Redis connection failure with memory fallback', async () => {
-      cacheManager.set.mockRejectedValueOnce(new Error('Redis connection failed'));
+      cacheManager.set.mockRejectedValueOnce(
+        new Error('Redis connection failed'),
+      );
       cacheManager.set.mockResolvedValueOnce(undefined); // Memory cache fallback
       cacheManager.get.mockResolvedValue('test-value');
 
       const mockResult: HealthCheckResult = {
         status: 'ok',
         info: {
-          redis: { 
-            status: 'up', 
+          redis: {
+            status: 'up',
             message: 'Using memory cache fallback (Redis unavailable)',
             fallback: true,
           },
         },
         error: {},
         details: {
-          redis: { 
-            status: 'up', 
+          redis: {
+            status: 'up',
             message: 'Using memory cache fallback (Redis unavailable)',
             fallback: true,
           },

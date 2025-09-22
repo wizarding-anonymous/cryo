@@ -22,7 +22,9 @@ describe('PerformanceInterceptor', () => {
     }).compile();
 
     interceptor = module.get<PerformanceInterceptor>(PerformanceInterceptor);
-    performanceMonitoringService = module.get<PerformanceMonitoringService>(PerformanceMonitoringService);
+    performanceMonitoringService = module.get<PerformanceMonitoringService>(
+      PerformanceMonitoringService,
+    );
   });
 
   it('should be defined', () => {
@@ -46,18 +48,27 @@ describe('PerformanceInterceptor', () => {
     } as CallHandler;
 
     const logSpy = jest.spyOn(interceptor['logger'], 'log');
-    const recordMetricsSpy = jest.spyOn(performanceMonitoringService, 'recordEndpointMetrics');
+    const recordMetricsSpy = jest.spyOn(
+      performanceMonitoringService,
+      'recordEndpointMetrics',
+    );
 
     interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
       next: (result) => {
         expect(result).toEqual({ data: 'test' });
-        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Request started'));
-        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Completed in'));
-        expect(recordMetricsSpy).toHaveBeenCalledWith(expect.objectContaining({
-          endpoint: '/games',
-          method: 'GET',
-          status: 'success',
-        }));
+        expect(logSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Request started'),
+        );
+        expect(logSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Completed in'),
+        );
+        expect(recordMetricsSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            endpoint: '/games',
+            method: 'GET',
+            status: 'success',
+          }),
+        );
         done();
       },
     });
@@ -83,17 +94,24 @@ describe('PerformanceInterceptor', () => {
     } as CallHandler;
 
     const errorSpy = jest.spyOn(interceptor['logger'], 'error');
-    const recordMetricsSpy = jest.spyOn(performanceMonitoringService, 'recordEndpointMetrics');
+    const recordMetricsSpy = jest.spyOn(
+      performanceMonitoringService,
+      'recordEndpointMetrics',
+    );
 
     interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
       error: () => {
-        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed in'));
-        expect(recordMetricsSpy).toHaveBeenCalledWith(expect.objectContaining({
-          endpoint: '/games',
-          method: 'GET',
-          status: 'error',
-          error: 'Test error',
-        }));
+        expect(errorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Failed in'),
+        );
+        expect(recordMetricsSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            endpoint: '/games',
+            method: 'GET',
+            status: 'error',
+            error: 'Test error',
+          }),
+        );
         done();
       },
     });

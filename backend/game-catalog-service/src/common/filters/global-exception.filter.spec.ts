@@ -57,7 +57,10 @@ describe('GlobalExceptionFilter', () => {
 
   describe('catch', () => {
     it('should handle HttpException with validation errors', () => {
-      const validationErrors = ['title should not be empty', 'price must be a number'];
+      const validationErrors = [
+        'title should not be empty',
+        'price must be a number',
+      ];
       const exception = new HttpException(
         { message: validationErrors },
         HttpStatus.BAD_REQUEST,
@@ -79,7 +82,10 @@ describe('GlobalExceptionFilter', () => {
     });
 
     it('should handle HttpException with single error message', () => {
-      const exception = new HttpException('Game not found', HttpStatus.NOT_FOUND);
+      const exception = new HttpException(
+        'Game not found',
+        HttpStatus.NOT_FOUND,
+      );
 
       filter.catch(exception, mockArgumentsHost);
 
@@ -97,7 +103,10 @@ describe('GlobalExceptionFilter', () => {
     });
 
     it('should handle unauthorized exception', () => {
-      const exception = new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      const exception = new HttpException(
+        'Unauthorized',
+        HttpStatus.UNAUTHORIZED,
+      );
 
       filter.catch(exception, mockArgumentsHost);
 

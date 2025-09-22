@@ -51,11 +51,11 @@ class IntegrationTestRunner {
   async setupTestDatabase(): Promise<void> {
     try {
       await this.testDataSource.initialize();
-      
+
       // Drop and recreate schema for clean tests
       await this.testDataSource.dropDatabase();
       await this.testDataSource.synchronize();
-      
+
       console.log('✅ Test database schema created');
       await this.testDataSource.destroy();
     } catch (error) {
@@ -70,14 +70,14 @@ class IntegrationTestRunner {
   async runTestSuite(suiteName: string): Promise<void> {
     try {
       console.log(`\n🧪 Running ${suiteName} tests...`);
-      
+
       const command = `jest --config ./test/jest-e2e.json --testNamePattern="${suiteName}" --verbose`;
-      execSync(command, { 
+      execSync(command, {
         stdio: 'inherit',
         cwd: process.cwd(),
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: { ...process.env, NODE_ENV: 'test' },
       });
-      
+
       console.log(`✅ ${suiteName} tests completed`);
     } catch (error) {
       console.error(`❌ ${suiteName} tests failed`);
@@ -91,14 +91,14 @@ class IntegrationTestRunner {
   async runAllTests(): Promise<void> {
     try {
       console.log('\n🧪 Running all integration and e2e tests...');
-      
+
       const command = 'jest --config ./test/jest-e2e.json --verbose --coverage';
-      execSync(command, { 
+      execSync(command, {
         stdio: 'inherit',
         cwd: process.cwd(),
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: { ...process.env, NODE_ENV: 'test' },
       });
-      
+
       console.log('✅ All integration tests completed');
     } catch (error) {
       console.error('❌ Integration tests failed');
@@ -130,7 +130,7 @@ class IntegrationTestRunner {
     try {
       // Check prerequisites
       console.log('\n📋 Checking prerequisites...');
-      
+
       const dbAvailable = await this.checkDatabaseConnection();
       if (!dbAvailable) {
         console.error('\n❌ Test database is not available. Please ensure:');
@@ -146,7 +146,7 @@ class IntegrationTestRunner {
 
       // Run tests based on command line arguments
       const args = process.argv.slice(2);
-      
+
       if (args.length === 0) {
         // Run all tests
         await this.runAllTests();
@@ -158,7 +158,6 @@ class IntegrationTestRunner {
       }
 
       console.log('\n🎉 All tests completed successfully!');
-      
     } catch (error) {
       console.error('\n💥 Test run failed:', error.message);
       process.exit(1);

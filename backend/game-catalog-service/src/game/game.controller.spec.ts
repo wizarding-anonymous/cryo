@@ -146,7 +146,9 @@ describe('GameController', () => {
       const error = new Error('Game not found');
       mockGameService.getGameById.mockRejectedValue(error);
 
-      await expect(controller.getGameById(id)).rejects.toThrow('Game not found');
+      await expect(controller.getGameById(id)).rejects.toThrow(
+        'Game not found',
+      );
       expect(service.getGameById).toHaveBeenCalledWith(id);
     });
   });
@@ -178,7 +180,9 @@ describe('GameController', () => {
       const error = new Error('Game not available for purchase');
       mockGameService.getGamePurchaseInfo.mockRejectedValue(error);
 
-      await expect(controller.getGamePurchaseInfo(id)).rejects.toThrow('Game not available for purchase');
+      await expect(controller.getGamePurchaseInfo(id)).rejects.toThrow(
+        'Game not available for purchase',
+      );
       expect(service.getGamePurchaseInfo).toHaveBeenCalledWith(id);
     });
   });

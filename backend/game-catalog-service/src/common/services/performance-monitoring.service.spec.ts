@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { PerformanceMonitoringService, PerformanceMetrics, CacheMetrics } from './performance-monitoring.service';
+import {
+  PerformanceMonitoringService,
+  PerformanceMetrics,
+  CacheMetrics,
+} from './performance-monitoring.service';
 
 describe('PerformanceMonitoringService', () => {
   let service: PerformanceMonitoringService;
@@ -28,7 +32,9 @@ describe('PerformanceMonitoringService', () => {
       ],
     }).compile();
 
-    service = module.get<PerformanceMonitoringService>(PerformanceMonitoringService);
+    service = module.get<PerformanceMonitoringService>(
+      PerformanceMonitoringService,
+    );
     configService = module.get<ConfigService>(ConfigService);
   });
 
@@ -68,7 +74,9 @@ describe('PerformanceMonitoringService', () => {
       const warnSpy = jest.spyOn(service['logger'], 'warn');
       service.recordEndpointMetrics(metrics);
 
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Slow request detected'));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Slow request detected'),
+      );
     });
 
     it('should log error requests', () => {
@@ -86,7 +94,9 @@ describe('PerformanceMonitoringService', () => {
       const errorSpy = jest.spyOn(service['logger'], 'error');
       service.recordEndpointMetrics(metrics);
 
-      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Request failed'));
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Request failed'),
+      );
     });
   });
 
@@ -103,7 +113,9 @@ describe('PerformanceMonitoringService', () => {
       const debugSpy = jest.spyOn(service['logger'], 'debug');
       service.recordCacheMetrics(metrics);
 
-      expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('Cache HIT'));
+      expect(debugSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cache HIT'),
+      );
     });
 
     it('should record cache miss', () => {
@@ -118,7 +130,9 @@ describe('PerformanceMonitoringService', () => {
       const debugSpy = jest.spyOn(service['logger'], 'debug');
       service.recordCacheMetrics(metrics);
 
-      expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('Cache MISS'));
+      expect(debugSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cache MISS'),
+      );
     });
   });
 
@@ -170,15 +184,27 @@ describe('PerformanceMonitoringService', () => {
         },
       ];
 
-      metrics.forEach(m => service.recordEndpointMetrics(m));
+      metrics.forEach((m) => service.recordEndpointMetrics(m));
 
       // Add cache metrics
       const cacheMetrics: CacheMetrics[] = [
-        { key: 'test1', operation: 'get', hit: true, responseTime: 5, timestamp: now },
-        { key: 'test2', operation: 'get', hit: false, responseTime: 5, timestamp: now },
+        {
+          key: 'test1',
+          operation: 'get',
+          hit: true,
+          responseTime: 5,
+          timestamp: now,
+        },
+        {
+          key: 'test2',
+          operation: 'get',
+          hit: false,
+          responseTime: 5,
+          timestamp: now,
+        },
       ];
 
-      cacheMetrics.forEach(m => service.recordCacheMetrics(m));
+      cacheMetrics.forEach((m) => service.recordCacheMetrics(m));
 
       const stats = service.getPerformanceStats(5);
 
@@ -206,12 +232,30 @@ describe('PerformanceMonitoringService', () => {
     it('should calculate cache statistics correctly', () => {
       const now = new Date();
       const cacheMetrics: CacheMetrics[] = [
-        { key: 'test1', operation: 'get', hit: true, responseTime: 5, timestamp: now },
-        { key: 'test2', operation: 'get', hit: false, responseTime: 10, timestamp: now },
-        { key: 'test3', operation: 'set', hit: false, responseTime: 15, timestamp: now },
+        {
+          key: 'test1',
+          operation: 'get',
+          hit: true,
+          responseTime: 5,
+          timestamp: now,
+        },
+        {
+          key: 'test2',
+          operation: 'get',
+          hit: false,
+          responseTime: 10,
+          timestamp: now,
+        },
+        {
+          key: 'test3',
+          operation: 'set',
+          hit: false,
+          responseTime: 15,
+          timestamp: now,
+        },
       ];
 
-      cacheMetrics.forEach(m => service.recordCacheMetrics(m));
+      cacheMetrics.forEach((m) => service.recordCacheMetrics(m));
 
       const stats = service.getCacheStats(5);
 
@@ -282,7 +326,9 @@ describe('PerformanceMonitoringService', () => {
         ],
       }).compile();
 
-      const disabledService = module.get<PerformanceMonitoringService>(PerformanceMonitoringService);
+      const disabledService = module.get<PerformanceMonitoringService>(
+        PerformanceMonitoringService,
+      );
 
       const metrics: PerformanceMetrics = {
         endpoint: '/games',

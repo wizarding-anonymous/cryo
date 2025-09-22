@@ -1,4 +1,11 @@
-import { Controller, Post, Get, Delete, Param, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Param,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CacheService } from '../services/cache.service';
 import { CacheWarmingService } from '../services/cache-warming.service';
@@ -16,7 +23,7 @@ export class CacheAdminController {
   @Get('stats')
   @ApiOperation({
     summary: 'Get cache statistics',
-    description: 'Retrieve current cache statistics and health information'
+    description: 'Retrieve current cache statistics and health information',
   })
   @ApiResponse({
     status: 200,
@@ -26,8 +33,8 @@ export class CacheAdminController {
       properties: {
         status: { type: 'string' },
         timestamp: { type: 'string' },
-      }
-    }
+      },
+    },
   })
   async getCacheStats() {
     return this.cacheService.getCacheStats();
@@ -36,7 +43,7 @@ export class CacheAdminController {
   @Post('warmup')
   @ApiOperation({
     summary: 'Trigger cache warmup',
-    description: 'Manually trigger cache warmup for frequently accessed data'
+    description: 'Manually trigger cache warmup for frequently accessed data',
   })
   @ApiResponse({
     status: 200,
@@ -47,8 +54,8 @@ export class CacheAdminController {
         success: { type: 'boolean' },
         duration: { type: 'number' },
         message: { type: 'string' },
-      }
-    }
+      },
+    },
   })
   async triggerCacheWarmup() {
     return this.cacheWarmingService.triggerWarmup();
@@ -57,7 +64,8 @@ export class CacheAdminController {
   @Delete('games')
   @ApiOperation({
     summary: 'Invalidate all game caches',
-    description: 'Clear all cached game data including lists, searches, and individual games'
+    description:
+      'Clear all cached game data including lists, searches, and individual games',
   })
   @ApiResponse({
     status: 200,
@@ -67,8 +75,8 @@ export class CacheAdminController {
       properties: {
         success: { type: 'boolean' },
         message: { type: 'string' },
-      }
-    }
+      },
+    },
   })
   async invalidateGameCaches() {
     try {
@@ -88,12 +96,12 @@ export class CacheAdminController {
   @Delete('games/:id')
   @ApiOperation({
     summary: 'Invalidate cache for specific game',
-    description: 'Clear cached data for a specific game by ID'
+    description: 'Clear cached data for a specific game by ID',
   })
   @ApiParam({
     name: 'id',
     description: 'UUID of the game',
-    example: '123e4567-e89b-12d3-a456-426614174000'
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
     status: 200,
@@ -103,8 +111,8 @@ export class CacheAdminController {
       properties: {
         success: { type: 'boolean' },
         message: { type: 'string' },
-      }
-    }
+      },
+    },
   })
   async invalidateGameCache(@Param('id') gameId: string) {
     try {

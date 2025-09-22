@@ -8,17 +8,17 @@ export class MetricsService {
   // HTTP request metrics
   private readonly httpRequestsTotal: Counter<string>;
   private readonly httpRequestDuration: Histogram<string>;
-  
+
   // Database metrics
   private readonly dbConnectionsActive: Gauge<string>;
   private readonly dbQueryDuration: Histogram<string>;
   private readonly dbQueryErrors: Counter<string>;
-  
+
   // Cache metrics
   private readonly cacheHits: Counter<string>;
   private readonly cacheMisses: Counter<string>;
   private readonly cacheErrors: Counter<string>;
-  
+
   // Application metrics
   private readonly gamesCatalogSize: Gauge<string>;
   private readonly searchRequests: Counter<string>;
@@ -113,11 +113,23 @@ export class MetricsService {
   }
 
   // HTTP metrics methods
-  incrementHttpRequests(method: string, route: string, statusCode: number): void {
-    this.httpRequestsTotal.inc({ method, route, status_code: statusCode.toString() });
+  incrementHttpRequests(
+    method: string,
+    route: string,
+    statusCode: number,
+  ): void {
+    this.httpRequestsTotal.inc({
+      method,
+      route,
+      status_code: statusCode.toString(),
+    });
   }
 
-  recordHttpRequestDuration(method: string, route: string, duration: number): void {
+  recordHttpRequestDuration(
+    method: string,
+    route: string,
+    duration: number,
+  ): void {
     this.httpRequestDuration.observe({ method, route }, duration);
   }
 

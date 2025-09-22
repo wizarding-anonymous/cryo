@@ -202,7 +202,9 @@ describe('SearchService', () => {
         page: 1,
         limit: 10,
       };
-      mockQueryBuilder.getManyAndCount.mockRejectedValue(new Error('Database error'));
+      mockQueryBuilder.getManyAndCount.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const result = await service.searchGames(searchGamesDto);
 
@@ -276,8 +278,14 @@ describe('SearchService', () => {
 
       await service.searchGames(searchGamesDto);
 
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('game.releaseDate', 'DESC');
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith('game.title', 'ASC');
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        'game.releaseDate',
+        'DESC',
+      );
+      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        'game.title',
+        'ASC',
+      );
     });
   });
 });

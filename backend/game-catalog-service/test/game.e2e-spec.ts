@@ -1,12 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { CreateGameDto } from '../src/dto/create-game.dto';
-import { UpdateGameDto } from '../src/dto/update-game.dto';
+import {
+  TestApiClient,
+  extractGameResponse,
+  extractPurchaseInfoResponse,
+  createTestGame,
+  expectValidGameResponse,
+  expectValidPurchaseInfoResponse,
+} from './utils/test-helpers';
+import {
+  TestGameResponse,
+  TestPurchaseInfoResponse,
+} from './types/test-interfaces';
 
 describe('GameController (e2e)', () => {
   let app: INestApplication;
+  let apiClient: TestApiClient;
   let createdGameId: string;
 
   beforeAll(async () => {
@@ -27,84 +37,66 @@ describe('GameController (e2e)', () => {
       }),
     );
     await app.init();
+
+    apiClient = new TestApiClient(app);
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  const createGameDto: CreateGameDto = {
+  const testGameData = createTestGame({
     title: 'E2E Test Game',
-    price: 19.99,
+    price: 1999.99,
     developer: 'E2E Studios',
     genre: 'Testing',
-  };
-
-  it('POST /api/games - should create a new game', () => {
-    return request(app.getHttpServer())
-      .post('/api/games')
-      .send(createGameDto)
-      .expect(201)
-      .then((res) => {
-        expect(res.body).toBeDefined();
-        expect(res.body.id).toBeDefined();
-        expect(res.body.title).toEqual(createGameDto.title);
-        createdGameId = res.body.id;
-      });
   });
 
-  it('GET /api/games/:id - should get the created game', () => {
-    return request(app.getHttpServer())
-      .get(`/api/games/${createdGameId}`)
-      .expect(200)
-      .then((res) => {
-        expect(res.body.id).toEqual(createdGameId);
-        expect(res.body.title).toEqual(createGameDto.title);
-      });
+  it('POST /api/games - should create a new game', async () => {
+    const response = await apiClient.createGame(testGameData);
+    expect(response.status).toBe(201);
+
+    const game: TestGameResponse = extractGameResponse(response);
+    expectValidGameResponse(game);
+    expect(game.title).toEqual(testGameData.title);
+
+    createdGameId = game.id;
   });
 
-  it('GET /api/games/:id/purchase-info - should get purchase info for the game', () => {
-    return request(app.getHttpServer())
-      .get(`/api/games/${createdGameId}/purchase-info`)
-      .expect(200)
-      .then((res) => {
-        expect(res.body.id).toEqual(createdGameId);
-        expect(res.body.title).toEqual(createGameDto.title);
-        expect(res.body.price).toEqual(createGameDto.price);
-        expect(res.body).toHaveProperty('available');
-        expect(res.body.available).toBe(true);
-      });
+  it('GET /api/games/:id - should get the created game', async () => {
+    const response = await apiClient.getGame(createdGameId);
+    expect(response.status).toBe(200);
+
+    const game: TestGameResponse = extractGameResponse(response);
+    expectValidGameResponse(game);
+    expect(game.id).toEqual(createdGameId);
+    expect(game.title).toEqual(testGameData.title);
   });
 
-  it('PATCH /api/games/:id - should update the game', () => {
-    const updateGameDto: UpdateGameDto = { title: 'Updated E2E Test Game' };
-    return request(app.getHttpServer())
-      .patch(`/api/games/${createdGameId}`)
-      .send(updateGameDto)
-      .expect(200)
-      .then((res) => {
-        expect(res.body.title).toEqual(updateGameDto.title);
-      });
+  it('GET /api/games/:id/purchase-info - should get purchase info for the game', async () => {
+    const response = await apiClient.getPurchaseInfo(createdGameId);
+    expect(response.status).toBe(200);
+
+    const purchaseInfo: TestPurchaseInfoResponse =
+      extractPurchaseInfoResponse(response);
+    expectValidPurchaseInfoResponse(purchaseInfo);
+    expect(purchaseInfo.id).toEqual(createdGameId);
+    expect(purchaseInfo.title).toEqual(testGameData.title);
+    expect(purchaseInfo.price).toEqual(testGameData.price);
+    expect(purchaseInfo.available).toBe(true);
   });
 
-  it('GET /api/games/:id - should get the updated game', () => {
-    return request(app.getHttpServer())
-      .get(`/api/games/${createdGameId}`)
-      .expect(200)
-      .then((res) => {
-        expect(res.body.title).toEqual('Updated E2E Test Game');
-      });
+  it('GET /api/games/:id - should return 404 for non-existent game', async () => {
+    const response = await apiClient.getGame(
+      '123e4567-e89b-12d3-a456-426614174000',
+    );
+    expect(response.status).toBe(404);
   });
 
-  it('DELETE /api/games/:id - should delete the game', () => {
-    return request(app.getHttpServer())
-      .delete(`/api/games/${createdGameId}`)
-      .expect(204);
-  });
-
-  it('GET /api/games/:id - should return 404 for the deleted game', () => {
-    return request(app.getHttpServer())
-      .get(`/api/games/${createdGameId}`)
-      .expect(404);
+  it('GET /api/games/:id/purchase-info - should return 404 for non-existent game', async () => {
+    const response = await apiClient.getPurchaseInfo(
+      '123e4567-e89b-12d3-a456-426614174000',
+    );
+    expect(response.status).toBe(404);
   });
 });

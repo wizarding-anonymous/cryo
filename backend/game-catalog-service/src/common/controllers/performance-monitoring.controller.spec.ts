@@ -36,7 +36,9 @@ describe('PerformanceMonitoringController', () => {
         {
           provide: PerformanceMonitoringService,
           useValue: {
-            getPerformanceStats: jest.fn().mockReturnValue(mockPerformanceStats),
+            getPerformanceStats: jest
+              .fn()
+              .mockReturnValue(mockPerformanceStats),
             getCacheStats: jest.fn().mockReturnValue(mockCacheStats),
             clearMetrics: jest.fn(),
           },
@@ -44,8 +46,12 @@ describe('PerformanceMonitoringController', () => {
       ],
     }).compile();
 
-    controller = module.get<PerformanceMonitoringController>(PerformanceMonitoringController);
-    performanceMonitoringService = module.get<PerformanceMonitoringService>(PerformanceMonitoringService);
+    controller = module.get<PerformanceMonitoringController>(
+      PerformanceMonitoringController,
+    );
+    performanceMonitoringService = module.get<PerformanceMonitoringService>(
+      PerformanceMonitoringService,
+    );
   });
 
   it('should be defined', () => {
@@ -56,14 +62,18 @@ describe('PerformanceMonitoringController', () => {
     it('should return performance statistics with default time period', async () => {
       const result = await controller.getPerformanceStats();
 
-      expect(performanceMonitoringService.getPerformanceStats).toHaveBeenCalledWith(5);
+      expect(
+        performanceMonitoringService.getPerformanceStats,
+      ).toHaveBeenCalledWith(5);
       expect(result).toEqual(mockPerformanceStats);
     });
 
     it('should return performance statistics with custom time period', async () => {
       const result = await controller.getPerformanceStats(10);
 
-      expect(performanceMonitoringService.getPerformanceStats).toHaveBeenCalledWith(10);
+      expect(
+        performanceMonitoringService.getPerformanceStats,
+      ).toHaveBeenCalledWith(10);
       expect(result).toEqual(mockPerformanceStats);
     });
   });
@@ -72,14 +82,18 @@ describe('PerformanceMonitoringController', () => {
     it('should return cache statistics with default time period', async () => {
       const result = await controller.getCacheStats();
 
-      expect(performanceMonitoringService.getCacheStats).toHaveBeenCalledWith(5);
+      expect(performanceMonitoringService.getCacheStats).toHaveBeenCalledWith(
+        5,
+      );
       expect(result).toEqual(mockCacheStats);
     });
 
     it('should return cache statistics with custom time period', async () => {
       const result = await controller.getCacheStats(15);
 
-      expect(performanceMonitoringService.getCacheStats).toHaveBeenCalledWith(15);
+      expect(performanceMonitoringService.getCacheStats).toHaveBeenCalledWith(
+        15,
+      );
       expect(result).toEqual(mockCacheStats);
     });
   });
@@ -96,9 +110,11 @@ describe('PerformanceMonitoringController', () => {
     });
 
     it('should handle errors when clearing metrics', async () => {
-      jest.spyOn(performanceMonitoringService, 'clearMetrics').mockImplementation(() => {
-        throw new Error('Clear failed');
-      });
+      jest
+        .spyOn(performanceMonitoringService, 'clearMetrics')
+        .mockImplementation(() => {
+          throw new Error('Clear failed');
+        });
 
       const result = await controller.clearMetrics();
 

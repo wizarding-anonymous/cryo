@@ -32,7 +32,7 @@ describe('Service Integration Tests', () => {
     images: ['test1.jpg'],
     systemRequirements: {
       minimum: 'Test minimum requirements',
-      recommended: 'Test recommended requirements'
+      recommended: 'Test recommended requirements',
     },
     available: true,
     createdAt: new Date(),
@@ -103,9 +103,12 @@ describe('Service Integration Tests', () => {
     describe('getAllGames', () => {
       it('should return paginated games with default filters', async () => {
         const getGamesDto: GetGamesDto = { page: 1, limit: 10 };
-        const availableGames = mockGames.filter(game => game.available);
-        
-        gameRepository.findAndCount.mockResolvedValue([availableGames, availableGames.length]);
+        const availableGames = mockGames.filter((game) => game.available);
+
+        gameRepository.findAndCount.mockResolvedValue([
+          availableGames,
+          availableGames.length,
+        ]);
 
         const result = await gameService.getAllGames(getGamesDto);
 
@@ -127,9 +130,14 @@ describe('Service Integration Tests', () => {
 
       it('should apply genre filter when provided', async () => {
         const getGamesDto: GetGamesDto = { page: 1, limit: 10, genre: 'RPG' };
-        const rpgGames = mockGames.filter(game => game.genre === 'RPG' && game.available);
-        
-        gameRepository.findAndCount.mockResolvedValue([rpgGames, rpgGames.length]);
+        const rpgGames = mockGames.filter(
+          (game) => game.genre === 'RPG' && game.available,
+        );
+
+        gameRepository.findAndCount.mockResolvedValue([
+          rpgGames,
+          rpgGames.length,
+        ]);
 
         const result = await gameService.getAllGames(getGamesDto);
 
@@ -144,14 +152,17 @@ describe('Service Integration Tests', () => {
       });
 
       it('should apply custom sorting when provided', async () => {
-        const getGamesDto: GetGamesDto = { 
-          page: 1, 
-          limit: 10, 
-          sortBy: 'price', 
-          sortOrder: 'ASC' 
+        const getGamesDto: GetGamesDto = {
+          page: 1,
+          limit: 10,
+          sortBy: 'price',
+          sortOrder: 'ASC',
         };
-        
-        gameRepository.findAndCount.mockResolvedValue([mockGames, mockGames.length]);
+
+        gameRepository.findAndCount.mockResolvedValue([
+          mockGames,
+          mockGames.length,
+        ]);
 
         await gameService.getAllGames(getGamesDto);
 
@@ -165,8 +176,11 @@ describe('Service Integration Tests', () => {
 
       it('should calculate hasNext correctly', async () => {
         const getGamesDto: GetGamesDto = { page: 1, limit: 2 };
-        
-        gameRepository.findAndCount.mockResolvedValue([mockGames.slice(0, 2), 5]);
+
+        gameRepository.findAndCount.mockResolvedValue([
+          mockGames.slice(0, 2),
+          5,
+        ]);
 
         const result = await gameService.getAllGames(getGamesDto);
 
@@ -181,9 +195,9 @@ describe('Service Integration Tests', () => {
 
         const result = await gameService.getGameById(mockGame.id);
 
-        expect(gameRepository.findOneBy).toHaveBeenCalledWith({ 
-          id: mockGame.id, 
-          available: true 
+        expect(gameRepository.findOneBy).toHaveBeenCalledWith({
+          id: mockGame.id,
+          available: true,
         });
         expect(result).toEqual(mockGame);
       });
@@ -191,21 +205,23 @@ describe('Service Integration Tests', () => {
       it('should throw NotFoundException when game not found', async () => {
         gameRepository.findOneBy.mockResolvedValue(null);
 
-        await expect(gameService.getGameById('nonexistent-id'))
-          .rejects.toThrow(NotFoundException);
+        await expect(gameService.getGameById('nonexistent-id')).rejects.toThrow(
+          NotFoundException,
+        );
 
         expect(gameRepository.findOneBy).toHaveBeenCalledTimes(2); // First call for available, second for unavailable check
       });
 
       it('should throw specific error when game exists but unavailable', async () => {
         const unavailableGame = { ...mockGame, available: false };
-        
+
         gameRepository.findOneBy
           .mockResolvedValueOnce(null) // First call (available: true)
           .mockResolvedValueOnce(unavailableGame); // Second call (check if exists but unavailable)
 
-        await expect(gameService.getGameById(mockGame.id))
-          .rejects.toThrow('Game with ID "123e4567-e89b-12d3-a456-426614174000" is currently unavailable');
+        await expect(gameService.getGameById(mockGame.id)).rejects.toThrow(
+          'Game with ID "123e4567-e89b-12d3-a456-426614174000" is currently unavailable',
+        );
       });
     });
 
@@ -219,7 +235,7 @@ describe('Service Integration Tests', () => {
         };
 
         const newGame = { ...mockGame, ...createGameDto };
-        
+
         gameRepository.create.mockReturnValue(newGame);
         gameRepository.save.mockResolvedValue(newGame);
 
@@ -242,8 +258,9 @@ describe('Service Integration Tests', () => {
         gameRepository.create.mockReturnValue(mockGame);
         gameRepository.save.mockRejectedValue(new Error('Database error'));
 
-        await expect(gameService.createGame(createGameDto))
-          .rejects.toThrow('Database error');
+        await expect(gameService.createGame(createGameDto)).rejects.toThrow(
+          'Database error',
+        );
 
         expect(cacheService.invalidateGameCache).not.toHaveBeenCalled();
       });
@@ -257,7 +274,7 @@ describe('Service Integration Tests', () => {
         };
 
         const updatedGame = { ...mockGame, ...updateGameDto };
-        
+
         gameRepository.preload.mockResolvedValue(updatedGame);
         gameRepository.save.mockResolvedValue(updatedGame);
 
@@ -268,17 +285,20 @@ describe('Service Integration Tests', () => {
           ...updateGameDto,
         });
         expect(gameRepository.save).toHaveBeenCalledWith(updatedGame);
-        expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(mockGame.id);
+        expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(
+          mockGame.id,
+        );
         expect(result).toEqual(updatedGame);
       });
 
       it('should throw NotFoundException when game to update not found', async () => {
         const updateGameDto: UpdateGameDto = { title: 'Updated Game' };
-        
+
         gameRepository.preload.mockResolvedValue(null);
 
-        await expect(gameService.updateGame('nonexistent-id', updateGameDto))
-          .rejects.toThrow(NotFoundException);
+        await expect(
+          gameService.updateGame('nonexistent-id', updateGameDto),
+        ).rejects.toThrow(NotFoundException);
 
         expect(gameRepository.save).not.toHaveBeenCalled();
         expect(cacheService.invalidateGameCache).not.toHaveBeenCalled();
@@ -292,14 +312,17 @@ describe('Service Integration Tests', () => {
         await gameService.deleteGame(mockGame.id);
 
         expect(gameRepository.delete).toHaveBeenCalledWith(mockGame.id);
-        expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(mockGame.id);
+        expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(
+          mockGame.id,
+        );
       });
 
       it('should throw NotFoundException when game to delete not found', async () => {
         gameRepository.delete.mockResolvedValue({ affected: 0, raw: {} });
 
-        await expect(gameService.deleteGame('nonexistent-id'))
-          .rejects.toThrow(NotFoundException);
+        await expect(gameService.deleteGame('nonexistent-id')).rejects.toThrow(
+          NotFoundException,
+        );
 
         expect(cacheService.invalidateGameCache).not.toHaveBeenCalled();
       });
@@ -321,8 +344,9 @@ describe('Service Integration Tests', () => {
       it('should throw NotFoundException for unavailable game', async () => {
         gameRepository.findOneBy.mockResolvedValue(null);
 
-        await expect(gameService.getGamePurchaseInfo('nonexistent-id'))
-          .rejects.toThrow(NotFoundException);
+        await expect(
+          gameService.getGamePurchaseInfo('nonexistent-id'),
+        ).rejects.toThrow(NotFoundException);
       });
     });
   });
@@ -339,7 +363,7 @@ describe('Service Integration Tests', () => {
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn(),
       };
-      gameRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+      gameRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       jest.clearAllMocks();
     });
 
@@ -359,11 +383,11 @@ describe('Service Integration Tests', () => {
         expect(gameRepository.createQueryBuilder).toHaveBeenCalledWith('game');
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           "to_tsvector('russian', game.title) @@ to_tsquery('russian', :query)",
-          { query: 'test:*' }
+          { query: 'test:*' },
         );
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           'game.available = :available',
-          { available: true }
+          { available: true },
         );
         expect(result).toEqual({
           games: searchResults,
@@ -388,11 +412,11 @@ describe('Service Integration Tests', () => {
 
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           'game.price >= :minPrice',
-          { minPrice: 20 }
+          { minPrice: 20 },
         );
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           'game.price <= :maxPrice',
-          { maxPrice: 50 }
+          { maxPrice: 50 },
         );
       });
 
@@ -410,7 +434,7 @@ describe('Service Integration Tests', () => {
 
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           "to_tsvector('russian', COALESCE(game.description, '')) @@ to_tsquery('russian', :query)",
-          { query: 'adventure:*' }
+          { query: 'adventure:*' },
         );
       });
 
@@ -428,7 +452,7 @@ describe('Service Integration Tests', () => {
 
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '')) @@ to_tsquery('russian', :query)",
-          { query: 'epic:*' }
+          { query: 'epic:*' },
         );
       });
 
@@ -446,7 +470,7 @@ describe('Service Integration Tests', () => {
         // Should sanitize special characters and create proper tsquery
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
           "to_tsvector('russian', game.title) @@ to_tsquery('russian', :query)",
-          { query: 'test:* & game:*' }
+          { query: 'test:* & game:*' },
         );
       });
 
@@ -457,14 +481,17 @@ describe('Service Integration Tests', () => {
           limit: 10,
         };
 
-        mockQueryBuilder.getManyAndCount.mockResolvedValue([mockGames, mockGames.length]);
+        mockQueryBuilder.getManyAndCount.mockResolvedValue([
+          mockGames,
+          mockGames.length,
+        ]);
 
         const result = await searchService.searchGames(searchDto);
 
         // Should not apply text search filter for empty query
         expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
           expect.stringContaining('to_tsvector'),
-          expect.any(Object)
+          expect.any(Object),
         );
         expect(result.games).toEqual(mockGames);
       });
@@ -476,7 +503,9 @@ describe('Service Integration Tests', () => {
           limit: 10,
         };
 
-        mockQueryBuilder.getManyAndCount.mockRejectedValue(new Error('Database error'));
+        mockQueryBuilder.getManyAndCount.mockRejectedValue(
+          new Error('Database error'),
+        );
 
         const result = await searchService.searchGames(searchDto);
 
@@ -510,7 +539,10 @@ describe('Service Integration Tests', () => {
           limit: 2,
         };
 
-        mockQueryBuilder.getManyAndCount.mockResolvedValue([mockGames.slice(0, 2), 5]);
+        mockQueryBuilder.getManyAndCount.mockResolvedValue([
+          mockGames.slice(0, 2),
+          5,
+        ]);
 
         const result = await searchService.searchGames(searchDto);
 
@@ -551,7 +583,9 @@ describe('Service Integration Tests', () => {
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn().mockResolvedValue([[createdGame], 1]),
       };
-      gameRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+      gameRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       const searchResult = await searchService.searchGames(searchDto);
 
@@ -572,7 +606,9 @@ describe('Service Integration Tests', () => {
 
       await gameService.updateGame(mockGame.id, updateDto);
 
-      expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(mockGame.id);
+      expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(
+        mockGame.id,
+      );
     });
 
     it('should handle game deletion and cache cleanup', async () => {
@@ -580,7 +616,9 @@ describe('Service Integration Tests', () => {
 
       await gameService.deleteGame(mockGame.id);
 
-      expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(mockGame.id);
+      expect(cacheService.invalidateGameCache).toHaveBeenCalledWith(
+        mockGame.id,
+      );
     });
 
     it('should maintain data consistency between services', async () => {
@@ -603,7 +641,9 @@ describe('Service Integration Tests', () => {
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn().mockResolvedValue([[mockGame], 1]),
       };
-      gameRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+      gameRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       const searchResult = await searchService.searchGames(searchDto);
 
       // Both services should return consistent data
@@ -615,10 +655,13 @@ describe('Service Integration Tests', () => {
 
   describe('Error Handling Integration', () => {
     it('should handle repository connection errors', async () => {
-      gameRepository.findAndCount.mockRejectedValue(new Error('Connection lost'));
+      gameRepository.findAndCount.mockRejectedValue(
+        new Error('Connection lost'),
+      );
 
-      await expect(gameService.getAllGames({ page: 1, limit: 10 }))
-        .rejects.toThrow('Connection lost');
+      await expect(
+        gameService.getAllGames({ page: 1, limit: 10 }),
+      ).rejects.toThrow('Connection lost');
     });
 
     it('should handle cache service errors gracefully', async () => {
@@ -632,11 +675,15 @@ describe('Service Integration Tests', () => {
       const newGame = { ...mockGame, ...createGameDto };
       gameRepository.create.mockReturnValue(newGame);
       gameRepository.save.mockResolvedValue(newGame);
-      cacheService.invalidateGameCache.mockRejectedValue(new Error('Cache error'));
+      cacheService.invalidateGameCache.mockRejectedValue(
+        new Error('Cache error'),
+      );
 
       // The current implementation doesn't handle cache errors gracefully
       // This test documents the current behavior - cache errors will propagate
-      await expect(gameService.createGame(createGameDto)).rejects.toThrow('Cache error');
+      await expect(gameService.createGame(createGameDto)).rejects.toThrow(
+        'Cache error',
+      );
 
       expect(gameRepository.save).toHaveBeenCalled();
     });
@@ -654,9 +701,13 @@ describe('Service Integration Tests', () => {
         addOrderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockRejectedValue(new Error('Search database error')),
+        getManyAndCount: jest
+          .fn()
+          .mockRejectedValue(new Error('Search database error')),
       };
-      gameRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+      gameRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       const result = await searchService.searchGames(searchDto);
 

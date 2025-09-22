@@ -23,9 +23,17 @@ interface TransformResponseOptions {
  * @param options Transformation options
  */
 export const TransformResponse = (options?: TransformResponseOptions) => {
-  return (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) => {
+  return (
+    target: any,
+    propertyKey?: string,
+    descriptor?: PropertyDescriptor,
+  ) => {
     if (descriptor) {
-      Reflect.defineMetadata(TRANSFORM_RESPONSE_METADATA, options || {}, descriptor.value);
+      Reflect.defineMetadata(
+        TRANSFORM_RESPONSE_METADATA,
+        options || {},
+        descriptor.value,
+      );
       return descriptor;
     }
     Reflect.defineMetadata(TRANSFORM_RESPONSE_METADATA, options || {}, target);
@@ -37,9 +45,17 @@ export const TransformResponse = (options?: TransformResponseOptions) => {
  * Decorator to exclude specific endpoints from response transformation
  */
 export const ExcludeTransform = () => {
-  return (target: any, _propertyKey?: string, descriptor?: PropertyDescriptor) => {
+  return (
+    target: any,
+    _propertyKey?: string,
+    descriptor?: PropertyDescriptor,
+  ) => {
     if (descriptor) {
-      Reflect.defineMetadata(EXCLUDE_TRANSFORM_METADATA, true, descriptor.value);
+      Reflect.defineMetadata(
+        EXCLUDE_TRANSFORM_METADATA,
+        true,
+        descriptor.value,
+      );
       return descriptor;
     }
     Reflect.defineMetadata(EXCLUDE_TRANSFORM_METADATA, true, target);
@@ -100,7 +116,10 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
         // Apply field exclusions if specified
         let transformedData = data;
         if (transformOptions?.excludeFields?.length > 0) {
-          transformedData = this.excludeFields(data, transformOptions.excludeFields);
+          transformedData = this.excludeFields(
+            data,
+            transformOptions.excludeFields,
+          );
         }
 
         // Create base response structure
@@ -127,7 +146,7 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
         }
 
         this.logger.debug(
-          `Response transformed for ${request.method} ${request.url} (${responseTime}ms)`
+          `Response transformed for ${request.method} ${request.url} (${responseTime}ms)`,
         );
 
         return transformedResponse;
@@ -135,7 +154,11 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
     );
   }
 
-  private shouldSkipTransformation(request: any, response: any, data: any): boolean {
+  private shouldSkipTransformation(
+    request: any,
+    response: any,
+    data: any,
+  ): boolean {
     // Skip for health check endpoints
     if (request.url?.includes('/health')) {
       return true;
@@ -166,19 +189,18 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.excludeFields(item, fieldsToExclude));
+      return obj.map((item) => this.excludeFields(item, fieldsToExclude));
     }
 
     const result = { ...obj };
-    fieldsToExclude.forEach(field => {
+    fieldsToExclude.forEach((field) => {
       if (field.includes('.')) {
         // Handle nested field exclusion (e.g., 'user.password')
         const [parentField, ...nestedPath] = field.split('.');
         if (result[parentField]) {
-          result[parentField] = this.excludeFields(
-            result[parentField],
-            [nestedPath.join('.')]
-          );
+          result[parentField] = this.excludeFields(result[parentField], [
+            nestedPath.join('.'),
+          ]);
         }
       } else {
         delete result[field];

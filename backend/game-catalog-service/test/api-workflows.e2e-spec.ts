@@ -19,7 +19,7 @@ describe('API Workflows (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Mirror the main.ts setup for realistic testing
     app.setGlobalPrefix('api');
     app.useGlobalPipes(
@@ -46,7 +46,7 @@ describe('API Workflows (e2e)', () => {
           expect([204, 404]).toContain(res.status);
         });
     }
-    
+
     await app.close();
     await cleanupTestDatabase();
   });
@@ -69,7 +69,7 @@ describe('API Workflows (e2e)', () => {
         images: ['workflow1.jpg', 'workflow2.jpg'],
         systemRequirements: {
           minimum: 'Minimum requirements for workflow test',
-          recommended: 'Recommended requirements for workflow test'
+          recommended: 'Recommended requirements for workflow test',
         },
       };
 
@@ -91,7 +91,9 @@ describe('API Workflows (e2e)', () => {
 
       expect(readResponse.body.id).toBe(gameId);
       expect(readResponse.body.title).toBe(createGameDto.title);
-      expect(readResponse.body.systemRequirements).toEqual(createGameDto.systemRequirements);
+      expect(readResponse.body.systemRequirements).toEqual(
+        createGameDto.systemRequirements,
+      );
 
       // 3. Update the game
       const updateGameDto: UpdateGameDto = {
@@ -128,12 +130,12 @@ describe('API Workflows (e2e)', () => {
         .expect(404);
 
       // Remove from cleanup list since it's already deleted
-      testGameIds = testGameIds.filter(id => id !== gameId);
+      testGameIds = testGameIds.filter((id) => id !== gameId);
     });
   });
 
   describe('Game Catalog Browsing Workflow', () => {
-    let catalogGameIds: string[] = [];
+    const catalogGameIds: string[] = [];
 
     beforeAll(async () => {
       // Create a catalog of test games
@@ -207,18 +209,20 @@ describe('API Workflows (e2e)', () => {
 
         expect(page2Response.body.games).toBeDefined();
         expect(page2Response.body.page).toBe(2);
-        
+
         // Verify no duplicate games between pages
         const page1Ids = page1Response.body.games.map((game: any) => game.id);
         const page2Ids = page2Response.body.games.map((game: any) => game.id);
-        const intersection = page1Ids.filter((id: string) => page2Ids.includes(id));
+        const intersection = page1Ids.filter((id: string) =>
+          page2Ids.includes(id),
+        );
         expect(intersection).toHaveLength(0);
       }
     });
 
     it('should get detailed game information', async () => {
       const gameId = catalogGameIds[0];
-      
+
       const response = await request(app.getHttpServer())
         .get(`/api/games/${gameId}`)
         .expect(200);
@@ -234,7 +238,7 @@ describe('API Workflows (e2e)', () => {
 
     it('should get purchase information for games', async () => {
       const gameId = catalogGameIds[0];
-      
+
       const response = await request(app.getHttpServer())
         .get(`/api/games/${gameId}/purchase-info`)
         .expect(200);
@@ -249,7 +253,7 @@ describe('API Workflows (e2e)', () => {
   });
 
   describe('Game Search and Discovery Workflow', () => {
-    let searchGameIds: string[] = [];
+    const searchGameIds: string[] = [];
 
     beforeAll(async () => {
       // Create games with specific search terms
@@ -303,9 +307,9 @@ describe('API Workflows (e2e)', () => {
       expect(response.body.games).toBeDefined();
       expect(response.body.total).toBeGreaterThan(0);
       expect(response.body.games.length).toBeGreaterThan(0);
-      
-      const foundGame = response.body.games.find((game: any) => 
-        game.title.includes('Cyberpunk')
+
+      const foundGame = response.body.games.find((game: any) =>
+        game.title.includes('Cyberpunk'),
       );
       expect(foundGame).toBeDefined();
     });
@@ -318,9 +322,11 @@ describe('API Workflows (e2e)', () => {
 
       expect(response.body.games).toBeDefined();
       expect(response.body.total).toBeGreaterThan(0);
-      
-      const hasAdventureInDescription = response.body.games.some((game: any) =>
-        game.description && game.description.toLowerCase().includes('adventure')
+
+      const hasAdventureInDescription = response.body.games.some(
+        (game: any) =>
+          game.description &&
+          game.description.toLowerCase().includes('adventure'),
       );
       expect(hasAdventureInDescription).toBe(true);
     });
@@ -333,12 +339,13 @@ describe('API Workflows (e2e)', () => {
 
       expect(response.body.games).toBeDefined();
       expect(response.body.total).toBeGreaterThan(0);
-      
+
       // Should find games with "Future" in title, description, or developer
-      const hasFutureInAnyField = response.body.games.some((game: any) =>
-        game.title.includes('Future') ||
-        (game.description && game.description.includes('future')) ||
-        game.developer.includes('Future')
+      const hasFutureInAnyField = response.body.games.some(
+        (game: any) =>
+          game.title.includes('Future') ||
+          (game.description && game.description.includes('future')) ||
+          game.developer.includes('Future'),
       );
       expect(hasFutureInAnyField).toBe(true);
     });
@@ -350,7 +357,7 @@ describe('API Workflows (e2e)', () => {
         .expect(200);
 
       expect(response.body.games).toBeDefined();
-      
+
       response.body.games.forEach((game: any) => {
         expect(game.price).toBeGreaterThanOrEqual(30);
         expect(game.price).toBeLessThanOrEqual(50);
@@ -360,24 +367,25 @@ describe('API Workflows (e2e)', () => {
     it('should combine search query with price filter', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/games/search')
-        .query({ 
-          q: 'RPG', 
+        .query({
+          q: 'RPG',
           searchType: 'all',
           minPrice: 40,
-          maxPrice: 60
+          maxPrice: 60,
         })
         .expect(200);
 
       expect(response.body.games).toBeDefined();
-      
+
       response.body.games.forEach((game: any) => {
         expect(game.price).toBeGreaterThanOrEqual(40);
         expect(game.price).toBeLessThanOrEqual(60);
-        
-        const hasRPG = game.title.includes('RPG') ||
-                      (game.description && game.description.includes('RPG')) ||
-                      game.genre.includes('RPG') ||
-                      game.developer.includes('RPG');
+
+        const hasRPG =
+          game.title.includes('RPG') ||
+          (game.description && game.description.includes('RPG')) ||
+          game.genre.includes('RPG') ||
+          game.developer.includes('RPG');
         expect(hasRPG).toBe(true);
       });
     });
@@ -399,7 +407,7 @@ describe('API Workflows (e2e)', () => {
   describe('Error Handling and Edge Cases Workflow', () => {
     it('should handle invalid game ID gracefully', async () => {
       const invalidId = '00000000-0000-0000-0000-000000000000';
-      
+
       await request(app.getHttpServer())
         .get(`/api/games/${invalidId}`)
         .expect(404)
@@ -411,7 +419,7 @@ describe('API Workflows (e2e)', () => {
 
     it('should handle malformed game ID', async () => {
       const malformedId = 'not-a-valid-uuid';
-      
+
       await request(app.getHttpServer())
         .get(`/api/games/${malformedId}`)
         .expect(400)
@@ -454,10 +462,10 @@ describe('API Workflows (e2e)', () => {
     it('should handle invalid search parameters', async () => {
       await request(app.getHttpServer())
         .get('/api/games/search')
-        .query({ 
+        .query({
           searchType: 'invalid',
           minPrice: -100,
-          maxPrice: -50
+          maxPrice: -50,
         })
         .expect(400)
         .expect((res) => {
@@ -497,15 +505,13 @@ describe('API Workflows (e2e)', () => {
 
       // Make multiple concurrent requests
       const concurrentRequests = Array.from({ length: 5 }, () =>
-        request(app.getHttpServer())
-          .get(`/api/games/${gameId}`)
-          .expect(200)
+        request(app.getHttpServer()).get(`/api/games/${gameId}`).expect(200),
       );
 
       const responses = await Promise.all(concurrentRequests);
-      
+
       // All responses should be identical
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect(response.body.id).toBe(gameId);
         expect(response.body.title).toBe(gameData.title);
       });

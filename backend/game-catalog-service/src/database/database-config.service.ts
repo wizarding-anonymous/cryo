@@ -10,8 +10,10 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
   constructor(private configService: ConfigService) {}
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
-    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
-    const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+    const isDevelopment =
+      this.configService.get<string>('NODE_ENV') === 'development';
 
     const config: TypeOrmModuleOptions = {
       type: 'postgres',
@@ -19,7 +21,10 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
       port: this.configService.get<number>('POSTGRES_PORT', 5432),
       username: this.configService.get<string>('POSTGRES_USER', 'user'),
       password: this.configService.get<string>('POSTGRES_PASSWORD', 'password'),
-      database: this.configService.get<string>('POSTGRES_DB', 'game_catalog_db'),
+      database: this.configService.get<string>(
+        'POSTGRES_DB',
+        'game_catalog_db',
+      ),
       entities: [Game],
       migrations: ['dist/database/migrations/*.js'],
       migrationsTableName: 'migrations',
@@ -32,7 +37,7 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
       // Connection pool settings for better performance
       extra: {
         max: 20, // Maximum number of connections in pool
-        min: 5,  // Minimum number of connections in pool
+        min: 5, // Minimum number of connections in pool
         acquire: 30000, // Maximum time to get connection
         idle: 10000, // Maximum time connection can be idle
         connectionTimeoutMillis: 5000,
@@ -42,8 +47,10 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
       ssl: isProduction ? { rejectUnauthorized: false } : false,
     };
 
-    this.logger.log(`Database configuration created for ${isDevelopment ? 'development' : 'production'} environment`);
-    
+    this.logger.log(
+      `Database configuration created for ${isDevelopment ? 'development' : 'production'} environment`,
+    );
+
     return config;
   }
 
@@ -51,15 +58,21 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
    * Validates database connection configuration
    */
   validateConfig(): boolean {
-    const requiredVars = ['POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB'];
-    
+    const requiredVars = [
+      'POSTGRES_HOST',
+      'POSTGRES_PORT',
+      'POSTGRES_USER',
+      'POSTGRES_PASSWORD',
+      'POSTGRES_DB',
+    ];
+
     for (const varName of requiredVars) {
       if (!this.configService.get(varName)) {
         this.logger.error(`Missing required environment variable: ${varName}`);
         return false;
       }
     }
-    
+
     return true;
   }
 
@@ -70,7 +83,7 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
     const host = this.configService.get<string>('POSTGRES_HOST');
     const port = this.configService.get<number>('POSTGRES_PORT');
     const database = this.configService.get<string>('POSTGRES_DB');
-    
+
     return `${host}:${port}/${database}`;
   }
 }

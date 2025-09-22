@@ -5,7 +5,7 @@ export class OptimizeGameIndexes1703000000000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create composite indexes for better query performance
-    
+
     // Index for games list with availability and genre filtering
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "idx_games_available_genre" 
@@ -69,11 +69,17 @@ export class OptimizeGameIndexes1703000000000 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop the indexes in reverse order
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_games_id_available"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_games_fulltext_search_ru"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_games_description_search_ru"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_games_fulltext_search_ru"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_games_description_search_ru"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_games_title_search_ru"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_games_search_price"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_games_available_release_date"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_games_available_release_date"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_games_available_price"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_games_available_genre"`);
   }

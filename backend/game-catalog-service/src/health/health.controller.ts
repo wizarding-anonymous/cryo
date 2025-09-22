@@ -25,31 +25,33 @@ export class HealthController {
 
   @Get()
   @HealthCheck()
-  @ApiOperation({ summary: 'Comprehensive health check for all service dependencies' })
+  @ApiOperation({
+    summary: 'Comprehensive health check for all service dependencies',
+  })
   @ApiResponse({ status: 200, description: 'Service is healthy' })
   @ApiResponse({ status: 503, description: 'Service is unhealthy' })
   async check(): Promise<HealthCheckResult> {
     const startTime = Date.now();
-    
+
     try {
       const result = await this.health.check([
         // Database connection health check
         () => this.db.pingCheck('database', { timeout: 5000 }),
-        
+
         // Memory usage health checks
         () => this.memory.checkHeap('memory_heap', 250 * 1024 * 1024),
         () => this.memory.checkRSS('memory_rss', 250 * 1024 * 1024),
-        
+
         // Redis/Cache health check
         () => this.checkRedisHealth(),
-        
+
         // Application-specific health checks
         () => this.checkApplicationHealth(),
       ]);
 
       const duration = Date.now() - startTime;
       this.logger.log(`Health check completed successfully in ${duration}ms`);
-      
+
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -60,7 +62,10 @@ export class HealthController {
 
   @Get('ready')
   @ApiOperation({ summary: 'Readiness probe for Kubernetes' })
-  @ApiResponse({ status: 200, description: 'Service is ready to accept traffic' })
+  @ApiResponse({
+    status: 200,
+    description: 'Service is ready to accept traffic',
+  })
   @ApiResponse({ status: 503, description: 'Service is not ready' })
   async readiness(): Promise<HealthCheckResult> {
     return this.health.check([
@@ -86,14 +91,14 @@ export class HealthController {
   private async checkRedisHealth(): Promise<HealthIndicatorResult> {
     const key = 'health-check';
     const testValue = Date.now().toString();
-    
+
     try {
       // Test Redis write
       await this.cacheManager.set(key, testValue, 10000); // 10 second TTL
-      
+
       // Test Redis read
       const retrievedValue = await this.cacheManager.get(key);
-      
+
       if (retrievedValue === testValue) {
         return {
           redis: {
@@ -106,13 +111,16 @@ export class HealthController {
         throw new Error('Redis read/write test failed');
       }
     } catch (error) {
-      this.logger.warn('Redis health check failed, service may be using memory cache fallback', error.message);
-      
+      this.logger.warn(
+        'Redis health check failed, service may be using memory cache fallback',
+        error.message,
+      );
+
       // Check if we're using memory cache fallback
       try {
         await this.cacheManager.set(key, testValue, 10000);
         const retrievedValue = await this.cacheManager.get(key);
-        
+
         if (retrievedValue === testValue) {
           return {
             redis: {
@@ -143,7 +151,7 @@ export class HealthController {
       // Check if the application can perform basic operations
       const uptime = process.uptime();
       const memoryUsage = process.memoryUsage();
-      
+
       return {
         application: {
           status: 'up',

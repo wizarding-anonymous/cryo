@@ -31,7 +31,9 @@ describe('ResponseTransformationInterceptor', () => {
       ],
     }).compile();
 
-    interceptor = module.get<ResponseTransformationInterceptor>(ResponseTransformationInterceptor);
+    interceptor = module.get<ResponseTransformationInterceptor>(
+      ResponseTransformationInterceptor,
+    );
     reflector = module.get<Reflector>(Reflector);
 
     mockRequest = {
@@ -65,14 +67,18 @@ describe('ResponseTransformationInterceptor', () => {
   describe('intercept', () => {
     it('should transform response with default metadata', (done) => {
       const responseData = { id: '1', title: 'Test Game' };
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({}); // TRANSFORM_RESPONSE_METADATA
-      
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -95,14 +101,18 @@ describe('ResponseTransformationInterceptor', () => {
     it('should include cached flag when request is from cache', (done) => {
       const responseData = { id: '1', title: 'Test Game' };
       mockRequest.cacheHit = true;
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({}); // TRANSFORM_RESPONSE_METADATA
-      
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -115,13 +125,15 @@ describe('ResponseTransformationInterceptor', () => {
 
     it('should exclude transformation when ExcludeTransform decorator is used', (done) => {
       const responseData = { id: '1', title: 'Test Game' };
-      
-      jest.spyOn(reflector, 'get')
-        .mockReturnValueOnce(true); // EXCLUDE_TRANSFORM_METADATA
-      
+
+      jest.spyOn(reflector, 'get').mockReturnValueOnce(true); // EXCLUDE_TRANSFORM_METADATA
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -133,27 +145,33 @@ describe('ResponseTransformationInterceptor', () => {
     });
 
     it('should exclude specified fields from response', (done) => {
-      const responseData = { 
-        id: '1', 
-        title: 'Test Game', 
+      const responseData = {
+        id: '1',
+        title: 'Test Game',
         internalId: 'secret',
-        user: { id: '1', password: 'secret', name: 'John' }
+        user: { id: '1', password: 'secret', name: 'John' },
       };
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
-        .mockReturnValueOnce({ excludeFields: ['internalId', 'user.password'] }); // TRANSFORM_RESPONSE_METADATA
-      
+        .mockReturnValueOnce({
+          excludeFields: ['internalId', 'user.password'],
+        }); // TRANSFORM_RESPONSE_METADATA
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
           expect(value.data).toEqual({
             id: '1',
             title: 'Test Game',
-            user: { id: '1', name: 'John' }
+            user: { id: '1', name: 'John' },
           });
           expect(value.data.internalId).toBeUndefined();
           expect(value.data.user.password).toBeUndefined();
@@ -165,14 +183,18 @@ describe('ResponseTransformationInterceptor', () => {
 
     it('should skip metadata when includeMetadata is false', (done) => {
       const responseData = { id: '1', title: 'Test Game' };
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({ includeMetadata: false }); // TRANSFORM_RESPONSE_METADATA
-      
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -188,14 +210,18 @@ describe('ResponseTransformationInterceptor', () => {
 
     it('should add timestamp when addTimestamp is true and includeMetadata is false', (done) => {
       const responseData = { id: '1', title: 'Test Game' };
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({ includeMetadata: false, addTimestamp: true }); // TRANSFORM_RESPONSE_METADATA
-      
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -215,14 +241,18 @@ describe('ResponseTransformationInterceptor', () => {
     it('should skip transformation for health check endpoints', (done) => {
       const responseData = { status: 'ok' };
       mockRequest.url = '/health';
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({}); // TRANSFORM_RESPONSE_METADATA
-      
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -236,14 +266,18 @@ describe('ResponseTransformationInterceptor', () => {
     it('should skip transformation for non-JSON responses', (done) => {
       const responseData = 'plain text response';
       mockResponse.getHeader.mockReturnValue('text/plain');
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({}); // TRANSFORM_RESPONSE_METADATA
-      
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -255,13 +289,17 @@ describe('ResponseTransformationInterceptor', () => {
     });
 
     it('should skip transformation for null/undefined data', (done) => {
-      jest.spyOn(reflector, 'get')
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({}); // TRANSFORM_RESPONSE_METADATA
-      
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(null));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -275,16 +313,22 @@ describe('ResponseTransformationInterceptor', () => {
     it('should skip transformation for already transformed data', (done) => {
       const alreadyTransformed = {
         data: { id: '1', title: 'Test Game' },
-        meta: { timestamp: '2023-01-01T00:00:00.000Z' }
+        meta: { timestamp: '2023-01-01T00:00:00.000Z' },
       };
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({}); // TRANSFORM_RESPONSE_METADATA
-      
-      jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(alreadyTransformed));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      jest
+        .spyOn(mockCallHandler, 'handle')
+        .mockReturnValue(of(alreadyTransformed));
+
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
@@ -298,22 +342,26 @@ describe('ResponseTransformationInterceptor', () => {
     it('should handle array responses correctly', (done) => {
       const responseData = [
         { id: '1', title: 'Game 1', secret: 'hidden' },
-        { id: '2', title: 'Game 2', secret: 'hidden' }
+        { id: '2', title: 'Game 2', secret: 'hidden' },
       ];
-      
-      jest.spyOn(reflector, 'get')
+
+      jest
+        .spyOn(reflector, 'get')
         .mockReturnValueOnce(false) // EXCLUDE_TRANSFORM_METADATA
         .mockReturnValueOnce({ excludeFields: ['secret'] }); // TRANSFORM_RESPONSE_METADATA
-      
+
       jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseData));
 
-      const result$ = interceptor.intercept(mockExecutionContext, mockCallHandler);
+      const result$ = interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
 
       result$.subscribe({
         next: (value) => {
           expect(value.data).toEqual([
             { id: '1', title: 'Game 1' },
-            { id: '2', title: 'Game 2' }
+            { id: '2', title: 'Game 2' },
           ]);
           expect(value.data[0].secret).toBeUndefined();
           expect(value.data[1].secret).toBeUndefined();
@@ -327,7 +375,7 @@ describe('ResponseTransformationInterceptor', () => {
   describe('decorators', () => {
     it('should set transform response metadata on method', () => {
       const options = { includeMetadata: true, excludeFields: ['password'] };
-      
+
       class TestController {
         @TransformResponse(options)
         testMethod() {
@@ -336,8 +384,11 @@ describe('ResponseTransformationInterceptor', () => {
       }
 
       const controller = new TestController();
-      const metadata = Reflect.getMetadata(TRANSFORM_RESPONSE_METADATA, controller.testMethod);
-      
+      const metadata = Reflect.getMetadata(
+        TRANSFORM_RESPONSE_METADATA,
+        controller.testMethod,
+      );
+
       expect(metadata).toEqual(options);
     });
 
@@ -350,8 +401,11 @@ describe('ResponseTransformationInterceptor', () => {
       }
 
       const controller = new TestController();
-      const metadata = Reflect.getMetadata(EXCLUDE_TRANSFORM_METADATA, controller.testMethod);
-      
+      const metadata = Reflect.getMetadata(
+        EXCLUDE_TRANSFORM_METADATA,
+        controller.testMethod,
+      );
+
       expect(metadata).toBe(true);
     });
 
@@ -364,8 +418,11 @@ describe('ResponseTransformationInterceptor', () => {
       }
 
       const controller = new TestController();
-      const metadata = Reflect.getMetadata(TRANSFORM_RESPONSE_METADATA, controller.testMethod);
-      
+      const metadata = Reflect.getMetadata(
+        TRANSFORM_RESPONSE_METADATA,
+        controller.testMethod,
+      );
+
       expect(metadata).toEqual({});
     });
   });

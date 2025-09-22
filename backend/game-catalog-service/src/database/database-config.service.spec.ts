@@ -39,7 +39,7 @@ describe('DatabaseConfigService', () => {
 
   it('should create TypeORM options', () => {
     const options = service.createTypeOrmOptions() as any;
-    
+
     expect(options).toBeDefined();
     expect(options.type).toBe('postgres');
     expect(options.host).toBe('localhost');
@@ -65,10 +65,10 @@ describe('DatabaseConfigService', () => {
     const mockConfigService = {
       get: jest.fn(() => undefined),
     };
-    
+
     const testService = new DatabaseConfigService(mockConfigService as any);
     const isValid = testService.validateConfig();
-    
+
     expect(isValid).toBe(false);
   });
 });

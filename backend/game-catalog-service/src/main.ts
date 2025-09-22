@@ -9,7 +9,7 @@ import { LoggingService } from './health/logging.service';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  
+
   try {
     const app = await NestFactory.create(AppModule);
 
@@ -48,23 +48,35 @@ async function bootstrap() {
         .setTitle('Game Catalog Service API')
         .setDescription(
           'Comprehensive REST API for the Game Catalog Service - part of the Russian Gaming Platform MVP. ' +
-          'Provides high-performance game catalog browsing, search functionality, and integration endpoints for other microservices. ' +
-          'Features include full-text search with Russian language support, Redis caching for sub-200ms response times, ' +
-          'and specialized endpoints for Payment Service integration.'
+            'Provides high-performance game catalog browsing, search functionality, and integration endpoints for other microservices. ' +
+            'Features include full-text search with Russian language support, Redis caching for sub-200ms response times, ' +
+            'and specialized endpoints for Payment Service integration.',
         )
         .setVersion('1.0.0')
         .setContact(
           'Game Catalog Service Team',
           'https://gaming-platform.ru/docs',
-          'support@gaming-platform.ru'
+          'support@gaming-platform.ru',
         )
         .setLicense('MIT', 'https://opensource.org/licenses/MIT')
         .addServer('http://localhost:3002', 'Development Server')
-        .addServer('https://api.gaming-platform.ru/catalog', 'Production Server')
+        .addServer(
+          'https://api.gaming-platform.ru/catalog',
+          'Production Server',
+        )
         .addTag('Games', 'Game catalog management and retrieval operations')
-        .addTag('Search', 'Full-text search operations with filtering and pagination')
-        .addTag('Health', 'Health check and monitoring endpoints for Kubernetes probes')
-        .addTag('Purchase', 'Purchase information endpoints for Payment Service integration')
+        .addTag(
+          'Search',
+          'Full-text search operations with filtering and pagination',
+        )
+        .addTag(
+          'Health',
+          'Health check and monitoring endpoints for Kubernetes probes',
+        )
+        .addTag(
+          'Purchase',
+          'Purchase information endpoints for Payment Service integration',
+        )
         .addBearerAuth(
           {
             type: 'http',
@@ -74,15 +86,16 @@ async function bootstrap() {
             description: 'Enter JWT token',
             in: 'header',
           },
-          'JWT-auth'
+          'JWT-auth',
         )
         .build();
-      
+
       const document = SwaggerModule.createDocument(app, config, {
-        operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
+        operationIdFactory: (controllerKey: string, methodKey: string) =>
+          methodKey,
         deepScanRoutes: true,
       });
-      
+
       // Add custom CSS for better documentation appearance
       const customCss = `
         .swagger-ui .topbar { display: none; }
@@ -90,7 +103,7 @@ async function bootstrap() {
         .swagger-ui .info .description { font-size: 14px; line-height: 1.6; }
         .swagger-ui .scheme-container { background: #f8f9fa; padding: 10px; border-radius: 4px; }
       `;
-      
+
       SwaggerModule.setup('api-docs', app, document, {
         customCss,
         customSiteTitle: 'Game Catalog Service API Documentation',
@@ -104,10 +117,18 @@ async function bootstrap() {
           tryItOutEnabled: true,
         },
       });
-      
-      logger.log(`Swagger documentation enabled at: http://localhost:${port}/api-docs`);
     } else {
       logger.log('Swagger documentation is disabled in production mode');
+    }
+
+    // Use port 3002 as specified in the integration map
+    const port = process.env.PORT || 3002;
+
+    // Log Swagger documentation URL if enabled
+    if (process.env.SWAGGER_ENABLED !== 'false') {
+      logger.log(
+        `Swagger documentation enabled at: http://localhost:${port}/api-docs`,
+      );
     }
 
     // --- Graceful Shutdown Handling ---
@@ -136,16 +157,15 @@ async function bootstrap() {
       logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
       loggingService.logError(new Error(String(reason)), 'unhandled_rejection');
     });
-
-    // Use port 3002 as specified in the integration map
-    const port = process.env.PORT || 3002;
     const environment = process.env.NODE_ENV || 'development';
-    
+
     await app.listen(port);
-    
-    logger.log(`Game Catalog Service is running on port ${port} in ${environment} mode`);
+
+    logger.log(
+      `Game Catalog Service is running on port ${port} in ${environment} mode`,
+    );
     loggingService.logStartup(Number(port), environment);
-    
+
     // Log initial health status
     logger.log('Health endpoints available:');
     logger.log(`  - Health Check: http://localhost:${port}/api/v1/health`);
@@ -153,7 +173,6 @@ async function bootstrap() {
     logger.log(`  - Liveness: http://localhost:${port}/api/v1/health/live`);
     logger.log(`  - Metrics: http://localhost:${port}/metrics`);
     logger.log(`  - API Docs: http://localhost:${port}/api-docs`);
-    
   } catch (error) {
     logger.error('Failed to start Game Catalog Service:', error);
     process.exit(1);

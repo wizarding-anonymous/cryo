@@ -54,7 +54,10 @@ describe('CacheAdminController', () => {
 
   describe('getCacheStats', () => {
     it('should return cache statistics', async () => {
-      const mockStats = { status: 'available', timestamp: new Date().toISOString() };
+      const mockStats = {
+        status: 'available',
+        timestamp: new Date().toISOString(),
+      };
       mockCacheService.getCacheStats.mockResolvedValue(mockStats);
 
       const result = await controller.getCacheStats();
@@ -66,7 +69,11 @@ describe('CacheAdminController', () => {
 
   describe('triggerCacheWarmup', () => {
     it('should trigger cache warmup and return result', async () => {
-      const mockResult = { success: true, duration: 1000, message: 'Warmup completed' };
+      const mockResult = {
+        success: true,
+        duration: 1000,
+        message: 'Warmup completed',
+      };
       mockCacheWarmingService.triggerWarmup.mockResolvedValue(mockResult);
 
       const result = await controller.triggerCacheWarmup();
@@ -87,7 +94,9 @@ describe('CacheAdminController', () => {
     });
 
     it('should handle cache invalidation errors', async () => {
-      mockCacheService.invalidateGameCache.mockRejectedValue(new Error('Cache error'));
+      mockCacheService.invalidateGameCache.mockRejectedValue(
+        new Error('Cache error'),
+      );
 
       const result = await controller.invalidateGameCaches();
 
@@ -109,7 +118,9 @@ describe('CacheAdminController', () => {
 
     it('should handle specific game cache invalidation errors', async () => {
       const gameId = 'test-game-id';
-      mockCacheService.invalidateGameCache.mockRejectedValue(new Error('Cache error'));
+      mockCacheService.invalidateGameCache.mockRejectedValue(
+        new Error('Cache error'),
+      );
 
       const result = await controller.invalidateGameCache(gameId);
 

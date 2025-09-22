@@ -9,10 +9,10 @@ export { DatabaseHealthService } from './database-health.service';
 export { DatabaseConnectionUtil } from './database-connection.util';
 
 // Re-export TypeORM decorators and types for convenience
-export { 
-  InjectDataSource, 
-  InjectRepository, 
-  getDataSourceToken, 
-  getRepositoryToken 
+export {
+  InjectDataSource,
+  InjectRepository,
+  getDataSourceToken,
+  getRepositoryToken,
 } from '@nestjs/typeorm';
 export { DataSource, Repository, EntityManager } from 'typeorm';

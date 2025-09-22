@@ -247,11 +247,7 @@ export class LoggingService {
   /**
    * Log error with full context
    */
-  logError(
-    error: Error,
-    operation: string,
-    context: LogContext = {},
-  ): void {
+  logError(error: Error, operation: string, context: LogContext = {}): void {
     const logData = {
       type: 'error',
       operation,

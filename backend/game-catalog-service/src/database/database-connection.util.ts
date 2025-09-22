@@ -12,10 +12,10 @@ export class DatabaseConnectionUtil {
       if (!dataSource.isInitialized) {
         await dataSource.initialize();
       }
-      
+
       // Test with a simple query
       await dataSource.query('SELECT 1');
-      
+
       this.logger.log('Database connection test successful');
       return true;
     } catch (error) {
@@ -46,12 +46,12 @@ export class DatabaseConnectionUtil {
       if (!dataSource.isInitialized) {
         await dataSource.initialize();
       }
-      
+
       const migrations = await dataSource.runMigrations();
-      
+
       if (migrations.length > 0) {
         this.logger.log(`Successfully ran ${migrations.length} migrations`);
-        migrations.forEach(migration => {
+        migrations.forEach((migration) => {
           this.logger.log(`- ${migration.name}`);
         });
       } else {
@@ -71,7 +71,7 @@ export class DatabaseConnectionUtil {
       if (!dataSource.isInitialized) {
         await dataSource.initialize();
       }
-      
+
       await dataSource.undoLastMigration();
       this.logger.log('Successfully reverted last migration');
     } catch (error) {
@@ -89,7 +89,7 @@ export class DatabaseConnectionUtil {
     connectionCount?: number;
   } {
     const isConnected = dataSource.isInitialized;
-    
+
     return {
       isConnected,
       hasActiveConnections: isConnected,
@@ -106,7 +106,7 @@ export class DatabaseConnectionUtil {
     responseTime?: number;
   }> {
     const startTime = Date.now();
-    
+
     try {
       if (!dataSource.isInitialized) {
         return {
@@ -119,9 +119,9 @@ export class DatabaseConnectionUtil {
       // Test query with timeout
       await Promise.race([
         dataSource.query('SELECT 1'),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Query timeout')), 5000)
-        )
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Query timeout')), 5000),
+        ),
       ]);
 
       const responseTime = Date.now() - startTime;
