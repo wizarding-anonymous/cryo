@@ -1,0 +1,229 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: game-catalog-service-alerts
+  namespace: microservices
+  labels:
+    app: game-catalog-service
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: game-catalog-service.rules
+    rules:
+    # High error rate alert
+    - alert: GameCatalogHighErrorRate
+      expr: |
+        (
+          rate(game_catalog_http_requests_total{status_code=~"5.."}[5m]) /
+          rate(game_catalog_http_requests_total[5m])
+        ) > 0.05
+      for: 2m
+      labels:
+        severity: warning
+        service: game-catalog-service
+      annotations:
+        summary: "Game Catalog Service has high error rate"
+        description: "Game Catalog Service error rate is {{ $value | humanizePercentage }} for the last 5 minutes."
+
+    # High response time alert
+    - alert: GameCatalogHighResponseTime
+      expr: |
+        histogram_quantile(0.95, rate(game_catalog_http_request_duration_seconds_bucket[5m])) > 1
+      for: 3m
+      labels:
+        severity: warning
+        service: game-catalog-service
+      annotations:
+        summary: "Game Catalog Service has high response time"
+        description: "Game Catalog Service 95th percentile response time is {{ $value }}s for the last 5 minutes."
+
+    # Database connection issues
+    - alert: GameCatalogDatabaseDown
+      expr: |
+        up{job="game-catalog-service"} == 0 or
+        game_catalog_db_connections_active == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: game-catalog-service
+      annotations:
+        summary: "Game Catalog Service database is down"
+        description: "Game Catalog Service cannot connect to the database."
+
+    # High memory usage
+    - alert: GameCatalogHighMemoryUsage
+      expr: |
+        (
+          container_memory_working_set_bytes{pod=~"game-catalog-service-.*"} /
+          container_spec_memory_limit_bytes{pod=~"game-catalog-service-.*"}
+        ) > 0.85
+      for: 5m
+      labels:
+        severity: warning
+        service: game-catalog-service
+      annotations:
+        summary: "Game Catalog Service high memory usage"
+        description: "Game Catalog Service memory usage is {{ $value | humanizePercentage }} of the limit."
+
+    # High CPU usage
+    - alert: GameCatalogHighCPUUsage
+      expr: |
+        rate(container_cpu_usage_seconds_total{pod=~"game-catalog-service-.*"}[5m]) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        service: game-catalog-service
+      annotations:
+        summary: "Game Catalog Service high CPU usage"
+        description: "Game Catalog Service CPU usage is {{ $value | humanizePercentage }}."
+
+    # Pod restart alert
+    - alert: GameCatalogPodRestarting
+      expr: |
+        rate(kube_pod_container_status_restarts_total{pod=~"game-catalog-service-.*"}[15m]) > 0
+      for: 0m
+      labels:
+        severity: warning
+        service: game-catalog-service
+      annotations:
+        summary: "Game Catalog Service pod is restarting"
+        description: "Game Catalog Service pod {{ $labels.pod }} is restarting frequently."
+
+    # Cache performance alert
+    - alert: GameCatalogLowCacheHitRate
+      expr: |
+        (
+          rate(game_catalog_cache_hits_total[5m]) /
+          (rate(game_catalog_cache_hits_total[5m]) + rate(game_catalog_cache_misses_total[5m]))
+        ) < 0.7
+      for: 10m
+      labels:
+        severity: info
+        service: game-catalog-service
+      annotations:
+        summary: "Game Catalog Service low cache hit rate"
+        description: "Game Catalog Service cache hit rate is {{ $value | humanizePercentage }} for the last 5 minutes."
+
+    # Health check failures
+    - alert: GameCatalogHealthCheckFailing
+      expr: |
+        up{job="game-catalog-service"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: game-catalog-service
+      annotations:
+        summary: "Game Catalog Service health check failing"
+        description: "Game Catalog Service health check has been failing for more than 1 minute."
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: game-catalog-service-grafana-dashboard
+  namespace: microservices
+  labels:
+    app: game-catalog-service
+    grafana_dashboard: "1"
+data:
+  dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Game Catalog Service Dashboard",
+        "tags": ["game-catalog", "microservice"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "HTTP Requests Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(game_catalog_http_requests_total[5m])",
+                "legendFormat": "{{method}} {{route}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Requests/sec"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Response Time (95th percentile)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(game_catalog_http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Seconds"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(game_catalog_http_requests_total{status_code=~\"5..\"}[5m]) / rate(game_catalog_http_requests_total[5m])",
+                "legendFormat": "Error Rate"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Percentage",
+                "max": 1,
+                "min": 0
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Database Query Performance",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(game_catalog_db_query_duration_seconds_sum[5m]) / rate(game_catalog_db_query_duration_seconds_count[5m])",
+                "legendFormat": "Avg Query Time"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Cache Hit Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(game_catalog_cache_hits_total[5m]) / (rate(game_catalog_cache_hits_total[5m]) + rate(game_catalog_cache_misses_total[5m]))",
+                "legendFormat": "Cache Hit Rate"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_working_set_bytes{pod=~\"game-catalog-service-.*\"} / 1024 / 1024",
+                "legendFormat": "Memory Usage (MB)"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
