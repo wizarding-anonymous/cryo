@@ -4,6 +4,7 @@ import { LibraryIntegrationModule } from '../../integrations/library/library.mod
 import { MetricsModule } from '../../common/metrics/metrics.module';
 import { PaymentController } from './payment.controller';
 import { MockPaymentController } from './mock-payment.controller';
+import { MockFormsController } from './mock-forms.controller';
 import { WebhookController } from './webhook.controller';
 import { PaymentService } from './payment.service';
 import { Payment } from './entities/payment.entity';
@@ -18,12 +19,8 @@ import { PaymentProviderFactory } from './payment-provider.factory';
     LibraryIntegrationModule,
     MetricsModule,
   ],
-  controllers: [PaymentController, MockPaymentController, WebhookController],
-  providers: [
-    PaymentService,
-    PaymentProviderService,
-    PaymentProviderFactory,
-  ],
+  controllers: [PaymentController, MockPaymentController, MockFormsController, WebhookController],
+  providers: [PaymentService, PaymentProviderService, PaymentProviderFactory],
   exports: [PaymentService],
 })
 export class PaymentModule {}

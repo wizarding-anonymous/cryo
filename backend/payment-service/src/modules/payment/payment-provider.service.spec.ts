@@ -23,7 +23,10 @@ describe('PaymentProviderService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentProviderService,
-        { provide: PaymentProviderFactory, useValue: mockPaymentProviderFactory },
+        {
+          provide: PaymentProviderFactory,
+          useValue: mockPaymentProviderFactory,
+        },
       ],
     }).compile();
 
@@ -37,42 +40,65 @@ describe('PaymentProviderService', () => {
   describe('processPayment', () => {
     it('should call sberbank provider', async () => {
       const payment = { provider: PaymentProvider.SBERBANK } as Payment;
-      mockPaymentProviderFactory.createProvider.mockReturnValue(mockSberbankProvider);
-      mockSberbankProvider.processPayment.mockResolvedValue({ paymentUrl: 'test-url', externalId: 'test-id' });
-      
+      mockPaymentProviderFactory.createProvider.mockReturnValue(
+        mockSberbankProvider,
+      );
+      mockSberbankProvider.processPayment.mockResolvedValue({
+        paymentUrl: 'test-url',
+        externalId: 'test-id',
+      });
+
       await service.processPayment(payment);
-      
-      expect(mockPaymentProviderFactory.createProvider).toHaveBeenCalledWith(PaymentProvider.SBERBANK);
+
+      expect(mockPaymentProviderFactory.createProvider).toHaveBeenCalledWith(
+        PaymentProvider.SBERBANK,
+      );
       expect(mockSberbankProvider.processPayment).toHaveBeenCalledWith(payment);
     });
 
     it('should call ymoney provider', async () => {
       const payment = { provider: PaymentProvider.YANDEX } as Payment;
-      mockPaymentProviderFactory.createProvider.mockReturnValue(mockYMoneyProvider);
-      mockYMoneyProvider.processPayment.mockResolvedValue({ paymentUrl: 'test-url', externalId: 'test-id' });
-      
+      mockPaymentProviderFactory.createProvider.mockReturnValue(
+        mockYMoneyProvider,
+      );
+      mockYMoneyProvider.processPayment.mockResolvedValue({
+        paymentUrl: 'test-url',
+        externalId: 'test-id',
+      });
+
       await service.processPayment(payment);
-      
-      expect(mockPaymentProviderFactory.createProvider).toHaveBeenCalledWith(PaymentProvider.YANDEX);
+
+      expect(mockPaymentProviderFactory.createProvider).toHaveBeenCalledWith(
+        PaymentProvider.YANDEX,
+      );
       expect(mockYMoneyProvider.processPayment).toHaveBeenCalledWith(payment);
     });
 
     it('should call tbank provider', async () => {
       const payment = { provider: PaymentProvider.TBANK } as Payment;
-      mockPaymentProviderFactory.createProvider.mockReturnValue(mockTBankProvider);
-      mockTBankProvider.processPayment.mockResolvedValue({ paymentUrl: 'test-url', externalId: 'test-id' });
-      
+      mockPaymentProviderFactory.createProvider.mockReturnValue(
+        mockTBankProvider,
+      );
+      mockTBankProvider.processPayment.mockResolvedValue({
+        paymentUrl: 'test-url',
+        externalId: 'test-id',
+      });
+
       await service.processPayment(payment);
-      
-      expect(mockPaymentProviderFactory.createProvider).toHaveBeenCalledWith(PaymentProvider.TBANK);
+
+      expect(mockPaymentProviderFactory.createProvider).toHaveBeenCalledWith(
+        PaymentProvider.TBANK,
+      );
       expect(mockTBankProvider.processPayment).toHaveBeenCalledWith(payment);
     });
 
     it('should throw an error for unknown provider', async () => {
       const payment = { provider: 'unknown' } as any;
       mockPaymentProviderFactory.createProvider.mockReturnValue(null);
-      
-      await expect(service.processPayment(payment)).rejects.toThrow(InternalServerErrorException);
+
+      await expect(service.processPayment(payment)).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 });

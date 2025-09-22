@@ -10,7 +10,9 @@ export class PaymentProviderService {
   async processPayment(payment: Payment) {
     const provider = this.factory.createProvider(payment.provider);
     if (!provider) {
-      throw new InternalServerErrorException(`Could not create provider for type: ${payment.provider}`);
+      throw new InternalServerErrorException(
+        `Could not create provider for type: ${payment.provider}`,
+      );
     }
     return provider.processPayment(payment);
   }
@@ -18,7 +20,9 @@ export class PaymentProviderService {
   async getPaymentStatus(providerType: PaymentProvider, externalId: string) {
     const provider = this.factory.createProvider(providerType);
     if (!provider) {
-      throw new InternalServerErrorException(`Could not create provider for type: ${providerType}`);
+      throw new InternalServerErrorException(
+        `Could not create provider for type: ${providerType}`,
+      );
     }
     return provider.getPaymentStatus(externalId);
   }
@@ -26,7 +30,9 @@ export class PaymentProviderService {
   handleWebhook(providerType: PaymentProvider, data: any) {
     const provider = this.factory.createProvider(providerType);
     if (!provider) {
-      throw new InternalServerErrorException(`Could not create provider for type: ${providerType}`);
+      throw new InternalServerErrorException(
+        `Could not create provider for type: ${providerType}`,
+      );
     }
     return provider.handleWebhook(data);
   }

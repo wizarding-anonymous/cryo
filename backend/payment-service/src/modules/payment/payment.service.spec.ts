@@ -28,6 +28,7 @@ describe('PaymentService', () => {
   const mockOrderService = {
     getOrder: jest.fn(),
     updateOrderStatus: jest.fn(),
+    validateOrderOwnership: jest.fn(),
   };
 
   const mockPaymentProviderService = {
@@ -76,14 +77,24 @@ describe('PaymentService', () => {
     orderService = module.get<OrderService>(OrderService);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
   describe('createPayment', () => {
     it('should create a payment if order is pending', async () => {
-      const order = { id: 'order1', status: OrderStatus.PENDING, amount: 100, currency: 'RUB' } as Order;
-      mockOrderService.getOrder.mockResolvedValue(order);
+      const order = {
+        id: 'order1',
+        status: OrderStatus.PENDING,
+        amount: 100,
+        currency: 'RUB',
+      } as Order;
+      mockOrderService.validateOrderOwnership.mockResolvedValue(order);
+      mockPaymentRepository.findOne.mockResolvedValue(null); // No existing payment
       const payment = new Payment();
       mockPaymentRepository.create.mockReturnValue(payment);
       mockPaymentRepository.save.mockResolvedValue(payment);
@@ -91,7 +102,7 @@ describe('PaymentService', () => {
       const dto = { orderId: 'order1', provider: PaymentProvider.SBERBANK };
       const result = await service.createPayment(dto, 'user1');
 
-      expect(mockOrderService.getOrder).toHaveBeenCalledWith('order1', 'user1');
+      expect(mockOrderService.validateOrderOwnership).toHaveBeenCalledWith('order1', 'user1');
       expect(mockPaymentRepository.create).toHaveBeenCalledWith({
         orderId: 'order1',
         provider: PaymentProvider.SBERBANK,
@@ -102,24 +113,59 @@ describe('PaymentService', () => {
       expect(result).toEqual(payment);
     });
 
-    it('should throw NotFoundException if order is not pending', async () => {
+    it('should throw ConflictException if order is not pending', async () => {
       const order = { id: 'order1', status: OrderStatus.PAID } as Order;
-      mockOrderService.getOrder.mockResolvedValue(order);
+      mockOrderService.validateOrderOwnership.mockResolvedValue(order);
       const dto = { orderId: 'order1', provider: PaymentProvider.SBERBANK };
 
-      await expect(service.createPayment(dto, 'user1')).rejects.toThrow(ConflictException);
+      await expect(service.createPayment(dto, 'user1')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should return existing pending payment if one exists', async () => {
+      const order = {
+        id: 'order1',
+        status: OrderStatus.PENDING,
+        amount: 100,
+        currency: 'RUB',
+      } as Order;
+      const existingPayment = {
+        id: 'payment1',
+        orderId: 'order1',
+        status: PaymentStatus.PENDING,
+      } as Payment;
+      
+      mockOrderService.validateOrderOwnership.mockResolvedValue(order);
+      mockPaymentRepository.findOne.mockResolvedValue(existingPayment);
+
+      const dto = { orderId: 'order1', provider: PaymentProvider.SBERBANK };
+      const result = await service.createPayment(dto, 'user1');
+
+      expect(mockOrderService.validateOrderOwnership).toHaveBeenCalledWith('order1', 'user1');
+      expect(mockPaymentRepository.findOne).toHaveBeenCalledWith({
+        where: { orderId: 'order1', status: PaymentStatus.PENDING }
+      });
+      expect(mockPaymentRepository.save).not.toHaveBeenCalled();
+      expect(result).toEqual(existingPayment);
     });
   });
 
   describe('confirmPayment', () => {
     it('should update payment and order status', async () => {
-        const payment = { id: 'payment1', orderId: 'order1' } as Payment;
-        mockPaymentRepository.findOne.mockResolvedValue(payment);
+      const payment = { id: 'payment1', orderId: 'order1' } as Payment;
+      mockPaymentRepository.findOne.mockResolvedValue(payment);
 
-        await service.confirmPayment('payment1');
+      await service.confirmPayment('payment1');
 
-        expect(mockPaymentRepository.update).toHaveBeenCalledWith('payment1', expect.objectContaining({ status: PaymentStatus.COMPLETED }));
-        expect(mockOrderService.updateOrderStatus).toHaveBeenCalledWith('order1', OrderStatus.PAID);
+      expect(mockPaymentRepository.update).toHaveBeenCalledWith(
+        'payment1',
+        expect.objectContaining({ status: PaymentStatus.COMPLETED }),
+      );
+      expect(mockOrderService.updateOrderStatus).toHaveBeenCalledWith(
+        'order1',
+        OrderStatus.PAID,
+      );
     });
   });
 });

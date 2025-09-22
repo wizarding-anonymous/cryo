@@ -6,7 +6,8 @@ import { Counter, Histogram } from 'prom-client';
 export class MetricsService {
   constructor(
     @InjectMetric('payments_total') public paymentsTotal: Counter<string>,
-    @InjectMetric('payment_duration_seconds') public paymentDuration: Histogram<string>,
+    @InjectMetric('payment_duration_seconds')
+    public paymentDuration: Histogram<string>,
   ) {}
 
   recordPayment(status: string, provider: string) {

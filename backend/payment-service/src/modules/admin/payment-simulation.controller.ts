@@ -1,4 +1,4 @@
-import { Controller, Post, Param, UseGuards, Put, Body, Get } from '@nestjs/common';
+import { Controller, Post, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AdminGuard } from '../../common/auth/admin.guard';
 import { PaymentService } from '../payment/payment.service';

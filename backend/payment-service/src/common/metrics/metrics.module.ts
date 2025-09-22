@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { PrometheusModule, makeCounterProvider, makeHistogramProvider } from '@willsoto/nestjs-prometheus';
+import {
+  PrometheusModule,
+  makeCounterProvider,
+  makeHistogramProvider,
+} from '@willsoto/nestjs-prometheus';
 import { MetricsService } from './metrics.service';
 
 @Module({
@@ -29,4 +33,4 @@ import { MetricsService } from './metrics.service';
   ],
   exports: [MetricsService],
 })
-export class MetricsModule { }
+export class MetricsModule {}

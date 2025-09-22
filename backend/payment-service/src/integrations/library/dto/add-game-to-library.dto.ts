@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsUUID, IsNumber, IsPositive, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsNumber,
+  IsPositive,
+  IsIn,
+} from 'class-validator';
 
 export class AddGameToLibraryDto {
   @IsUUID()

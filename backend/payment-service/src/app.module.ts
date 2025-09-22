@@ -8,8 +8,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { HttpModule } from '@nestjs/axios';
 
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { DatabaseConfig } from './config/database.config';
 import { winstonLogger } from './config/logger.config';
 import { CacheConfig } from './config/cache.config';

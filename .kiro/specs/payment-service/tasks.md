@@ -6,7 +6,24 @@
 
 ## Tasks
 
-- [ ] 1. Настройка проекта и базовой инфраструктуры
+- [x] 1. Настройка проекта и базовой инфраструктуры
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -21,7 +38,12 @@
 
 
 
-- [ ] 2. Настройка базы данных и кеширования
+- [x] 2. Настройка базы данных и кеширования
+
+
+
+
+
   - Настроить TypeORM модуль в NestJS с PostgreSQL
   - Создать Order и Payment entities с декораторами TypeORM
   - Настроить систему миграций TypeORM
@@ -29,7 +51,12 @@
   - Настроить Redis для кеширования статусов платежей и заказов
   - _Requirements: 1, 2, 3_
 
-- [ ] 3. Реализация базовых доменных моделей
+- [x] 3. Реализация базовых доменных моделей
+
+
+
+
+
   - Создать Order entity с декораторами TypeORM (@Entity, @Column, @PrimaryGeneratedColumn, @CreateDateColumn)
   - Создать Payment entity с связями к Order (@ManyToOne, @JoinColumn)
   - Создать DTO классы с class-validator декораторами (CreateOrderDto, CreatePaymentDto, GetOrdersQueryDto, PaymentWebhookDto)
@@ -37,7 +64,12 @@
   - Добавить enum типы для статусов и провайдеров
   - _Requirements: 1, 2, 3, 4_
 
-- [ ] 4. Реализация сервисов бизнес-логики
+- [x] 4. Реализация сервисов бизнес-логики
+
+
+
+
+
   - Создать OrderService с методами: createOrder, getOrder, getUserOrders, updateOrderStatus
   - Создать PaymentService с методами: createPayment, processPayment, confirmPayment, cancelPayment, getPayment
   - Создать PaymentProviderService с методами: processPayment, getPaymentStatus, handleWebhook
@@ -45,7 +77,12 @@
   - Добавить dependency injection через NestJS декораторы
   - _Requirements: 1, 2, 3, 4_
 
-- [ ] 5. Реализация имитации российских платежных систем
+- [x] 5. Реализация имитации российских платежных систем
+
+
+
+
+
   - Создать PaymentProvider интерфейс для абстракции провайдеров
   - Реализовать SberbankPaymentProvider с имитацией API Сбербанк Онлайн
   - Реализовать YMoneyPaymentProvider с имитацией API ЮMoney
@@ -54,7 +91,16 @@
   - Создать mock HTML формы для тестирования платежей
   - _Requirements: 2_
 
-- [ ] 6. Реализация JWT аутентификации и авторизации
+- [x] 6. Реализация JWT аутентификации и авторизации
+
+
+
+
+
+
+
+
+
   - Настроить Passport.js стратегии (JwtStrategy)
   - Создать JwtAuthGuard для защиты всех эндпоинтов
   - Реализовать валидацию JWT токенов

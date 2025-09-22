@@ -68,7 +68,9 @@ describe('PaymentController (e2e)', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .expect(201);
 
-    expect(response.body.data.paymentUrl).toContain(`/payments/${paymentId}/mock-form`);
+    expect(response.body.data.paymentUrl).toContain(
+      `/payments/${paymentId}/mock-form`,
+    );
   });
 
   it('/payments/:id/confirm (POST) -> should confirm the payment', async () => {

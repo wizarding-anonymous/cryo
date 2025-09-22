@@ -72,15 +72,19 @@ describe('PaymentProviderFactory', () => {
         if (key === 'PAYMENT_MODE') return 'unknown_mode';
         return undefined;
       });
-      expect(() => factory.createProvider(PaymentProvider.SBERBANK)).toThrow('Unknown payment mode: unknown_mode');
+      expect(() => factory.createProvider(PaymentProvider.SBERBANK)).toThrow(
+        'Unknown payment mode: unknown_mode',
+      );
     });
 
     it('should throw an error for an unknown provider type in simulation mode', () => {
-        mockConfigService.get.mockImplementation((key: string) => {
-          if (key === 'PAYMENT_MODE') return 'simulation';
-          return undefined;
-        });
-        expect(() => factory.createProvider('unknown' as PaymentProvider)).toThrow('Unknown mock provider type: unknown');
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'PAYMENT_MODE') return 'simulation';
+        return undefined;
+      });
+      expect(() =>
+        factory.createProvider('unknown' as PaymentProvider),
+      ).toThrow('Unknown mock provider type: unknown');
     });
   });
 });

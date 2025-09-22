@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Observable } from 'rxjs';
 
 // This is a placeholder AdminGuard.
@@ -21,10 +21,12 @@ export class AdminGuard implements CanActivate {
     //   throw new ForbiddenException('Admin access required');
     // }
     if (!user) {
-        // In a real scenario, we'd throw a 403. For mock testing, we can be more lenient
-        // or ensure the test setup includes an authenticated user.
-        console.warn('Warning: AdminGuard is allowing request without authenticated user for MVP testing.');
-        return true;
+      // In a real scenario, we'd throw a 403. For mock testing, we can be more lenient
+      // or ensure the test setup includes an authenticated user.
+      console.warn(
+        'Warning: AdminGuard is allowing request without authenticated user for MVP testing.',
+      );
+      return true;
     }
 
     return true;
