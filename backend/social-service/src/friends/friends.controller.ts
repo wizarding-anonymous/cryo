@@ -17,6 +17,7 @@ import { FriendsQueryDto } from './dto/friends-query.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthRequest } from '../common/interfaces/auth-request.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { InternalAuthGuard } from '../auth/guards/internal-auth.guard';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -88,5 +89,13 @@ export class FriendsController {
     const userId = req.user.userId;
     // This is a placeholder; in a real app, it would call the user service.
     return this.friendsService.searchUsers(query, userId);
+  }
+
+  // Internal endpoint for Review Service to check social connections
+  @Get('internal/:userId/list')
+  @UseGuards(InternalAuthGuard)
+  @ApiOperation({ summary: 'Internal: Get friends list for specified user (Review Service)' })
+  async internalGetFriends(@Param('userId') userId: string, @Query() query: FriendsQueryDto) {
+    return this.friendsService.getFriends(userId, query);
   }
 }
