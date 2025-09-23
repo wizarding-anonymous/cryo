@@ -10,6 +10,7 @@ import {
   Req,
   UseInterceptors,
 } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CacheInterceptor } from '../common/interceptors/cache.interceptor';
 import { CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { LibraryService } from './library.service';
@@ -29,6 +30,7 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+@ApiTags('Library')
 @Controller('library')
 export class LibraryController {
   constructor(
@@ -38,8 +40,10 @@ export class LibraryController {
 
   @Get('my')
   @UseGuards(JwtAuthGuard)
+  @UseGuards(OwnershipGuard)
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300) // 5 minutes
+  @ApiOperation({ summary: 'Get user library' })
   getMyLibrary(@Req() request: AuthenticatedRequest, @Query() query: LibraryQueryDto) {
     const userId = request.user.id;
     return this.libraryService.getUserLibrary(userId, query);
@@ -47,6 +51,7 @@ export class LibraryController {
 
   @Get('my/search')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Search in user library' })
   searchMyLibrary(@Req() request: AuthenticatedRequest, @Query() query: SearchLibraryDto) {
     const userId = request.user.id;
     return this.searchService.searchUserLibrary(userId, query);
@@ -54,6 +59,7 @@ export class LibraryController {
 
   @Get('ownership/:gameId')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Check game ownership' })
   checkOwnership(@Req() request: AuthenticatedRequest, @Param('gameId') gameId: string) {
     const userId = request.user.id;
     return this.libraryService.checkGameOwnership(userId, gameId);
@@ -65,13 +71,23 @@ export class LibraryController {
 
   @Post('add')
   @UseGuards(InternalAuthGuard)
+  @ApiOperation({ summary: 'Add game to library (internal)' })
   addGameToLibrary(@Body() dto: AddGameToLibraryDto) {
     return this.libraryService.addGameToLibrary(dto);
   }
 
   @Delete('remove')
   @UseGuards(InternalAuthGuard)
+  @ApiOperation({ summary: 'Remove game from library (internal)' })
   removeGameFromLibrary(@Body() body: { userId: string; gameId: string }) {
     return this.libraryService.removeGameFromLibrary(body.userId, body.gameId);
+  }
+
+  // Internal endpoint for other services (e.g., Download Service)
+  @Get('user/:userId/games')
+  @UseGuards(InternalAuthGuard)
+  @ApiOperation({ summary: 'Get games for a specific user (internal)' })
+  getUserGamesInternal(@Param('userId') userId: string, @Query() query: LibraryQueryDto) {
+    return this.libraryService.getUserLibrary(userId, query);
   }
 }
