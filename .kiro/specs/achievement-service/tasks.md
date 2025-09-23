@@ -6,7 +6,7 @@
 
 ## Tasks
 
-- [x] 1. Настройка NestJS проекта и базовой инфраструктуры
+- [ ] 1. Настройка NestJS проекта и базовой инфраструктуры
 
 
 
@@ -23,7 +23,7 @@
   - Создать базовую структуру модулей (AchievementModule)
   - _Requirements: Все требования_
 
-- [x] 2. Настройка TypeORM и PostgreSQL интеграции
+- [ ] 2. Настройка TypeORM и PostgreSQL интеграции
 
 
 
@@ -36,7 +36,7 @@
   - Настроить индексы для оптимизации запросов по userId и achievementId
   - _Requirements: 1, 2, 3, 4_
 
-- [x] 3. Создание TypeORM entities с декораторами
+- [ ] 3. Создание TypeORM entities с декораторами
 
 
 
@@ -49,7 +49,7 @@
   - Настроить связи между entities через @OneToMany, @ManyToOne
   - _Requirements: 1, 2, 3_
 
-- [x] 4. Создание DTO классов с валидацией
+- [ ] 4. Создание DTO классов с валидацией
 
 
 
@@ -62,7 +62,7 @@
   - Настроить Swagger декораторы @ApiProperty для документации
   - _Requirements: 1, 2, 3, 4_
 
-- [x] 5. Реализация AchievementService с dependency injection
+- [ ] 5. Реализация AchievementService с dependency injection
 
 
 
@@ -75,7 +75,7 @@
   - Добавить isAchievementUnlocked для проверки статуса
   - _Requirements: 1, 2_
 
-- [x] 6. Реализация ProgressService с бизнес-логикой
+- [ ] 6. Реализация ProgressService с бизнес-логикой
 
 
 
@@ -88,7 +88,7 @@
   - Реализовать evaluateCondition для обработки различных типов условий
   - _Requirements: 3, 4_
 
-- [x] 7. Создание EventService для обработки внешних событий
+- [ ] 7. Создание EventService для обработки внешних событий
 
 
 
@@ -101,7 +101,7 @@
   - Настроить интеграцию с ProgressService для обновления прогресса
   - _Requirements: 4_
 
-- [x] 8. Создание REST API контроллеров с NestJS декораторами
+- [ ] 8. Создание REST API контроллеров с NestJS декораторами
 
 
 
@@ -114,7 +114,7 @@
   - Реализовать обработку ошибок через custom exception filters
   - _Requirements: 1, 2, 3, 4_
 
-- [x] 9. Настройка middleware, guards и interceptors
+- [ ] 9. Настройка middleware, guards и interceptors
 
 
 
@@ -128,7 +128,7 @@
   - Настроить CacheInterceptor для кеширования часто запрашиваемых данных
   - _Requirements: Все требования_
 
-- [x] 10. Создание seed данных для базовых достижений
+- [ ] 10. Создание seed данных для базовых достижений
 
 
 
@@ -141,7 +141,7 @@
   - Добавить систему очков (points) для достижений
   - _Requirements: 1_
 
-- [x] 11. Написание comprehensive unit тестов
+- [ ] 11. Написание comprehensive unit тестов
 
 
 
@@ -154,7 +154,7 @@
   - Достичь 90%+ покрытия кода тестами
   - _Requirements: Все требования_
 
-- [x] 12. Создание integration и e2e тестов
+- [ ] 12. Создание integration и e2e тестов
 
 
 
@@ -167,7 +167,7 @@
   - Протестировать error handling и edge cases
   - _Requirements: Все требования_
 
-- [x] 13. Настройка Docker контейнеризации
+- [ ] 13. Настройка Docker контейнеризации
 
 
 
@@ -180,7 +180,7 @@
   - Создать .dockerignore для оптимизации размера образа
   - _Requirements: Все требования_
 
-- [x] 14. Интеграция с MVP сервисами
+- [ ] 14. Интеграция с MVP сервисами
 
 
 
@@ -194,7 +194,7 @@
   - Протестировать все интеграции в рамках MVP
   - _Requirements: 4_
 
-- [x] 15. Подготовка production конфигурации и мониторинга
+- [ ] 15. Подготовка production конфигурации и мониторинга
 
 
 

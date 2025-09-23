@@ -6,7 +6,7 @@
 
 ## Tasks
 
-- [x] 1. Настройка NestJS проекта и базовой инфраструктуры
+- [ ] 1. Настройка NestJS проекта и базовой инфраструктуры
 
 
 
@@ -19,7 +19,7 @@
   - Создать базовую структуру модулей (AppModule, FriendsModule, MessagesModule, StatusModule)
   - _Requirements: 5_
 
-- [x] 2. Настройка TypeORM и базы данных
+- [ ] 2. Настройка TypeORM и базы данных
 
 
 
@@ -32,7 +32,7 @@
   - Настроить миграции и добавить Redis для кеширования
   - _Requirements: 1, 2, 3_
 
-- [x] 3. Создание DTO классов с валидацией
+- [ ] 3. Создание DTO классов с валидацией
 
 
 
@@ -42,7 +42,7 @@
   - Настроить Swagger decorators для документации
   - _Requirements: 1, 2, 3_
 
-- [x] 4. Реализация FriendsService с бизнес-логикой
+- [ ] 4. Реализация FriendsService с бизнес-логикой
 
   - Создать FriendsService с dependency injection
   - Реализовать sendFriendRequest с валидацией дубликатов
@@ -51,7 +51,7 @@
   - _Requirements: 1_
 
 
-- [x] 5. Реализация MessagingService для простых сообщений
+- [ ] 5. Реализация MessagingService для простых сообщений
 
   - Создать MessagingService для сообщений между друзьями
   - Реализовать sendMessage с проверкой дружбы
@@ -59,7 +59,7 @@
   - Реализовать markAsRead и базовый rate limiting
   - _Requirements: 3_
 
-- [x] 6. Создание StatusService для онлайн статусов
+- [ ] 6. Создание StatusService для онлайн статусов
 
   - Реализовать StatusService для управления статусами
   - Добавить setOnlineStatus, setOfflineStatus, getFriendsStatus
@@ -67,7 +67,7 @@
   - Настроить кеширование статусов в Redis
   - _Requirements: 2_
 
-- [x] 7. Создание Controllers с REST API
+- [ ] 7. Создание Controllers с REST API
 
   - Реализовать FriendsController с endpoints для управления друзьями
   - Создать MessagesController для простых сообщений
@@ -75,14 +75,14 @@
   - Настроить Swagger документацию для всех endpoints
   - _Requirements: 1, 2, 3_
 
-- [x] 8. Создание Guards для аутентификации и авторизации
+- [ ] 8. Создание Guards для аутентификации и авторизации
 
   - Реализовать JwtAuthGuard для проверки JWT токенов
   - Создать FriendshipGuard для проверки дружбы перед отправкой сообщений
   - Добавить базовый RateLimitGuard для ограничения частоты сообщений
   - _Requirements: 3, 4_
 
-- [x] 9. Интеграция с внешними сервисами
+- [ ] 9. Интеграция с внешними сервисами
 
   - Создать HTTP клиенты для User Service и Notification Service
   - Добавить базовую retry логику для отказоустойчивости
@@ -90,7 +90,7 @@
   - _Requirements: 4_
 
 
-- [x] 10. Написание тестов MVP
+- [ ] 10. Написание тестов MVP
 
   - Создать unit тесты для всех Services (Friends, Messaging, Status)
   - Написать integration тесты для API endpoints с Supertest
@@ -99,7 +99,7 @@
   - _Requirements: Все требования_
 
 
-- [x] 11. Настройка production конфигурации MVP
+- [ ] 11. Настройка production конфигурации MVP
 
   - Создать production Dockerfile с оптимизацией
   - Настроить базовые Kubernetes манифесты (Deployment, Service, ConfigMap)
@@ -108,7 +108,7 @@
 
   - _Requirements: 5_
 
-- [x] 12. Интеграция с MVP сервисами
+- [ ] 12. Интеграция с MVP сервисами
 
 
   - Создать HTTP endpoints для интеграции с Achievement Service (получение списка друзей)
@@ -119,7 +119,7 @@
   - Протестировать интеграцию со всеми MVP сервисами
   - _Requirements: 4_
 
-- [x] 13. Подготовка к развертыванию MVP
+- [ ] 13. Подготовка к развертыванию MVP
 
   - Провести базовое тестирование производительности для 1000 пользователей
   - Создать документацию API с примерами интеграции
