@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { SearchService } from './search.service';
 import { LibraryRepository } from './repositories/library.repository';
 import { GameCatalogClient } from '../clients/game-catalog.client';
@@ -122,6 +122,38 @@ describe('SearchService', () => {
 
       const result = await service.searchUserLibrary('user1', searchDto);
       expect(result.games).toHaveLength(0);
+    });
+
+    it('should match by tags', async () => {
+      const libraryGames = [{ gameId: '1' }, { gameId: '2' }] as LibraryGame[];
+      const gameDetails: MinimalGameDetails[] = [
+        { id: '1', title: 'Action Game', developer: 'Dev A', publisher: 'Pub', tags: ['RPG', 'Open World'] as any },
+        { id: '2', title: 'Strategy', developer: 'Dev B', publisher: 'Pub', tags: ['Card', 'Turn-Based'] as any },
+      ] as any;
+      mockLibraryRepository.find.mockResolvedValue(libraryGames);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue(gameDetails);
+
+      const searchDto = new SearchLibraryDto();
+      searchDto.query = 'open';
+
+      const result = await service.searchUserLibrary('user1', searchDto);
+      expect(result.games).toHaveLength(1);
+      expect(result.games[0].gameDetails?.title).toBe('Action Game');
+    });
+
+    it('should fuzzy match close queries', async () => {
+      const libraryGames = [{ gameId: '1' }] as LibraryGame[];
+      const gameDetails: any[] = [
+        { id: '1', title: 'Cyberpunk', developer: 'CDPR', publisher: 'XYZ', tags: ['RPG'] },
+      ];
+      mockLibraryRepository.find.mockResolvedValue(libraryGames);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue(gameDetails);
+
+      const searchDto = new SearchLibraryDto();
+      searchDto.query = 'cyberpun'; // missing last char
+
+      const result = await service.searchUserLibrary('user1', searchDto);
+      expect(result.games).toHaveLength(1);
     });
   });
 });

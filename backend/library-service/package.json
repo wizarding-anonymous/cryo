@@ -57,6 +57,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "kafkajs": "^2.2.4",
+    "elastic-apm-node": "^4.5.0",
     "nest-winston": "^1.9.4",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -128,10 +129,10 @@
     ],
     "coverageThreshold": {
       "global": {
-        "branches": 0,
-        "functions": 30,
-        "lines": 20,
-        "statements": 19
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
       }
     },
     "moduleNameMapper": {

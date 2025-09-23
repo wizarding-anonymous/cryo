@@ -1,6 +1,6 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { LibraryRepository } from './library.repository';
 import { LibraryGame } from '../entities/library-game.entity';
 import { LibraryQueryDto, SortBy } from '../dto/request.dto';
@@ -12,6 +12,8 @@ describe('LibraryRepository', () => {
   const mockTypeormRepository = {
     findAndCount: jest.fn(),
     findOne: jest.fn(),
+    createQueryBuilder: jest.fn(),
+    count: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -148,6 +150,43 @@ describe('LibraryRepository', () => {
       const result = await repository.findOneByUserIdAndGameId('user123', 'game456');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('findUserLibraryWithLatestPurchase', () => {
+    it('builds left join to latest purchase and paginates/sorts', async () => {
+      const userId = 'user123';
+      const queryDto = new LibraryQueryDto();
+      queryDto.page = 1;
+      queryDto.limit = 5;
+      queryDto.sortBy = SortBy.PURCHASE_DATE;
+      queryDto.sortOrder = 'desc';
+
+      const qb: Partial<SelectQueryBuilder<any>> = {
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      mockTypeormRepository.createQueryBuilder.mockReturnValue(qb);
+      mockTypeormRepository.count.mockResolvedValue(0);
+
+      const result = await repository.findUserLibraryWithLatestPurchase(userId, queryDto);
+
+      expect(result).toEqual([[], 0]);
+      expect(mockTypeormRepository.createQueryBuilder).toHaveBeenCalledWith('lg');
+      expect(qb.leftJoin).toHaveBeenCalled();
+      expect(qb.where).toHaveBeenCalledWith('lg."userId" = :userId', { userId });
+      expect(qb.orderBy).toHaveBeenCalledWith('lg."purchaseDate"', 'DESC');
+      expect(qb.skip).toHaveBeenCalledWith(0);
+      expect(qb.take).toHaveBeenCalledWith(5);
+      expect(qb.select).toHaveBeenCalled();
+      expect(qb.getRawMany).toHaveBeenCalled();
+      expect(mockTypeormRepository.count).toHaveBeenCalledWith({ where: { userId } });
     });
   });
 });
