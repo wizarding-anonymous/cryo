@@ -1,5 +1,6 @@
 # Compiled output
 /dist
+/build
 /node_modules
 
 # Logs
@@ -13,10 +14,18 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Tests
 /coverage
 /.nyc_output
+test-results/
+junit.xml
 
 # IDEs and editors
 /.idea
@@ -26,6 +35,9 @@ lerna-debug.log*
 *.launch
 .settings/
 *.sublime-workspace
+*.swp
+*.swo
+*~
 
 # IDE - VSCode
 .vscode/*
@@ -38,9 +50,76 @@ lerna-debug.log*
 .env
 .env.local
 .env.development
+.env.development.local
 .env.test
+.env.test.local
 .env.production
+.env.production.local
 
 # Temporary files
 *.tmp
 *.temp
+tmp/
+temp/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+
+# Gatsby files
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Docker
+.dockerignore
+
+# Database
+*.sqlite
+*.db
+
+# Backup files
+*.bak
+*.backup
