@@ -68,7 +68,7 @@ services:
       dockerfile: Dockerfile
     container_name: library-service
     ports:
-      - "3003:3003"
+      - "3003:3000"
     depends_on:
       - postgres-library
       - redis
@@ -167,7 +167,7 @@ services:
       dockerfile: Dockerfile
     container_name: security-service
     ports:
-      - "3009:3009"
+      - "3009:3008"
     depends_on:
       - postgres-security
       - redis
@@ -184,7 +184,7 @@ services:
       dockerfile: Dockerfile
     container_name: download-service
     ports:
-      - "3010:3010"
+      - "3010:8080"
     depends_on:
       - postgres-download
       - redis
