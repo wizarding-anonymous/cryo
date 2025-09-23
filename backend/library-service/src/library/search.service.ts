@@ -3,6 +3,7 @@ import { LibraryRepository } from './repositories/library.repository';
 import { SearchLibraryDto } from './dto/request.dto';
 import { GameCatalogClient } from '../clients/game-catalog.client';
 import { LibraryResponseDto, LibraryGameDto, GameDetailsDto } from './dto/response.dto';
+import { CacheService } from '../cache/cache.service';
 import { LibraryGame } from './entities/library-game.entity';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class SearchService {
   constructor(
     private readonly libraryRepository: LibraryRepository,
     private readonly gameCatalogClient: GameCatalogClient,
+    private readonly cacheService: CacheService,
   ) {}
 
   async searchUserLibrary(
@@ -19,10 +21,13 @@ export class SearchService {
     const page = searchDto.page ?? 1;
     const limit = searchDto.limit ?? 20;
 
-    const allLibraryGames = await this.libraryRepository.find({ where: { userId } });
-    if (allLibraryGames.length === 0) {
-      return { games: [], pagination: { total: 0, page, limit, totalPages: 0 } };
-    }
+    const cacheKey = `search_library_${userId}_page_${page}_limit_${limit}_q_${normalize(searchDto.query)}`;
+
+    const fetchFn = async (): Promise<LibraryResponseDto> => {
+      const allLibraryGames = await this.libraryRepository.find({ where: { userId } });
+      if (allLibraryGames.length === 0) {
+        return { games: [], pagination: { total: 0, page, limit, totalPages: 0 } };
+      }
 
     const gameIds = allLibraryGames.map((game) => game.gameId);
     const gameDetails = await this.gameCatalogClient.getGamesByIds(gameIds);
@@ -43,20 +48,25 @@ export class SearchService {
       .sort((a, b) => b.score - a.score)
       .map((entry) => entry.game);
 
-    const total = filteredGames.length;
-    const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
-    const startIndex = (page - 1) * limit;
-    const paginatedGames = filteredGames.slice(startIndex, startIndex + limit);
+      const total = filteredGames.length;
+      const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
+      const startIndex = (page - 1) * limit;
+      const paginatedGames = filteredGames.slice(startIndex, startIndex + limit);
 
-    return {
-      games: paginatedGames,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages,
-      },
+      return {
+        games: paginatedGames,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+      };
     };
+
+    const response = await this.cacheService.getOrSet<LibraryResponseDto>(cacheKey, fetchFn, 300);
+    await recordUserCacheKey(this.cacheService, userId, cacheKey);
+    return response;
   }
 }
 
@@ -89,6 +99,15 @@ function computeBestMatchScore(query: string, details?: GameDetailsDto): number 
     best = Math.max(best, similarity(candidate, query));
   }
   return best;
+}
+
+async function recordUserCacheKey(cacheService: CacheService, userId: string, key: string): Promise<void> {
+  const userCacheKeysKey = `user-cache-keys:${userId}`;
+  const userKeys = (await cacheService.get<string[]>(userCacheKeysKey)) ?? [];
+  if (!userKeys.includes(key)) {
+    userKeys.push(key);
+    await cacheService.set(userCacheKeysKey, userKeys, 0);
+  }
 }
 
 // Jaro-Winkler-like lightweight similarity (no deps)

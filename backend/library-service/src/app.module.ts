@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import {
@@ -39,10 +39,33 @@ export const createTypeOrmConfig = (configService: ConfigService) => ({
   },
 });
 
-export const createCacheConfig = (configService: ConfigService) => ({
-  ttl: configService.get('redis.ttl'),
-  max: 100,
-});
+export const createCacheConfig = async (configService: ConfigService) => {
+  const ttl = configService.get<number>('redis.ttl');
+  const redisHost = configService.get<string>('redis.host');
+  const redisPort = configService.get<number>('redis.port');
+  const redisPassword = configService.get<string | undefined>('redis.password');
+
+  try {
+    // Dynamically import redis store. If not available, fallback to in-memory store.
+    const { redisStore } = await import('cache-manager-redis-yet');
+    const store = await redisStore({
+      socket: { host: redisHost, port: redisPort },
+      password: redisPassword,
+      ttl,
+    } as any);
+    return {
+      store,
+      ttl,
+      max: 100,
+    } as any;
+  } catch {
+    // Fallback to in-memory cache in environments where Redis store is unavailable
+    return {
+      ttl,
+      max: 100,
+    } as any;
+  }
+};
 
 @Module({
   imports: [
