@@ -1,4 +1,4 @@
-import {
+﻿import {
   IsOptional,
   IsInt,
   Min,
@@ -51,5 +51,5 @@ export class SearchHistoryDto extends HistoryQueryDto {
   @IsNotEmpty()
   @MinLength(2)
   @MaxLength(100)
-  query: string;
+  query!: string;
 }

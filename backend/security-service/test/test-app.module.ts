@@ -14,7 +14,7 @@ import { LogsController } from '../src/modules/logs/logs.controller';
 import { AlertsController } from '../src/modules/alerts/alerts.controller';
 import { SecurityService } from '../src/modules/security/security.service';
 import { LoggingService } from '../src/modules/logs/logging.service';
-import { AlertsService } from '../src/modules/alerts/alerts.service';
+import { MonitoringService } from '../src/modules/alerts/monitoring.service';
 import { RateLimitService } from '../src/modules/security/rate-limit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MetricsService } from '../src/common/metrics/metrics.service';
@@ -69,7 +69,7 @@ import { NotificationServiceClient } from '../src/clients/notification-service.c
   providers: [
     SecurityService,
     LoggingService,
-    AlertsService,
+    MonitoringService,
     RateLimitService,
     MetricsService,
     UserServiceClient,

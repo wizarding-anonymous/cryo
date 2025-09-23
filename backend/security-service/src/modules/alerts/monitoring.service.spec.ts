@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AlertsService } from './alerts.service';
+import { MonitoringService } from './monitoring.service';
 import { SecurityAlert } from '../../entities/security-alert.entity';
 import { SecurityEvent } from '../../entities/security-event.entity';
 import { ConfigService } from '@nestjs/config';
@@ -41,15 +41,15 @@ const eventsRepoMock = () => ({
   }),
 });
 
-describe('AlertsService', () => {
-  let service: AlertsService;
+describe('MonitoringService', () => {
+  let service: MonitoringService;
   let alertsRepo: ReturnType<typeof alertRepoMock>;
 
   beforeEach(async () => {
     alertsRepo = alertRepoMock();
     const moduleRef = await Test.createTestingModule({
       providers: [
-        AlertsService,
+        MonitoringService,
         { provide: getRepositoryToken(SecurityAlert), useValue: alertsRepo },
         { provide: getRepositoryToken(SecurityEvent), useValue: eventsRepoMock() },
         { provide: ConfigService, useValue: { get: (_: string, d?: any) => d } },
@@ -60,7 +60,7 @@ describe('AlertsService', () => {
       ],
     }).compile();
 
-    service = moduleRef.get(AlertsService);
+    service = moduleRef.get(MonitoringService);
   });
 
   it('creates and resolves alert', async () => {

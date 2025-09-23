@@ -18,7 +18,7 @@ import { SecurityAlertSeverity } from '../../common/enums/security-alert-severit
 import { EncryptionService } from '../../common/encryption/encryption.service';
 
 @Injectable()
-export class AlertsService implements OnModuleDestroy {
+export class MonitoringService implements OnModuleDestroy {
   constructor(
     @InjectRepository(SecurityAlert)
     private readonly alertsRepo: Repository<SecurityAlert>,

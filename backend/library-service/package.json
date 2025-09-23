@@ -116,6 +116,7 @@
       "!**/dist/**",
       "!**/*.interface.ts",
       "!**/*.enum.ts",
+      "!src/migrations/**/*",
       "!**/main.ts"
     ],
     "coverageDirectory": "../coverage",

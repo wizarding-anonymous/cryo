@@ -1,36 +1,36 @@
-import { ApiProperty } from '@nestjs/swagger';
+﻿import { ApiProperty } from '@nestjs/swagger';
 import { PurchaseHistory, PurchaseStatus } from '../entities/purchase-history.entity';
 
 export class PurchaseDetailsDto {
   @ApiProperty({ format: 'uuid' })
-  id: string;
+  id!: string;
 
   @ApiProperty({ format: 'uuid' })
-  userId: string;
+  userId!: string;
 
   @ApiProperty({ format: 'uuid' })
-  gameId: string;
+  gameId!: string;
 
   @ApiProperty({ format: 'uuid' })
-  orderId: string;
+  orderId!: string;
 
   @ApiProperty()
-  amount: number;
+  amount!: number;
 
   @ApiProperty({ example: 'USD' })
-  currency: string;
+  currency!: string;
 
   @ApiProperty({ enum: PurchaseStatus })
-  status: PurchaseStatus;
+  status!: PurchaseStatus;
 
   @ApiProperty()
-  paymentMethod: string;
+  paymentMethod!: string;
 
-  @ApiProperty({ type: 'object', additionalProperties: true })
-  metadata: Record<string, any>;
+  @ApiProperty({ type: 'object', additionalProperties: true, required: false })
+  metadata?: Record<string, unknown> | null;
 
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
 
   static fromEntity(entity: PurchaseHistory): PurchaseDetailsDto {
     const dto = new PurchaseDetailsDto();
@@ -38,36 +38,36 @@ export class PurchaseDetailsDto {
     dto.userId = entity.userId;
     dto.gameId = entity.gameId;
     dto.orderId = entity.orderId;
-    dto.amount = entity.amount;
+    dto.amount = Number(entity.amount);
     dto.currency = entity.currency;
     dto.status = entity.status;
     dto.paymentMethod = entity.paymentMethod;
-    dto.metadata = entity.metadata;
+    dto.metadata = entity.metadata ?? null;
     dto.createdAt = entity.createdAt;
     return dto;
   }
 }
 
 class PaginationDto {
-    @ApiProperty()
-    total: number;
+  @ApiProperty()
+  total!: number;
 
-    @ApiProperty()
-    page: number;
+  @ApiProperty()
+  page!: number;
 
-    @ApiProperty()
-    limit: number;
+  @ApiProperty()
+  limit!: number;
 
-    @ApiProperty()
-    totalPages: number;
+  @ApiProperty()
+  totalPages!: number;
 }
 
 export class HistoryResponseDto {
   @ApiProperty({ type: [PurchaseDetailsDto] })
-  history: PurchaseDetailsDto[];
+  history!: PurchaseDetailsDto[];
 
   @ApiProperty({ type: PaginationDto })
-  pagination: {
+  pagination!: {
     total: number;
     page: number;
     limit: number;

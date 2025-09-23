@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ClientsModule, Transport, type KafkaOptions } from '@nestjs/microservices';
 import { EventEmitterService } from './event.emitter.service';
 
 @Module({
@@ -9,29 +9,32 @@ import { EventEmitterService } from './event.emitter.service';
       {
         name: 'KAFKA_SERVICE',
         imports: [ConfigModule],
-        useFactory: (configService: ConfigService) => {
-          const kafkaEnabled = configService.get<boolean>('kafka.enabled');
+        useFactory: async (configService: ConfigService) => {
+          const kafkaEnabled = configService.get<boolean>('kafka.enabled', false) === true;
           if (!kafkaEnabled) {
-            // Provide a harmless TCP client config to satisfy types; not used when kafka is disabled
             return {
               transport: Transport.TCP,
               options: {
                 host: '127.0.0.1',
-                port: 65535, // Unused dummy port
+                port: 65535,
               },
             };
           }
-          return {
+
+          const broker = configService.get<string>('kafka.broker') ?? 'localhost:9092';
+          const kafkaOptions: KafkaOptions = {
             transport: Transport.KAFKA,
             options: {
               client: {
-                brokers: [configService.get<string>('kafka.broker')],
+                brokers: [broker],
               },
               consumer: {
                 groupId: 'library-service-consumer',
               },
             },
           };
+
+          return kafkaOptions;
         },
         inject: [ConfigService],
       },

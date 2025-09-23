@@ -1,4 +1,4 @@
-import {
+﻿import {
   IsOptional,
   IsInt,
   Min,
@@ -56,37 +56,37 @@ export class SearchLibraryDto extends LibraryQueryDto {
   @IsNotEmpty()
   @MinLength(2)
   @MaxLength(100)
-  query: string;
+  query!: string;
 }
 
 export class AddGameToLibraryDto {
   @ApiProperty({ description: 'User ID', format: 'uuid' })
   @IsUUID()
-  userId: string;
+  userId!: string;
 
   @ApiProperty({ description: 'Game ID', format: 'uuid' })
   @IsUUID()
-  gameId: string;
+  gameId!: string;
 
   @ApiProperty({ description: 'Order ID from payment service', format: 'uuid' })
   @IsUUID()
-  orderId: string;
+  orderId!: string;
 
   @ApiProperty({ description: 'Purchase ID from payment service', format: 'uuid' })
   @IsUUID()
-  purchaseId: string;
+  purchaseId!: string;
 
   @ApiProperty({ description: 'Price of the game at time of purchase', example: 49.99 })
   @IsNumber()
   @Min(0)
-  purchasePrice: number;
+  purchasePrice!: number;
 
   @ApiProperty({ description: 'Currency code (ISO 4217)', example: 'USD', maxLength: 3, minLength: 3 })
   @IsString()
   @Length(3, 3)
-  currency: string;
+  currency!: string;
 
   @ApiProperty({ description: 'Date of purchase in ISO 8601 format' })
   @IsDateString()
-  purchaseDate: string;
+  purchaseDate!: string;
 }

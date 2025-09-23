@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
-import { AlertsService } from './alerts.service';
+import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { MonitoringService } from './monitoring.service';
 import { GetAlertsQueryDto } from './dto/get-alerts-query.dto';
 import { PaginatedSecurityAlerts } from '../../dto/responses/paginated-security-alerts.dto';
 import { SecurityAlert } from '../../entities/security-alert.entity';
@@ -9,7 +9,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 @ApiTags('Security Alerts')
 @Controller('security/alerts')
 export class AlertsController {
-  constructor(private readonly alerts: AlertsService) {}
+  constructor(private readonly alerts: MonitoringService) {}
 
   @Get()
   @UseGuards(AdminGuard)

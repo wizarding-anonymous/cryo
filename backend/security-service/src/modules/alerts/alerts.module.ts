@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SecurityAlert } from '../../entities/security-alert.entity';
 import { SecurityEvent } from '../../entities/security-event.entity';
-import { AlertsService } from './alerts.service';
+import { MonitoringService } from './monitoring.service';
 import { AlertsController } from './alerts.controller';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { MetricsModule } from '../../common/metrics/metrics.module';
@@ -19,7 +19,7 @@ import { AuthModule } from '../../common/auth/auth.module';
     AuthModule,
   ],
   controllers: [AlertsController],
-  providers: [AlertsService, AdminGuard],
-  exports: [AlertsService],
+  providers: [MonitoringService, AdminGuard],
+  exports: [MonitoringService],
 })
 export class AlertsModule {}

@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { firstValueFrom, retry, catchError, of } from 'rxjs';
+import { firstValueFrom, retry, catchError } from 'rxjs';
 
 @Injectable()
 export class PaymentServiceClient {
@@ -14,7 +14,11 @@ export class PaymentServiceClient {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.baseUrl = this.configService.get('services.payment.url');
+    const configuredBaseUrl = this.configService.get<string>('services.payment.url');
+    if (!configuredBaseUrl) {
+      throw new Error('Payment service URL is not configured');
+    }
+    this.baseUrl = configuredBaseUrl;
   }
 
   /**
@@ -26,11 +30,9 @@ export class PaymentServiceClient {
 
     const request$ = this.httpService.get<{ status: string }>(url).pipe(
       retry({ count: this.retryAttempts, delay: this.retryDelay }),
-      catchError((error) => {
-        this.logger.error(
-          `Failed to get order status for order ${orderId}: ${error.message}`,
-        );
-        // Preserve error behavior for tests expecting rejection
+      catchError((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(`Failed to get order status for order ${orderId}: ${message}`);
         throw error;
       }),
     );

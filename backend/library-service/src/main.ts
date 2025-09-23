@@ -1,11 +1,11 @@
-import { NestFactory } from '@nestjs/core';
+﻿import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
+import { Transport, type KafkaOptions } from '@nestjs/microservices';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
-import { Transport } from '@nestjs/microservices';
+import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -28,26 +28,34 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
 
   // Hybrid application setup (for future Kafka integration)
-  // Only enable Kafka if not in test environment and if explicitly enabled
-  const kafkaEnabled = configService.get('kafka.enabled', 'true') === 'true' && process.env.NODE_ENV !== 'test';
-  
+  const kafkaEnabled =
+    configService.get<boolean>('kafka.enabled', false) === true &&
+    process.env.NODE_ENV !== 'test';
+
   if (kafkaEnabled) {
     try {
-      app.connectMicroservice({
+      const kafkaBroker = configService.get<string>('kafka.broker') ?? 'localhost:9092';
+      const kafkaOptions: KafkaOptions = {
         transport: Transport.KAFKA,
         options: {
           client: {
-            brokers: [configService.get('kafka.broker', 'localhost:9092')],
+            brokers: [kafkaBroker],
           },
           consumer: {
             groupId: 'library-service-consumer',
           },
         },
-      });
+      };
+      app.connectMicroservice(kafkaOptions);
       await app.startAllMicroservices();
       logger.log('🔗 Kafka microservice connected');
-    } catch (error) {
-      logger.warn('⚠️ Kafka connection failed, continuing without Kafka', error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const context = error instanceof Error ? error.stack : undefined;
+      logger.warn(
+        `⚠️ Kafka connection failed, continuing without Kafka. Reason: ${message}`,
+        context,
+      );
     }
   } else {
     logger.log('⏭️ Kafka disabled for this environment');
@@ -72,7 +80,9 @@ async function bootstrap(): Promise<void> {
   );
 
   // Global exception filter
-  app.useGlobalFilters(new (require('./common/filters/global-exception.filter').GlobalExceptionFilter)());
+  app.useGlobalFilters(
+    new (require('./common/filters/global-exception.filter').GlobalExceptionFilter)(),
+  );
 
   // CORS configuration
   app.enableCors({
@@ -86,12 +96,9 @@ async function bootstrap(): Promise<void> {
 
   // Swagger configuration
   const swaggerConfig = new DocumentBuilder()
-    .setTitle(
-      configService.get<string>('swagger.title') ?? 'Library Service API',
-    )
+    .setTitle(configService.get<string>('swagger.title') ?? 'Library Service API')
     .setDescription(
-      configService.get<string>('swagger.description') ??
-        'API for managing user game libraries',
+      configService.get<string>('swagger.description') ?? 'API for managing user game libraries',
     )
     .setVersion(configService.get<string>('swagger.version') ?? '1.0')
     .addBearerAuth(
@@ -124,7 +131,9 @@ async function bootstrap(): Promise<void> {
 
   logger.log(`🚀 Library Service is running on: http://localhost:${port}`);
   logger.log(
-    `📚 Swagger documentation: http://localhost:${port}/${configService.get<string>('swagger.path') ?? 'api/docs'}`,
+    `📚 Swagger documentation: http://localhost:${port}/${
+      configService.get<string>('swagger.path') ?? 'api/docs'
+    }`,
   );
 }
 

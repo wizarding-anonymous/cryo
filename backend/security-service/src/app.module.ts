@@ -11,6 +11,7 @@ import { RedisModule } from './redis/redis.module';
 import { WinstonModule } from 'nest-winston';
 import { winstonLogger } from './config/logger.config';
 import { IpBlockMiddleware } from './common/middleware/ip-block.middleware';
+import { LoggingMiddleware } from './common/middleware/logging.middleware';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { SecurityLoggingInterceptor } from './common/interceptors/security-logging.interceptor';
 import { JwtModule } from '@nestjs/jwt';
@@ -35,11 +36,13 @@ import { KafkaModule } from './kafka/kafka.module';
   providers: [
     AppService,
     { provide: APP_INTERCEPTOR, useClass: SecurityLoggingInterceptor },
+    LoggingMiddleware,
     IpBlockMiddleware,
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(IpBlockMiddleware).forRoutes('*');
+    consumer.apply(LoggingMiddleware, IpBlockMiddleware).forRoutes('*');
   }
 }
+

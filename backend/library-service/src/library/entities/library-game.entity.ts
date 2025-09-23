@@ -1,4 +1,4 @@
-import {
+﻿import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -11,34 +11,34 @@ import {
 @Index(['userId', 'gameId'], { unique: true })
 export class LibraryGame {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('uuid')
   @Index()
-  userId: string;
+  userId!: string;
 
   @Column('uuid')
   @Index()
-  gameId: string;
+  gameId!: string;
 
   @Column('timestamp')
-  purchaseDate: Date;
+  purchaseDate!: Date;
 
   @Column('decimal', { precision: 10, scale: 2 })
-  purchasePrice: number;
+  purchasePrice!: number;
 
   @Column('varchar', { length: 3 })
-  currency: string;
+  currency!: string;
 
   @Column('uuid')
-  orderId: string;
+  orderId!: string;
 
   @Column('uuid', { nullable: true })
-  purchaseId: string;
+  purchaseId?: string | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

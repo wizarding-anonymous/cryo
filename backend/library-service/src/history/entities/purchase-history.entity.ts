@@ -1,4 +1,4 @@
-import {
+﻿import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -16,40 +16,40 @@ export enum PurchaseStatus {
 @Entity('purchase_history')
 export class PurchaseHistory {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('uuid')
   @Index()
-  userId: string;
+  userId!: string;
 
   @Column('uuid')
-  gameId: string;
+  gameId!: string;
 
   @Column('uuid')
-  orderId: string;
+  orderId!: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
-  amount: number;
+  amount!: number;
 
   @Column('varchar', { length: 3 })
-  currency: string;
+  currency!: string;
 
   @Column({
     type: 'enum',
     enum: PurchaseStatus,
     default: PurchaseStatus.COMPLETED,
   })
-  status: PurchaseStatus;
+  status!: PurchaseStatus;
 
   @Column('varchar', { length: 100 })
-  paymentMethod: string;
+  paymentMethod!: string;
 
   @Column('jsonb', { nullable: true })
-  metadata: Record<string, any>;
+  metadata?: Record<string, unknown> | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

@@ -1,50 +1,50 @@
-import { ApiProperty } from '@nestjs/swagger';
+﻿import { ApiProperty } from '@nestjs/swagger';
 import { LibraryGame } from '../entities/library-game.entity';
 
 export class GameDetailsDto {
   @ApiProperty({ format: 'uuid' })
-  id: string;
+  id!: string;
 
   @ApiProperty()
-  title: string;
+  title!: string;
 
   @ApiProperty()
-  developer: string;
+  developer!: string;
 
   @ApiProperty()
-  publisher: string;
+  publisher!: string;
 
   @ApiProperty({ type: [String] })
-  images: string[];
+  images!: string[];
 
   @ApiProperty({ type: [String] })
-  tags: string[];
+  tags!: string[];
 
   @ApiProperty()
-  releaseDate: Date;
+  releaseDate!: Date;
 }
 
 export class LibraryGameDto {
   @ApiProperty({ format: 'uuid' })
-  id: string;
+  id!: string;
 
   @ApiProperty({ format: 'uuid' })
-  gameId: string;
+  gameId!: string;
 
   @ApiProperty({ format: 'uuid' })
-  userId: string;
+  userId!: string;
 
   @ApiProperty()
-  purchaseDate: Date;
+  purchaseDate!: Date;
 
   @ApiProperty()
-  purchasePrice: number;
+  purchasePrice!: number;
 
   @ApiProperty({ example: 'USD' })
-  currency: string;
+  currency!: string;
 
   @ApiProperty({ format: 'uuid' })
-  orderId: string;
+  orderId!: string;
 
   @ApiProperty({ type: GameDetailsDto, required: false })
   gameDetails?: GameDetailsDto;
@@ -55,7 +55,7 @@ export class LibraryGameDto {
     dto.gameId = entity.gameId;
     dto.userId = entity.userId;
     dto.purchaseDate = entity.purchaseDate;
-    dto.purchasePrice = entity.purchasePrice;
+    dto.purchasePrice = Number(entity.purchasePrice);
     dto.currency = entity.currency;
     dto.orderId = entity.orderId;
     if (gameDetails) {
@@ -66,25 +66,25 @@ export class LibraryGameDto {
 }
 
 class PaginationDto {
-    @ApiProperty()
-    total: number;
+  @ApiProperty()
+  total!: number;
 
-    @ApiProperty()
-    page: number;
+  @ApiProperty()
+  page!: number;
 
-    @ApiProperty()
-    limit: number;
+  @ApiProperty()
+  limit!: number;
 
-    @ApiProperty()
-    totalPages: number;
+  @ApiProperty()
+  totalPages!: number;
 }
 
 export class LibraryResponseDto {
   @ApiProperty({ type: [LibraryGameDto] })
-  games: LibraryGameDto[];
+  games!: LibraryGameDto[];
 
   @ApiProperty({ type: PaginationDto })
-  pagination: {
+  pagination!: {
     total: number;
     page: number;
     limit: number;
@@ -94,7 +94,7 @@ export class LibraryResponseDto {
 
 export class OwnershipResponseDto {
   @ApiProperty()
-  owns: boolean;
+  owns!: boolean;
 
   @ApiProperty({ required: false })
   purchaseDate?: Date;

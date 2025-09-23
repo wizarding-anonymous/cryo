@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentServiceClient } from './payment-service.client';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -15,11 +15,11 @@ describe('PaymentServiceClient', () => {
   };
 
   const mockConfigService = {
-    get: jest.fn((key: string) => {
+    get: jest.fn((key: string, defaultValue?: unknown) => {
       if (key === 'services.payment.url') {
         return 'http://payment-service';
       }
-      return null;
+      return defaultValue;
     }),
   };
 
@@ -42,15 +42,15 @@ describe('PaymentServiceClient', () => {
   });
 
   describe('getOrderStatus', () => {
-    it('should return order status on success', async () => {
+    it('returns order status on success', async () => {
       const orderId = 'test-order-id';
-      const mockResponse: AxiosResponse = {
+      const mockResponse = {
         data: { status: 'completed' },
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: { headers: null },
-      };
+        config: { headers: {} },
+      } as AxiosResponse<{ status: string }>;
       mockHttpService.get.mockReturnValue(of(mockResponse));
 
       const result = await client.getOrderStatus(orderId);
@@ -59,7 +59,7 @@ describe('PaymentServiceClient', () => {
       expect(httpService.get).toHaveBeenCalledWith(`http://payment-service/orders/${orderId}`);
     });
 
-    it('should throw an error if the http call fails', async () => {
+    it('throws an error if the http call fails', async () => {
       const orderId = 'test-order-id';
       const error = new Error('API Error');
       mockHttpService.get.mockReturnValue(throwError(() => error));

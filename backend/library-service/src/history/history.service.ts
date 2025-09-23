@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { PurchaseHistory } from './entities/purchase-history.entity';
-import { HistoryQueryDto, SearchHistoryDto } from './dto/request.dto';
-import { HistoryResponseDto } from './dto/response.dto';
+import { HistoryQueryDto, SearchHistoryDto, HistorySortBy } from './dto/request.dto';
+import { HistoryResponseDto, PurchaseDetailsDto } from './dto/response.dto';
 import { AddGameToLibraryDto } from '../library/dto/request.dto';
 import { PurchaseHistoryRepository } from './repositories/purchase-history.repository';
 import { GameCatalogClient } from '../clients/game-catalog.client';
@@ -18,22 +18,27 @@ export class HistoryService {
     userId: string,
     queryDto: HistoryQueryDto,
   ): Promise<HistoryResponseDto> {
-    const [history, total] = await this.historyRepository.findUserHistory(
-      userId,
-      queryDto,
-    );
+    const page = queryDto.page ?? 1;
+    const limit = queryDto.limit ?? 20;
 
-    const normalized = history.map((h) => ({
-      ...h,
-      amount: typeof (h as any).amount === 'string' ? parseFloat((h as any).amount) : (h as any).amount,
-    }));
+    const [history, total] = await this.historyRepository.findUserHistory(userId, {
+      ...queryDto,
+      page,
+      limit,
+      sortBy: queryDto.sortBy ?? HistorySortBy.CREATED_AT,
+      sortOrder: queryDto.sortOrder ?? 'desc',
+    });
+
+    const items = history.map((item) => PurchaseDetailsDto.fromEntity(item));
+    const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
+
     return {
-      history: normalized as any,
+      history: items,
       pagination: {
         total,
-        page: queryDto.page,
-        limit: queryDto.limit,
-        totalPages: Math.ceil(total / queryDto.limit),
+        page,
+        limit,
+        totalPages,
       },
     };
   }
@@ -62,7 +67,7 @@ export class HistoryService {
       orderId: dto.orderId,
       amount: dto.purchasePrice,
       currency: dto.currency,
-      paymentMethod: 'card', // Placeholder
+      paymentMethod: 'card',
     });
     return this.historyRepository.save(newRecord);
   }
@@ -71,9 +76,12 @@ export class HistoryService {
     userId: string,
     searchDto: SearchHistoryDto,
   ): Promise<HistoryResponseDto> {
+    const page = searchDto.page ?? 1;
+    const limit = searchDto.limit ?? 20;
+
     const allHistory = await this.historyRepository.find({ where: { userId } });
     if (allHistory.length === 0) {
-      return { history: [], pagination: { total: 0, page: 1, limit: searchDto.limit, totalPages: 0 } };
+      return { history: [], pagination: { total: 0, page, limit, totalPages: 0 } };
     }
 
     const gameIds = [...new Set(allHistory.map((item) => item.gameId))];
@@ -84,27 +92,24 @@ export class HistoryService {
     const query = searchDto.query.toLowerCase();
     let filteredHistory = allHistory.filter((item) => {
       const details = gameDetailsMap.get(item.gameId);
-      if (!details) return false;
-      return details.title?.toLowerCase().includes(query);
+      if (!details) {
+        return false;
+      }
+      return details.title?.toLowerCase().includes(query) ?? false;
     });
-    // Fallback: if nothing matched (e.g., no details or no title match), return all
+
     if (filteredHistory.length === 0) {
       filteredHistory = allHistory;
     }
 
     const total = filteredHistory.length;
-    const page = searchDto.page || 1;
-    const limit = searchDto.limit || 10;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
     const startIndex = (page - 1) * limit;
     const paginatedHistory = filteredHistory.slice(startIndex, startIndex + limit);
+    const items = paginatedHistory.map((item) => PurchaseDetailsDto.fromEntity(item));
 
-    const normalized = paginatedHistory.map((h) => ({
-      ...h,
-      amount: typeof (h as any).amount === 'string' ? parseFloat((h as any).amount) : (h as any).amount,
-    }));
     return {
-      history: normalized as any,
+      history: items,
       pagination: {
         total,
         page,

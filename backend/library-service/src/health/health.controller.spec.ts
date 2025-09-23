@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { HealthController } from './health.controller';
 import { HealthCheckService, TypeOrmHealthIndicator, MicroserviceHealthIndicator } from '@nestjs/terminus';
 import { ConfigService } from '@nestjs/config';
@@ -73,7 +73,7 @@ describe('HealthController', () => {
 
       mockHealthCheckService.check.mockImplementation((checks) => {
         // Execute the check functions to ensure they're called properly
-        return Promise.all(checks.map(check => check())).then(() => mockHealthResult);
+        return Promise.all(checks.map((check: () => Promise<unknown>) => check())).then(() => mockHealthResult);
       });
 
       const result = await controller.check();
@@ -156,7 +156,7 @@ describe('HealthController', () => {
 
       mockHealthCheckService.check.mockImplementation((checks) => {
         // Execute the check functions to ensure they're called properly
-        return Promise.all(checks.map(check => check())).then(() => mockHealthResult);
+        return Promise.all(checks.map((check: () => Promise<unknown>) => check())).then(() => mockHealthResult);
       });
 
       const result = await controller.check();

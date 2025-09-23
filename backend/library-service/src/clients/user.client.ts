@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, retry, catchError, of } from 'rxjs';
@@ -14,7 +14,11 @@ export class UserServiceClient {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.baseUrl = this.configService.get('services.user.url');
+    const configuredBaseUrl = this.configService.get<string>('services.user.url');
+    if (!configuredBaseUrl) {
+      throw new Error('User service URL is not configured');
+    }
+    this.baseUrl = configuredBaseUrl;
   }
 
   async doesUserExist(userId: string): Promise<boolean> {
@@ -22,8 +26,11 @@ export class UserServiceClient {
 
     const request$ = this.httpService.get<{ exists: boolean }>(url).pipe(
       retry({ count: this.retryAttempts, delay: this.retryDelay }),
-      catchError(error => {
-        this.logger.error(`Failed to check existence for user ${userId} after ${this.retryAttempts} attempts: ${error.message}`);
+      catchError((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(
+          `Failed to check existence for user ${userId} after ${this.retryAttempts} attempts: ${message}`,
+        );
         return of({ data: { exists: false } });
       }),
     );

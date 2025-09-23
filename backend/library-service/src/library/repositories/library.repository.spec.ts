@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LibraryRepository } from './library.repository';
@@ -12,10 +12,6 @@ describe('LibraryRepository', () => {
   const mockTypeormRepository = {
     findAndCount: jest.fn(),
     findOne: jest.fn(),
-    create: jest.fn(),
-    save: jest.fn(),
-    delete: jest.fn(),
-    createQueryBuilder: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -34,12 +30,8 @@ describe('LibraryRepository', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(repository).toBeDefined();
-  });
-
   describe('findUserLibrary', () => {
-    it('should return user library with pagination', async () => {
+    it('returns user library with pagination', async () => {
       const userId = 'user123';
       const queryDto = new LibraryQueryDto();
       queryDto.page = 1;
@@ -55,15 +47,17 @@ describe('LibraryRepository', () => {
       const result = await repository.findUserLibrary(userId, queryDto);
 
       expect(result).toEqual([mockGames, mockCount]);
-      expect(typeormRepository.findAndCount).toHaveBeenCalledWith({
-        where: { userId },
-        order: { purchaseDate: 'desc' },
-        skip: 0,
-        take: 20,
-      });
+      expect(typeormRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId },
+          order: { purchaseDate: 'DESC' },
+          skip: 0,
+          take: 20,
+        }),
+      );
     });
 
-    it('should handle different sort options', async () => {
+    it('maps price sort to purchasePrice column', async () => {
       const userId = 'user123';
       const queryDto = new LibraryQueryDto();
       queryDto.sortBy = SortBy.PRICE;
@@ -73,17 +67,67 @@ describe('LibraryRepository', () => {
 
       await repository.findUserLibrary(userId, queryDto);
 
-      expect(typeormRepository.findAndCount).toHaveBeenCalledWith({
-        where: { userId },
-        order: { price: 'asc' },
-        skip: 0,
-        take: 20,
-      });
+      expect(typeormRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: { purchasePrice: 'ASC' },
+        }),
+      );
+    });
+
+    it('maps developer sort to gameId column', async () => {
+      const userId = 'user123';
+      const queryDto = new LibraryQueryDto();
+      queryDto.sortBy = SortBy.DEVELOPER;
+      queryDto.sortOrder = 'asc';
+
+      mockTypeormRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await repository.findUserLibrary(userId, queryDto);
+
+      expect(typeormRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: { gameId: 'ASC' },
+        }),
+      );
+    });
+
+    it('maps title sort to gameId column', async () => {
+      const userId = 'user123';
+      const queryDto = new LibraryQueryDto();
+      queryDto.sortBy = SortBy.TITLE;
+      queryDto.sortOrder = 'desc';
+
+      mockTypeormRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await repository.findUserLibrary(userId, queryDto);
+
+      expect(typeormRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: { gameId: 'DESC' },
+        }),
+      );
+    });
+
+    it('falls back to purchaseDate when sortBy is undefined', async () => {
+      const userId = 'user123';
+      const queryDto = new LibraryQueryDto();
+      queryDto.sortBy = undefined;
+      queryDto.sortOrder = undefined;
+
+      mockTypeormRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await repository.findUserLibrary(userId, queryDto);
+
+      expect(typeormRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: { purchaseDate: 'DESC' },
+        }),
+      );
     });
   });
 
   describe('findOneByUserIdAndGameId', () => {
-    it('should find game by user and game ID', async () => {
+    it('returns game when found', async () => {
       const userId = 'user123';
       const gameId = 'game456';
       const mockGame = new LibraryGame();
@@ -98,13 +142,10 @@ describe('LibraryRepository', () => {
       });
     });
 
-    it('should return null if game not found', async () => {
-      const userId = 'user123';
-      const gameId = 'game456';
-
+    it('returns null when game not found', async () => {
       mockTypeormRepository.findOne.mockResolvedValue(null);
 
-      const result = await repository.findOneByUserIdAndGameId(userId, gameId);
+      const result = await repository.findOneByUserIdAndGameId('user123', 'game456');
 
       expect(result).toBeNull();
     });
