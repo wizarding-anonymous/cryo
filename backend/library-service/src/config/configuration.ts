@@ -47,4 +47,10 @@ export default () => ({
     version: '1.0',
     path: 'api/docs',
   },
+  apm: {
+    enabled: Boolean(process.env.ELASTIC_APM_SERVER_URL),
+    serviceName: process.env.ELASTIC_APM_SERVICE_NAME || 'library-service',
+    serverUrl: process.env.ELASTIC_APM_SERVER_URL,
+    secretToken: process.env.ELASTIC_APM_SECRET_TOKEN,
+  },
 });

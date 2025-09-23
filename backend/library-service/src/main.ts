@@ -1,4 +1,31 @@
-﻿import { NestFactory } from '@nestjs/core';
+// Optional APM agent initialization (loaded before the app for capture)
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const apm = (() => {
+  try {
+    // Only start APM if ELASTIC_APM_SERVER_URL is set
+    if (process.env.ELASTIC_APM_SERVER_URL) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const agent = require('elastic-apm-node').start({
+        serviceName: process.env.ELASTIC_APM_SERVICE_NAME || 'library-service',
+        serverUrl: process.env.ELASTIC_APM_SERVER_URL,
+        secretToken: process.env.ELASTIC_APM_SECRET_TOKEN,
+        environment: process.env.NODE_ENV || 'development',
+        captureHeaders: true,
+        captureBody: 'transactions',
+        active: true,
+      });
+      // eslint-disable-next-line no-console
+      console.log('[APM] Elastic APM agent initialized');
+      return agent;
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('[APM] Elastic APM initialization skipped:', e);
+  }
+  return undefined;
+})();
+
+import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
