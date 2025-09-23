@@ -41,6 +41,8 @@ services:
       - redis
     env_file:
       - ./user-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -74,6 +76,8 @@ services:
       - redis
     env_file:
       - ./library-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -123,6 +127,8 @@ services:
       - redis
     env_file:
       - ./notification-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -156,6 +162,8 @@ services:
       - redis
     env_file:
       - ./achievement-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -173,6 +181,8 @@ services:
       - redis
     env_file:
       - ./security-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -190,6 +200,8 @@ services:
       - redis
     env_file:
       - ./download-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
