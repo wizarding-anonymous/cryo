@@ -61,10 +61,7 @@ describe('FriendsController', () => {
     it('should call service with correct params', async () => {
       const requestId = 'req1';
       await controller.acceptFriendRequest(mockAuthRequest, requestId);
-      expect(service.acceptFriendRequest).toHaveBeenCalledWith(
-        requestId,
-        'user1',
-      );
+      expect(service.acceptFriendRequest).toHaveBeenCalledWith(requestId, 'user1');
     });
   });
 
@@ -72,10 +69,7 @@ describe('FriendsController', () => {
     it('should call service with correct params', async () => {
       const requestId = 'req1';
       await controller.declineFriendRequest(mockAuthRequest, requestId);
-      expect(service.declineFriendRequest).toHaveBeenCalledWith(
-        requestId,
-        'user1',
-      );
+      expect(service.declineFriendRequest).toHaveBeenCalledWith(requestId, 'user1');
     });
   });
 

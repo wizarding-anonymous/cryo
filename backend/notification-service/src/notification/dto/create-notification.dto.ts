@@ -1,4 +1,4 @@
-import {
+﻿import {
   IsArray,
   IsDateString,
   IsEnum,
@@ -21,7 +21,7 @@ export class CreateNotificationDto {
     description: 'The ID of the user to notify',
     example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
   })
-  userId: string;
+  userId!: string;
 
   @IsEnum(NotificationType)
   @ApiProperty({
@@ -29,7 +29,7 @@ export class CreateNotificationDto {
     enum: NotificationType,
     example: NotificationType.FRIEND_REQUEST,
   })
-  type: NotificationType;
+  type!: NotificationType;
 
   @IsString()
   @MaxLength(200)
@@ -37,7 +37,7 @@ export class CreateNotificationDto {
     description: 'The title of the notification',
     example: 'New Friend Request',
   })
-  title: string;
+  title!: string;
 
   @IsString()
   @MaxLength(1000)
@@ -45,7 +45,7 @@ export class CreateNotificationDto {
     description: 'The main message body of the notification',
     example: 'User John Doe wants to be your friend.',
   })
-  message: string;
+  message!: string;
 
   @IsEnum(NotificationPriority)
   @IsOptional()

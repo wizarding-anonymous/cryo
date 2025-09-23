@@ -4,8 +4,16 @@ metadata:
   name: social-service
   labels:
     app: social-service
+    version: v1
+  annotations:
+    deployment.kubernetes.io/revision: "1"
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: social-service
@@ -13,13 +21,24 @@ spec:
     metadata:
       labels:
         app: social-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3003"
+        prometheus.io/path: "/metrics"
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: social-service
           image: social-service:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 3007
+            - name: http
+              containerPort: 3003
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: social-service-config
           env:
             - name: NODE_ENV
               value: production
@@ -49,6 +68,12 @@ spec:
                   key: REDIS_HOST
             - name: REDIS_PORT
               value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: social-service-secrets
+                  key: REDIS_PASSWORD
+                  optional: true
             - name: CACHE_STORE
               value: redis
             - name: INTERNAL_API_TOKEN
@@ -56,22 +81,58 @@ spec:
                 secretKeyRef:
                   name: social-service-secrets
                   key: INTERNAL_API_TOKEN
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: social-service-secrets
+                  key: JWT_SECRET
           readinessProbe:
             httpGet:
               path: /v1/health
-              port: 3007
-            initialDelaySeconds: 5
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /v1/health
-              port: 3007
-            initialDelaySeconds: 10
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 30
             periodSeconds: 15
+            timeoutSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 12
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "500m"
+              cpu: "200m"
               memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]

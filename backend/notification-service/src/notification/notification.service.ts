@@ -13,6 +13,8 @@ import { Cache } from 'cache-manager';
 import {
   CreateNotificationDto,
   GetNotificationsDto,
+  NotificationDto,
+  NotificationSettingsDto,
   PaginatedNotificationsDto,
   UpdateNotificationSettingsDto,
 } from './dto';
@@ -25,6 +27,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
+  private readonly settingsCacheTtlSeconds = 3600;
 
   constructor(
     @InjectRepository(Notification)
@@ -39,12 +42,11 @@ export class NotificationService {
 
   async createNotification(
     dto: CreateNotificationDto,
-  ): Promise<Notification | null> {
+  ): Promise<NotificationDto | null> {
     const settings = await this.settingsRepository.findOne({
       where: { userId: dto.userId },
     });
 
-    // Default to true if settings don't exist for the user yet
     const canNotifyInApp = settings ? settings.inAppNotifications : true;
     const canNotifyByEmail = settings ? settings.emailNotifications : true;
 
@@ -55,26 +57,28 @@ export class NotificationService {
       return null;
     }
 
-    // Check notification type specific settings
     if (settings) {
       let suppressed = false;
       switch (dto.type) {
         case NotificationType.FRIEND_REQUEST:
-          if (!settings.friendRequests) suppressed = true;
+          suppressed = !settings.friendRequests;
           break;
         case NotificationType.GAME_UPDATE:
-          if (!settings.gameUpdates) suppressed = true;
+          suppressed = !settings.gameUpdates;
           break;
         case NotificationType.ACHIEVEMENT:
-          if (!settings.achievements) suppressed = true;
+          suppressed = !settings.achievements;
           break;
         case NotificationType.PURCHASE:
-          if (!settings.purchases) suppressed = true;
+          suppressed = !settings.purchases;
           break;
         case NotificationType.SYSTEM:
-          if (!settings.systemNotifications) suppressed = true;
+          suppressed = !settings.systemNotifications;
           break;
+        default:
+          suppressed = false;
       }
+
       if (suppressed) {
         this.logger.log(
           `Notification type "${dto.type}" is disabled for user ${dto.userId}. Skipping.`,
@@ -83,67 +87,36 @@ export class NotificationService {
       }
     }
 
-    const notification = this.notificationRepository.create(dto);
-    const savedNotification = await this.notificationRepository.save(
-      notification,
-    );
+    const requestedChannels = dto.channels ?? [NotificationChannel.IN_APP];
+    const targetChannels = requestedChannels.filter((channel) => {
+      if (channel === NotificationChannel.EMAIL && !canNotifyByEmail) {
+        return false;
+      }
+      if (channel === NotificationChannel.IN_APP && !canNotifyInApp) {
+        return false;
+      }
+      return true;
+    });
 
-    // Determine target channels based on user settings and request
-    const targetChannels =
-      dto.channels?.filter((channel) => {
-        if (channel === NotificationChannel.EMAIL && !canNotifyByEmail) {
-          return false;
-        }
-        if (channel === NotificationChannel.IN_APP && !canNotifyInApp) {
-          return false;
-        }
-        return true;
-      }) || [];
+    const notification = this.notificationRepository.create({
+      ...dto,
+      channels: targetChannels,
+    });
+    const savedNotification = await this.notificationRepository.save(notification);
 
     if (targetChannels.includes(NotificationChannel.EMAIL)) {
-      try {
-        const userServiceUrl =
-          this.configService.get<string>('USER_SERVICE_URL');
-        if (!userServiceUrl) {
-          this.logger.error(
-            'USER_SERVICE_URL is not configured. Cannot send email.',
-          );
-          return savedNotification;
-        }
-
-        const { data: user } = await firstValueFrom(
-          this.httpService.get<{ email: string }>(
-            `${userServiceUrl}/api/users/${dto.userId}`,
-          ),
-        );
-
-        if (user && user.email) {
-          await this.emailService.sendNotificationEmail(
-            user.email,
-            savedNotification,
-          );
-        } else {
-          this.logger.warn(
-            `Could not find email for user ${dto.userId}. Skipping email notification.`,
-          );
-        }
-      } catch (error) {
-        this.logger.error(
-          `Failed to fetch user data for email notification for user ${dto.userId}`,
-          error.stack,
-        );
-      }
+      await this.trySendEmail(savedNotification);
     }
 
     this.logger.log(
       `Successfully created notification ${savedNotification.id} for user ${savedNotification.userId}`,
     );
 
-    return savedNotification;
+    return this.toNotificationDto(savedNotification);
   }
 
   async getUserNotifications(
-    userId:string,
+    userId: string,
     query: GetNotificationsDto,
   ): Promise<PaginatedNotificationsDto> {
     const { limit = 20, offset = 0, type, isRead } = query;
@@ -160,13 +133,11 @@ export class NotificationService {
       where,
       take: limit,
       skip: offset,
-      order: {
-        createdAt: 'DESC',
-      },
+      order: { createdAt: 'DESC' },
     });
 
     return {
-      data,
+      data: data.map((notification) => this.toNotificationDto(notification)),
       total,
       limit,
       offset,
@@ -186,16 +157,79 @@ export class NotificationService {
     }
   }
 
-  async getSettings(userId: string): Promise<NotificationSettings> {
-    const cacheKey = `settings:${userId}`;
-    const cachedSettings = await this.cacheManager.get<string>(cacheKey);
+  async getSettings(userId: string): Promise<NotificationSettingsDto> {
+    const cacheKey = this.settingsCacheKey(userId);
+    const cachedSettings = await this.cacheManager.get<NotificationSettingsDto>(
+      cacheKey,
+    );
 
     if (cachedSettings) {
       this.logger.log(`Cache HIT for user ${userId} settings.`);
-      return JSON.parse(cachedSettings);
+      return cachedSettings;
     }
 
     this.logger.log(`Cache MISS for user ${userId} settings.`);
+    const settingsEntity = await this.loadOrCreateSettingsEntity(userId);
+    const dto = this.toSettingsDto(settingsEntity);
+    await this.cacheManager.set(cacheKey, dto, this.settingsCacheTtlSeconds);
+    return dto;
+  }
+
+  async updateSettings(
+    userId: string,
+    dto: UpdateNotificationSettingsDto,
+  ): Promise<NotificationSettingsDto> {
+    const settingsEntity = await this.loadOrCreateSettingsEntity(userId);
+    Object.assign(settingsEntity, dto);
+
+    const updatedSettings = await this.settingsRepository.save(settingsEntity);
+    const settingsDto = this.toSettingsDto(updatedSettings);
+
+    this.logger.log(`Updated settings for user ${userId}.`);
+
+    await this.cacheManager.set(
+      this.settingsCacheKey(userId),
+      settingsDto,
+      this.settingsCacheTtlSeconds,
+    );
+
+    return settingsDto;
+  }
+
+  private async trySendEmail(notification: Notification): Promise<void> {
+    try {
+      const userServiceUrl = this.configService.get<string>('USER_SERVICE_URL');
+      if (!userServiceUrl) {
+        this.logger.error(
+          'USER_SERVICE_URL is not configured. Cannot send email.',
+        );
+        return;
+      }
+
+      const { data: user } = await firstValueFrom(
+        this.httpService.get<{ email: string }>(
+          `${userServiceUrl}/api/users/${notification.userId}`,
+        ),
+      );
+
+      if (user?.email) {
+        await this.emailService.sendNotificationEmail(user.email, notification);
+      } else {
+        this.logger.warn(
+          `Could not find email for user ${notification.userId}. Skipping email notification.`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch user data for email notification for user ${notification.userId}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+  }
+
+  private async loadOrCreateSettingsEntity(
+    userId: string,
+  ): Promise<NotificationSettings> {
     let settings = await this.settingsRepository.findOne({ where: { userId } });
 
     if (!settings) {
@@ -203,30 +237,45 @@ export class NotificationService {
         `No settings found for user ${userId}. Creating default settings.`,
       );
       settings = this.settingsRepository.create({ userId });
-      await this.settingsRepository.save(settings);
+      settings = await this.settingsRepository.save(settings);
     }
 
-    await this.cacheManager.set(cacheKey, JSON.stringify(settings), 3600); // 1 hour TTL
     return settings;
   }
 
-  async updateSettings(
-    userId: string,
-    dto: UpdateNotificationSettingsDto,
-  ): Promise<NotificationSettings> {
-    const settings = await this.getSettings(userId);
+  private settingsCacheKey(userId: string): string {
+    return `settings:${userId}`;
+  }
 
-    Object.assign(settings, dto);
+  private toNotificationDto(notification: Notification): NotificationDto {
+    return {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      isRead: notification.isRead,
+      priority: notification.priority,
+      metadata: notification.metadata ?? undefined,
+      channels: notification.channels ?? undefined,
+      createdAt: notification.createdAt,
+    };
+  }
 
-    const updatedSettings = await this.settingsRepository.save(settings);
-
-    this.logger.log(`Updated settings for user ${userId}.`);
-
-    // Invalidate cache
-    const cacheKey = `settings:${userId}`;
-    await this.cacheManager.del(cacheKey);
-    this.logger.log(`Invalidated cache for user ${userId} settings.`);
-
-    return updatedSettings;
+  private toSettingsDto(
+    settings: NotificationSettings,
+  ): NotificationSettingsDto {
+    return {
+      id: settings.id,
+      userId: settings.userId,
+      inAppNotifications: settings.inAppNotifications,
+      emailNotifications: settings.emailNotifications,
+      friendRequests: settings.friendRequests,
+      gameUpdates: settings.gameUpdates,
+      achievements: settings.achievements,
+      purchases: settings.purchases,
+      systemNotifications: settings.systemNotifications,
+      updatedAt: settings.updatedAt,
+    };
   }
 }

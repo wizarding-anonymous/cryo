@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>19/19</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>16/16</span>
+                <span class='fraction'>17/17</span>
             </div>
         
             
@@ -109,9 +109,11 @@
 <a name='L44'></a><a href='#L44'>44</a>
 <a name='L45'></a><a href='#L45'>45</a>
 <a name='L46'></a><a href='#L46'>46</a>
-<a name='L47'></a><a href='#L47'>47</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -120,9 +122,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -135,6 +134,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -148,28 +157,19 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import {
-  Controller,
-  Put,
-  Body,
-  Req,
-  Get,
-  UseGuards,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Controller, Put, Body, Req, Get, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { StatusService } from './status.service';
 import { SetStatusDto } from './dto/set-status.dto';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiNoContentResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
 import { AuthRequest } from '../common/interfaces/auth-request.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { FriendStatusDto } from './dto/friend-status.dto';
 &nbsp;
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -181,7 +181,8 @@ export class StatusController {
   @Put('online')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Set the user's status to online" })
-  async setOnlineStatus(@Req() req: AuthRequest, @Body() dto: SetStatusDto) {
+  @ApiNoContentResponse()
+  async setOnlineStatus(@Req() req: AuthRequest, @Body() dto: SetStatusDto): Promise&lt;void&gt; {
     const userId = req.user.userId;
     await this.statusService.setOnlineStatus(userId, dto.currentGame);
   }
@@ -189,14 +190,16 @@ export class StatusController {
   @Put('offline')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Set the user's status to offline" })
-  async setOfflineStatus(@Req() req: AuthRequest) {
+  @ApiNoContentResponse()
+  async setOfflineStatus(@Req() req: AuthRequest): Promise&lt;void&gt; {
     const userId = req.user.userId;
     await this.statusService.setOfflineStatus(userId);
   }
 &nbsp;
   @Get('friends')
   @ApiOperation({ summary: "Get the online status of the user's friends" })
-  async getFriendsStatus(@Req() req: AuthRequest) {
+  @ApiOkResponse({ type: [FriendStatusDto] })
+  async getFriendsStatus(@Req() req: AuthRequest): Promise&lt;FriendStatusDto[]&gt; {
     const userId = req.user.userId;
     return this.statusService.getFriendsStatus(userId);
   }
@@ -208,7 +211,7 @@ export class StatusController {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-18T20:09:37.540Z
+                at 2025-09-23T15:47:22.637Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

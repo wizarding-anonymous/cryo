@@ -35,11 +35,7 @@ export class CacheService {
     return await this.get(`friends_list:${userId}`);
   }
 
-  async setFriendsList(
-    userId: string,
-    friends: any[],
-    ttl = 600,
-  ): Promise<void> {
+  async setFriendsList(userId: string, friends: any[], ttl = 600): Promise<void> {
     await this.set(`friends_list:${userId}`, friends, ttl);
   }
 
@@ -52,11 +48,7 @@ export class CacheService {
     return await this.get(`friends_status:${userId}`);
   }
 
-  async setFriendsStatus(
-    userId: string,
-    statuses: any[],
-    ttl = 300,
-  ): Promise<void> {
+  async setFriendsStatus(userId: string, statuses: any[], ttl = 300): Promise<void> {
     await this.set(`friends_status:${userId}`, statuses, ttl);
   }
 }

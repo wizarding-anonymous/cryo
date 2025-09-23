@@ -1,12 +1,10 @@
 import { INestApplication, ValidationPipe, ExecutionContext } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
 import { DataSource } from 'typeorm';
 import * as request from 'supertest';
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
+import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 
 import { Friendship } from '../src/friends/entities/friendship.entity';
 import { Message } from '../src/messages/entities/message.entity';
@@ -14,8 +12,7 @@ import { OnlineStatus } from '../src/status/entities/online-status.entity';
 import { FriendsModule } from '../src/friends/friends.module';
 import { MessagesModule } from '../src/messages/messages.module';
 import { StatusModule } from '../src/status/status.module';
-import { HealthModule } from '../src/health/health.module';
-import { CacheConfigModule } from '../src/cache/cache.module';
+import { HealthModule } from '../src/common/health/health.module';
 import { JwtAuthGuard } from '../src/auth/guards/jwt-auth.guard';
 import { AuthRequest } from '../src/common/interfaces/auth-request.interface';
 import { UserServiceClient } from '../src/clients/user.service.client';
@@ -47,8 +44,7 @@ describe('Social Service E2E', () => {
     checkUserExists: jest.fn(async (id: string) => Boolean(USERS_FIXTURE[id])),
     searchUsers: jest.fn(async (query: string, currentUserId: string) =>
       Object.values(USERS_FIXTURE).filter(
-        (user) =>
-          user.username.includes(query) && user.id !== currentUserId,
+        (user) => user.username.includes(query) && user.id !== currentUserId,
       ),
     ),
   };
@@ -81,7 +77,10 @@ describe('Social Service E2E', () => {
           synchronize: true,
           logging: false,
         }),
-        CacheConfigModule,
+        CacheModule.register({
+          isGlobal: true,
+          store: 'memory',
+        }),
         FriendsModule,
         MessagesModule,
         StatusModule,
@@ -93,12 +92,9 @@ describe('Social Service E2E', () => {
         canActivate: (context: ExecutionContext) => {
           const request = context.switchToHttp().getRequest<AuthRequest>();
           const headerValue = request.headers['x-user-id'];
-          const userId = Array.isArray(headerValue)
-            ? headerValue[0]
-            : headerValue;
+          const userId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
           request.user = {
-            userId:
-              userId ?? '11111111-1111-1111-1111-111111111111',
+            userId: userId ?? '11111111-1111-1111-1111-111111111111',
           };
           return true;
         },

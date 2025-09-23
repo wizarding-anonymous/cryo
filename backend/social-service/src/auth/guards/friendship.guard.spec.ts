@@ -47,10 +47,7 @@ describe('FriendshipGuard', () => {
 
     const canActivate = await guard.canActivate(mockContext);
     expect(canActivate).toBe(true);
-    expect(friendsService.checkFriendship).toHaveBeenCalledWith(
-      'user1',
-      'user2',
-    );
+    expect(friendsService.checkFriendship).toHaveBeenCalledWith('user1', 'user2');
   });
 
   it('should throw NotFriendsException if users are not friends', async () => {
@@ -58,9 +55,7 @@ describe('FriendshipGuard', () => {
     const mockContext = createMockExecutionContext(request);
     mockFriendsService.checkFriendship.mockResolvedValue(false);
 
-    await expect(guard.canActivate(mockContext)).rejects.toThrow(
-      NotFriendsException,
-    );
+    await expect(guard.canActivate(mockContext)).rejects.toThrow(NotFriendsException);
   });
 
   it('should return true if no toUserId is provided in body', async () => {

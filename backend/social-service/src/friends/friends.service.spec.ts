@@ -8,13 +8,25 @@ import { AlreadyFriendsException } from '../common/exceptions/already-friends.ex
 import { UserServiceClient } from '../clients/user.service.client';
 import { NotificationServiceClient } from '../clients/notification.service.client';
 import { AchievementServiceClient } from '../clients/achievement.service.client';
+import { CacheService } from '../cache/cache.service';
+
+// Mock query builder
+const mockQueryBuilder = {
+  where: jest.fn().mockReturnThis(),
+  andWhere: jest.fn().mockReturnThis(),
+  orderBy: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
+  take: jest.fn().mockReturnThis(),
+  getManyAndCount: jest.fn(),
+};
 
 // Mock repository
 const mockFriendshipRepository = {
   create: jest.fn(),
   save: jest.fn(),
   findOne: jest.fn(),
-  findAndCount: jest.fn(),
+  find: jest.fn(),
+  createQueryBuilder: jest.fn(() => mockQueryBuilder),
   remove: jest.fn(),
   findOneBy: jest.fn(),
   count: jest.fn(),
@@ -31,8 +43,10 @@ const mockNotificationServiceClient = {
   sendNotification: jest.fn(),
 };
 
-const mockAchievementServiceClient = {
-  updateProgress: jest.fn(),
+const mockCacheService = {
+  get: jest.fn(),
+  set: jest.fn(),
+  invalidateUserCache: jest.fn(),
 };
 
 describe('FriendsService', () => {
@@ -56,16 +70,20 @@ describe('FriendsService', () => {
           useValue: mockNotificationServiceClient,
         },
         {
+          provide: CacheService,
+          useValue: mockCacheService,
+        },
+        {
           provide: AchievementServiceClient,
-          useValue: mockAchievementServiceClient,
+          useValue: {
+            updateProgress: jest.fn(),
+          },
         },
       ],
     }).compile();
 
     service = module.get<FriendsService>(FriendsService);
-    repository = module.get<Repository<Friendship>>(
-      getRepositoryToken(Friendship),
-    );
+    repository = module.get<Repository<Friendship>>(getRepositoryToken(Friendship));
     jest.clearAllMocks();
   });
 
@@ -81,6 +99,7 @@ describe('FriendsService', () => {
     });
 
     it('should throw an error if already friends', async () => {
+      mockUserServiceClient.checkUserExists.mockResolvedValue(true);
       mockFriendshipRepository.findOne.mockResolvedValue({
         status: FriendshipStatus.ACCEPTED,
       });
@@ -90,6 +109,7 @@ describe('FriendsService', () => {
     });
 
     it('should throw an error if request is already pending', async () => {
+      mockUserServiceClient.checkUserExists.mockResolvedValue(true);
       mockFriendshipRepository.findOne.mockResolvedValue({
         status: FriendshipStatus.PENDING,
       });
@@ -107,15 +127,20 @@ describe('FriendsService', () => {
         friendId: toUserId,
         status: FriendshipStatus.PENDING,
         requestedBy: fromUserId,
+        createdAt: new Date(),
       };
 
+      mockUserServiceClient.checkUserExists.mockResolvedValue(true);
       mockFriendshipRepository.findOne.mockResolvedValue(null);
       mockFriendshipRepository.create.mockReturnValue(newRequest);
       mockFriendshipRepository.save.mockResolvedValue(newRequest);
       mockNotificationServiceClient.sendNotification.mockResolvedValue(undefined);
+      mockCacheService.invalidateUserCache.mockResolvedValue(undefined);
+      mockUserServiceClient.getUsersByIds.mockResolvedValue([{ id: toUserId, username: 'friend' }]);
 
       const result = await service.sendFriendRequest(fromUserId, toUserId);
-      expect(result).toEqual(newRequest);
+      expect(result.id).toEqual(newRequest.id);
+      expect(result.status).toEqual(FriendshipStatus.PENDING);
       expect(mockFriendshipRepository.create).toHaveBeenCalledWith({
         userId: fromUserId,
         friendId: toUserId,
@@ -124,6 +149,8 @@ describe('FriendsService', () => {
       });
       expect(mockFriendshipRepository.save).toHaveBeenCalledWith(newRequest);
       expect(mockNotificationServiceClient.sendNotification).toHaveBeenCalled();
+      expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(fromUserId);
+      expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(toUserId);
     });
   });
 
@@ -137,26 +164,26 @@ describe('FriendsService', () => {
         friendId: userId,
         status: FriendshipStatus.PENDING,
         requestedBy: 'user1',
+        createdAt: new Date(),
       };
 
-      mockFriendshipRepository.findOneBy.mockResolvedValue(request);
-      mockFriendshipRepository.create.mockReturnValue({
-        userId: request.friendId,
-        friendId: request.userId,
-        status: FriendshipStatus.ACCEPTED,
-        requestedBy: request.requestedBy,
-      });
-      mockFriendshipRepository.save.mockImplementation(
-        async (entities) => entities,
-      );
-      mockFriendshipRepository.count.mockResolvedValue(1);
-      mockAchievementServiceClient.updateProgress.mockResolvedValue(undefined);
+      const updatedRequest = { ...request, status: FriendshipStatus.ACCEPTED };
+
+      mockFriendshipRepository.findOne.mockResolvedValue(request);
+      mockFriendshipRepository.save.mockResolvedValue(updatedRequest);
+      mockNotificationServiceClient.sendNotification.mockResolvedValue(undefined);
+      mockCacheService.invalidateUserCache.mockResolvedValue(undefined);
+      mockUserServiceClient.getUsersByIds.mockResolvedValue([
+        { id: request.userId, username: 'requester' },
+      ]);
 
       const result = await service.acceptFriendRequest(requestId, userId);
 
       expect(result.status).toEqual(FriendshipStatus.ACCEPTED);
       expect(mockFriendshipRepository.save).toHaveBeenCalled();
-      expect(mockAchievementServiceClient.updateProgress).toHaveBeenCalled();
+      expect(mockNotificationServiceClient.sendNotification).toHaveBeenCalled();
+      expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(request.userId);
+      expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(request.friendId);
     });
   });
 
@@ -171,11 +198,17 @@ describe('FriendsService', () => {
         status: FriendshipStatus.PENDING,
       };
 
-      mockFriendshipRepository.findOneBy.mockResolvedValue(request);
+      const updatedRequest = { ...request, status: FriendshipStatus.DECLINED };
+
+      mockFriendshipRepository.findOne.mockResolvedValue(request);
+      mockFriendshipRepository.save.mockResolvedValue(updatedRequest);
+      mockCacheService.invalidateUserCache.mockResolvedValue(undefined);
 
       await service.declineFriendRequest(requestId, userId);
 
-      expect(mockFriendshipRepository.remove).toHaveBeenCalledWith(request);
+      expect(mockFriendshipRepository.save).toHaveBeenCalledWith(updatedRequest);
+      expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(request.userId);
+      expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(request.friendId);
     });
   });
 
@@ -188,23 +221,16 @@ describe('FriendsService', () => {
         friendId,
         status: FriendshipStatus.ACCEPTED,
       };
-      const reverseFriendship = {
-        userId: friendId,
-        friendId: userId,
-        status: FriendshipStatus.ACCEPTED,
-      };
 
-      // Mock finding both directions of the friendship
-      mockFriendshipRepository.findOne
-        .mockResolvedValueOnce(friendship) // First call for the main friendship
-        .mockResolvedValueOnce(reverseFriendship); // Second call for the reverse
+      mockFriendshipRepository.findOne.mockResolvedValue(friendship);
+      mockFriendshipRepository.remove.mockResolvedValue(friendship);
+      mockCacheService.invalidateUserCache.mockResolvedValue(undefined);
 
       await service.removeFriend(userId, friendId);
 
-      expect(mockFriendshipRepository.remove).toHaveBeenCalledWith([
-        friendship,
-        reverseFriendship,
-      ]);
+      expect(mockFriendshipRepository.remove).toHaveBeenCalledWith(friendship);
+      expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(userId);
+      expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(friendId);
     });
   });
 
@@ -212,13 +238,23 @@ describe('FriendsService', () => {
     it('should return a paginated list of friends', async () => {
       const userId = 'user1';
       const friends = [
-        { userId, friendId: 'user2', status: FriendshipStatus.ACCEPTED },
+        {
+          id: 'friendship1',
+          userId,
+          friendId: 'user2',
+          status: FriendshipStatus.ACCEPTED,
+          createdAt: new Date(),
+        },
       ];
       const total = 1;
-      const friendsInfo = [{ id: 'user2', username: 'friend1' }];
+      const friendsInfo = [
+        { id: 'user2', username: 'friend1', onlineStatus: 'online', lastSeen: new Date() },
+      ];
 
-      mockFriendshipRepository.findAndCount.mockResolvedValue([friends, total]);
+      mockCacheService.get.mockResolvedValue(null); // No cache
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([friends, total]);
       mockUserServiceClient.getUsersByIds.mockResolvedValue(friendsInfo);
+      mockCacheService.set.mockResolvedValue(undefined);
 
       const result = await service.getFriends(userId, { page: 1, limit: 10 });
 
@@ -241,6 +277,78 @@ describe('FriendsService', () => {
       mockFriendshipRepository.findOne.mockResolvedValue(null);
       const result = await service.checkFriendship('user1', 'user2');
       expect(result).toBe(false);
+    });
+  });
+
+  describe('getFriendRequests', () => {
+    it('should return pending friend requests', async () => {
+      const userId = 'user1';
+      const requests = [
+        {
+          id: 'req1',
+          userId: 'user2',
+          friendId: userId,
+          status: FriendshipStatus.PENDING,
+          createdAt: new Date(),
+        },
+      ];
+      const requestersInfo = [
+        { id: 'user2', username: 'requester1', onlineStatus: 'online', lastSeen: new Date() },
+      ];
+
+      mockFriendshipRepository.find.mockResolvedValue(requests);
+      mockUserServiceClient.getUsersByIds.mockResolvedValue(requestersInfo);
+
+      const result = await service.getFriendRequests(userId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.friendInfo?.username).toEqual('requester1');
+      expect(mockFriendshipRepository.find).toHaveBeenCalledWith({
+        where: { friendId: userId, status: FriendshipStatus.PENDING },
+        order: { createdAt: 'DESC' },
+      });
+    });
+  });
+
+  describe('searchUsers', () => {
+    it('should search users successfully', async () => {
+      const query = 'john';
+      const currentUserId = 'user1';
+      const searchResults = [{ id: 'user2', username: 'john_doe' }];
+
+      mockUserServiceClient.searchUsers.mockResolvedValue(searchResults);
+
+      const result = await service.searchUsers(query, currentUserId);
+
+      expect(result).toEqual(searchResults);
+      expect(mockUserServiceClient.searchUsers).toHaveBeenCalledWith(query, currentUserId);
+    });
+
+    it('should return empty array on search error', async () => {
+      const query = 'john';
+      const currentUserId = 'user1';
+
+      mockUserServiceClient.searchUsers.mockRejectedValue(new Error('Service unavailable'));
+
+      const result = await service.searchUsers(query, currentUserId);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getFriendsForAchievements', () => {
+    it('should return friend IDs for achievements', async () => {
+      const userId = 'user1';
+      const friendships = [
+        { userId, friendId: 'user2', status: FriendshipStatus.ACCEPTED },
+        { userId: 'user3', friendId: userId, status: FriendshipStatus.ACCEPTED },
+      ];
+
+      mockFriendshipRepository.find.mockResolvedValue(friendships);
+
+      const result = await service.getFriendsForAchievements(userId);
+
+      expect(result).toEqual(['user2', 'user3']);
     });
   });
 });

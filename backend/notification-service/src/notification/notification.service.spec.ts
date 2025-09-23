@@ -12,11 +12,16 @@ import { Notification } from '../entities/notification.entity';
 import { NotificationSettings } from '../entities/notification-settings.entity';
 import { NotFoundException } from '@nestjs/common';
 import { CreateNotificationDto } from './dto';
-import { NotificationChannel, NotificationType } from '../common/enums';
+import {
+  NotificationChannel,
+  NotificationPriority,
+  NotificationType,
+} from '../common/enums';
 
-// Mock data
 const mockUserId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-const mockSettings: NotificationSettings = {
+const mockDate = new Date('2024-01-01T10:00:00.000Z');
+
+const mockSettingsEntity: NotificationSettings = {
   id: 'settings-id',
   userId: mockUserId,
   inAppNotifications: true,
@@ -26,7 +31,20 @@ const mockSettings: NotificationSettings = {
   achievements: true,
   purchases: true,
   systemNotifications: true,
-  updatedAt: new Date(),
+  updatedAt: mockDate,
+};
+
+const mockSettingsDto = {
+  id: mockSettingsEntity.id,
+  userId: mockSettingsEntity.userId,
+  inAppNotifications: mockSettingsEntity.inAppNotifications,
+  emailNotifications: mockSettingsEntity.emailNotifications,
+  friendRequests: mockSettingsEntity.friendRequests,
+  gameUpdates: mockSettingsEntity.gameUpdates,
+  achievements: mockSettingsEntity.achievements,
+  purchases: mockSettingsEntity.purchases,
+  systemNotifications: mockSettingsEntity.systemNotifications,
+  updatedAt: mockSettingsEntity.updatedAt,
 };
 
 describe('NotificationService', () => {
@@ -107,56 +125,62 @@ describe('NotificationService', () => {
 
   describe('getSettings', () => {
     it('should return settings from cache if available', async () => {
-      jest
-        .spyOn(cacheManager, 'get')
-        .mockResolvedValue(JSON.stringify(mockSettings));
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(mockSettingsDto);
+
       const result = await service.getSettings(mockUserId);
-      expect(result).toEqual(mockSettings);
+
+      expect(result).toEqual(mockSettingsDto);
       expect(settingsRepo.findOne).not.toHaveBeenCalled();
     });
 
     it('should return settings from DB and cache them if not in cache', async () => {
       jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
-      jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(mockSettings);
+      jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(mockSettingsEntity);
+
       const result = await service.getSettings(mockUserId);
-      expect(result).toEqual(mockSettings);
+
+      expect(result).toEqual(mockSettingsDto);
       expect(cacheManager.set).toHaveBeenCalledWith(
         `settings:${mockUserId}`,
-        JSON.stringify(mockSettings),
+        mockSettingsDto,
         3600,
       );
     });
 
-    it('should create default settings if none exist', async () => {
+    it('should create default settings if user has none', async () => {
+      const createdSettings = { ...mockSettingsEntity };
       jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
       jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(null);
-      jest
-        .spyOn(settingsRepo, 'create')
-        .mockReturnValue({ userId: mockUserId } as any);
-      jest.spyOn(settingsRepo, 'save').mockResolvedValue(mockSettings);
+      jest.spyOn(settingsRepo, 'create').mockReturnValue(createdSettings);
+      jest.spyOn(settingsRepo, 'save').mockResolvedValue(createdSettings);
+
       const result = await service.getSettings(mockUserId);
-      expect(result).toEqual(mockSettings);
+
+      expect(result).toEqual(mockSettingsDto);
       expect(settingsRepo.create).toHaveBeenCalledWith({ userId: mockUserId });
-      expect(cacheManager.set).toHaveBeenCalled();
     });
   });
 
   describe('updateSettings', () => {
-    it('should update settings and invalidate the cache', async () => {
+    it('should update settings, refresh cache and return DTO', async () => {
       const dto = { emailNotifications: false };
-      const newSettings = { ...mockSettings, ...dto };
+      const updatedEntity = { ...mockSettingsEntity, ...dto };
+      const expectedDto = { ...mockSettingsDto, ...dto };
 
-      jest.spyOn(service, 'getSettings').mockResolvedValue(mockSettings);
-      jest.spyOn(settingsRepo, 'save').mockResolvedValue(newSettings);
-      jest.spyOn(cacheManager, 'del').mockResolvedValue();
+      jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(mockSettingsEntity);
+      jest.spyOn(settingsRepo, 'save').mockResolvedValue(updatedEntity);
 
       const result = await service.updateSettings(mockUserId, dto);
 
-      expect(result).toEqual(newSettings);
+      expect(result).toEqual(expectedDto);
       expect(settingsRepo.save).toHaveBeenCalledWith(
         expect.objectContaining(dto),
       );
-      expect(cacheManager.del).toHaveBeenCalledWith(`settings:${mockUserId}`);
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        `settings:${mockUserId}`,
+        expectedDto,
+        3600,
+      );
     });
   });
 
@@ -165,7 +189,9 @@ describe('NotificationService', () => {
       jest
         .spyOn(notificationRepo, 'update')
         .mockResolvedValue({ affected: 1 } as any);
+
       await service.markAsRead('notif-id', mockUserId);
+
       expect(notificationRepo.update).toHaveBeenCalledWith(
         { id: 'notif-id', userId: mockUserId },
         { isRead: true },
@@ -176,6 +202,7 @@ describe('NotificationService', () => {
       jest
         .spyOn(notificationRepo, 'update')
         .mockResolvedValue({ affected: 0 } as any);
+
       await expect(
         service.markAsRead('notif-id', mockUserId),
       ).rejects.toThrow(NotFoundException);
@@ -183,22 +210,62 @@ describe('NotificationService', () => {
   });
 
   describe('getUserNotifications', () => {
-    it('should call findAndCount with correct parameters', async () => {
+    it('should call repository with correct parameters and return DTOs', async () => {
       const query = { limit: 10, offset: 5 };
-      jest.spyOn(notificationRepo, 'findAndCount').mockResolvedValue([[], 0]);
-      await service.getUserNotifications(mockUserId, query);
+      const notificationEntity: Notification = {
+        id: 'notif-id',
+        userId: mockUserId,
+        type: NotificationType.PURCHASE,
+        title: 'Title',
+        message: 'Message',
+        isRead: false,
+        priority: NotificationPriority.HIGH,
+        metadata: { amount: 100 },
+        channels: [NotificationChannel.IN_APP],
+        createdAt: mockDate,
+        updatedAt: mockDate,
+        expiresAt: undefined,
+      };
+
+      jest
+        .spyOn(notificationRepo, 'findAndCount')
+        .mockResolvedValue([[notificationEntity], 1]);
+
+      const result = await service.getUserNotifications(mockUserId, query);
+
       expect(notificationRepo.findAndCount).toHaveBeenCalledWith({
         where: { userId: mockUserId },
         take: 10,
         skip: 5,
         order: { createdAt: 'DESC' },
       });
+      expect(result).toEqual({
+        data: [
+          {
+            id: 'notif-id',
+            userId: mockUserId,
+            type: NotificationType.PURCHASE,
+            title: 'Title',
+            message: 'Message',
+            isRead: false,
+            priority: NotificationPriority.HIGH,
+            metadata: { amount: 100 },
+            channels: [NotificationChannel.IN_APP],
+            createdAt: mockDate,
+          },
+        ],
+        total: 1,
+        limit: 10,
+        offset: 5,
+      });
     });
 
     it('should include filters in where clause', async () => {
       const query = { type: NotificationType.PURCHASE, isRead: false };
       jest.spyOn(notificationRepo, 'findAndCount').mockResolvedValue([[], 0]);
+
       await service.getUserNotifications(mockUserId, query);
+
       expect(notificationRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -212,57 +279,98 @@ describe('NotificationService', () => {
   });
 
   describe('createNotification', () => {
-    const createDto: CreateNotificationDto = {
+    const baseDto: CreateNotificationDto = {
       userId: mockUserId,
       type: NotificationType.FRIEND_REQUEST,
       title: 'Test',
       message: 'Test message',
     };
 
-    it('should create a notification if settings allow', async () => {
-      jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(mockSettings);
-      jest.spyOn(notificationRepo, 'create').mockReturnValue(createDto as any);
-      jest
-        .spyOn(notificationRepo, 'save')
-        .mockResolvedValue({ ...createDto, id: 'notif-id' } as any);
+    it('should create a notification and return DTO if settings allow', async () => {
+      const createdEntity: Partial<Notification> = {
+        ...baseDto,
+        channels: [NotificationChannel.IN_APP],
+        priority: NotificationPriority.NORMAL,
+        isRead: false,
+      };
+      const savedEntity: Notification = {
+        ...(createdEntity as Notification),
+        id: 'notif-id',
+        createdAt: mockDate,
+        updatedAt: mockDate,
+        metadata: undefined,
+        expiresAt: undefined,
+      };
 
-      const result = await service.createNotification(createDto);
-      expect(result).toBeDefined();
-      expect(notificationRepo.save).toHaveBeenCalled();
+      jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(mockSettingsEntity);
+      jest
+        .spyOn(notificationRepo, 'create')
+        .mockReturnValue(createdEntity as Notification);
+      jest.spyOn(notificationRepo, 'save').mockResolvedValue(savedEntity);
+
+      const result = await service.createNotification(baseDto);
+
+      expect(result).toEqual({
+        id: 'notif-id',
+        userId: mockUserId,
+        type: baseDto.type,
+        title: baseDto.title,
+        message: baseDto.message,
+        isRead: false,
+        priority: NotificationPriority.NORMAL,
+        metadata: undefined,
+        channels: [NotificationChannel.IN_APP],
+        createdAt: mockDate,
+      });
     });
 
     it('should return null if type-specific setting is disabled', async () => {
-      const disabledSettings = { ...mockSettings, friendRequests: false };
+      const disabledSettings = { ...mockSettingsEntity, friendRequests: false };
       jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(disabledSettings);
 
-      const result = await service.createNotification(createDto);
+      const result = await service.createNotification(baseDto);
+
       expect(result).toBeNull();
       expect(notificationRepo.save).not.toHaveBeenCalled();
     });
 
-    it('should call email service if channel is provided and enabled', async () => {
+    it('should call email service if EMAIL channel is requested and enabled', async () => {
       const dtoWithEmail = {
-        ...createDto,
+        ...baseDto,
         channels: [NotificationChannel.EMAIL],
       };
-      const emailServiceSpy = jest.spyOn(emailService, 'sendNotificationEmail');
-      const httpServiceSpy = jest
-        .spyOn(httpService, 'get')
-        .mockReturnValue(of({ data: { email: 'test@test.com' } } as any));
-      jest.spyOn(configService, 'get').mockReturnValue('http://user-service');
+      const createdEntity: Partial<Notification> = {
+        ...dtoWithEmail,
+        channels: [NotificationChannel.EMAIL],
+        priority: NotificationPriority.NORMAL,
+        isRead: false,
+      };
+      const savedEntity: Notification = {
+        ...(createdEntity as Notification),
+        id: 'notif-id',
+        createdAt: mockDate,
+        updatedAt: mockDate,
+        metadata: undefined,
+        expiresAt: undefined,
+      };
 
-      jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(mockSettings);
+      jest.spyOn(settingsRepo, 'findOne').mockResolvedValue(mockSettingsEntity);
       jest
         .spyOn(notificationRepo, 'create')
-        .mockReturnValue(dtoWithEmail as any);
+        .mockReturnValue(createdEntity as Notification);
+      jest.spyOn(notificationRepo, 'save').mockResolvedValue(savedEntity);
+      jest.spyOn(configService, 'get').mockReturnValue('http://user-service');
       jest
-        .spyOn(notificationRepo, 'save')
-        .mockResolvedValue({ ...dtoWithEmail, id: 'notif-id' } as any);
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: { email: 'test@test.com' } } as any));
+      const emailSpy = jest.spyOn(
+        emailService,
+        'sendNotificationEmail',
+      );
 
       await service.createNotification(dtoWithEmail);
 
-      expect(httpServiceSpy).toHaveBeenCalled();
-      expect(emailServiceSpy).toHaveBeenCalled();
+      expect(emailSpy).toHaveBeenCalledWith('test@test.com', savedEntity);
     });
   });
 });

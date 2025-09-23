@@ -130,6 +130,8 @@
 
 
 
+
+
   - Создать OrderController с эндпоинтами: POST /orders, GET /orders/:id, GET /orders
   - Создать PaymentController с эндпоинтами: POST /payments, GET /payments/:id, POST /payments/:id/confirm, POST /payments/:id/cancel
   - Добавить Swagger декораторы для автоматической документации API

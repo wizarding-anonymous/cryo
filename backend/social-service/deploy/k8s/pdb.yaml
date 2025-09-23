@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: social-service-pdb
+  labels:
+    app: social-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: social-service

@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>24/24</span>
+                <span class='fraction'>27/27</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>22/22</span>
+                <span class='fraction'>25/25</span>
             </div>
         
             
@@ -128,7 +128,18 @@
 <a name='L63'></a><a href='#L63'>63</a>
 <a name='L64'></a><a href='#L64'>64</a>
 <a name='L65'></a><a href='#L65'>65</a>
-<a name='L66'></a><a href='#L66'>66</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -146,6 +157,16 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -159,12 +180,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -173,11 +188,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -189,6 +201,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -209,11 +231,21 @@
 import { MessagingService } from './messaging.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MessagesQueryDto } from './dto/messages-query.dto';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiNoContentResponse,
+} from '@nestjs/swagger';
 import { AuthRequest } from '../common/interfaces/auth-request.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FriendshipGuard } from '../auth/guards/friendship.guard';
 import { RateLimitGuard } from '../auth/guards/rate-limit.guard';
+import { MessageDto } from './dto/message.dto';
+import { ConversationDto } from './dto/conversation.dto';
+import { ConversationResponseDto } from './dto/conversation-response.dto';
 &nbsp;
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, FriendshipGuard, RateLimitGuard)
@@ -224,25 +256,28 @@ export class MessagesController {
 &nbsp;
   @Post()
   @ApiOperation({ summary: 'Send a message to a friend' })
-  async sendMessage(@Req() req: AuthRequest, @Body() dto: SendMessageDto) {
+  @ApiCreatedResponse({ type: MessageDto })
+  async sendMessage(@Req() req: AuthRequest, @Body() dto: SendMessageDto): Promise&lt;MessageDto&gt; {
     const fromUserId = req.user.userId;
     return this.messagingService.sendMessage(fromUserId, dto);
   }
 &nbsp;
   @Get('conversations')
   @ApiOperation({ summary: 'Get a list of conversations' })
-  async getConversations(@Req() req: AuthRequest) {
+  @ApiOkResponse({ type: [ConversationDto] })
+  async getConversations(@Req() req: AuthRequest): Promise&lt;ConversationDto[]&gt; {
     const userId = req.user.userId;
     return this.messagingService.getConversations(userId);
   }
 &nbsp;
   @Get('conversations/:friendId')
   @ApiOperation({ summary: 'Get conversation history with a friend' })
+  @ApiOkResponse({ type: ConversationResponseDto })
   async getConversation(
     @Req() req: AuthRequest,
     @Param('friendId') friendId: string,
     @Query() query: MessagesQueryDto,
-  ) {
+  ): Promise&lt;ConversationResponseDto&gt; {
     const userId = req.user.userId;
     return this.messagingService.getConversation(userId, friendId, query);
   }
@@ -250,10 +285,8 @@ export class MessagesController {
   @Put(':messageId/read')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Mark a message as read' })
-  async markAsRead(
-    @Req() req: AuthRequest,
-    @Param('messageId') messageId: string,
-  ) {
+  @ApiNoContentResponse()
+  async markAsRead(@Req() req: AuthRequest, @Param('messageId') messageId: string): Promise&lt;void&gt; {
     const userId = req.user.userId;
     await this.messagingService.markAsRead(messageId, userId);
   }
@@ -265,7 +298,7 @@ export class MessagesController {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-18T20:09:37.540Z
+                at 2025-09-23T15:47:22.637Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

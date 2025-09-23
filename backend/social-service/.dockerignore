@@ -3,6 +3,9 @@ npm-debug.log
 dist
 .git
 .gitignore
+README.md
 .env
-Dockerfile
-.dockerignore
+.nyc_output
+coverage
+.vscode
+.idea

@@ -65,11 +65,7 @@ describe('MessagesController', () => {
       const friendId = 'user2';
       const query = { page: 1, limit: 50 };
       await controller.getConversation(mockAuthRequest, friendId, query);
-      expect(service.getConversation).toHaveBeenCalledWith(
-        'user1',
-        friendId,
-        query,
-      );
+      expect(service.getConversation).toHaveBeenCalledWith('user1', friendId, query);
     });
   });
 

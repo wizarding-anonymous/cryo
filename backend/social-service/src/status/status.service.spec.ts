@@ -50,9 +50,7 @@ describe('StatusService', () => {
     }).compile();
 
     service = module.get<StatusService>(StatusService);
-    repository = module.get<Repository<OnlineStatus>>(
-      getRepositoryToken(OnlineStatus),
-    );
+    repository = module.get<Repository<OnlineStatus>>(getRepositoryToken(OnlineStatus));
     cacheManager = module.get<Cache>(CACHE_MANAGER);
     friendsService = module.get<FriendsService>(FriendsService);
     jest.clearAllMocks();
@@ -99,11 +97,7 @@ describe('StatusService', () => {
       mockStatusRepository.findOneBy.mockResolvedValue(status);
       const result = await service.getUserStatus(userId);
       expect(result).toEqual(status);
-      expect(mockCacheManager.set).toHaveBeenCalledWith(
-        `user-status:${userId}`,
-        status,
-        900,
-      );
+      expect(mockCacheManager.set).toHaveBeenCalledWith(`user-status:${userId}`, status, 900);
     });
 
     it('should return AWAY status if user was last seen more than 15 minutes ago', async () => {
@@ -140,8 +134,8 @@ describe('StatusService', () => {
       const result = await service.getFriendsStatus(userId);
 
       expect(result).toHaveLength(2);
-      expect(result[0].status).toEqual(UserStatus.ONLINE);
-      expect(result[1].status).toEqual(UserStatus.OFFLINE);
+      expect(result[0]?.status).toEqual(UserStatus.ONLINE);
+      expect(result[1]?.status).toEqual(UserStatus.OFFLINE);
       expect(getUserStatusSpy).toHaveBeenCalledTimes(2);
     });
   });

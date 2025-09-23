@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">44.44% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/18</span>
+                <span class='fraction'>8/18</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">25% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/12</span>
+                <span class='fraction'>3/12</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">37.5% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/16</span>
+                <span class='fraction'>6/16</span>
             </div>
         
             
@@ -117,28 +117,20 @@
 <a name='L52'></a><a href='#L52'>52</a>
 <a name='L53'></a><a href='#L53'>53</a>
 <a name='L54'></a><a href='#L54'>54</a>
-<a name='L55'></a><a href='#L55'>55</a>
-<a name='L56'></a><a href='#L56'>56</a>
-<a name='L57'></a><a href='#L57'>57</a>
-<a name='L58'></a><a href='#L58'>58</a>
-<a name='L59'></a><a href='#L59'>59</a>
-<a name='L60'></a><a href='#L60'>60</a>
-<a name='L61'></a><a href='#L61'>61</a>
-<a name='L62'></a><a href='#L62'>62</a>
-<a name='L63'></a><a href='#L63'>63</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L55'></a><a href='#L55'>55</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -163,10 +155,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -180,27 +168,23 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import { Injectable, Inject } from '@nestjs/common';</span>
-<span class="cstat-no" title="statement not covered" >import { CACHE_MANAGER } from '@nestjs/cache-manager';</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 &nbsp;
 @Injectable()
-export <span class="cstat-no" title="statement not covered" >class <span class="cstat-no" title="statement not covered" ><span class="cstat-no" title="statement not covered" >CacheService </span>{</span></span>
-<span class="fstat-no" title="function not covered" >  constructor(@I</span>nject(CACHE_MANAGER) private <span class="cstat-no" title="statement not covered" >cacheManager: Cache)</span> {}
+export class CacheService {
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
 &nbsp;
-<span class="fstat-no" title="function not covered" >  async </span>get&lt;T&gt;(key: string): Promise&lt;T | undefined&gt; {
-<span class="cstat-no" title="statement not covered" >    return await this.cacheManager.get&lt;T&gt;(key);</span>
+  async get&lt;T&gt;(key: string): Promise&lt;T | undefined&gt; {
+    return await this.cacheManager.get&lt;T&gt;(key);
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  async </span>set&lt;T&gt;(key: string, value: T, ttl?: number): Promise&lt;void&gt; {
-<span class="cstat-no" title="statement not covered" >    await this.cacheManager.set(key, value, ttl);</span>
+  async set&lt;T&gt;(key: string, value: T, ttl?: number): Promise&lt;void&gt; {
+    await this.cacheManager.set(key, value, ttl);
   }
 &nbsp;
 <span class="fstat-no" title="function not covered" >  async </span>del(key: string): Promise&lt;void&gt; {
@@ -224,11 +208,7 @@ export <span class="cstat-no" title="statement not covered" >class <span class="
 <span class="cstat-no" title="statement not covered" >    return await this.get(`friends_list:${userId}`);</span>
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  async </span>setFriendsList(
-    userId: string,
-    friends: any[],
-    ttl = <span class="branch-0 cbranch-no" title="branch not covered" >600,</span>
-  ): Promise&lt;void&gt; {
+<span class="fstat-no" title="function not covered" >  async </span>setFriendsList(userId: string, friends: any[], ttl = <span class="branch-0 cbranch-no" title="branch not covered" >600)</span>: Promise&lt;void&gt; {
 <span class="cstat-no" title="statement not covered" >    await this.set(`friends_list:${userId}`, friends, ttl);</span>
   }
 &nbsp;
@@ -241,11 +221,7 @@ export <span class="cstat-no" title="statement not covered" >class <span class="
 <span class="cstat-no" title="statement not covered" >    return await this.get(`friends_status:${userId}`);</span>
   }
 &nbsp;
-<span class="fstat-no" title="function not covered" >  async </span>setFriendsStatus(
-    userId: string,
-    statuses: any[],
-    ttl = <span class="branch-0 cbranch-no" title="branch not covered" >300,</span>
-  ): Promise&lt;void&gt; {
+<span class="fstat-no" title="function not covered" >  async </span>setFriendsStatus(userId: string, statuses: any[], ttl = <span class="branch-0 cbranch-no" title="branch not covered" >300)</span>: Promise&lt;void&gt; {
 <span class="cstat-no" title="statement not covered" >    await this.set(`friends_status:${userId}`, statuses, ttl);</span>
   }
 }
@@ -256,7 +232,7 @@ export <span class="cstat-no" title="statement not covered" >class <span class="
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-18T20:09:37.540Z
+                at 2025-09-23T15:47:22.637Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

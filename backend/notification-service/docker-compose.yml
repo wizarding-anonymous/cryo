@@ -1,4 +1,4 @@
-version: '3.8'
+﻿version: '3.8'
 
 services:
   # Notification Service
@@ -11,11 +11,11 @@ services:
       - "3003:3000"
     environment:
       - NODE_ENV=development
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USERNAME=notification_user
-      - DATABASE_PASSWORD=notification_password
-      - DATABASE_NAME=notification_db
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=notification_user
+      - DB_PASSWORD=notification_password
+      - DB_DATABASE=notification_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     volumes:

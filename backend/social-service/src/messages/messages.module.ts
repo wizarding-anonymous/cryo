@@ -5,11 +5,12 @@ import { FriendsModule } from '../friends/friends.module';
 import { MessagingService } from './messaging.service';
 import { MessagesController } from './messages.controller';
 import { ClientsModule } from '../clients/clients.module';
+import { CacheService } from '../cache/cache.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Message]), FriendsModule, ClientsModule],
   controllers: [MessagesController],
-  providers: [MessagingService],
+  providers: [MessagingService, CacheService],
   exports: [MessagingService],
 })
 export class MessagesModule {}

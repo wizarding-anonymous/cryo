@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+﻿import { ApiProperty } from '@nestjs/swagger';
 import { NotificationDto } from './notification.dto';
 
 export class PaginatedNotificationsDto {
@@ -6,14 +6,14 @@ export class PaginatedNotificationsDto {
     type: [NotificationDto],
     description: 'The list of notifications for the current page',
   })
-  data: NotificationDto[];
+  data!: NotificationDto[];
 
   @ApiProperty({ description: 'The total number of notifications available' })
-  total: number;
+  total!: number;
 
   @ApiProperty({ description: 'The number of items requested per page' })
-  limit: number;
+  limit!: number;
 
   @ApiProperty({ description: 'The number of items skipped' })
-  offset: number;
+  offset!: number;
 }

@@ -32,7 +32,6 @@ import {
   PaginatedNotificationsDto,
   UpdateNotificationSettingsDto,
 } from './dto';
-import { Notification } from '../entities';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('notifications')
@@ -111,7 +110,7 @@ export class NotificationController {
   @ApiCreatedResponse({ type: NotificationDto })
   async createNotification(
     @Body() createDto: CreateNotificationDto,
-  ): Promise<Notification | null> {
+  ): Promise<NotificationDto | null> {
     return this.notificationService.createNotification(createDto);
   }
 

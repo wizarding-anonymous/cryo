@@ -1,4 +1,4 @@
-{
+﻿{
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
@@ -24,7 +24,7 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "strictPropertyInitialization": false,
+    "strictPropertyInitialization": true,
     "useUnknownInCatchVariables": false
   }
 }

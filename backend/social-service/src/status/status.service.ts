@@ -32,11 +32,7 @@ export class StatusService {
     };
 
     await this.statusRepository.upsert(statusData, ['userId']);
-    await this.cacheManager.set(
-      this.getCacheKey(userId),
-      statusData,
-      CACHE_TTL_SECONDS,
-    );
+    await this.cacheManager.set(this.getCacheKey(userId), statusData, CACHE_TTL_SECONDS);
   }
 
   async setOfflineStatus(userId: string): Promise<void> {
@@ -52,20 +48,14 @@ export class StatusService {
   }
 
   async getUserStatus(userId: string): Promise<OnlineStatus | null> {
-    const cachedStatus = await this.cacheManager.get<OnlineStatus>(
-      this.getCacheKey(userId),
-    );
+    const cachedStatus = await this.cacheManager.get<OnlineStatus>(this.getCacheKey(userId));
     if (cachedStatus) {
       return this.checkAwayStatus(cachedStatus);
     }
 
     const dbStatus = await this.statusRepository.findOneBy({ userId });
     if (dbStatus) {
-      await this.cacheManager.set(
-        this.getCacheKey(userId),
-        dbStatus,
-        CACHE_TTL_SECONDS,
-      );
+      await this.cacheManager.set(this.getCacheKey(userId), dbStatus, CACHE_TTL_SECONDS);
       return this.checkAwayStatus(dbStatus);
     }
 

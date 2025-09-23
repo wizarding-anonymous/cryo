@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  Inject,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, Inject } from '@nestjs/common';
 import { FriendsService } from '../../friends/friends.service';
 import { NotFriendsException } from '../../common/exceptions/not-friends.exception';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
@@ -34,10 +29,7 @@ export class FriendshipGuard implements CanActivate {
       return true;
     }
 
-    const areFriends = await this.friendsService.checkFriendship(
-      fromUserId,
-      toUserId,
-    );
+    const areFriends = await this.friendsService.checkFriendship(fromUserId, toUserId);
 
     if (!areFriends) {
       throw new NotFriendsException();

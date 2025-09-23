@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+﻿import { ApiProperty } from '@nestjs/swagger';
 import {
   NotificationChannel,
   NotificationPriority,
@@ -7,25 +7,25 @@ import {
 
 export class NotificationDto {
   @ApiProperty({ description: 'The unique ID of the notification' })
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'The ID of the user who owns the notification' })
-  userId: string;
+  userId!: string;
 
   @ApiProperty({ enum: NotificationType, description: 'The type of the notification' })
-  type: NotificationType;
+  type!: NotificationType;
 
   @ApiProperty({ description: 'The title of the notification' })
-  title: string;
+  title!: string;
 
   @ApiProperty({ description: 'The message body of the notification' })
-  message: string;
+  message!: string;
 
   @ApiProperty({ description: 'Indicates if the notification has been read' })
-  isRead: boolean;
+  isRead!: boolean;
 
   @ApiProperty({ enum: NotificationPriority, description: 'The priority of the notification' })
-  priority: NotificationPriority;
+  priority!: NotificationPriority;
 
   @ApiProperty({ required: false, description: 'Optional metadata' })
   metadata?: Record<string, any>;
@@ -34,5 +34,5 @@ export class NotificationDto {
   channels?: NotificationChannel[];
 
   @ApiProperty({ description: 'The date the notification was created' })
-  createdAt: Date;
+  createdAt!: Date;
 }

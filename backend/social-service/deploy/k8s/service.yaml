@@ -4,11 +4,16 @@ metadata:
   name: social-service
   labels:
     app: social-service
+    service: social-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
   selector:
     app: social-service
   ports:
     - name: http
       port: 80
-      targetPort: 3007
+      targetPort: 3003
+      protocol: TCP
   type: ClusterIP
+  sessionAffinity: None
