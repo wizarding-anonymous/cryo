@@ -16,7 +16,9 @@ export class GameCatalogIntegrationService {
     private readonly configService: ConfigService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {
-    this.gameCatalogUrl = this.configService.get<string>('GAME_CATALOG_SERVICE_URL');
+    this.gameCatalogUrl = this.configService.get<string>(
+      'GAME_CATALOG_SERVICE_URL',
+    );
   }
 
   async getGamePurchaseInfo(gameId: string): Promise<GamePurchaseInfo | null> {
@@ -35,8 +37,10 @@ export class GameCatalogIntegrationService {
       const response = await firstValueFrom(
         this.httpService.get<GamePurchaseInfo>(url).pipe(
           timeout(5000),
-          catchError(err => {
-            this.logger.error(`Error fetching game info for ${gameId}: ${err.message}`);
+          catchError((err: any) => {
+            this.logger.error(
+              `Error fetching game info for ${gameId}: ${err.message}`,
+            );
             return of(null);
           }),
         ),
@@ -50,20 +54,24 @@ export class GameCatalogIntegrationService {
       await this.cacheManager.set(cacheKey, gameInfo, 3600); // Cache for 1 hour
       return gameInfo;
     } catch (error) {
-      this.logger.error(`Failed to fetch from Game Catalog Service: ${error.message}`);
+      this.logger.error(
+        `Failed to fetch from Game Catalog Service: ${error.message}`,
+      );
       return null;
     }
   }
 
   async checkHealth(): Promise<{ status: string }> {
-    const url = `${this.gameCatalogUrl}/api/health`;
+    const url = `${this.gameCatalogUrl}/v1/health`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url).pipe(timeout(2000)),
       );
       return { status: response.data?.status === 'ok' ? 'up' : 'down' };
     } catch (error) {
-      this.logger.error(`Game Catalog Service health check failed: ${error.message}`);
+      this.logger.error(
+        `Game Catalog Service health check failed: ${error.message}`,
+      );
       return { status: 'down' };
     }
   }

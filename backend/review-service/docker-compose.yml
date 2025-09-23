@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # Review Service Application
+  review-service:
+    build:
+      context: .
+      target: development
+    container_name: review-service-app
+    ports:
+      - "3003:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=review_user
+      - DATABASE_PASSWORD=review_password
+      - DATABASE_NAME=review_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=your-jwt-secret-key
+      - LIBRARY_SERVICE_URL=http://library-service:3000
+      - GAME_CATALOG_SERVICE_URL=http://game-catalog-service:3000
+      - ACHIEVEMENT_SERVICE_URL=http://achievement-service:3000
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3000
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - review-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: review-service-postgres
+    environment:
+      - POSTGRES_USER=review_user
+      - POSTGRES_PASSWORD=review_password
+      - POSTGRES_DB=review_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - review-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: review-service-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - review-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # PostgreSQL Admin (optional for development)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: review-service-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@review.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5051:80"
+    depends_on:
+      - postgres
+    networks:
+      - review-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  review-network:
+    driver: bridge

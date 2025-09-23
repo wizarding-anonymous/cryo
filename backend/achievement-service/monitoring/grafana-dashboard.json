@@ -1,0 +1,137 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Achievement Service Production Dashboard",
+    "tags": ["achievement-service", "production", "mvp"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"achievement-service\"}[5m])",
+            "legendFormat": "{{method}} {{route}} {{status_code}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "HTTP Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"achievement-service\"}[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"achievement-service\"}[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Seconds"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Achievement Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(achievements_unlocked_total{job=\"achievement-service\"}[5m])",
+            "legendFormat": "Achievements Unlocked/sec"
+          },
+          {
+            "expr": "rate(progress_updates_total{job=\"achievement-service\"}[5m])",
+            "legendFormat": "Progress Updates/sec"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Service Integration Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(service_calls_total{job=\"achievement-service\",status=\"success\"}[5m]) / rate(service_calls_total{job=\"achievement-service\"}[5m])",
+            "legendFormat": "Success Rate"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Database Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "database_connections_active{job=\"achievement-service\"}",
+            "legendFormat": "Active Connections"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(database_query_duration_seconds_bucket{job=\"achievement-service\"}[5m]))",
+            "legendFormat": "95th percentile query time"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Cache Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(cache_hits_total{job=\"achievement-service\"}[5m])",
+            "legendFormat": "Cache Hits/sec"
+          },
+          {
+            "expr": "rate(cache_misses_total{job=\"achievement-service\"}[5m])",
+            "legendFormat": "Cache Misses/sec"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "System Resources",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes{job=\"achievement-service\"} / 1024 / 1024",
+            "legendFormat": "Memory Usage (MB)"
+          },
+          {
+            "expr": "rate(process_cpu_seconds_total{job=\"achievement-service\"}[5m]) * 100",
+            "legendFormat": "CPU Usage (%)"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"achievement-service\",status_code=~\"5..\"}[5m])",
+            "legendFormat": "5xx Errors/sec"
+          },
+          {
+            "expr": "rate(service_errors_total{job=\"achievement-service\"}[5m])",
+            "legendFormat": "Service Integration Errors/sec"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

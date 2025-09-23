@@ -11,9 +11,9 @@ export class CacheConfig implements CacheOptionsFactory {
     const redisHost = this.configService.get<string>('REDIS_HOST');
     const redisPort = this.configService.get<number>('REDIS_PORT');
     const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
-    
+
     console.log(`Redis config: ${redisHost}:${redisPort}`);
-    
+
     return {
       store: redisStore as any,
       socket: {

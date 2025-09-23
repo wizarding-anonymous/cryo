@@ -1,0 +1,27 @@
+config:
+  target: "{{ $processEnvironment.BASE_URL || 'http://localhost:3001' }}"
+  phases:
+    - duration: 60
+      arrivalRate: 100
+      name: warm-up
+    - duration: 120
+      arrivalRate: 500
+      rampTo: 1000
+      name: ramp
+    - duration: 300
+      arrivalRate: 1000
+      name: sustain
+  defaults:
+    headers:
+      Accept: application/json
+  plugins:
+    statsd: { } # placeholder if needed
+scenarios:
+  - name: Browse and read games
+    flow:
+      - get:
+          url: "/api/games?limit=20"
+      - think: 1
+      - get:
+          url: "/api/games?limit=20&cursor=next"
+

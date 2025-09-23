@@ -1,0 +1,119 @@
+version: '3.8'
+
+# Development docker-compose file
+# This extends the main docker-compose.yml with development-specific configurations
+
+services:
+  # Override services for development
+  api-gateway:
+    volumes:
+      - ./api-gateway/src:/usr/src/app/src
+      - ./api-gateway/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  user-service:
+    volumes:
+      - ./user-service/src:/usr/src/app/src
+      - ./user-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  game-catalog-service:
+    volumes:
+      - ./game-catalog-service/src:/usr/src/app/src
+      - ./game-catalog-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  library-service:
+    volumes:
+      - ./library-service/src:/usr/src/app/src
+      - ./library-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  review-service:
+    volumes:
+      - ./review-service/src:/usr/src/app/src
+      - ./review-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  payment-service:
+    volumes:
+      - ./payment-service/src:/usr/src/app/src
+      - ./payment-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  notification-service:
+    volumes:
+      - ./notification-service/src:/usr/src/app/src
+      - ./notification-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  social-service:
+    volumes:
+      - ./social-service/src:/usr/src/app/src
+      - ./social-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  achievement-service:
+    volumes:
+      - ./achievement-service/src:/usr/src/app/src
+      - ./achievement-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  security-service:
+    volumes:
+      - ./security-service/src:/usr/src/app/src
+      - ./security-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  download-service:
+    volumes:
+      - ./download-service:/go/src/app
+    environment:
+      - GO_ENV=development
+    command: go run cmd/main.go
+
+  # Development tools
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - microservices-network
+    restart: unless-stopped

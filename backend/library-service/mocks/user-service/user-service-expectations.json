@@ -1,0 +1,46 @@
+[
+  {
+    "httpRequest": {
+      "method": "POST",
+      "path": "/api/auth/validate-token"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "valid": true,
+        "userId": "user-123",
+        "email": "test@example.com",
+        "roles": ["user"],
+        "exp": 1735689600
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/api/users/.*",
+      "pathParameters": {
+        "userId": [".*"]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "id": "user-123",
+        "email": "test@example.com",
+        "username": "testuser",
+        "firstName": "Test",
+        "lastName": "User",
+        "country": "RU",
+        "currency": "RUB",
+        "createdAt": "2023-01-01T00:00:00Z"
+      }
+    }
+  }
+]

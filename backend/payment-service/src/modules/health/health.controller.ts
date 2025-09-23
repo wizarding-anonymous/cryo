@@ -31,31 +31,34 @@ export class HealthController {
     return this.health.check([
       // Database health check
       () => this.db.pingCheck('database'),
-      
+
       // Memory health check (should not exceed 150MB)
       () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
-      
+
       // Storage health check (should not exceed 90% of disk)
-      () => this.disk.checkStorage('storage', { 
-        path: '/', 
-        thresholdPercent: 0.9 
-      }),
+      () =>
+        this.disk.checkStorage('storage', {
+          path: '/',
+          thresholdPercent: 0.9,
+        }),
       async () => {
         const result = await this.gameCatalogService.checkHealth();
-        return { 
-          'game-catalog-service': { 
+        return {
+          'game-catalog-service': {
             status: result.status === 'up' ? 'up' : 'down',
-            [result.status === 'up' ? 'message' : 'error']: result.status === 'up' ? 'Service is healthy' : 'Service is down'
-          } 
+            [result.status === 'up' ? 'message' : 'error']:
+              result.status === 'up' ? 'Service is healthy' : 'Service is down',
+          },
         };
       },
       async () => {
         const result = await this.libraryService.checkHealth();
-        return { 
-          'library-service': { 
+        return {
+          'library-service': {
             status: result.status === 'up' ? 'up' : 'down',
-            [result.status === 'up' ? 'message' : 'error']: result.status === 'up' ? 'Service is healthy' : 'Service is down'
-          } 
+            [result.status === 'up' ? 'message' : 'error']:
+              result.status === 'up' ? 'Service is healthy' : 'Service is down',
+          },
         };
       },
     ]);
@@ -66,9 +69,7 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Service is ready' })
   @HealthCheck()
   readiness() {
-    return this.health.check([
-      () => this.db.pingCheck('database'),
-    ]);
+    return this.health.check([() => this.db.pingCheck('database')]);
   }
 
   @Get('live')

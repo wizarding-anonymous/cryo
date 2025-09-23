@@ -21,14 +21,11 @@ export class LoggingInterceptor implements NestInterceptor {
     const startTime = Date.now();
     const correlationId = this.alsService.get('correlationId');
 
-    this.logger.log(
-      `[${correlationId}] Incoming Request: ${method} ${url}`,
-      {
-        body: this.sanitizeBody(body),
-        query,
-        params,
-      },
-    );
+    this.logger.log(`[${correlationId}] Incoming Request: ${method} ${url}`, {
+      body: this.sanitizeBody(body),
+      query,
+      params,
+    });
 
     return next.handle().pipe(
       tap(() => {
@@ -42,17 +39,17 @@ export class LoggingInterceptor implements NestInterceptor {
 
   private sanitizeBody(body: any): any {
     if (!body) return body;
-    
+
     const sanitized = { ...body };
-    
+
     // Remove sensitive fields
     const sensitiveFields = ['password', 'token', 'secret', 'key'];
-    sensitiveFields.forEach(field => {
+    sensitiveFields.forEach((field) => {
       if (sanitized[field]) {
         sanitized[field] = '[REDACTED]';
       }
     });
-    
+
     return sanitized;
   }
 }

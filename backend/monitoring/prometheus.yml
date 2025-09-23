@@ -1,0 +1,107 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Payment Service (has metrics according to specification)
+  - job_name: 'payment-service'
+    static_configs:
+      - targets: ['payment-service:3005']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Download Service (has metrics according to specification)
+  - job_name: 'download-service'
+    static_configs:
+      - targets: ['download-service:3010']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Note: Other services don't have /metrics endpoints in their specifications
+  # This is correct according to the service design documents
+  # Only Payment Service and Download Service are specified to have metrics endpoints
+
+  # PostgreSQL Exporter for all databases
+  - job_name: 'postgres-user'
+    static_configs:
+      - targets: ['postgres-user:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-catalog'
+    static_configs:
+      - targets: ['postgres-catalog:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-library'
+    static_configs:
+      - targets: ['postgres-library:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-review'
+    static_configs:
+      - targets: ['postgres-review:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-payment'
+    static_configs:
+      - targets: ['postgres-payment:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-notification'
+    static_configs:
+      - targets: ['postgres-notification:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-social'
+    static_configs:
+      - targets: ['postgres-social:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-achievement'
+    static_configs:
+      - targets: ['postgres-achievement:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-security'
+    static_configs:
+      - targets: ['postgres-security:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-download'
+    static_configs:
+      - targets: ['postgres-download:5432']
+    scrape_interval: 30s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # Node Exporter (if added)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093

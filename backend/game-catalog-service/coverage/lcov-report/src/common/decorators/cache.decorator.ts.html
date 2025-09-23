@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">92.3% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>9/9</span>
+                <span class='fraction'>12/13</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>1/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">66.66% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/2</span>
+                <span class='fraction'>2/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">90.9% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>5/5</span>
+                <span class='fraction'>10/11</span>
             </div>
         
             
@@ -81,16 +81,20 @@
 <a name='L16'></a><a href='#L16'>16</a>
 <a name='L17'></a><a href='#L17'>17</a>
 <a name='L18'></a><a href='#L18'>18</a>
-<a name='L19'></a><a href='#L19'>19</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -98,25 +102,51 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { SetMetadata } from '@nestjs/common';
 &nbsp;
 export const CACHE_KEY_METADATA = 'cache_key';
 export const CACHE_INVALIDATE_METADATA = 'cache_invalidate';
+export const CACHE_TTL_METADATA = 'cache_ttl';
 &nbsp;
 /**
  * Decorator to set a cache key for a route.
  * Used by the HttpCacheInterceptor.
  * @param key - The cache key to use for this route's response.
+ * @param ttl - Time to live in seconds (optional, defaults to 300s)
  */
-export const Cache = (key: string) =&gt; SetMetadata(CACHE_KEY_METADATA, key);
+export const Cache = (key: string, ttl?: number) =&gt; {
+  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) =&gt; {
+    SetMetadata(CACHE_KEY_METADATA, key)(target, propertyKey, descriptor);
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (ttl !== undefined) {
+      SetMetadata(CACHE_TTL_METADATA, ttl)(target, propertyKey, descriptor);
+    }
+  };
+};
 &nbsp;
 /**
  * Decorator to specify cache keys to invalidate upon successful execution of this route.
  * Used by the HttpCacheInterceptor.
  * @param keys - The cache keys to invalidate.
  */
-export const InvalidateCache = (...keys: string[]) =&gt; SetMetadata(CACHE_INVALIDATE_METADATA, keys);
+export const InvalidateCache = <span class="fstat-no" title="function not covered" >(.</span>..keys: string[]) =&gt;
+<span class="cstat-no" title="statement not covered" >  SetMetadata(CACHE_INVALIDATE_METADATA, keys);</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -124,7 +154,7 @@ export const InvalidateCache = (...keys: string[]) =&gt; SetMetadata(CACHE_INVAL
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-12T13:33:23.895Z
+                at 2025-09-22T16:09:52.380Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

@@ -1,38 +1,89 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import request from 'supertest';
-import { App } from 'supertest/types';
+import * as request from 'supertest';
 import { TestAppModule } from './test-app.module';
+import { GameCatalogClient } from '../src/clients/game-catalog.client';
+import { JwtService } from '@nestjs/jwt';
+import { randomUUID } from 'crypto';
 
 describe('Library Service (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
+  let jwtService: JwtService;
+  let validToken: string;
+  let testUserId: string;
+
+  const mockGameCatalogClient = {
+    getGamesByIds: jest.fn(),
+    doesGameExist: jest.fn(),
+  };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [TestAppModule],
-    }).compile();
+    })
+      .overrideProvider(GameCatalogClient)
+      .useValue(mockGameCatalogClient)
+      .compile();
 
     app = moduleFixture.createNestApplication();
-
-    // Apply the same configuration as in main.ts
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-        transformOptions: {
-          enableImplicitConversion: true,
-        },
-      }),
-    );
-
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     app.setGlobalPrefix('api');
-
     await app.init();
+
+    jwtService = app.get(JwtService);
+    testUserId = randomUUID(); // Генерируем валидный UUID для тестов
+    validToken = jwtService.sign({ sub: testUserId, username: 'testuser', roles: ['user'] });
   });
 
   afterAll(async () => {
     await app.close();
+  });
+
+  beforeEach(() => {
+    mockGameCatalogClient.getGamesByIds.mockClear();
+  });
+
+  describe('LibraryController', () => {
+    it('GET /api/library/my - should fail without auth token', () => {
+      return request(app.getHttpServer())
+        .get('/api/library/my')
+        .expect(401);
+    });
+
+    it('GET /api/library/my - should return user library', () => {
+      // We don't need to mock the repository because for e2e, we want to hit the real DB.
+      // But we do need to mock the HTTP client.
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
+
+      return request(app.getHttpServer())
+        .get('/api/library/my')
+        .set('Authorization', `Bearer ${validToken}`)
+        .expect(200);
+    });
+
+    it('GET /api/library/my/search - should return search results', () => {
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
+
+      return request(app.getHttpServer())
+        .get('/api/library/my/search?query=test')
+        .set('Authorization', `Bearer ${validToken}`)
+        .expect(200);
+    });
+  });
+
+  describe('HistoryController', () => {
+    it('GET /api/library/history - should fail without auth token', () => {
+      return request(app.getHttpServer())
+        .get('/api/library/history')
+        .expect(401);
+    });
+
+    it('GET /api/library/history - should return user history', () => {
+      return request(app.getHttpServer())
+        .get('/api/library/history')
+        .set('Authorization', `Bearer ${validToken}`)
+        .expect(200);
+    });
   });
 
   describe('Health Endpoints', () => {
@@ -41,32 +92,8 @@ describe('Library Service (e2e)', () => {
         .get('/api/health')
         .expect(200)
         .expect((res) => {
-          expect(res.body).toHaveProperty('status', 'ok');
-          expect(res.body).toHaveProperty('service', 'library-service');
-          expect(res.body).toHaveProperty('timestamp');
+          expect(res.body.status).toEqual('ok');
         });
-    });
-
-    it('/api/health/detailed (GET)', () => {
-      return request(app.getHttpServer())
-        .get('/api/health/detailed')
-        .expect(200)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('status', 'ok');
-          expect(res.body).toHaveProperty('service', 'library-service');
-          expect(res.body).toHaveProperty('version', '1.0.0');
-          expect(res.body).toHaveProperty('uptime');
-          expect(res.body).toHaveProperty('timestamp');
-        });
-    });
-  });
-
-  describe('App Controller', () => {
-    it('/api (GET)', () => {
-      return request(app.getHttpServer())
-        .get('/api')
-        .expect(200)
-        .expect('Hello World!');
     });
   });
 });

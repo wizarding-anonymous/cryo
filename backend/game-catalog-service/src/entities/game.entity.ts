@@ -57,6 +57,7 @@ export class Game {
   shortDescription: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
+  @Index()
   @Type(() => Number)
   @IsNumber()
   @IsPositive()

@@ -1,0 +1,23 @@
+config:
+  target: "{{ $processEnvironment.BASE_URL || 'http://localhost:3001' }}"
+  phases:
+    - duration: 60
+      arrivalRate: 200
+      name: warm-up
+    - duration: 120
+      arrivalRate: 1000
+      rampTo: 2000
+      name: overload
+    - duration: 180
+      arrivalRate: 2000
+      name: sustain-overload
+  defaults:
+    headers:
+      Accept: application/json
+scenarios:
+  - name: Hammer games endpoint
+    flow:
+      - get:
+          url: "/api/games?limit=50"
+      - think: 0.5
+

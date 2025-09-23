@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # Library Service
+  library-service:
+    build:
+      context: .
+      target: development
+    container_name: library-service-dev
+    command: ["npm", "run", "start"]
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: library_service
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: dev-secret-key
+      GAMES_CATALOG_SERVICE_URL: http://game-catalog-mock:3001
+      USER_SERVICE_URL: http://user-service-mock:3002
+      PAYMENT_SERVICE_URL: http://payment-service-mock:3003
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - library-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: library-service-postgres
+    environment:
+      POSTGRES_DB: library_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - library-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: library-service-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - library-network
+
+  # Mock Game Catalog Service
+  game-catalog-mock:
+    image: mockserver/mockserver:5.15.0
+    container_name: game-catalog-mock
+    ports:
+      - "3001:1080"
+    environment:
+      MOCKSERVER_PROPERTY_FILE: /config/mockserver.properties
+      MOCKSERVER_INITIALIZATION_JSON_PATH: /config/game-catalog-expectations.json
+    volumes:
+      - ./mocks/game-catalog:/config
+    networks:
+      - library-network
+
+  # Mock User Service
+  user-service-mock:
+    image: mockserver/mockserver:5.15.0
+    container_name: user-service-mock
+    ports:
+      - "3002:1080"
+    environment:
+      MOCKSERVER_PROPERTY_FILE: /config/mockserver.properties
+      MOCKSERVER_INITIALIZATION_JSON_PATH: /config/user-service-expectations.json
+    volumes:
+      - ./mocks/user-service:/config
+    networks:
+      - library-network
+
+  # Mock Payment Service
+  payment-service-mock:
+    image: mockserver/mockserver:5.15.0
+    container_name: payment-service-mock
+    ports:
+      - "3003:1080"
+    environment:
+      MOCKSERVER_PROPERTY_FILE: /config/mockserver.properties
+      MOCKSERVER_INITIALIZATION_JSON_PATH: /config/payment-service-expectations.json
+    volumes:
+      - ./mocks/payment-service:/config
+    networks:
+      - library-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  library-network:
+    driver: bridge

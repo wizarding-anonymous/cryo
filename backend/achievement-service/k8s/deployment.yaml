@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: achievement-service
+  labels:
+    app: achievement-service
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: achievement-service
+  template:
+    metadata:
+      labels:
+        app: achievement-service
+        version: v1
+    spec:
+      containers:
+      - name: achievement-service
+        image: achievement-service:latest
+        ports:
+        - containerPort: 3003
+          name: http
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3003"
+        - name: DATABASE_HOST
+          valueFrom:
+            secretKeyRef:
+              name: achievement-secrets
+              key: database-host
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: achievement-secrets
+              key: database-name
+        - name: DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: achievement-secrets
+              key: database-user
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: achievement-secrets
+              key: database-password
+        - name: REDIS_HOST
+          valueFrom:
+            secretKeyRef:
+              name: achievement-secrets
+              key: redis-host
+        - name: REDIS_PORT
+          value: "6379"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: achievement-secrets
+              key: jwt-secret
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health/live
+            port: 3003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health/ready
+            port: 3003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3003
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: achievement-service
+  labels:
+    app: achievement-service
+spec:
+  selector:
+    app: achievement-service
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3003
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: achievement-secrets
+type: Opaque
+stringData:
+  database-host: "postgres-service"
+  database-name: "achievement_db"
+  database-user: "achievement_user"
+  database-password: "your-secure-password"
+  redis-host: "redis-service"
+  jwt-secret: "your-secure-jwt-secret"

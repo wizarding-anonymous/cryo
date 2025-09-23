@@ -8,12 +8,20 @@ export default () => ({
     database: process.env.DATABASE_NAME || 'library_service',
     synchronize: process.env.NODE_ENV !== 'production',
     logging: process.env.NODE_ENV === 'development',
+    maxConnections: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '20', 10),
+    minConnections: parseInt(process.env.DATABASE_MIN_CONNECTIONS || '5', 10),
+    acquireTimeout: parseInt(process.env.DATABASE_ACQUIRE_TIMEOUT || '60000', 10),
+    idleTimeout: parseInt(process.env.DATABASE_IDLE_TIMEOUT || '600000', 10),
   },
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD,
     ttl: parseInt(process.env.CACHE_TTL || '300', 10), // 5 minutes default
+  },
+  kafka: {
+    enabled: process.env.KAFKA_ENABLED === 'true' || false, // Default to false for MVP
+    broker: process.env.KAFKA_BROKER || 'localhost:9092',
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key',

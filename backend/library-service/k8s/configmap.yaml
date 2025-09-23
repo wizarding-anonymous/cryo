@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: library-service-config
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  REDIS_HOST: "redis-service" # Assuming redis is deployed in the cluster
+  REDIS_PORT: "6379"
+  GAMES_CATALOG_SERVICE_URL: "http://game-catalog-service"
+  USER_SERVICE_URL: "http://user-service"
+  # Database credentials should be in a Secret, not a ConfigMap
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "library_service"

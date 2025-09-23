@@ -1,0 +1,150 @@
+import { Inject, Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { SecurityAlert } from '../../entities/security-alert.entity';
+import { SecurityEvent } from '../../entities/security-event.entity';
+import { CreateSecurityAlertDto } from '../../dto/requests/create-security-alert.dto';
+import { PaginatedSecurityAlerts } from '../../dto/responses/paginated-security-alerts.dto';
+import { GetAlertsQueryDto } from './dto/get-alerts-query.dto';
+import { ConfigService } from '@nestjs/config';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LoggerService } from '@nestjs/common';
+import { SuspiciousActivityResult } from './types/suspicious-activity-result';
+import { BehaviorAnalysis } from './types/behavior-analysis';
+import { MetricsService } from '../../common/metrics/metrics.service';
+import { ClientKafka } from '@nestjs/microservices';
+import { KAFKA_PRODUCER_SERVICE } from '../../kafka/kafka.constants';
+import { SecurityAlertSeverity } from '../../common/enums/security-alert-severity.enum';
+import { EncryptionService } from '../../common/encryption/encryption.service';
+
+@Injectable()
+export class MonitoringService implements OnModuleDestroy {
+  constructor(
+    @InjectRepository(SecurityAlert)
+    private readonly alertsRepo: Repository<SecurityAlert>,
+    @InjectRepository(SecurityEvent)
+    private readonly eventsRepo: Repository<SecurityEvent>,
+    private readonly config: ConfigService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @Inject(KAFKA_PRODUCER_SERVICE)
+    private readonly kafkaClient: ClientKafka,
+    private readonly encryption: EncryptionService,
+    @Optional() private readonly metrics?: MetricsService,
+  ) {}
+
+  async onModuleDestroy() {
+    await this.kafkaClient.close();
+  }
+
+  async createAlert(dto: CreateSecurityAlertDto): Promise<SecurityAlert> {
+    const encryptedData = this.encryption.encrypt(dto.data);
+
+    const alert = this.alertsRepo.create({
+      type: dto.type,
+      severity: dto.severity,
+      userId: dto.userId ?? null,
+      ip: dto.ip ?? null,
+      data: encryptedData as any,
+      resolved: false,
+    });
+    const saved = await this.alertsRepo.save(alert);
+    this.logger.warn('Security alert created', { id: saved.id, type: saved.type, severity: saved.severity });
+    this.metrics?.recordAlert(String(dto.type), String(dto.severity));
+
+    if (saved.severity === SecurityAlertSeverity.HIGH || saved.severity === SecurityAlertSeverity.CRITICAL) {
+      this.kafkaClient.emit('security.alerts.created', {
+        ...saved,
+        data: this.encryption.decrypt(saved.data as any), // Decrypt for the event
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return saved;
+  }
+
+  async getAlerts(query: GetAlertsQueryDto): Promise<PaginatedSecurityAlerts> {
+    const qb = this.alertsRepo.createQueryBuilder('a');
+    if (query.type) qb.andWhere('a.type = :type', { type: query.type });
+    if (query.severity) qb.andWhere('a.severity = :severity', { severity: query.severity });
+    if (typeof query.resolved === 'boolean') qb.andWhere('a.resolved = :resolved', { resolved: query.resolved });
+    qb.orderBy('a.created_at', 'DESC');
+
+    const page = query.page ?? 1;
+    const limit = query.pageSize ?? 50;
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+
+    const decryptedItems = items.map(item => ({
+      ...item,
+      data: this.encryption.decrypt(item.data as any),
+    }));
+
+    return { data: decryptedItems, page, limit, total };
+  }
+
+  async getActiveAlerts(): Promise<SecurityAlert[]> {
+    const items = await this.alertsRepo.find({ where: { resolved: false }, order: { createdAt: 'DESC' }, take: 200 });
+    this.metrics?.setActiveAlerts(items.length);
+    // Decrypt data before returning
+    return items.map(item => ({
+      ...item,
+      data: this.encryption.decrypt(item.data as any),
+    }));
+  }
+
+  async resolveAlert(alertId: string, resolvedBy?: string): Promise<void> {
+    const alert = await this.alertsRepo.findOne({ where: { id: alertId } });
+    if (!alert) return;
+    alert.resolved = true;
+    alert.resolvedAt = new Date();
+    alert.resolvedBy = resolvedBy ?? null;
+    await this.alertsRepo.save(alert);
+    this.logger.log('Security alert resolved', { id: alert.id });
+  }
+
+  async detectSuspiciousActivity(userId: string): Promise<SuspiciousActivityResult> {
+    const minutes = this.config.get<number>('SECURITY_SUSPICIOUS_EVENTS_WINDOW_MIN', 10);
+    const thresholdCount = this.config.get<number>('SECURITY_SUSPICIOUS_EVENTS_THRESHOLD', 20);
+    const riskThreshold = this.config.get<number>('SECURITY_ALERT_RISK_THRESHOLD', 80);
+    const since = new Date(Date.now() - minutes * 60_000);
+
+    const events = await this.eventsRepo
+      .createQueryBuilder('e')
+      .where('e.user_id = :userId', { userId })
+      .andWhere('e.created_at >= :since', { since: since.toISOString() })
+      .orderBy('e.created_at', 'DESC')
+      .getMany();
+
+    const count = events.length;
+    const highRisk = events.filter((e) => (e.riskScore ?? 0) >= riskThreshold).length;
+    const suspicious = count >= thresholdCount || highRisk > 0;
+    const reasons: string[] = [];
+    if (count >= thresholdCount) reasons.push(`high activity: ${count} events in ${minutes}m`);
+    if (highRisk > 0) reasons.push(`${highRisk} high-risk events (>=${riskThreshold})`);
+
+    const score = Math.min(99, Math.max(0, Math.floor((count / thresholdCount) * 60 + highRisk * 20)));
+    return { suspicious, score, reasons };
+  }
+
+  async analyzeUserBehavior(userId: string): Promise<BehaviorAnalysis> {
+    const days = this.config.get<number>('SECURITY_BEHAVIOR_WINDOW_DAYS', 7);
+    const since = new Date(Date.now() - days * 24 * 60 * 60_000);
+    const events = await this.eventsRepo
+      .createQueryBuilder('e')
+      .where('e.user_id = :userId', { userId })
+      .andWhere('e.created_at >= :since', { since: since.toISOString() })
+      .orderBy('e.created_at', 'DESC')
+      .getMany();
+
+    const countsByType: Record<string, number> = {};
+    let lastActiveAt: string | undefined;
+    for (const e of events) {
+      countsByType[e.type] = (countsByType[e.type] ?? 0) + 1;
+      if (!lastActiveAt) lastActiveAt = e.createdAt.toISOString();
+    }
+
+    return { userId, countsByType, lastActiveAt };
+  }
+}

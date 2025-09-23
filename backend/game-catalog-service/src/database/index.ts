@@ -1,0 +1,18 @@
+// Database configuration and services
+export { DatabaseModule } from './database.module';
+export { DatabaseConfigService } from './database-config.service';
+export { RedisConfigService } from './redis-config.service';
+export { MigrationService } from './migration.service';
+export { DatabaseHealthService } from './database-health.service';
+
+// Database utilities
+export { DatabaseConnectionUtil } from './database-connection.util';
+
+// Re-export TypeORM decorators and types for convenience
+export {
+  InjectDataSource,
+  InjectRepository,
+  getDataSourceToken,
+  getRepositoryToken,
+} from '@nestjs/typeorm';
+export { DataSource, Repository, EntityManager } from 'typeorm';

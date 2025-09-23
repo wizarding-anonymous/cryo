@@ -105,6 +105,42 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsIn(['development', 'production', 'test'])
   NODE_ENV?: string = 'development';
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }: { value: string | number }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  DATABASE_MAX_CONNECTIONS?: number = 20;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }: { value: string | number }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  DATABASE_MIN_CONNECTIONS?: number = 5;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }: { value: string | number }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  DATABASE_ACQUIRE_TIMEOUT?: number = 60000;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }: { value: string | number }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  DATABASE_IDLE_TIMEOUT?: number = 600000;
+
+  @IsString()
+  @IsOptional()
+  KAFKA_ENABLED?: string = 'false';
+
+  @IsString()
+  @IsOptional()
+  KAFKA_BROKER?: string = 'localhost:9092';
 }
 
 export function validate(

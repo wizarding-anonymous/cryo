@@ -16,4 +16,4 @@ import { UserModule } from '../user/user.module';
   providers: [ProfileService],
   exports: [ProfileService],
 })
-export class ProfileModule {}
+export class ProfileModule { }

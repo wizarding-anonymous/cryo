@@ -1,0 +1,35 @@
+{
+  "title": "Security Service Overview",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Security Checks Rate",
+      "targets": [{ "expr": "rate(security_checks_total[5m])", "legendFormat": "{{type}} allowed={{allowed}}" }]
+    },
+    {
+      "type": "graph",
+      "title": "Security Check Duration P95",
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(security_check_duration_seconds_bucket[5m])) by (le,type))", "legendFormat": "{{type}} p95" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Active Alerts",
+      "targets": [{ "expr": "security_active_alerts" }]
+    },
+    {
+      "type": "graph",
+      "title": "High Risk Events",
+      "targets": [{ "expr": "rate(high_risk_events_total[5m])", "legendFormat": "high-risk" }]
+    },
+    {
+      "type": "graph",
+      "title": "IP Blocks",
+      "targets": [{ "expr": "rate(ip_blocks_total[5m])", "legendFormat": "ip-blocks" }]
+    }
+  ],
+  "schemaVersion": 30,
+  "version": 1
+}
+

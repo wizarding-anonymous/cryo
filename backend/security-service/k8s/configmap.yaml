@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-service-config
+data:
+  NODE_ENV: "production"
+  PORT: "3008"
+
+  # Database (if not using DATABASE_URL)
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_USER: "postgres"
+  DB_NAME: "security_service"
+
+  # Redis
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+
+  # Security thresholds (safe defaults)
+  SECURITY_LOGIN_PER_MINUTE_IP: "20"
+  SECURITY_LOGIN_PER_MINUTE_USER: "10"
+  SECURITY_TXN_PER_MINUTE_USER: "15"
+  SECURITY_TXN_AMOUNT_THRESHOLD: "10000"
+  SECURITY_ACTIVITY_PER_MINUTE: "60"
+  SECURITY_SUSPICIOUS_EVENTS_WINDOW_MIN: "10"
+  SECURITY_SUSPICIOUS_EVENTS_THRESHOLD: "20"
+  SECURITY_ALERT_RISK_THRESHOLD: "80"
+  SECURITY_BEHAVIOR_WINDOW_DAYS: "7"
+

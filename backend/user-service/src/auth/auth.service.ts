@@ -1,19 +1,18 @@
-import { Injectable, ConflictException, Inject } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import { UserService } from '../user/user.service';
 import { RegisterDto } from './dto/register.dto';
 import { User } from '../user/entities/user.entity';
 import { NotificationClient } from '../integrations/notification/notification.client';
+import { RedisService } from '../common/redis/redis.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly redisService: RedisService,
     private readonly notificationClient: NotificationClient,
   ) {}
 
@@ -120,8 +119,16 @@ export class AuthService {
     }
     const ttl = decoded.exp * 1000 - Date.now();
     if (ttl > 0) {
-      // Use the token as the key. 'jti' claim is often used for this, but this is simpler for MVP.
-      await this.cacheManager.set(accessToken, 'blacklisted', ttl);
+      await this.redisService.blacklistToken(accessToken, ttl);
     }
+  }
+
+  /**
+   * Check if a JWT token is blacklisted
+   * @param token JWT token to check
+   * @returns true if token is blacklisted
+   */
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    return this.redisService.isTokenBlacklisted(token);
   }
 }

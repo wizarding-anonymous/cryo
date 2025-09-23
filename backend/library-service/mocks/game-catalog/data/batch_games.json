@@ -1,0 +1,13 @@
+{
+    "games": [
+        {
+            "id": "game1",
+            "title": "Mock Game 1",
+            "developer": "Mock Dev",
+            "publisher": "Mock Pub",
+            "images": [],
+            "tags": ["mock", "adventure"],
+            "releaseDate": "2023-01-01T00:00:00.000Z"
+        }
+    ]
+}

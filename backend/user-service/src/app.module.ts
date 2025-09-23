@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -12,54 +12,42 @@ import { ProfileModule } from './profile/profile.module';
 import { HealthModule } from './health/health.module';
 import { AppPrometheusModule } from './common/prometheus/prometheus.module';
 import { AppConfigModule } from './config/config.module';
-import { AppConfigService } from './config/config.service';
+import { DatabaseModule } from './database/database.module';
+import { RedisModule } from './common/redis/redis.module';
+import { ConfigFactory } from './config/config.factory';
+import { EnvironmentVariables } from './config/env.validation';
 
 @Module({
   imports: [
     // --- Global Config Module ---
     AppConfigModule,
 
+    // --- Database Module (PostgreSQL with TypeORM) ---
+    DatabaseModule,
+
+    // --- Redis Module for JWT blacklisting and caching ---
+    RedisModule,
+
     // --- Throttler Module for Rate Limiting ---
     ThrottlerModule.forRootAsync({
-      inject: [AppConfigService],
-      useFactory: (configService: AppConfigService) => [
-        {
-          ttl: configService.throttleConfig.ttl,
-          limit: configService.throttleConfig.limit,
-        },
-      ],
-    }),
-
-    // --- TypeORM Module (PostgreSQL) ---
-    // Asynchronously configures the database connection using variables from AppConfigService.
-    TypeOrmModule.forRootAsync({
-      inject: [AppConfigService],
-      useFactory: (configService: AppConfigService) => {
-        const dbConfig = configService.databaseConfig;
-        return {
-          type: 'postgres',
-          host: dbConfig.host,
-          port: dbConfig.port,
-          username: dbConfig.username,
-          password: dbConfig.password,
-          database: dbConfig.database,
-          autoLoadEntities: true, // Automatically load all entities registered with forFeature
-          synchronize: false, // This is now handled by migrations
-          extra: {
-            max: dbConfig.maxConnections,
-            connectionTimeoutMillis: dbConfig.connectionTimeout,
-          },
-        };
+      imports: [AppConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => {
+        const configFactory = new ConfigFactory(configService);
+        return configFactory.createThrottlerConfig();
       },
     }),
 
     // --- Cache Module (Memory Store) ---
     // Use memory store for cache-manager to avoid Redis compatibility issues
     // Redis is still used directly for JWT blacklist and other operations
-    CacheModule.register({
-      isGlobal: true,
-      ttl: 300, // 5 minutes default TTL
-      max: 1000, // Maximum number of items in cache
+    CacheModule.registerAsync({
+      imports: [AppConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => {
+        const configFactory = new ConfigFactory(configService);
+        return configFactory.createCacheConfig();
+      },
     }),
 
     // --- Custom Modules ---

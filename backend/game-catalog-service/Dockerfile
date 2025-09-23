@@ -1,37 +1,67 @@
 # Stage 1: Build the application
 FROM node:20-alpine AS builder
 
-# Set working directory
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create app directory and set permissions
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
+# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --legacy-peer-deps
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci --legacy-peer-deps && npm cache clean --force
 
-# Copy application source
+# Copy source code
 COPY . .
+
+# Change ownership to non-root user
+RUN chown -R nestjs:nodejs /usr/src/app
+USER nestjs
 
 # Build the application
 RUN npm run build
 
 # Stage 2: Production environment
-FROM node:20-alpine
+FROM node:20-alpine AS production
 
-# Set working directory
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create app directory
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json for production dependencies
-COPY --from=builder /usr/src/app/package*.json ./
-RUN npm install --only=production --legacy-peer-deps
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
 
-# Copy the built application from the builder stage
-COPY --from=builder /usr/src/app/dist ./dist
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
+
+# Copy built application from builder stage
+COPY --from=builder --chown=nestjs:nodejs /usr/src/app/dist ./dist
+
+# Change ownership to non-root user
+RUN chown -R nestjs:nodejs /usr/src/app
+USER nestjs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node dist/src/health-check.js || exit 1
 
 # The service will run on port 3002
 EXPOSE 3002
 
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
 # Command to run the application
-# Note: The entrypoint in dist is dist/src/main.js
 CMD ["node", "dist/src/main.js"]

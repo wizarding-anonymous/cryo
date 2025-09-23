@@ -29,15 +29,25 @@ export const envValidationSchema = Joi.object({
   THROTTLE_TTL: Joi.number().default(60),
   THROTTLE_LIMIT: Joi.number().default(100),
 
-  // Payment providers (mock URLs)
-  SBERBANK_MOCK_URL: Joi.string().default('http://localhost:3003/mock/sberbank'),
-  YANDEX_MOCK_URL: Joi.string().default('http://localhost:3003/mock/yandex'),
+  // Payment providers (mock URLs and keys)
+  SBERBANK_MOCK_URL: Joi.string().default(
+    'http://localhost:3003/mock/sberbank',
+  ),
+  SBERBANK_MOCK_API_KEY: Joi.string().default('mock_sberbank_key_12345'),
+  YANDEX_MOCK_URL: Joi.string().default('http://localhost:3003/mock/ymoney'),
+  YANDEX_MOCK_API_KEY: Joi.string().default('mock_ymoney_key_67890'),
   TBANK_MOCK_URL: Joi.string().default('http://localhost:3003/mock/tbank'),
+  TBANK_MOCK_API_KEY: Joi.string().default('mock_tbank_key_abcde'),
 
   // External services
   USER_SERVICE_URL: Joi.string().default('http://localhost:3001'),
   GAME_CATALOG_SERVICE_URL: Joi.string().default('http://localhost:3002'),
   LIBRARY_SERVICE_URL: Joi.string().default('http://localhost:3004'),
+  EVENT_BUS_URL: Joi.string().uri().optional(),
+  PURCHASE_COMPLETED_EVENT_NAME: Joi.string().default(
+    'payment.purchase.completed',
+  ),
+  EVENT_BUS_TIMEOUT_MS: Joi.number().default(3000),
 
   // Payment Simulation
   PAYMENT_MODE: Joi.string()

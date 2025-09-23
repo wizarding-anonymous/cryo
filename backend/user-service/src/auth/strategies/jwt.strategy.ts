@@ -1,10 +1,9 @@
-import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import { Request } from 'express';
+import { RedisService } from '../../common/redis/redis.service';
 
 interface JwtPayload {
   sub: string;
@@ -15,7 +14,7 @@ interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly configService: ConfigService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly redisService: RedisService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -39,7 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const authHeader = req.headers.authorization;
     if (authHeader) {
       const token = authHeader.split(' ')[1];
-      const isBlacklisted = await this.cacheManager.get(token);
+      const isBlacklisted = await this.redisService.isTokenBlacklisted(token);
       if (isBlacklisted) {
         throw new UnauthorizedException(
           'Токен недействителен (в черном списке)',

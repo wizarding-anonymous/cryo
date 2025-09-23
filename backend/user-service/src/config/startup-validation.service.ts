@@ -14,7 +14,7 @@ export class StartupValidationService implements OnModuleInit {
     private readonly configService: AppConfigService,
     private readonly dataSource: DataSource,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     this.logger.log('Starting application validation...');
@@ -22,15 +22,17 @@ export class StartupValidationService implements OnModuleInit {
     try {
       await this.validateEnvironment();
       await this.validateDatabaseConnection();
-      
+
       // Redis validation is non-critical, don't fail startup if it fails
       try {
         this.logger.log('Attempting Redis validation...');
         await this.validateRedisConnection();
       } catch (redisError) {
-        this.logger.warn(`⚠️ Redis validation failed (non-critical): ${redisError.message}`);
+        this.logger.warn(
+          `⚠️ Redis validation failed (non-critical): ${redisError.message}`,
+        );
       }
-      
+
       await this.validateJWTConfiguration();
 
       this.logger.log('✅ All startup validations passed successfully');
@@ -84,8 +86,10 @@ export class StartupValidationService implements OnModuleInit {
 
     const redisConfig = this.configService.redisConfig;
     this.logger.log(`Redis config: ${JSON.stringify(redisConfig)}`);
-    this.logger.log(`Attempting to connect to Redis at ${redisConfig.host}:${redisConfig.port}`);
-    
+    this.logger.log(
+      `Attempting to connect to Redis at ${redisConfig.host}:${redisConfig.port}`,
+    );
+
     let redisClient: Redis.Redis | null = null;
 
     try {
@@ -108,11 +112,11 @@ export class StartupValidationService implements OnModuleInit {
       while (retries > 0) {
         try {
           this.logger.log(`Redis connection attempt ${4 - retries}/3...`);
-          
+
           // Test direct Redis connection
           await redisClient.connect();
           this.logger.log('Redis connected, testing ping...');
-          
+
           await redisClient.ping();
           this.logger.log('Redis ping successful, testing operations...');
 
@@ -139,13 +143,17 @@ export class StartupValidationService implements OnModuleInit {
           retries--;
           this.logger.warn(`Redis validation attempt failed: ${error.message}`);
           if (retries > 0) {
-            this.logger.warn(`Retrying in 1 second... (${retries} attempts left)`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            this.logger.warn(
+              `Retrying in 1 second... (${retries} attempts left)`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           }
         }
       }
 
-      throw new Error(`Redis validation failed after retries: ${lastError.message}`);
+      throw new Error(
+        `Redis validation failed after retries: ${lastError.message}`,
+      );
     } catch (error) {
       this.logger.error(`Redis validation error: ${error.message}`);
       throw new Error(`Redis validation failed: ${error.message}`);
@@ -222,15 +230,18 @@ export class StartupValidationService implements OnModuleInit {
       try {
         await redisClient.connect();
         await redisClient.ping();
-        
+
         // Test basic operations
         const testKey = 'health-check-direct-test';
         await redisClient.set(testKey, 'test', 'EX', 5);
         const testValue = await redisClient.get(testKey);
         await redisClient.del(testKey);
-        
+
         if (testValue === 'test') {
-          checks.redis = { status: 'pass', message: 'Direct Redis connection successful' };
+          checks.redis = {
+            status: 'pass',
+            message: 'Direct Redis connection successful',
+          };
         } else {
           throw new Error('Redis operations test failed');
         }

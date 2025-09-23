@@ -1,0 +1,163 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: download-service
+  labels:
+    app: download-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: download-service
+  template:
+    metadata:
+      labels:
+        app: download-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+      containers:
+        - name: download-service
+          image: your-registry/download-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: APP_ENV
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: download-service-secrets
+                  key: DATABASE_URL
+            - name: REDIS_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: download-service-config
+                  key: REDIS_ADDR
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: download-service-secrets
+                  key: REDIS_PASSWORD
+            - name: REDIS_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: download-service-config
+                  key: REDIS_DB
+            - name: LIBRARY_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: download-service-config
+                  key: LIBRARY_BASE_URL
+            - name: LIBRARY_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: download-service-config
+                  key: LIBRARY_TIMEOUT_MS
+            - name: LIBRARY_RETRIES
+              valueFrom:
+                configMapKeyRef:
+                  name: download-service-config
+                  key: LIBRARY_RETRIES
+            - name: LIBRARY_CB_THRESHOLD
+              valueFrom:
+                configMapKeyRef:
+                  name: download-service-config
+                  key: LIBRARY_CB_THRESHOLD
+            - name: LIBRARY_CB_COOLDOWN_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: download-service-config
+                  key: LIBRARY_CB_COOLDOWN_MS
+            - name: LIBRARY_INTERNAL_HEADER
+              valueFrom:
+                configMapKeyRef:
+                  name: download-service-config
+                  key: LIBRARY_INTERNAL_HEADER
+            - name: LIBRARY_INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: download-service-secrets
+                  key: LIBRARY_INTERNAL_TOKEN
+          readinessProbe:
+            httpGet:
+              path: /health/detailed
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: download-service
+  labels:
+    app: download-service
+spec:
+  selector:
+    app: download-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: download-service-config
+data:
+  REDIS_ADDR: "redis:6379"
+  REDIS_DB: "0"
+  LIBRARY_BASE_URL: "http://library-service:3000"
+  LIBRARY_TIMEOUT_MS: "2000"
+  LIBRARY_RETRIES: "2"
+  LIBRARY_CB_THRESHOLD: "5"
+  LIBRARY_CB_COOLDOWN_MS: "10000"
+  LIBRARY_INTERNAL_HEADER: "X-Internal-Token"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: download-service-secrets
+type: Opaque
+stringData:
+  DATABASE_URL: "postgres://postgres:postgres@postgres:5432/downloads?sslmode=disable"
+  REDIS_PASSWORD: ""
+  LIBRARY_INTERNAL_TOKEN: ""
+

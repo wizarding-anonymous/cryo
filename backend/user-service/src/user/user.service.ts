@@ -73,6 +73,31 @@ export class UserService {
   }
 
   /**
+   * Updates a user's information.
+   * @param id - The ID of the user to update.
+   * @param updateData - The data to update (partial user data).
+   * @returns The updated user.
+   * @throws NotFoundException if the user does not exist.
+   */
+  async update(id: string, updateData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User> {
+    // If password is being updated, hash it first
+    if (updateData.password) {
+      updateData.password = await this.hashPassword(updateData.password);
+    }
+
+    const userToUpdate = await this.userRepository.preload({
+      id: id,
+      ...updateData,
+    });
+
+    if (!userToUpdate) {
+      throw new NotFoundException(`Пользователь с ID ${id} не найден`);
+    }
+
+    return this.userRepository.save(userToUpdate);
+  }
+
+  /**
    * Deletes a user from the database.
    * @param id - The ID of the user to delete.
    * @returns A promise that resolves when the user is deleted.
@@ -83,5 +108,24 @@ export class UserService {
     if (result.affected === 0) {
       throw new NotFoundException(`Пользователь с ID ${id} не найден`);
     }
+  }
+
+  /**
+   * Alias for delete method to match controller naming.
+   * @param id - The ID of the user to delete.
+   * @returns A promise that resolves when the user is deleted.
+   */
+  async deleteUser(id: string): Promise<void> {
+    return this.delete(id);
+  }
+
+  /**
+   * Updates a user's profile information.
+   * @param id - The ID of the user to update.
+   * @param updateData - The profile data to update.
+   * @returns The updated user.
+   */
+  async updateProfile(id: string, updateData: { name?: string }): Promise<User> {
+    return this.update(id, updateData);
   }
 }

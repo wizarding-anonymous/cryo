@@ -1,0 +1,47 @@
+config:
+  target: "http://localhost:3003"
+  phases:
+    - duration: 120
+      arrivalRate: 200
+      name: "Warm up"
+    - duration: 180
+      arrivalRate: 500
+      name: "Ramp up"
+    - duration: 300
+      arrivalRate: 1000
+      name: "Peak load"
+  processor: "./processors/payment-flow.js"
+  payload:
+    path: "./payloads/orders.csv"
+    fields:
+      - "gameId"
+      - "provider"
+scenarios:
+  - name: "Complete order and payment flow"
+    flow:
+      - post:
+          url: "/orders"
+          json:
+            gameId: "{{ gameId }}"
+            gameName: "Load Test Game"
+            amount: 999
+          capture:
+            - json: "data.id"
+              as: "orderId"
+      - post:
+          url: "/payments"
+          json:
+            orderId: "{{ orderId }}"
+            provider: "{{ provider }}"
+          capture:
+            - json: "data.id"
+              as: "paymentId"
+      - post:
+          url: "/payments/{{ paymentId }}/process"
+      - think: 2
+      - post:
+          url: "/payments/{{ paymentId }}/confirm"
+      - get:
+          url: "/payments/{{ paymentId }}"
+      - get:
+          url: "/orders/{{ orderId }}"

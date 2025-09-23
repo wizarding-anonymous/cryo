@@ -1,0 +1,59 @@
+services:
+  download-service:
+    build: .
+    container_name: download-service
+    env_file:
+      - .env
+    environment:
+      - PORT=8080
+      - APP_ENV=${APP_ENV:-development}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/downloads?sslmode=disable}
+      - REDIS_ADDR=${REDIS_ADDR:-redis:6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - download-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: download-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=downloads
+    # ports:
+    #   - "5434:5432"  # expose if you need host access
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - download-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: download-redis
+    # ports:
+    #   - "6380:6379"  # expose if you need host access
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - download-net
+
+volumes:
+  pgdata:
+
+networks:
+  download-net:
+    driver: bridge

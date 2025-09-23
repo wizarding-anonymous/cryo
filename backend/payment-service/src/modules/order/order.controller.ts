@@ -1,5 +1,19 @@
-import { Controller, Get, Post, Body, Param, Query, Request, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -15,8 +29,15 @@ export class OrderController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new order' })
-  @ApiResponse({ status: 201, description: 'The order has been successfully created.', type: Order })
-  @ApiResponse({ status: 400, description: 'Bad Request. Invalid game ID or game not available.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The order has been successfully created.',
+    type: Order,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. Invalid game ID or game not available.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   create(@Body() createOrderDto: CreateOrderDto, @Request() req) {
     // Note: The JwtStrategy should place the user payload in req.user
@@ -25,7 +46,11 @@ export class OrderController {
 
   @Get()
   @ApiOperation({ summary: 'Get all orders for the current user' })
-  @ApiResponse({ status: 200, description: 'List of user orders.', type: [Order] })
+  @ApiResponse({
+    status: 200,
+    description: 'List of user orders.',
+    type: [Order],
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   findAll(@Query() query: GetOrdersQueryDto, @Request() req) {
     return this.orderService.getUserOrders(query, req.user.userId);

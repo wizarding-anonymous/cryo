@@ -1,15 +1,10 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
   Query,
   ParseUUIDPipe,
   UseInterceptors,
-  HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import {
@@ -17,84 +12,183 @@ import {
   ApiOperation,
   ApiResponse,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { GameService } from './game.service';
-import { CreateGameDto } from '../dto/create-game.dto';
-import { UpdateGameDto } from '../dto/update-game.dto';
 import { GetGamesDto } from '../dto/get-games.dto';
+import { GameResponseDto } from '../dto/game-response.dto';
+import { GameListResponseDto } from '../dto/game-list-response.dto';
 import { PurchaseInfoDto } from '../dto/purchase-info.dto';
+import { ErrorResponseDto } from '../dto/error-response.dto';
 import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
+import { PerformanceInterceptor } from '../common/interceptors/performance.interceptor';
 import {
-  Cache,
-  InvalidateCache,
-} from '../common/decorators/cache.decorator';
-import { Game } from '../entities/game.entity';
+  TimeoutInterceptor,
+  Timeout,
+} from '../common/interceptors/timeout.interceptor';
+import {
+  ResponseTransformationInterceptor,
+  TransformResponse,
+} from '../common/interceptors/response-transformation.interceptor';
+import { Cache } from '../common/decorators/cache.decorator';
 
 @ApiTags('Games')
 @Controller('games')
-@UseInterceptors(HttpCacheInterceptor)
+@UseInterceptors(
+  TimeoutInterceptor,
+  HttpCacheInterceptor,
+  PerformanceInterceptor,
+  ResponseTransformationInterceptor,
+)
 export class GameController {
   constructor(private readonly gameService: GameService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Create a new game' })
-  @ApiResponse({ status: 201, description: 'The game has been successfully created.', type: Game })
-  @ApiResponse({ status: 400, description: 'Bad Request.' })
-  create(@Body() createGameDto: CreateGameDto) {
-    return this.gameService.createGame(createGameDto);
-  }
-
   @Get()
-  @ApiOperation({ summary: 'Get a paginated list of games' })
-  @ApiResponse({ status: 200, description: 'List of games.', type: [Game] })
-  findAll(@Query() getGamesDto: GetGamesDto) {
-    return this.gameService.getAllGames(getGamesDto);
+  @ApiOperation({
+    summary: 'Get a paginated list of games',
+    description:
+      'Retrieve a paginated list of available games with optional filtering and sorting',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Successfully retrieved list of games',
+    type: GameListResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid query parameters',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page (default: 10, max: 100)',
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'Sort field (title, price, releaseDate, createdAt)',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'Sort order (ASC, DESC)',
+  })
+  @ApiQuery({ name: 'genre', required: false, description: 'Filter by genre' })
+  @ApiQuery({
+    name: 'available',
+    required: false,
+    description: 'Filter by availability',
+  })
+  @Cache('games_list_{{query}}', 600) // 10 minutes TTL for game lists
+  @Timeout(15000) // 15 seconds timeout for list operations
+  @TransformResponse({ includeMetadata: true })
+  async getGames(
+    @Query() getGamesDto: GetGamesDto,
+  ): Promise<GameListResponseDto> {
+    const result = await this.gameService.getAllGames(getGamesDto);
+
+    // Transform Game entities to GameResponseDto
+    const gameResponseDtos = result.games.map(
+      (game) => new GameResponseDto(game),
+    );
+
+    return new GameListResponseDto(
+      gameResponseDtos,
+      result.total,
+      result.page,
+      result.limit,
+    );
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a game by its ID' })
-  @ApiResponse({ status: 200, description: 'The found game record.', type: Game })
-  @ApiResponse({ status: 404, description: 'Game not found.' })
-  @ApiParam({ name: 'id', description: 'UUID of the game' })
-  @Cache('game_{{params.id}}')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.gameService.getGameById(id);
+  @ApiOperation({
+    summary: 'Get a game by its ID',
+    description:
+      'Retrieve detailed information about a specific game by its UUID',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Successfully retrieved game details',
+    type: GameResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid game ID format',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Game not found or unavailable',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the game',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @Cache('game_{{params.id}}', 1800) // 30 minutes TTL for individual games
+  @Timeout(10000) // 10 seconds timeout for single game retrieval
+  @TransformResponse({ includeMetadata: true })
+  async getGameById(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<GameResponseDto> {
+    const game = await this.gameService.getGameById(id);
+    return new GameResponseDto(game);
   }
 
   @Get(':id/purchase-info')
   @ApiOperation({
-    summary: 'Get game purchase info by ID (For Payment Service)',
+    summary: 'Get game purchase information (For Payment Service)',
+    description:
+      'Retrieve purchase-specific information for a game, used by Payment Service for order processing',
   })
   @ApiResponse({
-    status: 200,
-    description: 'Purchase information for the game.',
+    status: HttpStatus.OK,
+    description: 'Successfully retrieved purchase information',
     type: PurchaseInfoDto,
   })
-  @ApiResponse({ status: 404, description: 'Game not found.' })
-  @ApiParam({ name: 'id', description: 'UUID of the game' })
-  findPurchaseInfo(@Param('id', ParseUUIDPipe) id: string) {
-    return this.gameService.getGamePurchaseInfo(id);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a game by its ID' })
-  @ApiResponse({ status: 200, description: 'The updated game record.', type: Game })
-  @ApiResponse({ status: 404, description: 'Game not found.' })
-  @InvalidateCache('game_{{params.id}}')
-  update(
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid game ID format',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Game not found or not available for purchase',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the game',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @Cache('game_purchase_{{params.id}}', 900) // 15 minutes TTL for purchase info
+  @Timeout(8000) // 8 seconds timeout for purchase info (critical for payment flow)
+  @TransformResponse({ includeMetadata: true, excludeFields: ['internalId'] })
+  async getGamePurchaseInfo(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateGameDto: UpdateGameDto,
-  ) {
-    return this.gameService.updateGame(id, updateGameDto);
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a game by its ID' })
-  @ApiResponse({ status: 204, description: 'The game has been successfully deleted.' })
-  @ApiResponse({ status: 404, description: 'Game not found.' })
-  @InvalidateCache('game_{{params.id}}')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.gameService.deleteGame(id);
+  ): Promise<PurchaseInfoDto> {
+    return this.gameService.getGamePurchaseInfo(id);
   }
 }

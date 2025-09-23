@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: security-postgres-backup
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: pg-dump
+              image: postgres:15-alpine
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: security-service-secret
+                      key: DB_PASSWORD
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  pg_dump -h ${DB_HOST:-postgres} -U ${DB_USER:-postgres} -d ${DB_NAME:-security_service} \
+                    -Fc -f /backups/security_service_$(date +%F_%H%M).dump
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backups
+              envFrom:
+                - configMapRef:
+                    name: security-service-config
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: security-backups-pvc
+

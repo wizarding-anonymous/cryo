@@ -7,8 +7,9 @@ import {
 } from '@nestjs/terminus';
 import { StartupValidationService } from '../config/startup-validation.service';
 import { AppConfigService } from '../config/config.service';
+import { RedisService } from '../common/redis/redis.service';
 
-@Controller('health')
+@Controller('v1/health')
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
@@ -16,6 +17,7 @@ export class HealthController {
     private readonly memory: MemoryHealthIndicator,
     private readonly startupValidation: StartupValidationService,
     private readonly configService: AppConfigService,
+    private readonly redisService: RedisService,
   ) {}
 
   @Get()
@@ -29,6 +31,8 @@ export class HealthController {
       // Memory checks with reasonable limits
       () => this.memory.checkHeap('memory_heap', 250 * 1024 * 1024),
       () => this.memory.checkRSS('memory_rss', 250 * 1024 * 1024),
+      // Redis health check (non-critical)
+      () => this.performRedisHealthCheck(),
       // Custom validation check
       () => this.performCustomHealthCheck(),
     ]);
@@ -46,16 +50,37 @@ export class HealthController {
     };
   }
 
+  private async performRedisHealthCheck(): Promise<{ [key: string]: any }> {
+    try {
+      const isHealthy = await this.redisService.healthCheck();
+      return {
+        redis: {
+          status: isHealthy ? 'up' : 'down',
+          message: isHealthy
+            ? 'Redis connection is healthy'
+            : 'Redis connection failed',
+        },
+      };
+    } catch (error) {
+      // Redis is non-critical, so we don't throw an error
+      return {
+        redis: {
+          status: 'down',
+          message: `Redis health check failed: ${error.message}`,
+        },
+      };
+    }
+  }
+
   private async performCustomHealthCheck(): Promise<{ [key: string]: any }> {
     const result = await this.startupValidation.performHealthCheck();
 
     // Only fail if critical services (database, environment) are down
     // Redis is non-critical for basic functionality
-    const criticalFailures = Object.entries(result.checks)
-      .filter(([name, check]) => 
-        check.status === 'fail' && 
-        ['database', 'environment'].includes(name)
-      );
+    const criticalFailures = Object.entries(result.checks).filter(
+      ([name, check]) =>
+        check.status === 'fail' && ['database', 'environment'].includes(name),
+    );
 
     if (criticalFailures.length > 0) {
       const failedChecks = criticalFailures

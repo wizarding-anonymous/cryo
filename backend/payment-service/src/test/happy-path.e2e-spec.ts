@@ -27,18 +27,26 @@ describe('Happy Path (E2E)', () => {
       imports: [AppModule],
     })
       .overrideProvider(GameCatalogIntegrationService)
-      .useValue({ getGamePurchaseInfo: jest.fn().mockResolvedValue(mockGameInfo) })
+      .useValue({
+        getGamePurchaseInfo: jest.fn().mockResolvedValue(mockGameInfo),
+      })
       .overrideProvider(LibraryIntegrationService)
       .useValue({ addGameToLibrary: jest.fn().mockResolvedValue(true) })
       .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
     await app.init();
 
     jwtService = moduleFixture.get<JwtService>(JwtService);
-    gameCatalogService = moduleFixture.get<GameCatalogIntegrationService>(GameCatalogIntegrationService);
-    libraryService = moduleFixture.get<LibraryIntegrationService>(LibraryIntegrationService);
+    gameCatalogService = moduleFixture.get<GameCatalogIntegrationService>(
+      GameCatalogIntegrationService,
+    );
+    libraryService = moduleFixture.get<LibraryIntegrationService>(
+      LibraryIntegrationService,
+    );
   });
 
   afterAll(async () => {

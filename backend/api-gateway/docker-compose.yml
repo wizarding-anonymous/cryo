@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_KEY_PREFIX: cryo:gateway:
+      SERVICE_DEFAULT_TIMEOUT_MS: 5000
+      SERVICE_DEFAULT_RETRIES: 1
+      SERVICE_USER_BASE_URL: http://user-service:3001
+      SERVICE_GAME_CATALOG_BASE_URL: http://game-catalog-service:3002
+      SERVICE_PAYMENT_BASE_URL: http://payment-service:3003
+      SERVICE_LIBRARY_BASE_URL: http://library-service:3004
+      SERVICE_NOTIFICATION_BASE_URL: http://notification-service:3005
+      SERVICE_REVIEW_BASE_URL: http://review-service:3006
+      SERVICE_ACHIEVEMENT_BASE_URL: http://achievement-service:3007
+      SERVICE_SECURITY_BASE_URL: http://security-service:3008
+      SERVICE_SOCIAL_BASE_URL: http://social-service:3009
+      SERVICE_DOWNLOAD_BASE_URL: http://download-service:3010
+      RATE_LIMIT_ENABLED: 'true'
+      RATE_LIMIT_WINDOW_MS: 60000
+      RATE_LIMIT_MAX_REQUESTS: 60
+      CACHE_ENABLED: 'true'
+      CACHE_TTL_MS: 30000
+      CORS_ENABLED: 'true'
+      CORS_ORIGIN: "*"
+    depends_on:
+      - redis
+      - user-service
+      - game-catalog-service
+    networks:
+      - gateway-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_gateway
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gateway-net
+
+  user-service:
+    build:
+      context: ./mocks/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "3001:3001"
+    networks:
+      - gateway-net
+
+  game-catalog-service:
+    build:
+      context: ./mocks/game-catalog-service
+    container_name: game-catalog-service
+    ports:
+      - "3002:3002"
+    networks:
+      - gateway-net
+
+volumes:
+  redis_data:
+
+networks:
+  gateway-net:
+    driver: bridge

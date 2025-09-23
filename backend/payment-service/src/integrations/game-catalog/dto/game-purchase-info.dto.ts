@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsNumber, IsPositive, IsBoolean, IsUUID, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsPositive,
+  IsBoolean,
+  IsUUID,
+  IsIn,
+} from 'class-validator';
 
 export class GamePurchaseInfo {
   @IsUUID()

@@ -34,7 +34,9 @@ describe('GameCatalogIntegrationService', () => {
       ],
     }).compile();
 
-    service = module.get<GameCatalogIntegrationService>(GameCatalogIntegrationService);
+    service = module.get<GameCatalogIntegrationService>(
+      GameCatalogIntegrationService,
+    );
     httpService = module.get<HttpService>(HttpService);
     cacheManager = module.get(CACHE_MANAGER);
   });
@@ -49,7 +51,13 @@ describe('GameCatalogIntegrationService', () => {
 
   describe('getGamePurchaseInfo', () => {
     const gameId = 'test-game-id';
-    const gameInfo: GamePurchaseInfo = { id: gameId, title: 'Test Game', price: 100, currency: 'RUB', available: true };
+    const gameInfo: GamePurchaseInfo = {
+      id: gameId,
+      title: 'Test Game',
+      price: 100,
+      currency: 'RUB',
+      available: true,
+    };
 
     it('should return game info from cache if available', async () => {
       cacheManager.get.mockResolvedValue(gameInfo);
@@ -61,19 +69,33 @@ describe('GameCatalogIntegrationService', () => {
 
     it('should fetch from http service and cache the result if not in cache', async () => {
       cacheManager.get.mockResolvedValue(null);
-      mockHttpService.get.mockReturnValue(of({ data: gameInfo, status: 200, statusText: 'OK', headers: {}, config: {} }));
+      mockHttpService.get.mockReturnValue(
+        of({
+          data: gameInfo,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {},
+        }),
+      );
 
       const result = await service.getGamePurchaseInfo(gameId);
 
       expect(result).toEqual(gameInfo);
       expect(cacheManager.get).toHaveBeenCalledWith(`game-info-${gameId}`);
       expect(httpService.get).toHaveBeenCalled();
-      expect(cacheManager.set).toHaveBeenCalledWith(`game-info-${gameId}`, gameInfo, 3600);
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        `game-info-${gameId}`,
+        gameInfo,
+        3600,
+      );
     });
 
     it('should return null if http service throws an error', async () => {
       cacheManager.get.mockResolvedValue(null);
-      mockHttpService.get.mockReturnValue(throwError(() => new Error('Network error')));
+      mockHttpService.get.mockReturnValue(
+        throwError(() => new Error('Network error')),
+      );
 
       const result = await service.getGamePurchaseInfo(gameId);
       expect(result).toBeNull();

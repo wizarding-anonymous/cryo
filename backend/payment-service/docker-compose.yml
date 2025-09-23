@@ -13,10 +13,10 @@ services:
       target: development
     container_name: payment-service
     ports:
-      - "3003:3003"
+      - "3005:3005"
     depends_on:
-      - postgres
-      - redis
+      - postgres-payment-db
+      - redis-cache
     env_file:
       - .env
     volumes:
@@ -27,13 +27,13 @@ services:
       - payment-network
 
   # PostgreSQL Database
-  postgres:
+  postgres-payment-db:
     image: postgres:15-alpine
-    container_name: postgres_payment_db
+    container_name: postgres-payment-db
     environment:
-      POSTGRES_USER: ${POSTGRES_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DATABASE:-payment_service}
+      POSTGRES_USER: ${POSTGRES_USERNAME:-payment_service}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payment_password}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-payment_db}
     ports:
       - "5433:5432"
     volumes:
@@ -43,14 +43,16 @@ services:
       - payment-network
 
   # Redis Cache
-  redis:
+  redis-cache:
     image: redis:7-alpine
-    container_name: redis_payment_cache
+    container_name: redis-cache
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
     ports:
       - "6380:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
     networks:
       - payment-network
 
@@ -59,11 +61,11 @@ services:
     image: rediscommander/redis-commander:latest
     container_name: redis-commander
     environment:
-      - REDIS_HOSTS=local:redis:6379
+      - REDIS_HOSTS=local:redis-cache:6379:0:${REDIS_PASSWORD:-redis_password}
     ports:
       - "8082:8081"
     depends_on:
-      - redis
+      - redis-cache
     networks:
       - payment-network
 
