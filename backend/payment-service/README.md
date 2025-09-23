@@ -186,7 +186,14 @@ docker run -p 3003:3003 payment-service
 
 ### Kubernetes
 
-Kubernetes манифесты будут добавлены в следующих задачах.
+В каталоге `k8s/` есть готовые манифесты (`deployment.yaml`, `service.yaml`, `configmap.yaml`, `secret.yaml`). Для применения:
+
+```bash
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+```
 
 ## Тестирование
 
@@ -200,6 +207,14 @@ npm run test
 
 ```bash
 npm run test:e2e
+```
+
+### Нагрузочное тестирование
+
+В папке `load-test/` размещён сценарий Artillery (`payment-service-load-test.yml`), который моделирует нагрузку до 1000+ одновременных пользователей.
+
+```bash
+npx artillery run load-test/payment-service-load-test.yml
 ```
 
 ### Покрытие кода

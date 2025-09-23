@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LibraryIntegrationModule } from '../../integrations/library/library.module';
 import { MetricsModule } from '../../common/metrics/metrics.module';
@@ -11,6 +12,7 @@ import { Payment } from './entities/payment.entity';
 import { OrderModule } from '../order/order.module';
 import { PaymentProviderService } from './payment-provider.service';
 import { PaymentProviderFactory } from './payment-provider.factory';
+import { PaymentEventsService } from './payment-events.service';
 
 @Module({
   imports: [
@@ -18,9 +20,20 @@ import { PaymentProviderFactory } from './payment-provider.factory';
     OrderModule,
     LibraryIntegrationModule,
     MetricsModule,
+    HttpModule,
   ],
-  controllers: [PaymentController, MockPaymentController, MockFormsController, WebhookController],
-  providers: [PaymentService, PaymentProviderService, PaymentProviderFactory],
+  controllers: [
+    PaymentController,
+    MockPaymentController,
+    MockFormsController,
+    WebhookController,
+  ],
+  providers: [
+    PaymentService,
+    PaymentProviderService,
+    PaymentProviderFactory,
+    PaymentEventsService,
+  ],
   exports: [PaymentService],
 })
 export class PaymentModule {}

@@ -69,4 +69,38 @@ export class PaymentController {
   findOne(@Param('id') id: string) {
     return this.paymentService.getPayment(id);
   }
+
+  @Post(':id/confirm')
+  @ApiOperation({ summary: 'Confirm a payment (webhook endpoint)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment has been successfully confirmed.',
+    type: Payment,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Payment is already confirmed or cannot be confirmed.',
+  })
+  confirm(@Param('id') id: string) {
+    return this.paymentService.confirmPayment(id);
+  }
+
+  @Post(':id/cancel')
+  @ApiOperation({ summary: 'Cancel a payment' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment has been successfully cancelled.',
+    type: Payment,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Payment cannot be cancelled (already processed).',
+  })
+  cancel(@Param('id') id: string) {
+    return this.paymentService.cancelPayment(id);
+  }
 }

@@ -18,16 +18,20 @@ export class TinkoffMockProvider implements PaymentProviderInterface {
   }
 
   async processPayment(payment: Payment): Promise<ProcessPaymentResponse> {
-    this.logger.log(`Processing T-Bank payment for order ${payment.orderId}, amount: ${payment.amount} RUB`);
-    
+    this.logger.log(
+      `Processing T-Bank payment for order ${payment.orderId}, amount: ${payment.amount} RUB`,
+    );
+
     await this.delay(this.config.delayMs);
 
     const externalId = `tb_${Date.now()}_${uuidv4().substring(0, 8)}`;
-    
+
     // Simulate T-Bank payment form URL
     const paymentUrl = `/mock/tbank/payment-form/${payment.id}?externalId=${externalId}`;
 
-    this.logger.log(`Generated T-Bank payment URL: ${paymentUrl}, externalId: ${externalId}`);
+    this.logger.log(
+      `Generated T-Bank payment URL: ${paymentUrl}, externalId: ${externalId}`,
+    );
 
     return {
       paymentUrl,
@@ -38,13 +42,15 @@ export class TinkoffMockProvider implements PaymentProviderInterface {
   async getPaymentStatus(
     externalId: string,
   ): Promise<{ status: string; providerResponse: any }> {
-    this.logger.log(`Checking T-Bank payment status for externalId: ${externalId}`);
-    
+    this.logger.log(
+      `Checking T-Bank payment status for externalId: ${externalId}`,
+    );
+
     await this.delay(400); // Simulate API call delay
-    
+
     const isSuccess = Math.random() < this.config.successRate;
     const status = isSuccess ? 'completed' : 'failed';
-    
+
     const providerResponse = {
       externalId,
       status,
@@ -57,17 +63,19 @@ export class TinkoffMockProvider implements PaymentProviderInterface {
       paymentMethod: 'card', // Could be 'card', 'sbp', 'installment', etc.
     };
 
-    this.logger.log(`T-Bank payment status: ${status} for externalId: ${externalId}`);
-    
+    this.logger.log(
+      `T-Bank payment status: ${status} for externalId: ${externalId}`,
+    );
+
     return { status, providerResponse };
   }
 
   handleWebhook(data: any): { externalId: string; status: string } {
     this.logger.log(`Handling T-Bank webhook: ${JSON.stringify(data)}`);
-    
+
     // Simulate T-Bank webhook format
     const { PaymentId, Status, Amount, Currency } = data;
-    
+
     // Map T-Bank statuses to internal statuses
     let status = 'pending';
     switch (Status) {
@@ -88,11 +96,13 @@ export class TinkoffMockProvider implements PaymentProviderInterface {
         break;
     }
 
-    this.logger.log(`Mapped T-Bank status ${Status} to ${status} for payment ${PaymentId}`);
-    
-    return { 
-      externalId: PaymentId || data.externalId, 
-      status 
+    this.logger.log(
+      `Mapped T-Bank status ${Status} to ${status} for payment ${PaymentId}`,
+    );
+
+    return {
+      externalId: PaymentId || data.externalId,
+      status,
     };
   }
 }

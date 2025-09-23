@@ -18,16 +18,20 @@ export class SberbankMockProvider implements PaymentProviderInterface {
   }
 
   async processPayment(payment: Payment): Promise<ProcessPaymentResponse> {
-    this.logger.log(`Processing Sberbank payment for order ${payment.orderId}, amount: ${payment.amount} RUB`);
-    
+    this.logger.log(
+      `Processing Sberbank payment for order ${payment.orderId}, amount: ${payment.amount} RUB`,
+    );
+
     await this.delay(this.config.delayMs);
 
     const externalId = `sber_${Date.now()}_${uuidv4().substring(0, 8)}`;
-    
+
     // Simulate Sberbank Online payment form URL
     const paymentUrl = `/mock/sberbank/payment-form/${payment.id}?externalId=${externalId}`;
 
-    this.logger.log(`Generated Sberbank payment URL: ${paymentUrl}, externalId: ${externalId}`);
+    this.logger.log(
+      `Generated Sberbank payment URL: ${paymentUrl}, externalId: ${externalId}`,
+    );
 
     return {
       paymentUrl,
@@ -38,14 +42,16 @@ export class SberbankMockProvider implements PaymentProviderInterface {
   async getPaymentStatus(
     externalId: string,
   ): Promise<{ status: string; providerResponse: any }> {
-    this.logger.log(`Checking Sberbank payment status for externalId: ${externalId}`);
-    
+    this.logger.log(
+      `Checking Sberbank payment status for externalId: ${externalId}`,
+    );
+
     await this.delay(500); // Simulate API call delay
-    
+
     // Simulate different payment statuses based on external ID pattern
     const isSuccess = Math.random() < this.config.successRate;
     const status = isSuccess ? 'completed' : 'failed';
-    
+
     const providerResponse = {
       externalId,
       status,
@@ -57,17 +63,19 @@ export class SberbankMockProvider implements PaymentProviderInterface {
       sberbankOrderId: `SB${Date.now()}`,
     };
 
-    this.logger.log(`Sberbank payment status: ${status} for externalId: ${externalId}`);
-    
+    this.logger.log(
+      `Sberbank payment status: ${status} for externalId: ${externalId}`,
+    );
+
     return { status, providerResponse };
   }
 
   handleWebhook(data: any): { externalId: string; status: string } {
     this.logger.log(`Handling Sberbank webhook: ${JSON.stringify(data)}`);
-    
+
     // Simulate Sberbank webhook format
     const { orderNumber, orderStatus, amount, currency } = data;
-    
+
     // Map Sberbank statuses to internal statuses
     let status = 'pending';
     switch (orderStatus) {
@@ -84,11 +92,13 @@ export class SberbankMockProvider implements PaymentProviderInterface {
         break;
     }
 
-    this.logger.log(`Mapped Sberbank status ${orderStatus} to ${status} for order ${orderNumber}`);
-    
-    return { 
-      externalId: orderNumber || data.externalId, 
-      status 
+    this.logger.log(
+      `Mapped Sberbank status ${orderStatus} to ${status} for order ${orderNumber}`,
+    );
+
+    return {
+      externalId: orderNumber || data.externalId,
+      status,
     };
   }
 }

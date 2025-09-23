@@ -2,7 +2,6 @@ import { Injectable, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from './entities/payment.entity';
-import { OrderNotFoundException } from '../../common/exceptions/order-not-found.exception';
 import { PaymentNotFoundException } from '../../common/exceptions/payment-not-found.exception';
 import { PaymentAlreadyProcessedException } from '../../common/exceptions/payment-already-processed.exception';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -12,7 +11,10 @@ import { PaymentStatus } from '../../common/enums/payment-status.enum';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import { LibraryIntegrationService } from '../../integrations/library/library.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
-import { Order } from '../order/entities/order.entity';
+import {
+  PaymentEventsService,
+  PaymentCompletedEvent,
+} from './payment-events.service';
 
 @Injectable()
 export class PaymentService {
@@ -25,6 +27,7 @@ export class PaymentService {
     private readonly paymentProviderService: PaymentProviderService,
     private readonly libraryIntegrationService: LibraryIntegrationService,
     private readonly metricsService: MetricsService,
+    private readonly paymentEventsService: PaymentEventsService,
   ) {}
 
   async createPayment(
@@ -32,9 +35,12 @@ export class PaymentService {
     userId: string,
   ): Promise<Payment> {
     const { orderId, provider } = createPaymentDto;
-    
+
     // Validate order ownership and get order details
-    const order = await this.orderService.validateOrderOwnership(orderId, userId);
+    const order = await this.orderService.validateOrderOwnership(
+      orderId,
+      userId,
+    );
 
     if (order.status !== OrderStatus.PENDING) {
       throw new ConflictException(
@@ -48,7 +54,9 @@ export class PaymentService {
     });
 
     if (existingPayment) {
-      this.logger.log(`Returning existing pending payment ${existingPayment.id} for order ${orderId}`);
+      this.logger.log(
+        `Returning existing pending payment ${existingPayment.id} for order ${orderId}`,
+      );
       return existingPayment;
     }
 
@@ -60,7 +68,9 @@ export class PaymentService {
       status: PaymentStatus.PENDING,
     });
 
-    this.logger.log(`Creating new payment for order ${orderId} with provider ${provider}`);
+    this.logger.log(
+      `Creating new payment for order ${orderId} with provider ${provider}`,
+    );
     return this.paymentRepository.save(newPayment);
   }
 
@@ -89,17 +99,16 @@ export class PaymentService {
     return { paymentUrl };
   }
 
-  async confirmPayment(id: string): Promise<void> {
+  async confirmPayment(id: string): Promise<Payment> {
     const payment = await this.getPayment(id);
     if (payment.status === PaymentStatus.COMPLETED) {
       this.logger.warn(`Payment ${id} has already been completed. Skipping.`);
-      return;
+      return payment;
     }
 
-    await this.paymentRepository.update(id, {
-      status: PaymentStatus.COMPLETED,
-      completedAt: new Date(),
-    });
+    payment.status = PaymentStatus.COMPLETED;
+    payment.completedAt = new Date();
+    const updatedPayment = await this.paymentRepository.save(payment);
     await this.orderService.updateOrderStatus(
       payment.orderId,
       OrderStatus.PAID,
@@ -118,21 +127,38 @@ export class PaymentService {
         purchasePrice: order.amount,
         currency: order.currency,
       });
+
+      const eventPayload: PaymentCompletedEvent = {
+        paymentId: updatedPayment.id,
+        orderId: order.id,
+        userId: order.userId,
+        gameId: order.gameId,
+        amount: updatedPayment.amount,
+        currency: updatedPayment.currency,
+        provider: updatedPayment.provider,
+        status: updatedPayment.status,
+        completedAt:
+          updatedPayment.completedAt?.toISOString() || new Date().toISOString(),
+        externalId: updatedPayment.externalId,
+      };
+
+      await this.paymentEventsService.publishPaymentCompleted(eventPayload);
     } else {
       this.logger.error(
         `Could not find order ${payment.orderId} after payment confirmation. Cannot add to library.`,
       );
     }
+
+    return updatedPayment;
   }
 
-  async cancelPayment(id: string): Promise<void> {
+  async cancelPayment(id: string): Promise<Payment> {
     const payment = await this.getPayment(id);
     if (payment.status === PaymentStatus.CANCELLED) {
-      return;
+      return payment;
     }
-    await this.paymentRepository.update(id, {
-      status: PaymentStatus.CANCELLED,
-    });
+    payment.status = PaymentStatus.CANCELLED;
+    const updatedPayment = await this.paymentRepository.save(payment);
     await this.orderService.updateOrderStatus(
       payment.orderId,
       OrderStatus.CANCELLED,
@@ -141,6 +167,8 @@ export class PaymentService {
       PaymentStatus.CANCELLED,
       payment.provider,
     );
+
+    return updatedPayment;
   }
 
   async getPayment(id: string): Promise<Payment> {

@@ -60,7 +60,7 @@ describe('OrderService', () => {
     const createOrderDto: CreateOrderDto = {
       gameId: 'valid-game-id',
       gameName: 'Test Game',
-      amount: 100
+      amount: 100,
     };
     const userId = 'user-id';
     const gameInfo: GamePurchaseInfo = {
@@ -134,7 +134,7 @@ describe('OrderService', () => {
       const result = await service.getOrder('1');
       expect(result).toEqual(order);
       expect(mockOrderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: '1' }
+        where: { id: '1' },
       });
     });
 
@@ -142,7 +142,7 @@ describe('OrderService', () => {
       const order = new Order();
       order.userId = 'user2';
       mockOrderRepository.findOne.mockResolvedValue(order);
-      
+
       await expect(service.getOrder('1', 'user1')).rejects.toThrow(
         OrderNotFoundException,
       );
@@ -160,24 +160,24 @@ describe('OrderService', () => {
 
       expect(result).toEqual(order);
       expect(mockOrderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'order1', userId: 'user1' }
+        where: { id: 'order1', userId: 'user1' },
       });
     });
 
     it('should throw OrderNotFoundException when order does not exist', async () => {
       mockOrderRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.validateOrderOwnership('order1', 'user1')).rejects.toThrow(
-        OrderNotFoundException,
-      );
+      await expect(
+        service.validateOrderOwnership('order1', 'user1'),
+      ).rejects.toThrow(OrderNotFoundException);
     });
 
     it('should throw OrderNotFoundException when user does not own the order', async () => {
       mockOrderRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.validateOrderOwnership('order1', 'user2')).rejects.toThrow(
-        OrderNotFoundException,
-      );
+      await expect(
+        service.validateOrderOwnership('order1', 'user2'),
+      ).rejects.toThrow(OrderNotFoundException);
     });
 
     it('should call repository with correct parameters', async () => {
@@ -187,7 +187,7 @@ describe('OrderService', () => {
       await service.validateOrderOwnership('order123', 'user456');
 
       expect(mockOrderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'order123', userId: 'user456' }
+        where: { id: 'order123', userId: 'user456' },
       });
     });
   });

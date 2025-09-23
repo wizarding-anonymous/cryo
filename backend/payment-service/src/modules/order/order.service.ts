@@ -88,13 +88,15 @@ export class OrderService {
     if (!order) {
       throw new OrderNotFoundException(id);
     }
-    
+
     // Additional security check: if userId is provided, ensure the order belongs to the user
     if (userId && order.userId !== userId) {
-      this.logger.warn(`User ${userId} attempted to access order ${id} owned by ${order.userId}`);
+      this.logger.warn(
+        `User ${userId} attempted to access order ${id} owned by ${order.userId}`,
+      );
       throw new OrderNotFoundException(id); // Don't reveal that order exists but belongs to another user
     }
-    
+
     return order;
   }
 
@@ -104,16 +106,21 @@ export class OrderService {
    * @param userId - The user ID that should own the order
    * @throws OrderNotFoundException if order doesn't exist or doesn't belong to user
    */
-  async validateOrderOwnership(orderId: string, userId: string): Promise<Order> {
-    const order = await this.orderRepository.findOne({ 
-      where: { id: orderId, userId } 
+  async validateOrderOwnership(
+    orderId: string,
+    userId: string,
+  ): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId, userId },
     });
-    
+
     if (!order) {
-      this.logger.warn(`User ${userId} attempted to access non-existent or unauthorized order ${orderId}`);
+      this.logger.warn(
+        `User ${userId} attempted to access non-existent or unauthorized order ${orderId}`,
+      );
       throw new OrderNotFoundException(orderId);
     }
-    
+
     return order;
   }
 

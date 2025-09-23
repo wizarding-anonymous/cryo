@@ -49,11 +49,14 @@ describe('Authorization Integration Tests', () => {
 
       mockOrderRepository.findOne.mockResolvedValue(order);
 
-      const result = await orderService.validateOrderOwnership('order123', 'user123');
+      const result = await orderService.validateOrderOwnership(
+        'order123',
+        'user123',
+      );
 
       expect(result).toEqual(order);
       expect(mockOrderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'order123', userId: 'user123' }
+        where: { id: 'order123', userId: 'user123' },
       });
     });
   });

@@ -35,9 +35,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // For example, checking if user still exists in database
     // or if user account is still active
 
-    return { 
-      userId: payload.sub, 
-      username: payload.username 
+    return {
+      userId: payload.sub,
+      username: payload.username,
     };
   }
 }

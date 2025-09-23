@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsNumber, IsPositive, Min, IsOptional, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsPositive,
+  Min,
+  IsOptional,
+  IsIn,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Note: This is a simplified DTO. A real-world scenario would have
@@ -12,7 +20,7 @@ export class PaymentWebhookDto {
   @IsNotEmpty()
   externalId: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'The status of the payment from the provider.',
     example: 'success',
   })
@@ -20,7 +28,7 @@ export class PaymentWebhookDto {
   @IsNotEmpty()
   status: string; // e.g., 'success', 'failure' - this would be specific to each provider
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'The amount paid, for verification.',
     example: 1999.99,
     minimum: 0.01,

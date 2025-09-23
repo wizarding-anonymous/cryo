@@ -41,7 +41,10 @@ export class PaymentProviderFactory {
 
   private createMockProvider(type: PaymentProvider): PaymentProviderInterface {
     const baseConfig = {
-      autoApprove: this.configService.get<boolean>('PAYMENT_AUTO_APPROVE', true),
+      autoApprove: this.configService.get<boolean>(
+        'PAYMENT_AUTO_APPROVE',
+        true,
+      ),
       delayMs: this.configService.get<number>('PAYMENT_DELAY_MS', 1000),
       successRate: this.configService.get<number>('PAYMENT_SUCCESS_RATE', 0.95),
     };
@@ -52,28 +55,52 @@ export class PaymentProviderFactory {
       case PaymentProvider.SBERBANK:
         config = {
           ...baseConfig,
-          mockUrl: this.configService.get<string>('SBERBANK_MOCK_URL', 'http://localhost:3003/mock/sberbank'),
-          mockApiKey: this.configService.get<string>('SBERBANK_MOCK_API_KEY', 'mock_sberbank_key_12345'),
+          mockUrl: this.configService.get<string>(
+            'SBERBANK_MOCK_URL',
+            'http://localhost:3003/mock/sberbank',
+          ),
+          mockApiKey: this.configService.get<string>(
+            'SBERBANK_MOCK_API_KEY',
+            'mock_sberbank_key_12345',
+          ),
         };
-        this.logger.log(`Creating Sberbank mock provider with config: ${JSON.stringify(config)}`);
+        this.logger.log(
+          `Creating Sberbank mock provider with config: ${JSON.stringify(config)}`,
+        );
         return new SberbankMockProvider(config);
 
       case PaymentProvider.YANDEX:
         config = {
           ...baseConfig,
-          mockUrl: this.configService.get<string>('YANDEX_MOCK_URL', 'http://localhost:3003/mock/ymoney'),
-          mockApiKey: this.configService.get<string>('YANDEX_MOCK_API_KEY', 'mock_ymoney_key_67890'),
+          mockUrl: this.configService.get<string>(
+            'YANDEX_MOCK_URL',
+            'http://localhost:3003/mock/ymoney',
+          ),
+          mockApiKey: this.configService.get<string>(
+            'YANDEX_MOCK_API_KEY',
+            'mock_ymoney_key_67890',
+          ),
         };
-        this.logger.log(`Creating YMoney mock provider with config: ${JSON.stringify(config)}`);
+        this.logger.log(
+          `Creating YMoney mock provider with config: ${JSON.stringify(config)}`,
+        );
         return new YMoneyMockProvider(config);
 
       case PaymentProvider.TBANK:
         config = {
           ...baseConfig,
-          mockUrl: this.configService.get<string>('TBANK_MOCK_URL', 'http://localhost:3003/mock/tbank'),
-          mockApiKey: this.configService.get<string>('TBANK_MOCK_API_KEY', 'mock_tbank_key_abcde'),
+          mockUrl: this.configService.get<string>(
+            'TBANK_MOCK_URL',
+            'http://localhost:3003/mock/tbank',
+          ),
+          mockApiKey: this.configService.get<string>(
+            'TBANK_MOCK_API_KEY',
+            'mock_tbank_key_abcde',
+          ),
         };
-        this.logger.log(`Creating T-Bank mock provider with config: ${JSON.stringify(config)}`);
+        this.logger.log(
+          `Creating T-Bank mock provider with config: ${JSON.stringify(config)}`,
+        );
         return new TinkoffMockProvider(config);
 
       default:

@@ -43,6 +43,11 @@ export const envValidationSchema = Joi.object({
   USER_SERVICE_URL: Joi.string().default('http://localhost:3001'),
   GAME_CATALOG_SERVICE_URL: Joi.string().default('http://localhost:3002'),
   LIBRARY_SERVICE_URL: Joi.string().default('http://localhost:3004'),
+  EVENT_BUS_URL: Joi.string().uri().optional(),
+  PURCHASE_COMPLETED_EVENT_NAME: Joi.string().default(
+    'payment.purchase.completed',
+  ),
+  EVENT_BUS_TIMEOUT_MS: Joi.number().default(3000),
 
   // Payment Simulation
   PAYMENT_MODE: Joi.string()

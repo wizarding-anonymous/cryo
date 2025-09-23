@@ -64,13 +64,11 @@ describe('JWT Authentication Integration', () => {
 
   describe('Protected endpoints', () => {
     it('should reject requests without JWT token', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/orders')
-        .send({
-          gameId: 'game123',
-          gameName: 'Test Game',
-          amount: 100,
-        });
+      const response = await request(app.getHttpServer()).post('/orders').send({
+        gameId: 'game123',
+        gameName: 'Test Game',
+        amount: 100,
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.message).toBe('Unauthorized');
@@ -92,7 +90,8 @@ describe('JWT Authentication Integration', () => {
 
     it('should reject requests with expired JWT token', async () => {
       // Create an expired token
-      const expiredToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMTIzIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxNjAwMDAwMDAxfQ.invalid';
+      const expiredToken =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMTIzIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxNjAwMDAwMDAxfQ.invalid';
 
       const response = await request(app.getHttpServer())
         .post('/orders')
@@ -148,7 +147,7 @@ describe('JWT Authentication Integration', () => {
           gameName: 'Test Game',
           amount: 100,
         }),
-        'user123'
+        'user123',
       );
     });
   });
@@ -158,7 +157,7 @@ describe('JWT Authentication Integration', () => {
       const strategy = new JwtStrategy(
         new ConfigService({
           JWT_SECRET: 'test_secret',
-        })
+        }),
       );
 
       const payload = {
@@ -180,7 +179,7 @@ describe('JWT Authentication Integration', () => {
       const strategy = new JwtStrategy(
         new ConfigService({
           JWT_SECRET: 'test_secret',
-        })
+        }),
       );
 
       const payload = {
@@ -190,7 +189,7 @@ describe('JWT Authentication Integration', () => {
       } as any;
 
       await expect(strategy.validate(payload)).rejects.toThrow(
-        'Invalid token payload'
+        'Invalid token payload',
       );
     });
 
@@ -198,7 +197,7 @@ describe('JWT Authentication Integration', () => {
       const strategy = new JwtStrategy(
         new ConfigService({
           JWT_SECRET: 'test_secret',
-        })
+        }),
       );
 
       const payload = {
@@ -208,7 +207,7 @@ describe('JWT Authentication Integration', () => {
       } as any;
 
       await expect(strategy.validate(payload)).rejects.toThrow(
-        'Invalid token payload'
+        'Invalid token payload',
       );
     });
   });

@@ -13,10 +13,14 @@ spec:
     metadata:
       labels:
         app: payment-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "3003"
     spec:
       containers:
       - name: payment-service
-        image: your-registry/payment-service:latest
+        image: your-registry/payment-service:1.0.0
         ports:
         - containerPort: 3003
         envFrom:

@@ -25,62 +25,62 @@ describe('JwtAuthGuard', () => {
   describe('handleRequest', () => {
     it('should return user when authentication is successful', () => {
       const user = { userId: 'user123', username: 'testuser' };
-      
+
       const result = guard.handleRequest(null, user, null);
-      
+
       expect(result).toBe(user);
     });
 
     it('should throw UnauthorizedException when user is null', () => {
       expect(() => guard.handleRequest(null, null, null)).toThrow(
-        new UnauthorizedException('Unauthorized access')
+        new UnauthorizedException('Unauthorized access'),
       );
     });
 
     it('should throw UnauthorizedException when user is undefined', () => {
       expect(() => guard.handleRequest(null, undefined, null)).toThrow(
-        new UnauthorizedException('Unauthorized access')
+        new UnauthorizedException('Unauthorized access'),
       );
     });
 
     it('should throw specific error for expired token', () => {
       const info = { name: 'TokenExpiredError' };
-      
+
       expect(() => guard.handleRequest(null, null, info)).toThrow(
-        new UnauthorizedException('Token has expired')
+        new UnauthorizedException('Token has expired'),
       );
     });
 
     it('should throw specific error for invalid token', () => {
       const info = { name: 'JsonWebTokenError' };
-      
+
       expect(() => guard.handleRequest(null, null, info)).toThrow(
-        new UnauthorizedException('Invalid token')
+        new UnauthorizedException('Invalid token'),
       );
     });
 
     it('should throw specific error for not active token', () => {
       const info = { name: 'NotBeforeError' };
-      
+
       expect(() => guard.handleRequest(null, null, info)).toThrow(
-        new UnauthorizedException('Token not active')
+        new UnauthorizedException('Token not active'),
       );
     });
 
     it('should throw the original error when err is provided', () => {
       const originalError = new Error('Custom error');
-      
+
       expect(() => guard.handleRequest(originalError, null, null)).toThrow(
-        originalError
+        originalError,
       );
     });
 
     it('should prioritize original error over info', () => {
       const originalError = new Error('Custom error');
       const info = { name: 'TokenExpiredError' };
-      
+
       expect(() => guard.handleRequest(originalError, null, info)).toThrow(
-        originalError
+        originalError,
       );
     });
   });

@@ -18,16 +18,20 @@ export class YMoneyMockProvider implements PaymentProviderInterface {
   }
 
   async processPayment(payment: Payment): Promise<ProcessPaymentResponse> {
-    this.logger.log(`Processing YMoney payment for order ${payment.orderId}, amount: ${payment.amount} RUB`);
-    
+    this.logger.log(
+      `Processing YMoney payment for order ${payment.orderId}, amount: ${payment.amount} RUB`,
+    );
+
     await this.delay(this.config.delayMs);
 
     const externalId = `ym_${Date.now()}_${uuidv4().substring(0, 8)}`;
-    
+
     // Simulate YMoney payment form URL
     const paymentUrl = `/mock/ymoney/payment-form/${payment.id}?externalId=${externalId}`;
 
-    this.logger.log(`Generated YMoney payment URL: ${paymentUrl}, externalId: ${externalId}`);
+    this.logger.log(
+      `Generated YMoney payment URL: ${paymentUrl}, externalId: ${externalId}`,
+    );
 
     return {
       paymentUrl,
@@ -38,13 +42,15 @@ export class YMoneyMockProvider implements PaymentProviderInterface {
   async getPaymentStatus(
     externalId: string,
   ): Promise<{ status: string; providerResponse: any }> {
-    this.logger.log(`Checking YMoney payment status for externalId: ${externalId}`);
-    
+    this.logger.log(
+      `Checking YMoney payment status for externalId: ${externalId}`,
+    );
+
     await this.delay(300); // Simulate API call delay
-    
+
     const isSuccess = Math.random() < this.config.successRate;
     const status = isSuccess ? 'completed' : 'failed';
-    
+
     const providerResponse = {
       externalId,
       status,
@@ -57,17 +63,19 @@ export class YMoneyMockProvider implements PaymentProviderInterface {
       paymentMethod: 'wallet', // Could be 'wallet', 'card', 'sberbank', etc.
     };
 
-    this.logger.log(`YMoney payment status: ${status} for externalId: ${externalId}`);
-    
+    this.logger.log(
+      `YMoney payment status: ${status} for externalId: ${externalId}`,
+    );
+
     return { status, providerResponse };
   }
 
   handleWebhook(data: any): { externalId: string; status: string } {
     this.logger.log(`Handling YMoney webhook: ${JSON.stringify(data)}`);
-    
+
     // Simulate YMoney webhook format
     const { operation_id, status: ymoneyStatus, amount, currency } = data;
-    
+
     // Map YMoney statuses to internal statuses
     let status = 'pending';
     switch (ymoneyStatus) {
@@ -84,11 +92,13 @@ export class YMoneyMockProvider implements PaymentProviderInterface {
         break;
     }
 
-    this.logger.log(`Mapped YMoney status ${ymoneyStatus} to ${status} for operation ${operation_id}`);
-    
-    return { 
-      externalId: operation_id || data.externalId, 
-      status 
+    this.logger.log(
+      `Mapped YMoney status ${ymoneyStatus} to ${status} for operation ${operation_id}`,
+    );
+
+    return {
+      externalId: operation_id || data.externalId,
+      status,
     };
   }
 }
