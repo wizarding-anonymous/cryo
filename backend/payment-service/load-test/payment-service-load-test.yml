@@ -1,47 +1,165 @@
 config:
-  target: "http://localhost:3003"
+  target: "http://localhost:3005"
   phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 50
+      name: "Warm up - Light load"
+    # Gradual ramp-up
     - duration: 120
       arrivalRate: 200
-      name: "Warm up"
+      name: "Ramp up - Moderate load"
+    # Stress testing
     - duration: 180
       arrivalRate: 500
-      name: "Ramp up"
+      name: "Stress test - Heavy load"
+    # Peak load testing (1000+ concurrent users)
     - duration: 300
       arrivalRate: 1000
-      name: "Peak load"
+      name: "Peak load - Maximum capacity"
+    # Spike testing
+    - duration: 60
+      arrivalRate: 1500
+      name: "Spike test - Beyond capacity"
+    # Cool down
+    - duration: 120
+      arrivalRate: 100
+      name: "Cool down - Recovery test"
   processor: "./processors/payment-flow.js"
   payload:
     path: "./payloads/orders.csv"
     fields:
       - "gameId"
+      - "gameName"
+      - "amount"
       - "provider"
+      - "userId"
+  http:
+    timeout: 30
+    pool: 50
+  metrics:
+    - statsd
+  plugins:
+    statsd:
+      host: localhost
+      port: 8125
+      prefix: "artillery.payment-service"
+
 scenarios:
+  # Main payment flow (70% of traffic)
   - name: "Complete order and payment flow"
+    weight: 70
     flow:
       - post:
           url: "/orders"
+          headers:
+            Authorization: "Bearer {{ $randomString() }}"
+            x-correlation-id: "load-test-{{ $randomString() }}"
           json:
             gameId: "{{ gameId }}"
-            gameName: "Load Test Game"
-            amount: 999
+            gameName: "{{ gameName }}"
+            amount: "{{ amount }}"
           capture:
             - json: "data.id"
               as: "orderId"
+          expect:
+            - statusCode: 201
+      - think: 1
       - post:
           url: "/payments"
+          headers:
+            Authorization: "Bearer {{ $randomString() }}"
+            x-correlation-id: "load-test-{{ $randomString() }}"
           json:
             orderId: "{{ orderId }}"
             provider: "{{ provider }}"
           capture:
             - json: "data.id"
               as: "paymentId"
-      - post:
-          url: "/payments/{{ paymentId }}/process"
+            - json: "data.paymentUrl"
+              as: "paymentUrl"
+          expect:
+            - statusCode: 201
       - think: 2
       - post:
           url: "/payments/{{ paymentId }}/confirm"
+          headers:
+            Authorization: "Bearer {{ $randomString() }}"
+            x-correlation-id: "load-test-{{ $randomString() }}"
+          expect:
+            - statusCode: 200
       - get:
           url: "/payments/{{ paymentId }}"
+          headers:
+            Authorization: "Bearer {{ $randomString() }}"
+            x-correlation-id: "load-test-{{ $randomString() }}"
+          expect:
+            - statusCode: 200
+
+  # Order lookup scenario (15% of traffic)
+  - name: "Order status check"
+    weight: 15
+    flow:
       - get:
-          url: "/orders/{{ orderId }}"
+          url: "/orders"
+          headers:
+            Authorization: "Bearer {{ $randomString() }}"
+            x-correlation-id: "load-test-{{ $randomString() }}"
+          qs:
+            page: "{{ $randomInt(1, 10) }}"
+            limit: "10"
+          expect:
+            - statusCode: 200
+
+  # Payment cancellation scenario (10% of traffic)
+  - name: "Payment cancellation flow"
+    weight: 10
+    flow:
+      - post:
+          url: "/orders"
+          headers:
+            Authorization: "Bearer {{ $randomString() }}"
+            x-correlation-id: "load-test-{{ $randomString() }}"
+          json:
+            gameId: "{{ gameId }}"
+            gameName: "{{ gameName }}"
+            amount: "{{ amount }}"
+          capture:
+            - json: "data.id"
+              as: "orderId"
+      - post:
+          url: "/payments"
+          headers:
+            Authorization: "Bearer {{ $randomString() }}"
+            x-correlation-id: "load-test-{{ $randomString() }}"
+          json:
+            orderId: "{{ orderId }}"
+            provider: "{{ provider }}"
+          capture:
+            - json: "data.id"
+              as: "paymentId"
+      - think: 1
+      - post:
+          url: "/payments/{{ paymentId }}/cancel"
+          headers:
+            Authorization: "Bearer {{ $randomString() }}"
+            x-correlation-id: "load-test-{{ $randomString() }}"
+          expect:
+            - statusCode: 200
+
+  # Health check scenario (5% of traffic)
+  - name: "Health check monitoring"
+    weight: 5
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/health/ready"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/health/live"
+          expect:
+            - statusCode: 200

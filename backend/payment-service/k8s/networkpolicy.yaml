@@ -1,0 +1,73 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payment-service-netpol
+  labels:
+    app: payment-service
+spec:
+  podSelector:
+    matchLabels:
+      app: payment-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    # Allow traffic from API Gateway
+    - namespaceSelector:
+        matchLabels:
+          name: api-gateway
+    # Allow traffic from monitoring namespace
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    # Allow traffic from same namespace (for health checks)
+    - namespaceSelector:
+        matchLabels:
+          name: payment-service
+    ports:
+    - protocol: TCP
+      port: 3005
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow access to PostgreSQL
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: database
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow access to Redis
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: cache
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow access to Library Service
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: library-service
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow access to Game Catalog Service
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: game-catalog-service
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow HTTPS outbound for external APIs (if needed)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443

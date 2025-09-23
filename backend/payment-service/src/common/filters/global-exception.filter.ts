@@ -28,7 +28,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof BaseHttpException) {
       status = exception.getStatus();
       const payload = exception.getResponse();
-      errorResponse = { error: payload };
+      errorResponse = {
+        error: payload,
+        timestamp: new Date().toISOString(),
+        path: request.url,
+        correlationId,
+      };
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
@@ -46,6 +51,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           code: error.toUpperCase().replace(/ /g, '_'),
           message,
         },
+        timestamp: new Date().toISOString(),
+        path: request.url,
+        correlationId,
       };
     } else {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -54,6 +62,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           code: 'INTERNAL_SERVER_ERROR',
           message: 'An unexpected internal server error occurred.',
         },
+        timestamp: new Date().toISOString(),
+        path: request.url,
+        correlationId,
       };
       this.logger.error(
         `[${correlationId}] Unexpected error: ${exception}`,

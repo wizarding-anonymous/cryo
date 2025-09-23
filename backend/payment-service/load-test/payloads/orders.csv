@@ -1,4 +1,21 @@
-gameId,provider
-1c1f6b5c-3b70-4b5f-9f63-1b4f2c5f7f11,sberbank
-2d2e7c6d-4c81-5c6g-0a74-2c5g3d6g8g22,yandex
-3e3f8d7e-5d92-6d7h-1b85-3d6h4e7h9h33,tbank
+gameId,gameName,amount,provider,userId
+550e8400-e29b-41d4-a716-446655440001,Cyberpunk 2077,2999,sberbank,user-001
+550e8400-e29b-41d4-a716-446655440002,The Witcher 3,1499,yandex,user-002
+550e8400-e29b-41d4-a716-446655440003,Red Dead Redemption 2,3499,tbank,user-003
+550e8400-e29b-41d4-a716-446655440004,Grand Theft Auto V,1999,sberbank,user-004
+550e8400-e29b-41d4-a716-446655440005,Minecraft,999,yandex,user-005
+550e8400-e29b-41d4-a716-446655440006,Counter-Strike 2,0,tbank,user-006
+550e8400-e29b-41d4-a716-446655440007,Dota 2,0,sberbank,user-007
+550e8400-e29b-41d4-a716-446655440008,Apex Legends,0,yandex,user-008
+550e8400-e29b-41d4-a716-446655440009,Valorant,0,tbank,user-009
+550e8400-e29b-41d4-a716-446655440010,FIFA 24,4999,sberbank,user-010
+550e8400-e29b-41d4-a716-446655440011,Call of Duty MW3,4999,yandex,user-011
+550e8400-e29b-41d4-a716-446655440012,Baldur's Gate 3,2499,tbank,user-012
+550e8400-e29b-41d4-a716-446655440013,Starfield,3999,sberbank,user-013
+550e8400-e29b-41d4-a716-446655440014,Hogwarts Legacy,2999,yandex,user-014
+550e8400-e29b-41d4-a716-446655440015,Elden Ring,2499,tbank,user-015
+550e8400-e29b-41d4-a716-446655440016,God of War,1999,sberbank,user-016
+550e8400-e29b-41d4-a716-446655440017,Spider-Man Remastered,2999,yandex,user-017
+550e8400-e29b-41d4-a716-446655440018,Horizon Zero Dawn,1499,tbank,user-018
+550e8400-e29b-41d4-a716-446655440019,Death Stranding,1999,sberbank,user-019
+550e8400-e29b-41d4-a716-446655440020,Control,999,yandex,user-020

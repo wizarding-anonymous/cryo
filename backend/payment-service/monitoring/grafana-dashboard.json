@@ -1,29 +1,264 @@
 {
-  "title": "Payment Service Overview",
-  "panels": [
-    {
-      "type": "graph",
-      "title": "Payment Success vs Failure",
-      "targets": [
-        {
-          "expr": "sum(rate(payments_total{status=\"COMPLETED\"}[5m]))",
-          "legendFormat": "Success"
-        },
-        {
-          "expr": "sum(rate(payments_total{status!=\"COMPLETED\"}[5m]))",
-          "legendFormat": "Failures"
-        }
-      ]
+  "dashboard": {
+    "id": null,
+    "title": "Payment Service - Production Monitoring",
+    "tags": ["payment-service", "production", "microservices"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
     },
-    {
-      "type": "graph",
-      "title": "Payment Duration P95",
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(payment_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "P95"
-        }
-      ]
-    }
-  ]
+    "panels": [
+      {
+        "id": 1,
+        "title": "Payment Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(payments_total{status=\"COMPLETED\"}[5m])) / sum(rate(payments_total[5m])) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 95},
+                {"color": "green", "value": 99}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Payment Volume (per minute)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(payments_total[1m])) * 60",
+            "legendFormat": "Payments/min"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Average Payment Amount",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(payment_amount_histogram_sum[5m])) / sum(rate(payment_amount_histogram_count[5m]))",
+            "legendFormat": "Avg Amount (RUB)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyRUB",
+            "decimals": 0
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Active Payments",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(active_payments_gauge)",
+            "legendFormat": "Active"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Payment Success vs Failure Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(payments_total{status=\"COMPLETED\"}[5m]))",
+            "legendFormat": "Success Rate"
+          },
+          {
+            "expr": "sum(rate(payments_total{status!=\"COMPLETED\"}[5m]))",
+            "legendFormat": "Failure Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Payment Duration Percentiles",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(payment_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(payment_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(payment_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 7,
+        "title": "Payment Status by Provider",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(payments_total[5m])) by (provider, status)",
+            "legendFormat": "{{provider}} - {{status}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 8,
+        "title": "Provider Response Times",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(payment_provider_duration_seconds_bucket[5m])) by (le, provider))",
+            "legendFormat": "{{provider}} P95"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 9,
+        "title": "Integration Health",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(integration_requests_total{status=\"success\"}[5m])) by (service)",
+            "legendFormat": "{{service}} Success"
+          },
+          {
+            "expr": "sum(rate(integration_requests_total{status!=\"success\"}[5m])) by (service)",
+            "legendFormat": "{{service}} Errors"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 10,
+        "title": "Resource Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{container=\"payment-service\"}[5m]) * 100",
+            "legendFormat": "CPU Usage %"
+          },
+          {
+            "expr": "container_memory_working_set_bytes{container=\"payment-service\"} / 1024 / 1024",
+            "legendFormat": "Memory Usage (MB)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 11,
+        "title": "Payment Amount Distribution",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "sum(rate(payment_amount_histogram_bucket[5m])) by (le)",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32}
+      },
+      {
+        "id": 12,
+        "title": "Error Rate by Provider",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum(rate(payments_total{status!=\"COMPLETED\"}[5m])) by (provider) / sum(rate(payments_total[5m])) by (provider) * 100",
+            "legendFormat": "{{provider}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40}
+      },
+      {
+        "id": 13,
+        "title": "Webhook Processing",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(webhook_requests_total[5m])) by (provider, status)",
+            "legendFormat": "{{provider}} - {{status}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40}
+      }
+    ]
+  }
 }

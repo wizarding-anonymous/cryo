@@ -108,7 +108,12 @@
   - Создать unit тесты для всех guards и стратегий
   - _Requirements: 4, 5_
 
-- [ ] 7. Создание REST API контроллеров
+- [x] 7. Создание REST API контроллеров
+
+
+
+
+
 
 
 
@@ -139,7 +144,12 @@
   - Добавить обработку ошибок через ExceptionFilter
   - _Requirements: 1, 2, 3, 4_
 
-- [ ] 8. Добавление middleware и interceptors
+
+
+- [x] 8. Добавление middleware и interceptors
+
+
+
   - Настроить глобальный ValidationPipe для автоматической валидации DTO
   - Создать GlobalExceptionFilter для унифицированной обработки ошибок
   - Добавить LoggingInterceptor для логирования всех запросов
@@ -148,7 +158,12 @@
   - Добавить ThrottlerGuard для rate limiting
   - _Requirements: 4, 5_
 
-- [ ] 9. Настройка конфигурации и окружения
+- [x] 9. Настройка конфигурации и окружения
+
+
+
+
+
   - Создать ConfigModule для управления переменными окружения
   - Настроить различные конфигурации для development, testing, production
   - Добавить валидацию переменных окружения с Joi
@@ -156,7 +171,16 @@
   - Настроить логирование с Winston для платежных операций
   - _Requirements: Все требования_
 
-- [ ] 10. Тестирование и документация API
+- [x] 10. Тестирование и документация API
+
+
+
+
+
+
+
+
+
   - Написать unit тесты для всех сервисов (OrderService, PaymentService, PaymentProviderService)
   - Создать integration тесты для REST API эндпоинтов с supertest
   - Добавить e2e тесты для полных сценариев создания заказа и платежа
@@ -165,7 +189,12 @@
   - Создать health check эндпоинт GET /health для мониторинга
   - _Requirements: Все требования_
 
-- [ ] 11. Подготовка к production развертыванию
+- [x] 11. Подготовка к production развертыванию
+
+
+
+
+
   - Создать оптимизированный Dockerfile с multi-stage build
   - Настроить Kubernetes манифесты (Deployment, Service, ConfigMap, Secret)
   - Добавить Prometheus метрики через @nestjs/prometheus для мониторинга платежей

@@ -1,5 +1,4 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { WinstonModule } from 'nest-winston';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { JwtModule } from '@nestjs/jwt';
@@ -10,8 +9,8 @@ import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { winstonLogger } from './config/logger.config';
 import { JwtConfig } from './config/jwt.config';
 import { ThrottlerConfig } from './config/throttler.config';
-import { envValidationSchema } from './config/env.validation';
-import { configuration } from './config/configuration';
+import { ConfigModule } from './config/config.module';
+import { AppConfigService } from './config/app.config';
 
 // Modules
 import { OrderModule } from './modules/order/order.module';
@@ -24,23 +23,14 @@ import { MetricsModule } from './common/metrics/metrics.module';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
-    // Configuration
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [configuration],
-      validationSchema: envValidationSchema,
-      envFilePath: [
-        `.env.${process.env.NODE_ENV || 'development'}.local`,
-        `.env.${process.env.NODE_ENV || 'development'}`,
-        '.env.local',
-        '.env',
-      ],
-    }),
+    // Configuration (Global)
+    ConfigModule,
 
     // Logging
     WinstonModule.forRoot(winstonLogger),
@@ -54,10 +44,14 @@ import { DatabaseModule } from './database/database.module';
     // Passport
     PassportModule.register({ defaultStrategy: 'jwt' }),
 
-    // HTTP Client
-    HttpModule.register({
-      timeout: 5000,
-      maxRedirects: 5,
+    // HTTP Client with dynamic configuration
+    HttpModule.registerAsync({
+      inject: [AppConfigService],
+      useFactory: (configService: AppConfigService) => ({
+        timeout: configService.external.timeoutMs,
+        maxRedirects: 5,
+        retries: configService.external.retryAttempts,
+      }),
     }),
 
     // Rate limiting
@@ -65,11 +59,13 @@ import { DatabaseModule } from './database/database.module';
       useClass: ThrottlerConfig,
     }),
 
-    // Feature modules
+    // Core modules
+    DatabaseModule,
     AuthModule,
     AlsModule,
     MetricsModule,
-    DatabaseModule,
+
+    // Feature modules
     OrderModule,
     PaymentModule,
     HealthModule,
@@ -83,6 +79,10 @@ import { DatabaseModule } from './database/database.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
     },
     {
       provide: APP_GUARD,

@@ -2,19 +2,172 @@ groups:
   - name: payment-service.rules
     interval: 30s
     rules:
+      # Payment Error Rate Alerts
       - alert: PaymentErrorRateHigh
-        expr: sum(rate(payments_total{status!="COMPLETED"}[5m])) / sum(rate(payments_total[5m])) > 0.05
+        expr: |
+          (
+            sum(rate(payments_total{status!="COMPLETED"}[5m])) /
+            sum(rate(payments_total[5m]))
+          ) > 0.05
         for: 5m
         labels:
           severity: warning
+          service: payment-service
         annotations:
           summary: "Payment failure rate is elevated"
-          description: "More than 5% of payments are failing in the last 5 minutes."
+          description: "More than 5% of payments are failing in the last 5 minutes. Current rate: {{ $value | humanizePercentage }}"
+          runbook_url: "https://runbooks.company.com/payment-service/high-error-rate"
+
+      - alert: PaymentErrorRateCritical
+        expr: |
+          (
+            sum(rate(payments_total{status!="COMPLETED"}[5m])) /
+            sum(rate(payments_total[5m]))
+          ) > 0.15
+        for: 2m
+        labels:
+          severity: critical
+          service: payment-service
+        annotations:
+          summary: "Payment failure rate is critically high"
+          description: "More than 15% of payments are failing in the last 5 minutes. Current rate: {{ $value | humanizePercentage }}"
+          runbook_url: "https://runbooks.company.com/payment-service/critical-error-rate"
+
+      # Payment Latency Alerts
       - alert: PaymentProcessingSlow
         expr: histogram_quantile(0.95, sum(rate(payment_duration_seconds_bucket[5m])) by (le)) > 2
         for: 10m
         labels:
           severity: warning
+          service: payment-service
         annotations:
           summary: "Payment processing latency is high"
-          description: "95th percentile payment processing time is above 2s."
+          description: "95th percentile payment processing time is above 2s. Current P95: {{ $value }}s"
+          runbook_url: "https://runbooks.company.com/payment-service/high-latency"
+
+      - alert: PaymentProcessingVerySlow
+        expr: histogram_quantile(0.95, sum(rate(payment_duration_seconds_bucket[5m])) by (le)) > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: payment-service
+        annotations:
+          summary: "Payment processing latency is critically high"
+          description: "95th percentile payment processing time is above 5s. Current P95: {{ $value }}s"
+
+      # Payment Volume Alerts
+      - alert: PaymentVolumeDropped
+        expr: |
+          (
+            sum(rate(payments_total[5m])) <
+            sum(rate(payments_total[1h] offset 1h)) * 0.5
+          )
+        for: 10m
+        labels:
+          severity: warning
+          service: payment-service
+        annotations:
+          summary: "Payment volume has dropped significantly"
+          description: "Payment volume is less than 50% of the volume from 1 hour ago"
+
+      - alert: NoPaymentsReceived
+        expr: sum(rate(payments_total[10m])) == 0
+        for: 15m
+        labels:
+          severity: critical
+          service: payment-service
+        annotations:
+          summary: "No payments received"
+          description: "No payments have been processed in the last 15 minutes"
+
+      # Provider-specific Alerts
+      - alert: PaymentProviderDown
+        expr: |
+          sum(rate(payment_provider_requests_total{status!="success"}[5m])) by (provider) /
+          sum(rate(payment_provider_requests_total[5m])) by (provider) > 0.8
+        for: 5m
+        labels:
+          severity: critical
+          service: payment-service
+        annotations:
+          summary: "Payment provider {{ $labels.provider }} is experiencing issues"
+          description: "Provider {{ $labels.provider }} has >80% error rate in the last 5 minutes"
+
+      # Integration Alerts
+      - alert: LibraryServiceIntegrationFailing
+        expr: |
+          sum(rate(integration_requests_total{service="library-service",status!="success"}[5m])) /
+          sum(rate(integration_requests_total{service="library-service"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: payment-service
+        annotations:
+          summary: "Library Service integration is failing"
+          description: "More than 10% of Library Service integration requests are failing"
+
+      - alert: GameCatalogServiceIntegrationFailing
+        expr: |
+          sum(rate(integration_requests_total{service="game-catalog-service",status!="success"}[5m])) /
+          sum(rate(integration_requests_total{service="game-catalog-service"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: payment-service
+        annotations:
+          summary: "Game Catalog Service integration is failing"
+          description: "More than 10% of Game Catalog Service integration requests are failing"
+
+      # Resource Alerts
+      - alert: PaymentServiceHighMemoryUsage
+        expr: |
+          (
+            container_memory_working_set_bytes{container="payment-service"} /
+            container_spec_memory_limit_bytes{container="payment-service"}
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: payment-service
+        annotations:
+          summary: "Payment service memory usage is high"
+          description: "Memory usage is above 85% for pod {{ $labels.pod }}"
+
+      - alert: PaymentServiceHighCPUUsage
+        expr: |
+          rate(container_cpu_usage_seconds_total{container="payment-service"}[5m]) /
+          (container_spec_cpu_quota{container="payment-service"} / container_spec_cpu_period{container="payment-service"}) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: payment-service
+        annotations:
+          summary: "Payment service CPU usage is high"
+          description: "CPU usage is above 80% for pod {{ $labels.pod }}"
+
+      # Business Logic Alerts
+      - alert: HighValuePaymentsFailing
+        expr: |
+          sum(rate(payments_total{status!="COMPLETED"}[5m])) by (provider) > 10 and
+          sum(rate(payment_amount_histogram_sum[5m])) by (provider) /
+          sum(rate(payment_amount_histogram_count[5m])) by (provider) > 5000
+        for: 5m
+        labels:
+          severity: critical
+          service: payment-service
+        annotations:
+          summary: "High-value payments are failing for provider {{ $labels.provider }}"
+          description: "High-value payments (>5000 RUB average) are failing at a rate of {{ $value }} per second"
+
+      # Webhook Alerts
+      - alert: WebhookProcessingFailing
+        expr: |
+          sum(rate(webhook_requests_total{status!="success"}[5m])) by (provider) /
+          sum(rate(webhook_requests_total[5m])) by (provider) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: payment-service
+        annotations:
+          summary: "Webhook processing is failing for provider {{ $labels.provider }}"
+          description: "More than 10% of webhooks from {{ $labels.provider }} are failing to process"

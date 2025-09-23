@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { OrderService } from '../../modules/order/order.service';
-import { OrderNotFoundException } from '../exceptions/order-not-found.exception';
+import { GameCatalogIntegrationService } from '../../integrations/game-catalog/game-catalog.service';
 import { Order } from '../../modules/order/entities/order.entity';
 import { OrderStatus } from '../enums/order-status.enum';
 
@@ -11,6 +12,7 @@ describe('Authorization Integration Tests', () => {
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+    update: jest.fn(),
     createQueryBuilder: jest.fn(),
   };
 
@@ -23,11 +25,11 @@ describe('Authorization Integration Tests', () => {
       providers: [
         OrderService,
         {
-          provide: 'OrderRepository',
+          provide: getRepositoryToken(Order),
           useValue: mockOrderRepository,
         },
         {
-          provide: 'GameCatalogIntegrationService',
+          provide: GameCatalogIntegrationService,
           useValue: mockGameCatalogService,
         },
       ],

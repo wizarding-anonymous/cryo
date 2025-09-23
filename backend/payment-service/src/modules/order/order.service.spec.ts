@@ -1,38 +1,60 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { BadRequestException } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { Order } from './entities/order.entity';
 import { GameCatalogIntegrationService } from '../../integrations/game-catalog/game-catalog.service';
 import { OrderNotFoundException } from '../../common/exceptions/order-not-found.exception';
-import { BadRequestException } from '@nestjs/common';
+import { OrderStatus } from '../../common/enums/order-status.enum';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { GamePurchaseInfo } from '../../integrations/game-catalog/dto/game-purchase-info.dto';
+import { GetOrdersQueryDto } from './dto/get-orders-query.dto';
 
 describe('OrderService', () => {
   let service: OrderService;
-  let repository: Repository<Order>;
-  let gameCatalogService: GameCatalogIntegrationService;
+  let orderRepository: jest.Mocked<Repository<Order>>;
+  let gameCatalogService: jest.Mocked<GameCatalogIntegrationService>;
 
-  const mockOrderRepository = {
-    create: jest.fn(),
-    save: jest.fn(),
-    findOne: jest.fn(),
-    update: jest.fn(),
-    createQueryBuilder: jest.fn(),
+  const mockOrder: Order = {
+    id: 'order-123',
+    userId: 'user-123',
+    gameId: 'game-123',
+    gameName: 'Test Game',
+    amount: 1999,
+    currency: 'RUB',
+    status: OrderStatus.PENDING,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000),
   };
 
-  const mockGameCatalogService = {
-    getGamePurchaseInfo: jest.fn(),
+  const mockGameInfo = {
+    id: 'game-123',
+    title: 'Test Game',
+    price: 1999,
+    currency: 'RUB',
+    available: true,
   };
 
   beforeEach(async () => {
+    const mockRepository = {
+      create: jest.fn(),
+      save: jest.fn(),
+      findOne: jest.fn(),
+      update: jest.fn(),
+      createQueryBuilder: jest.fn(),
+    };
+
+    const mockGameCatalogService = {
+      getGamePurchaseInfo: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrderService,
         {
           provide: getRepositoryToken(Order),
-          useValue: mockOrderRepository,
+          useValue: mockRepository,
         },
         {
           provide: GameCatalogIntegrationService,
@@ -42,14 +64,8 @@ describe('OrderService', () => {
     }).compile();
 
     service = module.get<OrderService>(OrderService);
-    repository = module.get<Repository<Order>>(getRepositoryToken(Order));
-    gameCatalogService = module.get<GameCatalogIntegrationService>(
-      GameCatalogIntegrationService,
-    );
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
+    orderRepository = module.get(getRepositoryToken(Order));
+    gameCatalogService = module.get(GameCatalogIntegrationService);
   });
 
   it('should be defined', () => {
@@ -58,136 +74,179 @@ describe('OrderService', () => {
 
   describe('createOrder', () => {
     const createOrderDto: CreateOrderDto = {
-      gameId: 'valid-game-id',
+      gameId: 'game-123',
       gameName: 'Test Game',
-      amount: 100,
-    };
-    const userId = 'user-id';
-    const gameInfo: GamePurchaseInfo = {
-      id: 'valid-game-id',
-      title: 'Test Game',
-      price: 100,
-      currency: 'RUB',
-      available: true,
+      amount: 1999,
     };
 
-    it('should create an order when game is available', async () => {
-      mockGameCatalogService.getGamePurchaseInfo.mockResolvedValue(gameInfo);
-      const expectedOrder = new Order();
-      mockOrderRepository.create.mockReturnValue(expectedOrder);
-      mockOrderRepository.save.mockResolvedValue(expectedOrder);
+    it('should create an order successfully', async () => {
+      gameCatalogService.getGamePurchaseInfo.mockResolvedValue(mockGameInfo);
+      orderRepository.create.mockReturnValue(mockOrder);
+      orderRepository.save.mockResolvedValue(mockOrder);
 
-      const result = await service.createOrder(createOrderDto, userId);
+      const result = await service.createOrder(createOrderDto, 'user-123');
 
       expect(gameCatalogService.getGamePurchaseInfo).toHaveBeenCalledWith(
-        createOrderDto.gameId,
+        'game-123',
       );
-      expect(mockOrderRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          gameId: gameInfo.id,
-          gameName: gameInfo.title,
-          amount: gameInfo.price,
-        }),
-      );
-      expect(mockOrderRepository.save).toHaveBeenCalledWith(expectedOrder);
-      expect(result).toEqual(expectedOrder);
+      expect(orderRepository.create).toHaveBeenCalledWith({
+        userId: 'user-123',
+        gameId: 'game-123',
+        gameName: 'Test Game',
+        amount: 1999,
+        currency: 'RUB',
+        status: OrderStatus.PENDING,
+        expiresAt: expect.any(Date),
+      });
+      expect(orderRepository.save).toHaveBeenCalledWith(mockOrder);
+      expect(result).toEqual(mockOrder);
     });
 
-    it('should throw BadRequestException if game not found', async () => {
-      mockGameCatalogService.getGamePurchaseInfo.mockResolvedValue(null);
-      await expect(service.createOrder(createOrderDto, userId)).rejects.toThrow(
-        BadRequestException,
+    it('should throw BadRequestException when game is not found', async () => {
+      gameCatalogService.getGamePurchaseInfo.mockResolvedValue(null);
+
+      await expect(
+        service.createOrder(createOrderDto, 'user-123'),
+      ).rejects.toThrow(BadRequestException);
+      expect(gameCatalogService.getGamePurchaseInfo).toHaveBeenCalledWith(
+        'game-123',
       );
     });
 
-    it('should throw BadRequestException if game is not available', async () => {
-      const unavailableGameInfo = { ...gameInfo, available: false };
-      mockGameCatalogService.getGamePurchaseInfo.mockResolvedValue(
-        unavailableGameInfo,
+    it('should throw BadRequestException when game is not available', async () => {
+      const unavailableGame = { ...mockGameInfo, available: false };
+      gameCatalogService.getGamePurchaseInfo.mockResolvedValue(unavailableGame);
+
+      await expect(
+        service.createOrder(createOrderDto, 'user-123'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getUserOrders', () => {
+    const queryDto: GetOrdersQueryDto = {
+      page: 1,
+      limit: 10,
+      status: OrderStatus.PENDING,
+    };
+
+    it('should return user orders with pagination', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[mockOrder], 1]),
+      };
+
+      orderRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
       );
-      await expect(service.createOrder(createOrderDto, userId)).rejects.toThrow(
-        BadRequestException,
+
+      const result = await service.getUserOrders(queryDto, 'user-123');
+
+      expect(orderRepository.createQueryBuilder).toHaveBeenCalledWith('order');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'order.userId = :userId',
+        {
+          userId: 'user-123',
+        },
       );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'order.status = :status',
+        {
+          status: OrderStatus.PENDING,
+        },
+      );
+      expect(result).toEqual({ data: [mockOrder], total: 1 });
+    });
+
+    it('should return orders without status filter', async () => {
+      const queryWithoutStatus = { page: 1, limit: 10 };
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[mockOrder], 1]),
+      };
+
+      orderRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
+
+      await service.getUserOrders(queryWithoutStatus, 'user-123');
+
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalled();
     });
   });
 
   describe('getOrder', () => {
-    it('should return an order if found', async () => {
-      const order = new Order();
-      order.userId = 'user1';
-      mockOrderRepository.findOne.mockResolvedValue(order);
-      const result = await service.getOrder('1', 'user1');
-      expect(result).toEqual(order);
-    });
+    it('should return order when found', async () => {
+      orderRepository.findOne.mockResolvedValue(mockOrder);
 
-    it('should throw OrderNotFoundException if order not found', async () => {
-      mockOrderRepository.findOne.mockResolvedValue(null);
-      await expect(service.getOrder('1', 'user1')).rejects.toThrow(
-        OrderNotFoundException,
-      );
-    });
+      const result = await service.getOrder('order-123', 'user-123');
 
-    it('should return order when no userId provided (admin access)', async () => {
-      const order = new Order();
-      order.userId = 'user1';
-      mockOrderRepository.findOne.mockResolvedValue(order);
-      const result = await service.getOrder('1');
-      expect(result).toEqual(order);
-      expect(mockOrderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: '1' },
+      expect(orderRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'order-123', userId: 'user-123' },
       });
+      expect(result).toEqual(mockOrder);
     });
 
-    it('should throw OrderNotFoundException when user tries to access another users order', async () => {
-      const order = new Order();
-      order.userId = 'user2';
-      mockOrderRepository.findOne.mockResolvedValue(order);
+    it('should throw OrderNotFoundException when order not found', async () => {
+      orderRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getOrder('1', 'user1')).rejects.toThrow(
+      await expect(service.getOrder('order-123', 'user-123')).rejects.toThrow(
         OrderNotFoundException,
       );
+    });
+
+    it('should return order without userId check when userId not provided', async () => {
+      orderRepository.findOne.mockResolvedValue(mockOrder);
+
+      const result = await service.getOrder('order-123');
+
+      expect(orderRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'order-123' },
+      });
+      expect(result).toEqual(mockOrder);
     });
   });
 
   describe('validateOrderOwnership', () => {
-    it('should return order when user owns the order', async () => {
-      const order = new Order();
-      order.id = 'order1';
-      order.userId = 'user1';
-      mockOrderRepository.findOne.mockResolvedValue(order);
+    it('should return order when user owns it', async () => {
+      orderRepository.findOne.mockResolvedValue(mockOrder);
 
-      const result = await service.validateOrderOwnership('order1', 'user1');
+      const result = await service.validateOrderOwnership(
+        'order-123',
+        'user-123',
+      );
 
-      expect(result).toEqual(order);
-      expect(mockOrderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'order1', userId: 'user1' },
+      expect(orderRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'order-123', userId: 'user-123' },
       });
+      expect(result).toEqual(mockOrder);
     });
 
-    it('should throw OrderNotFoundException when order does not exist', async () => {
-      mockOrderRepository.findOne.mockResolvedValue(null);
+    it('should throw OrderNotFoundException when user does not own order', async () => {
+      orderRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.validateOrderOwnership('order1', 'user1'),
+        service.validateOrderOwnership('order-123', 'user-456'),
       ).rejects.toThrow(OrderNotFoundException);
     });
+  });
 
-    it('should throw OrderNotFoundException when user does not own the order', async () => {
-      mockOrderRepository.findOne.mockResolvedValue(null);
+  describe('updateOrderStatus', () => {
+    it('should update order status', async () => {
+      orderRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      await expect(
-        service.validateOrderOwnership('order1', 'user2'),
-      ).rejects.toThrow(OrderNotFoundException);
-    });
+      await service.updateOrderStatus('order-123', OrderStatus.PAID);
 
-    it('should call repository with correct parameters', async () => {
-      const order = new Order();
-      mockOrderRepository.findOne.mockResolvedValue(order);
-
-      await service.validateOrderOwnership('order123', 'user456');
-
-      expect(mockOrderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'order123', userId: 'user456' },
+      expect(orderRepository.update).toHaveBeenCalledWith('order-123', {
+        status: OrderStatus.PAID,
       });
     });
   });

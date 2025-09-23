@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: payment-service-metrics
+  labels:
+    app: payment-service
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: payment-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+  namespaceSelector:
+    matchNames:
+    - payment-service

@@ -7,6 +7,7 @@ import { Payment } from './entities/payment.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
 import { PaymentProvider } from '../../common/enums/payment-provider.enum';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { PaymentCacheInterceptor } from '../../common/interceptors/payment-cache.interceptor';
 
 describe('PaymentController', () => {
   let controller: PaymentController;
@@ -37,6 +38,7 @@ describe('PaymentController', () => {
           provide: PaymentService,
           useValue: mockPaymentService,
         },
+        PaymentCacheInterceptor,
         {
           provide: CACHE_MANAGER,
           useValue: mockCacheManager,

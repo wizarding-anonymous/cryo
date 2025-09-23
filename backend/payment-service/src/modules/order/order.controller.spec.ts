@@ -6,6 +6,8 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { GetOrdersQueryDto } from './dto/get-orders-query.dto';
 import { Order } from './entities/order.entity';
 import { OrderStatus } from '../../common/enums/order-status.enum';
+import { PaymentCacheInterceptor } from '../../common/interceptors/payment-cache.interceptor';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('OrderController', () => {
   let controller: OrderController;
@@ -21,6 +23,11 @@ describe('OrderController', () => {
     canActivate: jest.fn(() => true),
   };
 
+  const mockCacheManager = {
+    get: jest.fn(),
+    set: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [OrderController],
@@ -28,6 +35,11 @@ describe('OrderController', () => {
         {
           provide: OrderService,
           useValue: mockOrderService,
+        },
+        PaymentCacheInterceptor,
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     })
