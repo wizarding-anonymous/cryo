@@ -41,6 +41,8 @@ services:
       - redis
     env_file:
       - ./user-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -68,12 +70,14 @@ services:
       dockerfile: Dockerfile
     container_name: library-service
     ports:
-      - "3003:3003"
+      - "3003:3000"
     depends_on:
       - postgres-library
       - redis
     env_file:
       - ./library-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -123,6 +127,8 @@ services:
       - redis
     env_file:
       - ./notification-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -156,6 +162,8 @@ services:
       - redis
     env_file:
       - ./achievement-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -167,12 +175,14 @@ services:
       dockerfile: Dockerfile
     container_name: security-service
     ports:
-      - "3009:3009"
+      - "3009:3008"
     depends_on:
       - postgres-security
       - redis
     env_file:
       - ./security-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
@@ -184,12 +194,14 @@ services:
       dockerfile: Dockerfile
     container_name: download-service
     ports:
-      - "3010:3010"
+      - "3010:8080"
     depends_on:
       - postgres-download
       - redis
     env_file:
       - ./download-service/.env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
       - microservices-network
     restart: unless-stopped
