@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
-import { ConfigModule as NestConfigModule, ConfigService } from '@nestjs/config';
+import {
+  ConfigModule as NestConfigModule,
+  ConfigService,
+} from '@nestjs/config';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 import { MetricsController } from '../src/metrics.controller';
@@ -42,7 +45,7 @@ import { InternalAuthGuard } from '../src/auth/guards/internal-auth.guard';
         dropSchema: true,
       };
       // Minimal debug to ensure correct values are used during e2e
-      // eslint-disable-next-line no-console
+
       console.log('[e2e] TypeORM options', {
         host: dbOptions.host,
         port: dbOptions.port,

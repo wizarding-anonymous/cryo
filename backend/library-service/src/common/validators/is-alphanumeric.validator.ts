@@ -8,18 +8,18 @@ import {
 
 @ValidatorConstraint({ async: false })
 export class IsAlphanumericConstraint implements ValidatorConstraintInterface {
-  validate(value: any, args: ValidationArguments) {
+  validate(value: any, _args: ValidationArguments) {
     if (typeof value !== 'string') return false;
     return /^[a-zA-Z0-9]+$/.test(value);
   }
 
-  defaultMessage(args: ValidationArguments) {
+  defaultMessage(_args: ValidationArguments) {
     return '($value) must contain only letters and numbers.';
   }
 }
 
 export function IsAlphanumeric(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,

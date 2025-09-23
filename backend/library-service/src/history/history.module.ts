@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PurchaseHistory } from './entities/purchase-history.entity';
+import { PurchaseHistory } from '../entities/purchase-history.entity';
 import { HistoryService } from './history.service';
 import { HistoryController } from './history.controller';
 import { PurchaseHistoryRepository } from './repositories/purchase-history.repository';
@@ -9,9 +9,9 @@ import { AppCacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PurchaseHistory]), 
+    TypeOrmModule.forFeature([PurchaseHistory]),
     ClientsModule,
-    AppCacheModule
+    AppCacheModule,
   ],
   controllers: [HistoryController],
   providers: [HistoryService, PurchaseHistoryRepository],

@@ -6,7 +6,7 @@ describe('JwtAuthGuard', () => {
     expect(new JwtAuthGuard()).toBeDefined();
   });
 
-  it('should extend AuthGuard(\'jwt\')', () => {
+  it("should extend AuthGuard('jwt')", () => {
     const guard = new JwtAuthGuard();
     expect(guard).toBeInstanceOf(AuthGuard('jwt'));
   });

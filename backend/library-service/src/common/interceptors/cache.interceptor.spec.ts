@@ -47,13 +47,22 @@ describe('CacheInterceptor', () => {
     mockCache.get.mockResolvedValueOnce({ cached: true });
     const context = {
       switchToHttp: () => ({
-        getRequest: () => ({ method: 'GET', originalUrl: '/api/library/my', user: { id: 'u1' } }),
+        getRequest: () => ({
+          method: 'GET',
+          originalUrl: '/api/library/my',
+          user: { id: 'u1' },
+        }),
       }),
     } as unknown as ExecutionContext;
     const handler = { handle: () => of({ fresh: true }) } as CallHandler;
 
     const res$ = await interceptor.intercept(context, handler);
-    await new Promise((resolve) => res$.subscribe((data) => { expect(data).toEqual({ cached: true }); resolve(null); }));
+    await new Promise((resolve) =>
+      res$.subscribe((data) => {
+        expect(data).toEqual({ cached: true });
+        resolve(null);
+      }),
+    );
   });
 
   it('should cache response and record user key on miss', async () => {
@@ -61,7 +70,11 @@ describe('CacheInterceptor', () => {
     mockCache.get.mockResolvedValueOnce([]); // user keys fetch
     const context = {
       switchToHttp: () => ({
-        getRequest: () => ({ method: 'GET', originalUrl: '/api/library/my?page=1', user: { id: 'u1' } }),
+        getRequest: () => ({
+          method: 'GET',
+          originalUrl: '/api/library/my?page=1',
+          user: { id: 'u1' },
+        }),
       }),
     } as unknown as ExecutionContext;
     const handler = { handle: () => of({ fresh: true }) } as CallHandler;
@@ -69,7 +82,10 @@ describe('CacheInterceptor', () => {
     const res$ = await interceptor.intercept(context, handler);
     await new Promise((resolve) => res$.subscribe((data) => resolve(data)));
 
-    expect(mockCache.set).toHaveBeenCalledWith(expect.stringContaining('cache:u1:/api/library/my'), { fresh: true }, 300);
+    expect(mockCache.set).toHaveBeenCalledWith(
+      expect.stringContaining('cache:u1:/api/library/my'),
+      { fresh: true },
+      300,
+    );
   });
 });
-

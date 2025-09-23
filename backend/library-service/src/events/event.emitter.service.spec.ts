@@ -33,7 +33,11 @@ describe('EventEmitterService', () => {
       emit: jest.fn(() => of(null)),
     };
 
-    Reflect.set((service as unknown as Record<string, unknown>), 'client', mockClient);
+    Reflect.set(
+      service as unknown as Record<string, unknown>,
+      'client',
+      mockClient,
+    );
 
     jest.clearAllMocks();
   });
@@ -44,29 +48,39 @@ describe('EventEmitterService', () => {
 
   describe('emitGameAddedEvent', () => {
     it('emits game added event', async () => {
-      const logSpy = jest.spyOn((service as any).logger, 'log').mockImplementation();
+      const logSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation();
 
       await service.emitGameAddedEvent('user123', 'game456');
 
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Emitting game.added event'));
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Emitting game.added event'),
+      );
       logSpy.mockRestore();
     });
   });
 
   describe('emitGameRemovedEvent', () => {
     it('emits game removed event', async () => {
-      const logSpy = jest.spyOn((service as any).logger, 'log').mockImplementation();
+      const logSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation();
 
       await service.emitGameRemovedEvent('user123', 'game456');
 
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Emitting game.removed event'));
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Emitting game.removed event'),
+      );
       logSpy.mockRestore();
     });
   });
 
   describe('onModuleInit', () => {
     it('initializes successfully when Kafka connection succeeds', async () => {
-      const logSpy = jest.spyOn((service as any).logger, 'log').mockImplementation();
+      const logSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation();
 
       await service.onModuleInit();
 

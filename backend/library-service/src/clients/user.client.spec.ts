@@ -11,6 +11,7 @@ describe('UserServiceClient', () => {
 
   const mockHttpService = {
     get: jest.fn(),
+    post: jest.fn(),
   };
 
   const mockConfigService = {
@@ -54,7 +55,9 @@ describe('UserServiceClient', () => {
       const result = await client.doesUserExist('user123');
       expect(result).toBe(true);
       expect(httpService.get).toHaveBeenCalledTimes(1);
-      expect(httpService.get).toHaveBeenCalledWith('http://fake-user-service/users/user123/exists');
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-user-service/users/user123/exists',
+      );
     });
 
     it('should return false when user does not exist', async () => {
@@ -77,7 +80,9 @@ describe('UserServiceClient', () => {
 
       const result = await client.doesUserExist('user123');
       expect(result).toBe(false);
-      expect(httpService.get).toHaveBeenCalledWith('http://fake-user-service/users/user123/exists');
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-user-service/users/user123/exists',
+      );
     });
 
     it('should handle malformed response', async () => {
@@ -106,6 +111,91 @@ describe('UserServiceClient', () => {
 
       const result = await client.doesUserExist('user123');
       expect(result).toBe(false);
+    });
+  });
+
+  describe('getUserProfile', () => {
+    it('should return user profile on success', async () => {
+      const mockUserProfile = {
+        id: 'user123',
+        email: 'test@example.com',
+        username: 'testuser',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const mockResponse: AxiosResponse = {
+        data: mockUserProfile,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+      mockHttpService.get.mockReturnValue(of(mockResponse));
+
+      const result = await client.getUserProfile('user123');
+      expect(result).toEqual(mockUserProfile);
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-user-service/users/user123',
+      );
+    });
+
+    it('should return null on error after retries', async () => {
+      const error = new Error('Network error');
+      mockHttpService.get.mockReturnValue(throwError(() => error));
+
+      const result = await client.getUserProfile('user123');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('validateUserToken', () => {
+    it('should return validation result on success', async () => {
+      const mockResponse: AxiosResponse = {
+        data: { valid: true, userId: 'user123' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+      mockHttpService.post.mockReturnValue(of(mockResponse));
+
+      const result = await client.validateUserToken('valid-token');
+      expect(result).toEqual({ valid: true, userId: 'user123' });
+      expect(httpService.post).toHaveBeenCalledWith(
+        'http://fake-user-service/auth/validate',
+        { token: 'valid-token' },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+    });
+
+    it('should return invalid result on error after retries', async () => {
+      const error = new Error('Network error');
+      mockHttpService.post.mockReturnValue(throwError(() => error));
+
+      const result = await client.validateUserToken('invalid-token');
+      expect(result).toEqual({ valid: false });
+    });
+  });
+
+  describe('circuit breaker', () => {
+    it('should handle circuit breaker functionality', async () => {
+      // Test that circuit breaker exists and can handle errors
+      const error = new Error('Network error');
+      mockHttpService.get.mockReturnValue(throwError(() => error));
+
+      // First call should return false due to error handling
+      const result = await client.doesUserExist('user123');
+      expect(result).toBe(false);
+
+      // Verify that the HTTP service was called
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-user-service/users/user123/exists',
+      );
     });
   });
 });

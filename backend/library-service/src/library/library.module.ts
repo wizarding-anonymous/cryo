@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { LibraryGame } from './entities/library-game.entity';
+import { LibraryGame } from '../entities/library-game.entity';
 import { LibraryService } from './library.service';
 import { SearchService } from './search.service';
 import { LibraryController } from './library.controller';
@@ -12,11 +12,11 @@ import { HistoryModule } from '../history/history.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([LibraryGame]), 
+    TypeOrmModule.forFeature([LibraryGame]),
     ClientsModule,
     AppCacheModule,
     EventsModule,
-    HistoryModule
+    HistoryModule,
   ],
   controllers: [LibraryController],
   providers: [LibraryService, SearchService, LibraryRepository],

@@ -1,8 +1,13 @@
 ﻿import { Test, TestingModule } from '@nestjs/testing';
 import { HealthController } from './health.controller';
-import { HealthCheckService, TypeOrmHealthIndicator, MicroserviceHealthIndicator } from '@nestjs/terminus';
+import {
+  HealthCheckService,
+  TypeOrmHealthIndicator,
+  MicroserviceHealthIndicator,
+} from '@nestjs/terminus';
 import { ConfigService } from '@nestjs/config';
 import { RedisHealthIndicator } from './redis.health';
+import { CacheHealthIndicator } from './cache.health';
 
 describe('HealthController', () => {
   let controller: HealthController;
@@ -17,11 +22,17 @@ describe('HealthController', () => {
   };
 
   const mockMicroserviceHealthIndicator = {
-    pingCheck: jest.fn().mockResolvedValue({ 'game-catalog-service': { status: 'up' } }),
+    pingCheck: jest
+      .fn()
+      .mockResolvedValue({ 'game-catalog-service': { status: 'up' } }),
   };
 
   const mockRedisHealthIndicator = {
     isHealthy: jest.fn().mockResolvedValue({ redis: { status: 'up' } }),
+  };
+
+  const mockCacheHealthIndicator = {
+    isHealthy: jest.fn().mockResolvedValue({ cache: { status: 'up' } }),
   };
 
   const mockConfigService = {
@@ -38,9 +49,16 @@ describe('HealthController', () => {
       controllers: [HealthController],
       providers: [
         { provide: HealthCheckService, useValue: mockHealthCheckService },
-        { provide: TypeOrmHealthIndicator, useValue: mockTypeOrmHealthIndicator },
-        { provide: MicroserviceHealthIndicator, useValue: mockMicroserviceHealthIndicator },
+        {
+          provide: TypeOrmHealthIndicator,
+          useValue: mockTypeOrmHealthIndicator,
+        },
+        {
+          provide: MicroserviceHealthIndicator,
+          useValue: mockMicroserviceHealthIndicator,
+        },
         { provide: RedisHealthIndicator, useValue: mockRedisHealthIndicator },
+        { provide: CacheHealthIndicator, useValue: mockCacheHealthIndicator },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
@@ -73,13 +91,18 @@ describe('HealthController', () => {
 
       mockHealthCheckService.check.mockImplementation((checks) => {
         // Execute the check functions to ensure they're called properly
-        return Promise.all(checks.map((check: () => Promise<unknown>) => check())).then(() => mockHealthResult);
+        return Promise.all(
+          checks.map((check: () => Promise<unknown>) => check()),
+        ).then(() => mockHealthResult);
       });
 
       const result = await controller.check();
 
       expect(result).toEqual(mockHealthResult);
-      expect(mockTypeOrmHealthIndicator.pingCheck).toHaveBeenCalledWith('database', { timeout: 300 });
+      expect(mockTypeOrmHealthIndicator.pingCheck).toHaveBeenCalledWith(
+        'database',
+        { timeout: 300 },
+      );
       // In test environment, Redis and microservice checks should not be called
       expect(mockRedisHealthIndicator.isHealthy).not.toHaveBeenCalled();
       expect(mockMicroserviceHealthIndicator.pingCheck).not.toHaveBeenCalled();
@@ -120,7 +143,12 @@ describe('HealthController', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'test';
 
-      const mockHealthResult = { status: 'ok', info: {}, error: {}, details: {} };
+      const mockHealthResult = {
+        status: 'ok',
+        info: {},
+        error: {},
+        details: {},
+      };
       mockHealthCheckService.check.mockResolvedValue(mockHealthResult);
 
       await controller.check();
@@ -156,15 +184,23 @@ describe('HealthController', () => {
 
       mockHealthCheckService.check.mockImplementation((checks) => {
         // Execute the check functions to ensure they're called properly
-        return Promise.all(checks.map((check: () => Promise<unknown>) => check())).then(() => mockHealthResult);
+        return Promise.all(
+          checks.map((check: () => Promise<unknown>) => check()),
+        ).then(() => mockHealthResult);
       });
 
       const result = await controller.check();
 
       expect(result).toEqual(mockHealthResult);
-      expect(mockTypeOrmHealthIndicator.pingCheck).toHaveBeenCalledWith('database', { timeout: 300 });
+      expect(mockTypeOrmHealthIndicator.pingCheck).toHaveBeenCalledWith(
+        'database',
+        { timeout: 300 },
+      );
       expect(mockRedisHealthIndicator.isHealthy).toHaveBeenCalledWith('redis');
-      expect(mockMicroserviceHealthIndicator.pingCheck).toHaveBeenCalledWith('game-catalog-service', expect.any(Object));
+      expect(mockMicroserviceHealthIndicator.pingCheck).toHaveBeenCalledWith(
+        'game-catalog-service',
+        expect.any(Object),
+      );
 
       // Restore original NODE_ENV
       process.env.NODE_ENV = originalEnv;

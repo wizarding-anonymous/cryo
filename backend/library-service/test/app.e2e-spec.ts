@@ -26,13 +26,23 @@ describe('Library Service (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
     app.setGlobalPrefix('api');
     await app.init();
 
     jwtService = app.get(JwtService);
     testUserId = randomUUID(); // Генерируем валидный UUID для тестов
-    validToken = jwtService.sign({ sub: testUserId, username: 'testuser', roles: ['user'] });
+    validToken = jwtService.sign({
+      sub: testUserId,
+      username: 'testuser',
+      roles: ['user'],
+    });
   });
 
   afterAll(async () => {
@@ -45,9 +55,7 @@ describe('Library Service (e2e)', () => {
 
   describe('LibraryController', () => {
     it('GET /api/library/my - should fail without auth token', () => {
-      return request(app.getHttpServer())
-        .get('/api/library/my')
-        .expect(401);
+      return request(app.getHttpServer()).get('/api/library/my').expect(401);
     });
 
     it('GET /api/library/my - should return user library', () => {

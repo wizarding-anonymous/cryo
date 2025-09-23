@@ -1,8 +1,17 @@
-﻿import { Inject, Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+﻿import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
-import { GameAddedToLibraryEvent, GameRemovedFromLibraryEvent } from './dto/events.dto';
+import {
+  GameAddedToLibraryEvent,
+  GameRemovedFromLibraryEvent,
+} from './dto/events.dto';
 
 @Injectable()
 export class EventEmitterService implements OnModuleInit {
@@ -13,7 +22,8 @@ export class EventEmitterService implements OnModuleInit {
     private readonly configService: ConfigService,
     @Optional() @Inject('KAFKA_SERVICE') private readonly client?: ClientKafka,
   ) {
-    this.kafkaEnabled = this.configService.get<boolean>('kafka.enabled', false) === true;
+    this.kafkaEnabled =
+      this.configService.get<boolean>('kafka.enabled', false) === true;
   }
 
   async onModuleInit(): Promise<void> {
@@ -24,7 +34,8 @@ export class EventEmitterService implements OnModuleInit {
         this.logger.log('EventEmitterService initialized with Kafka support');
         this.logger.log('EventEmitterService initialized.');
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message =
+          error instanceof Error ? error.message : 'Unknown error';
         const stack = error instanceof Error ? error.stack : undefined;
         this.logger.warn(
           `Failed to connect Kafka client, continuing without Kafka. Reason: ${message}`,
@@ -33,13 +44,19 @@ export class EventEmitterService implements OnModuleInit {
         this.kafkaEnabled = false;
       }
     } else {
-      this.logger.log('EventEmitterService initialized without Kafka (MVP mode)');
+      this.logger.log(
+        'EventEmitterService initialized without Kafka (MVP mode)',
+      );
       this.logger.log('EventEmitterService initialized.');
     }
   }
 
   async emitGameAddedEvent(userId: string, gameId: string): Promise<void> {
-    const event = new GameAddedToLibraryEvent({ userId, gameId, timestamp: new Date() });
+    const event = new GameAddedToLibraryEvent({
+      userId,
+      gameId,
+      timestamp: new Date(),
+    });
 
     if (this.kafkaEnabled && this.client) {
       this.logger.log(`Emitting game.added event: ${JSON.stringify(event)}`);
@@ -47,11 +64,17 @@ export class EventEmitterService implements OnModuleInit {
       return;
     }
 
-    this.logger.log(`Emitting game.added event (MVP mode - no Kafka): ${JSON.stringify(event)}`);
+    this.logger.log(
+      `Emitting game.added event (MVP mode - no Kafka): ${JSON.stringify(event)}`,
+    );
   }
 
   async emitGameRemovedEvent(userId: string, gameId: string): Promise<void> {
-    const event = new GameRemovedFromLibraryEvent({ userId, gameId, timestamp: new Date() });
+    const event = new GameRemovedFromLibraryEvent({
+      userId,
+      gameId,
+      timestamp: new Date(),
+    });
 
     if (this.kafkaEnabled && this.client) {
       this.logger.log(`Emitting game.removed event: ${JSON.stringify(event)}`);
@@ -59,6 +82,8 @@ export class EventEmitterService implements OnModuleInit {
       return;
     }
 
-    this.logger.log(`Emitting game.removed event (MVP mode - no Kafka): ${JSON.stringify(event)}`);
+    this.logger.log(
+      `Emitting game.removed event (MVP mode - no Kafka): ${JSON.stringify(event)}`,
+    );
   }
 }

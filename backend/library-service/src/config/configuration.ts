@@ -8,10 +8,37 @@ export default () => ({
     database: process.env.DATABASE_NAME || 'library_service',
     synchronize: process.env.NODE_ENV !== 'production',
     logging: process.env.NODE_ENV === 'development',
+
+    // Enhanced connection pooling settings
     maxConnections: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '20', 10),
     minConnections: parseInt(process.env.DATABASE_MIN_CONNECTIONS || '5', 10),
-    acquireTimeout: parseInt(process.env.DATABASE_ACQUIRE_TIMEOUT || '60000', 10),
+    acquireTimeout: parseInt(
+      process.env.DATABASE_ACQUIRE_TIMEOUT || '60000',
+      10,
+    ),
     idleTimeout: parseInt(process.env.DATABASE_IDLE_TIMEOUT || '600000', 10),
+    softIdleTimeout: parseInt(
+      process.env.DATABASE_SOFT_IDLE_TIMEOUT || '300000',
+      10,
+    ),
+
+    // Query optimization settings
+    statementTimeout: parseInt(
+      process.env.DATABASE_STATEMENT_TIMEOUT || '30000',
+      10,
+    ),
+    queryTimeout: parseInt(process.env.DATABASE_QUERY_TIMEOUT || '25000', 10),
+    maxQueryExecutionTime: parseInt(
+      process.env.DATABASE_MAX_QUERY_EXECUTION_TIME || '10000',
+      10,
+    ),
+
+    // Cache settings
+    cacheTimeout: parseInt(process.env.DATABASE_CACHE_TIMEOUT || '30000', 10),
+
+    // Retry configuration
+    retryAttempts: parseInt(process.env.DATABASE_RETRY_ATTEMPTS || '3', 10),
+    retryDelay: parseInt(process.env.DATABASE_RETRY_DELAY || '3000', 10),
   },
   redis: {
     host: process.env.REDIS_HOST || 'localhost',

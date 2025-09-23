@@ -28,6 +28,8 @@ describe('env.validation', () => {
   });
 
   it('throws when validation fails', () => {
-    expect(() => validate({ NODE_ENV: 'invalid-env' })).toThrow('Environment validation failed');
+    expect(() => validate({ NODE_ENV: 'invalid-env' })).toThrow(
+      'Environment validation failed',
+    );
   });
 });

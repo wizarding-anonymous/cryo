@@ -4,31 +4,33 @@ const { execSync } = require('child_process');
 const path = require('path');
 
 /**
- * Production-ready migration runner script
- * This script ensures migrations are run safely in production
+ * Production migration runner script
+ * This script ensures migrations are run safely in production environments
  */
 
-console.log('🔄 Starting migration process...');
-
-try {
-  // Build the project first
-  console.log('📦 Building project...');
-  execSync('npm run build', { stdio: 'inherit', cwd: process.cwd() });
-
-  // Check pending migrations
-  console.log('🔍 Checking for pending migrations...');
+async function runMigrations() {
   try {
-    execSync('npm run typeorm -- migration:show', { stdio: 'inherit', cwd: process.cwd() });
+    console.log('Starting database migrations...');
+    
+    // Ensure the application is built
+    console.log('Building application...');
+    execSync('npm run build', { stdio: 'inherit' });
+    
+    // Run migrations
+    console.log('Running migrations...');
+    execSync('npm run typeorm -- migration:run', { stdio: 'inherit' });
+    
+    console.log('Migrations completed successfully!');
+    process.exit(0);
   } catch (error) {
-    console.log('ℹ️  No migrations to show or database not accessible');
+    console.error('Migration failed:', error.message);
+    process.exit(1);
   }
-
-  // Run migrations
-  console.log('🚀 Running migrations...');
-  execSync('npm run typeorm -- migration:run', { stdio: 'inherit', cwd: process.cwd() });
-
-  console.log('✅ Migrations completed successfully!');
-} catch (error) {
-  console.error('❌ Migration failed:', error.message);
-  process.exit(1);
 }
+
+// Only run if this script is executed directly
+if (require.main === module) {
+  runMigrations();
+}
+
+module.exports = { runMigrations };

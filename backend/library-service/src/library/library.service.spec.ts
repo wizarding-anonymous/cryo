@@ -7,8 +7,9 @@ import { UserServiceClient } from '../clients/user.client';
 import { CacheService } from '../cache/cache.service';
 import { EventEmitterService } from '../events/event.emitter.service';
 import { HistoryService } from '../history/history.service';
-import { LibraryQueryDto, AddGameToLibraryDto, SortBy } from './dto/request.dto';
-import { LibraryGame } from './entities/library-game.entity';
+import { LibraryQueryDto, AddGameToLibraryDto } from './dto';
+import { SortBy } from '../common/enums';
+import { LibraryGame } from '../entities/library-game.entity';
 
 interface MinimalGameDetails {
   id: string;
@@ -39,6 +40,13 @@ describe('LibraryService', () => {
     set: jest.fn(),
     del: jest.fn(),
     getOrSet: jest.fn(),
+    getCachedLibraryData: jest.fn().mockImplementation(async (_userId, _cacheKey, fetchFn) => {
+      return await fetchFn();
+    }),
+    invalidateUserLibraryCache: jest.fn(),
+    mget: jest.fn().mockResolvedValue(new Map()),
+    mset: jest.fn(),
+    recordUserCacheKey: jest.fn(),
   };
 
   const mockEventEmitter = {
@@ -69,7 +77,9 @@ describe('LibraryService', () => {
     mockCacheService.get.mockResolvedValue(undefined);
     mockCacheService.set.mockResolvedValue(undefined);
     mockCacheService.del.mockResolvedValue(undefined);
-    mockCacheService.getOrSet.mockImplementation(async (_key: string, fn: () => Promise<any>) => fn());
+    mockCacheService.getOrSet.mockImplementation(
+      async (_key: string, fn: () => Promise<any>) => fn(),
+    );
   });
 
   it('should be defined', () => {
@@ -79,7 +89,9 @@ describe('LibraryService', () => {
   describe('getUserLibrary', () => {
     it('returns a paginated and enriched list of games', async () => {
       const mockGames = [{ id: '1', userId: 'user1', gameId: 'game1' }];
-      const mockDetails: MinimalGameDetails[] = [{ id: 'game1', title: 'Game One' }];
+      const mockDetails: MinimalGameDetails[] = [
+        { id: 'game1', title: 'Game One' },
+      ];
       const queryDto = new LibraryQueryDto();
 
       mockLibraryRepository.findUserLibrary.mockResolvedValue([mockGames, 1]);
@@ -94,9 +106,16 @@ describe('LibraryService', () => {
       expect(result.pagination.total).toBe(1);
       expect(mockLibraryRepository.findUserLibrary).toHaveBeenCalledWith(
         'user1',
-        expect.objectContaining({ page: 1, limit: 20, sortBy: SortBy.PURCHASE_DATE, sortOrder: 'desc' }),
+        expect.objectContaining({
+          page: 1,
+          limit: 20,
+          sortBy: SortBy.PURCHASE_DATE,
+          sortOrder: 'desc',
+        }),
       );
-      expect(mockGameCatalogClient.getGamesByIds).toHaveBeenCalledWith(['game1']);
+      expect(mockGameCatalogClient.getGamesByIds).toHaveBeenCalledWith([
+        'game1',
+      ]);
     });
 
     it('returns empty library when user has no games', async () => {
@@ -115,7 +134,10 @@ describe('LibraryService', () => {
       mockLibraryRepository.findUserLibrary.mockResolvedValue([mockGames, 1]);
       mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
 
-      const result = await service.getUserLibrary('user1', new LibraryQueryDto());
+      const result = await service.getUserLibrary(
+        'user1',
+        new LibraryQueryDto(),
+      );
 
       expect(result.games).toHaveLength(1);
       expect(result.games[0].gameDetails).toBeUndefined();
@@ -127,11 +149,14 @@ describe('LibraryService', () => {
         games: [],
         pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
       };
-      mockCacheService.getOrSet.mockResolvedValue(cachedResponse);
+      mockCacheService.getCachedLibraryData.mockResolvedValue(cachedResponse);
 
-      const result = await service.getUserLibrary('user1', new LibraryQueryDto());
+      const result = await service.getUserLibrary(
+        'user1',
+        new LibraryQueryDto(),
+      );
 
-      expect(mockCacheService.getOrSet).toHaveBeenCalled();
+      expect(mockCacheService.getCachedLibraryData).toHaveBeenCalled();
       expect(result).toBe(cachedResponse);
     });
   });
@@ -159,22 +184,33 @@ describe('LibraryService', () => {
 
       expect(result).toEqual(newGame);
       expect(mockHistoryService.createPurchaseRecord).toHaveBeenCalledWith(dto);
-      expect(mockEventEmitter.emitGameAddedEvent).toHaveBeenCalledWith(dto.userId, dto.gameId);
+      expect(mockEventEmitter.emitGameAddedEvent).toHaveBeenCalledWith(
+        dto.userId,
+        dto.gameId,
+      );
     });
 
     it('throws a ConflictException if the game already exists', async () => {
       mockUserServiceClient.doesUserExist.mockResolvedValue(true);
-      mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(new LibraryGame());
+      mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(
+        new LibraryGame(),
+      );
 
-      await expect(service.addGameToLibrary(dto)).rejects.toThrow(ConflictException);
+      await expect(service.addGameToLibrary(dto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(mockEventEmitter.emitGameAddedEvent).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException if user does not exist', async () => {
       mockUserServiceClient.doesUserExist.mockResolvedValue(false);
 
-      await expect(service.addGameToLibrary(dto)).rejects.toThrow(NotFoundException);
-      expect(mockLibraryRepository.findOneByUserIdAndGameId).not.toHaveBeenCalled();
+      await expect(service.addGameToLibrary(dto)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(
+        mockLibraryRepository.findOneByUserIdAndGameId,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -184,7 +220,9 @@ describe('LibraryService', () => {
       mockGame.purchaseDate = new Date();
       mockGame.purchasePrice = 29.99;
       mockGame.currency = 'USD';
-      mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(mockGame);
+      mockLibraryRepository.findOneByUserIdAndGameId.mockResolvedValue(
+        mockGame,
+      );
 
       const result = await service.checkGameOwnership('user1', 'game1');
 
@@ -210,14 +248,22 @@ describe('LibraryService', () => {
 
       await service.removeGameFromLibrary('user1', 'game1');
 
-      expect(mockLibraryRepository.delete).toHaveBeenCalledWith({ userId: 'user1', gameId: 'game1' });
-      expect(mockEventEmitter.emitGameRemovedEvent).toHaveBeenCalledWith('user1', 'game1');
+      expect(mockLibraryRepository.delete).toHaveBeenCalledWith({
+        userId: 'user1',
+        gameId: 'game1',
+      });
+      expect(mockEventEmitter.emitGameRemovedEvent).toHaveBeenCalledWith(
+        'user1',
+        'game1',
+      );
     });
 
     it('throws NotFoundException when delete affects no rows', async () => {
       mockLibraryRepository.delete.mockResolvedValue({ affected: 0, raw: {} });
 
-      await expect(service.removeGameFromLibrary('user1', 'game1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.removeGameFromLibrary('user1', 'game1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

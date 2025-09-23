@@ -7,8 +7,8 @@ import { GameCatalogClient } from '../src/clients/game-catalog.client';
 import { UserServiceClient } from '../src/clients/user.client';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
-import { LibraryGame } from '../src/library/entities/library-game.entity';
-import { PurchaseHistory } from '../src/history/entities/purchase-history.entity';
+import { LibraryGame } from '../src/entities/library-game.entity';
+import { PurchaseHistory } from '../src/entities/purchase-history.entity';
 
 describe('Library Service E2E with Database', () => {
   let app: INestApplication;
@@ -39,11 +39,13 @@ describe('Library Service E2E with Database', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true
-    }));
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
     app.setGlobalPrefix('api');
     await app.init();
 
@@ -58,7 +60,7 @@ describe('Library Service E2E with Database', () => {
     validToken = jwtService.sign({
       sub: testUserId,
       username: 'testuser',
-      roles: ['user']
+      roles: ['user'],
     });
 
     // Setup mock responses
@@ -73,7 +75,7 @@ describe('Library Service E2E with Database', () => {
         images: ['test-image.jpg'],
         tags: ['action', 'adventure'],
         releaseDate: new Date('2023-01-01'),
-      }
+      },
     ]);
   });
 
@@ -84,7 +86,9 @@ describe('Library Service E2E with Database', () => {
   beforeEach(async () => {
     // Clean up test data before each test
     await dataSource.getRepository(LibraryGame).delete({ userId: testUserId });
-    await dataSource.getRepository(PurchaseHistory).delete({ userId: testUserId });
+    await dataSource
+      .getRepository(PurchaseHistory)
+      .delete({ userId: testUserId });
 
     // Reset mocks
     mockGameCatalogClient.getGamesByIds.mockClear();
@@ -128,7 +132,9 @@ describe('Library Service E2E with Database', () => {
 
       expect(libraryWithGameResponse.body.games).toHaveLength(1);
       expect(libraryWithGameResponse.body.games[0].gameId).toBe(testGameId);
-      expect(libraryWithGameResponse.body.games[0].gameDetails.title).toBe('Test Game');
+      expect(libraryWithGameResponse.body.games[0].gameDetails.title).toBe(
+        'Test Game',
+      );
 
       // 4. Check ownership
       const ownershipResponse = await request(app.getHttpServer())
@@ -204,7 +210,7 @@ describe('Library Service E2E with Database', () => {
           images: [`test-image-${index + 1}.jpg`],
           tags: ['action'],
           releaseDate: new Date('2023-01-01'),
-        }))
+        })),
       );
 
       // Test pagination
@@ -302,9 +308,7 @@ describe('Library Service E2E with Database', () => {
     });
 
     it('should handle missing authorization header', async () => {
-      await request(app.getHttpServer())
-        .get('/api/library/my')
-        .expect(401);
+      await request(app.getHttpServer()).get('/api/library/my').expect(401);
     });
 
     it('should validate request data', async () => {
@@ -351,7 +355,7 @@ describe('Library Service E2E with Database', () => {
   });
 
   describe('Security and Authorization', () => {
-    it('should prevent a user from accessing another user\'s library', async () => {
+    it("should prevent a user from accessing another user's library", async () => {
       const otherUserId = randomUUID();
       const otherUserGameId = randomUUID();
 
@@ -363,7 +367,7 @@ describe('Library Service E2E with Database', () => {
           gameId: testGameId,
           orderId: randomUUID(),
           purchaseId: randomUUID(),
-          purchasePrice: 10.00,
+          purchasePrice: 10.0,
           currency: 'USD',
           purchaseDate: new Date().toISOString(),
         })
@@ -377,7 +381,7 @@ describe('Library Service E2E with Database', () => {
           gameId: otherUserGameId,
           orderId: randomUUID(),
           purchaseId: randomUUID(),
-          purchasePrice: 20.00,
+          purchasePrice: 20.0,
           currency: 'EUR',
           purchaseDate: new Date().toISOString(),
         })

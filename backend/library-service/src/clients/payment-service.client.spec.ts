@@ -56,7 +56,9 @@ describe('PaymentServiceClient', () => {
       const result = await client.getOrderStatus(orderId);
 
       expect(result).toEqual({ status: 'completed' });
-      expect(httpService.get).toHaveBeenCalledWith(`http://payment-service/orders/${orderId}`);
+      expect(httpService.get).toHaveBeenCalledWith(
+        `http://payment-service/orders/${orderId}`,
+      );
     });
 
     it('throws an error if the http call fails', async () => {
@@ -65,6 +67,94 @@ describe('PaymentServiceClient', () => {
       mockHttpService.get.mockReturnValue(throwError(() => error));
 
       await expect(client.getOrderStatus(orderId)).rejects.toThrow('API Error');
+    });
+  });
+
+  describe('getOrderDetails', () => {
+    it('returns order details on success', async () => {
+      const orderId = 'test-order-id';
+      const mockOrderDetails = {
+        id: orderId,
+        userId: 'user-123',
+        gameId: 'game-456',
+        amount: 29.99,
+        currency: 'USD',
+        status: 'completed' as const,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const mockResponse = {
+        data: mockOrderDetails,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: { headers: {} },
+      } as AxiosResponse;
+      mockHttpService.get.mockReturnValue(of(mockResponse));
+
+      const result = await client.getOrderDetails(orderId);
+
+      expect(result).toEqual(mockOrderDetails);
+      expect(httpService.get).toHaveBeenCalledWith(
+        `http://payment-service/orders/${orderId}/details`,
+      );
+    });
+
+    it('throws an error if the http call fails', async () => {
+      const orderId = 'test-order-id';
+      const error = new Error('API Error');
+      mockHttpService.get.mockReturnValue(throwError(() => error));
+
+      await expect(client.getOrderDetails(orderId)).rejects.toThrow(
+        'API Error',
+      );
+    });
+  });
+
+  describe('verifyPayment', () => {
+    it('returns verification result on success', async () => {
+      const orderId = 'test-order-id';
+      const mockResponse = {
+        data: { verified: true, transactionId: 'txn-123' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: { headers: {} },
+      } as AxiosResponse;
+      mockHttpService.get.mockReturnValue(of(mockResponse));
+
+      const result = await client.verifyPayment(orderId);
+
+      expect(result).toEqual({ verified: true, transactionId: 'txn-123' });
+      expect(httpService.get).toHaveBeenCalledWith(
+        `http://payment-service/orders/${orderId}/verify`,
+      );
+    });
+
+    it('throws an error if the http call fails', async () => {
+      const orderId = 'test-order-id';
+      const error = new Error('API Error');
+      mockHttpService.get.mockReturnValue(throwError(() => error));
+
+      await expect(client.verifyPayment(orderId)).rejects.toThrow('API Error');
+    });
+  });
+
+  describe('circuit breaker', () => {
+    it('should handle circuit breaker functionality', async () => {
+      // Test that circuit breaker exists and can handle errors
+      const error = new Error('Network error');
+      mockHttpService.get.mockReturnValue(throwError(() => error));
+
+      // First call should throw error
+      await expect(client.getOrderStatus('test-order')).rejects.toThrow(
+        'Network error',
+      );
+
+      // Verify that the HTTP service was called
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://payment-service/orders/test-order',
+      );
     });
   });
 });

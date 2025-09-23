@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 import { RedisHealthIndicator } from './redis.health';
+import { CacheHealthIndicator } from './cache.health';
 
 @Controller('health')
 export class HealthController {
@@ -16,6 +17,7 @@ export class HealthController {
     private db: TypeOrmHealthIndicator,
     private microservice: MicroserviceHealthIndicator,
     private redis: RedisHealthIndicator,
+    private cache: CacheHealthIndicator,
     private configService: ConfigService,
   ) {}
 
@@ -53,6 +55,7 @@ export class HealthController {
     const checks = [
       () => this.db.pingCheck('database', { timeout: 300 }),
       () => this.redis.isHealthy('redis'),
+      () => this.cache.isHealthy('cache'),
     ];
     return this.health.check(checks);
   }

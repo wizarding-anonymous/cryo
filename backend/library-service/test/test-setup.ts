@@ -8,7 +8,7 @@ process.env.NODE_ENV = 'test';
 process.env.DATABASE_HOST = '127.0.0.1';
 process.env.DATABASE_PORT = '5433';
 process.env.DATABASE_USERNAME = 'postgres';
-process.env.DATABASE_PASSWORD = 'test_password';
+process.env.DATABASE_PASSWORD = 'password';
 process.env.DATABASE_NAME = 'library_service_test';
 process.env.REDIS_HOST = '127.0.0.1';
 process.env.REDIS_PORT = '6380';
@@ -27,7 +27,14 @@ process.env.HTTP_TIMEOUT = '1000';
 process.env.CACHE_TTL = '60';
 
 // Basic debug to verify env values in CI/local
-// eslint-disable-next-line no-console
+
 console.log('[e2e] E2E Test environment configured');
-// eslint-disable-next-line no-console
-console.log('[e2e] DB', process.env.DATABASE_HOST, process.env.DATABASE_PORT, process.env.DATABASE_USERNAME, process.env.DATABASE_PASSWORD, process.env.DATABASE_NAME);
+
+console.log(
+  '[e2e] DB',
+  process.env.DATABASE_HOST,
+  process.env.DATABASE_PORT,
+  process.env.DATABASE_USERNAME,
+  process.env.DATABASE_PASSWORD,
+  process.env.DATABASE_NAME,
+);

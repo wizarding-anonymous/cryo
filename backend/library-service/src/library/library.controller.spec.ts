@@ -1,9 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { LibraryController } from './library.controller';
 import { LibraryService } from './library.service';
 import { SearchService } from './search.service';
-import { LibraryQueryDto, SearchLibraryDto } from './dto/request.dto';
-import { LibraryResponseDto, OwnershipResponseDto } from './dto/response.dto';
+import {
+  LibraryQueryDto,
+  SearchLibraryDto,
+  LibraryResponseDto,
+  OwnershipResponseDto,
+} from './dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../auth/guards/ownership.guard';
+import { InternalAuthGuard } from '../auth/guards/internal-auth.guard';
 
 describe('LibraryController', () => {
   let controller: LibraryController;
@@ -21,13 +29,24 @@ describe('LibraryController', () => {
     searchUserLibrary: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LibraryController],
       providers: [
         { provide: LibraryService, useValue: mockLibraryService },
         { provide: SearchService, useValue: mockSearchService },
-        { provide: 'CACHE_MANAGER', useValue: { get: jest.fn(), set: jest.fn() } },
+        { provide: ConfigService, useValue: mockConfigService },
+        { provide: JwtAuthGuard, useValue: { canActivate: () => true } },
+        { provide: OwnershipGuard, useValue: { canActivate: () => true } },
+        { provide: InternalAuthGuard, useValue: { canActivate: () => true } },
+        {
+          provide: 'CACHE_MANAGER',
+          useValue: { get: jest.fn(), set: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -52,10 +71,16 @@ describe('LibraryController', () => {
 
       mockLibraryService.getUserLibrary.mockResolvedValue(mockResponse);
 
-      const result = await controller.getMyLibrary(mockRequest as any, queryDto);
+      const result = await controller.getMyLibrary(
+        mockRequest as any,
+        queryDto,
+      );
 
       expect(result).toEqual(mockResponse);
-      expect(libraryService.getUserLibrary).toHaveBeenCalledWith('user123', queryDto);
+      expect(libraryService.getUserLibrary).toHaveBeenCalledWith(
+        'user123',
+        queryDto,
+      );
     });
   });
 
@@ -71,10 +96,16 @@ describe('LibraryController', () => {
 
       mockSearchService.searchUserLibrary.mockResolvedValue(mockResponse);
 
-      const result = await controller.searchMyLibrary(mockRequest as any, searchDto);
+      const result = await controller.searchMyLibrary(
+        mockRequest as any,
+        searchDto,
+      );
 
       expect(result).toEqual(mockResponse);
-      expect(searchService.searchUserLibrary).toHaveBeenCalledWith('user123', searchDto);
+      expect(searchService.searchUserLibrary).toHaveBeenCalledWith(
+        'user123',
+        searchDto,
+      );
     });
   });
 
@@ -91,10 +122,16 @@ describe('LibraryController', () => {
 
       mockLibraryService.checkGameOwnership.mockResolvedValue(mockResponse);
 
-      const result = await controller.checkOwnership(mockRequest as any, gameId);
+      const result = await controller.checkOwnership(
+        mockRequest as any,
+        gameId,
+      );
 
       expect(result).toEqual(mockResponse);
-      expect(libraryService.checkGameOwnership).toHaveBeenCalledWith('user123', gameId);
+      expect(libraryService.checkGameOwnership).toHaveBeenCalledWith(
+        'user123',
+        gameId,
+      );
     });
   });
 });

@@ -49,7 +49,11 @@ describe('GameCatalogClient', () => {
 
     it('should return game details on success', async () => {
       const mockResponse: AxiosResponse = {
-        data: { games: [{ id: '1', title: 'Game 1', developer: 'Dev 1', price: 29.99 }] },
+        data: {
+          games: [
+            { id: '1', title: 'Game 1', developer: 'Dev 1', price: 29.99 },
+          ],
+        },
         status: 200,
         statusText: 'OK',
         headers: {},
@@ -60,7 +64,9 @@ describe('GameCatalogClient', () => {
       const result = await client.getGamesByIds(['1']);
       expect(result).toEqual(mockResponse.data.games);
       expect(httpService.get).toHaveBeenCalledTimes(1);
-      expect(httpService.get).toHaveBeenCalledWith('http://fake-url/internal/games/batch?ids=1');
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-url/internal/games/batch?ids=1',
+      );
     });
 
     it('should return empty array on error after retries', async () => {
@@ -69,7 +75,9 @@ describe('GameCatalogClient', () => {
 
       const result = await client.getGamesByIds(['1']);
       expect(result).toEqual([]);
-      expect(httpService.get).toHaveBeenCalledWith('http://fake-url/internal/games/batch?ids=1');
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-url/internal/games/batch?ids=1',
+      );
     });
 
     it('should handle missing games property in response', async () => {
@@ -100,7 +108,9 @@ describe('GameCatalogClient', () => {
 
       const result = await client.doesGameExist('1');
       expect(result).toBe(true);
-      expect(httpService.get).toHaveBeenCalledWith('http://fake-url/internal/games/1/exists');
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-url/internal/games/1/exists',
+      );
     });
 
     it('should return false when game does not exist', async () => {
@@ -123,7 +133,9 @@ describe('GameCatalogClient', () => {
 
       const result = await client.doesGameExist('1');
       expect(result).toBe(false);
-      expect(httpService.get).toHaveBeenCalledWith('http://fake-url/internal/games/1/exists');
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-url/internal/games/1/exists',
+      );
     });
 
     it('should handle malformed response data', async () => {
@@ -138,6 +150,56 @@ describe('GameCatalogClient', () => {
 
       const result = await client.doesGameExist('1');
       expect(result).toBe(false);
+    });
+  });
+
+  describe('getGameDetails', () => {
+    it('should return game details on success', async () => {
+      const mockGameDetails = {
+        id: '1',
+        title: 'Test Game',
+        developer: 'Test Developer',
+        price: 29.99,
+      };
+      const mockResponse: AxiosResponse = {
+        data: mockGameDetails,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+      mockHttpService.get.mockReturnValue(of(mockResponse));
+
+      const result = await client.getGameDetails('1');
+      expect(result).toEqual(mockGameDetails);
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-url/internal/games/1',
+      );
+    });
+
+    it('should return null on error after retries', async () => {
+      const error = new Error('Network error');
+      mockHttpService.get.mockReturnValue(throwError(() => error));
+
+      const result = await client.getGameDetails('1');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('circuit breaker', () => {
+    it('should handle circuit breaker functionality', async () => {
+      // Test that circuit breaker exists and can be triggered
+      const error = new Error('Network error');
+      mockHttpService.get.mockReturnValue(throwError(() => error));
+
+      // First call should return false due to error handling
+      const result = await client.doesGameExist('1');
+      expect(result).toBe(false);
+
+      // Verify that the HTTP service was called
+      expect(httpService.get).toHaveBeenCalledWith(
+        'http://fake-url/internal/games/1/exists',
+      );
     });
   });
 });

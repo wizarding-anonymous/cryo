@@ -1,11 +1,9 @@
 // Optional APM agent initialization (loaded before the app for capture)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const apm = (() => {
+(() => {
   try {
     // Only start APM if ELASTIC_APM_SERVER_URL is set
     if (process.env.ELASTIC_APM_SERVER_URL) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const agent = require('elastic-apm-node').start({
+      require('elastic-apm-node').start({
         serviceName: process.env.ELASTIC_APM_SERVICE_NAME || 'library-service',
         serverUrl: process.env.ELASTIC_APM_SERVER_URL,
         secretToken: process.env.ELASTIC_APM_SECRET_TOKEN,
@@ -14,25 +12,28 @@ const apm = (() => {
         captureBody: 'transactions',
         active: true,
       });
-      // eslint-disable-next-line no-console
+
       console.log('[APM] Elastic APM agent initialized');
-      return agent;
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('[APM] Elastic APM initialization skipped:', e);
   }
-  return undefined;
 })();
 
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Transport, type KafkaOptions } from '@nestjs/microservices';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { AppModule } from './app.module';
+import { 
+  CustomValidationPipe,
+  LoggingInterceptor,
+  TransformInterceptor,
+  GlobalExceptionFilter 
+} from './common';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -61,7 +62,8 @@ async function bootstrap(): Promise<void> {
 
   if (kafkaEnabled) {
     try {
-      const kafkaBroker = configService.get<string>('kafka.broker') ?? 'localhost:9092';
+      const kafkaBroker =
+        configService.get<string>('kafka.broker') ?? 'localhost:9092';
       const kafkaOptions: KafkaOptions = {
         transport: Transport.KAFKA,
         options: {
@@ -88,28 +90,17 @@ async function bootstrap(): Promise<void> {
     logger.log('⏭️ Kafka disabled for this environment');
   }
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
+  // Enhanced global validation pipe with custom validators
+  app.useGlobalPipes(new CustomValidationPipe());
 
-  // Global interceptors for logging and response transformation
+  // Enhanced global interceptors for logging and response transformation
   app.useGlobalInterceptors(
-    new (require('./common/interceptors/logging.interceptor').LoggingInterceptor)(),
-    new (require('./common/interceptors/transform.interceptor').TransformInterceptor)(),
+    new LoggingInterceptor(),
+    new TransformInterceptor(),
   );
 
   // Global exception filter
-  app.useGlobalFilters(
-    new (require('./common/filters/global-exception.filter').GlobalExceptionFilter)(),
-  );
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // CORS configuration
   app.enableCors({
@@ -123,9 +114,12 @@ async function bootstrap(): Promise<void> {
 
   // Swagger configuration
   const swaggerConfig = new DocumentBuilder()
-    .setTitle(configService.get<string>('swagger.title') ?? 'Library Service API')
+    .setTitle(
+      configService.get<string>('swagger.title') ?? 'Library Service API',
+    )
     .setDescription(
-      configService.get<string>('swagger.description') ?? 'API for managing user game libraries',
+      configService.get<string>('swagger.description') ??
+        'API for managing user game libraries',
     )
     .setVersion(configService.get<string>('swagger.version') ?? '1.0')
     .addBearerAuth(

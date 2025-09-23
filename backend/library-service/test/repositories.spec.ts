@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { LibraryGame } from '../src/library/entities/library-game.entity';
-import { PurchaseHistory } from '../src/history/entities/purchase-history.entity';
+import { LibraryGame } from '../src/entities/library-game.entity';
+import { PurchaseHistory } from '../src/entities/purchase-history.entity';
 import { TestAppModule } from './test-app.module';
 
 describe('Repository Layer', () => {
