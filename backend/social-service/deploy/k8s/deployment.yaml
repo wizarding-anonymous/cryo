@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: social-service
+  labels:
+    app: social-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: social-service
+  template:
+    metadata:
+      labels:
+        app: social-service
+    spec:
+      containers:
+        - name: social-service
+          image: social-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3007
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: social-service-secrets
+                  key: DATABASE_HOST
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: social-service-secrets
+                  key: DATABASE_USERNAME
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: social-service-secrets
+                  key: DATABASE_PASSWORD
+            - name: DATABASE_NAME
+              value: social_db
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: social-service-secrets
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              value: "6379"
+            - name: CACHE_STORE
+              value: redis
+            - name: INTERNAL_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: social-service-secrets
+                  key: INTERNAL_API_TOKEN
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 3007
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: 3007
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

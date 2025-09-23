@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: social-service-config
+data:
+  PORT: "3007"
+  DATABASE_NAME: "social_db"

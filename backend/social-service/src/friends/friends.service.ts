@@ -11,6 +11,7 @@ import { UserServiceClient } from '../clients/user.service.client';
 import { NotificationServiceClient } from '../clients/notification.service.client';
 import { AchievementServiceClient } from '../clients/achievement.service.client';
 import { UserSearchResultDto } from './dto/user-search-result.dto';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable()
 export class FriendsService {
@@ -20,6 +21,7 @@ export class FriendsService {
     private readonly userServiceClient: UserServiceClient,
     private readonly notificationServiceClient: NotificationServiceClient,
     private readonly achievementServiceClient: AchievementServiceClient,
+    private readonly cacheService: CacheService,
   ) {}
 
   async sendFriendRequest(
@@ -86,6 +88,9 @@ export class FriendsService {
 
     await this.friendshipRepository.save([request, reverseFriendship]);
 
+    // Invalidate friends list cache for both users
+    await this.invalidateFriendsCache([request.userId, request.friendId]);
+
     const friendCount = await this.getFriendsCount(userId);
     if (friendCount === 1) {
       await this.achievementServiceClient.updateProgress({
@@ -112,6 +117,8 @@ export class FriendsService {
     }
 
     await this.friendshipRepository.remove(request);
+    // Invalidate cache for involved users
+    await this.invalidateFriendsCache([request.userId, request.friendId]);
   }
 
   async removeFriend(userId: string, friendId: string): Promise<void> {
@@ -128,10 +135,22 @@ export class FriendsService {
     } else {
       await this.friendshipRepository.remove(friendship);
     }
+
+    await this.invalidateFriendsCache([userId, friendId]);
   }
 
   async getFriends(userId: string, options: FriendsQueryDto) {
     const { page = 1, limit = 20 } = options;
+
+    // Try cache only for default filter (no status filter) and first pages
+    const canUseCache = (!options.status || options.status === 'all') && page === 1;
+    const cacheKey = `friends:list:${userId}:page=${page}:limit=${limit}:status=${options.status ?? 'all'}`;
+    if (canUseCache) {
+      const cached = await this.cacheService.get<any>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
 
     const where: FindOptionsWhere<Friendship> = {
       userId: userId,
@@ -153,7 +172,7 @@ export class FriendsService {
       return { ...f, friendInfo: info };
     });
 
-    return {
+    const result = {
       friends: friendsWithInfo,
       pagination: {
         total,
@@ -162,6 +181,12 @@ export class FriendsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+
+    if (canUseCache) {
+      await this.cacheService.set(cacheKey, result, 60);
+    }
+
+    return result;
   }
 
   async getFriendRequests(userId: string): Promise<Friendship[]> {
@@ -202,5 +227,13 @@ export class FriendsService {
     currentUserId: string,
   ): Promise<UserSearchResultDto[]> {
     return this.userServiceClient.searchUsers(query, currentUserId);
+  }
+
+  private async invalidateFriendsCache(userIds: string[]): Promise<void> {
+    for (const id of userIds) {
+      // A simple strategy: invalidate first-page cache variants
+      await this.cacheService.del(`friends:list:${id}:page=1:limit=20:status=all`);
+      await this.cacheService.del(`friends:list:${id}:page=1:limit=20:status=${'all'}`);
+    }
   }
 }
