@@ -1,0 +1,53 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: library-service
+  labels:
+    app: library-service
+    component: backend
+
+resources:
+- serviceaccount.yaml
+- secret.yaml
+- configmap.yaml
+- pvc.yaml
+- deployment.yaml
+- service.yaml
+- hpa.yaml
+- networkpolicy.yaml
+- poddisruptionbudget.yaml
+
+commonLabels:
+  app: library-service
+  version: v1
+  managed-by: kustomize
+
+namespace: default
+
+images:
+- name: your-registry/library-service
+  newTag: latest
+
+replicas:
+- name: library-service
+  count: 2
+
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: library-service
+  spec:
+    template:
+      metadata:
+        annotations:
+          config/checksum: ${CONFIG_CHECKSUM}
+
+configMapGenerator:
+- name: library-service-env-config
+  literals:
+  - DEPLOYMENT_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  - GIT_COMMIT=${GIT_COMMIT:-unknown}
+  - BUILD_VERSION=${BUILD_VERSION:-dev}

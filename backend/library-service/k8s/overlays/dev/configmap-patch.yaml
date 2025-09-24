@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: library-service-config
+data:
+  LOG_LEVEL: "debug"
+  DATABASE_POOL_SIZE: "5"
+  CACHE_TTL: "60"
+  API_RATE_LIMIT: "1000"

@@ -329,7 +329,16 @@
   - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - _Requirements: 5_
 
-- [-] 19. Подготовка к Kubernetes deployment
+- [x] 19. Подготовка к Kubernetes deployment
+
+
+
+
+
+
+
+
+
 
 
   - Создать Kubernetes manifests (Deployment, Service, ConfigMap)
