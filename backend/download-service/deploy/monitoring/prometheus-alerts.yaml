@@ -1,0 +1,127 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: download-service-alerts
+  labels:
+    app: download-service
+    prometheus: kube-prometheus
+spec:
+  groups:
+  - name: download-service.rules
+    rules:
+    # High error rate alert
+    - alert: DownloadServiceHighErrorRate
+      expr: |
+        (
+          rate(http_requests_total{job="download-service",status=~"5.."}[5m]) /
+          rate(http_requests_total{job="download-service"}[5m])
+        ) * 100 > 5
+      for: 2m
+      labels:
+        severity: warning
+        service: download-service
+      annotations:
+        summary: "Download Service has high error rate"
+        description: "Download Service error rate is {{ $value }}% for the last 5 minutes"
+
+    # High response time alert
+    - alert: DownloadServiceHighLatency
+      expr: |
+        histogram_quantile(0.95, 
+          rate(http_request_duration_seconds_bucket{job="download-service"}[5m])
+        ) > 1
+      for: 5m
+      labels:
+        severity: warning
+        service: download-service
+      annotations:
+        summary: "Download Service has high response time"
+        description: "Download Service 95th percentile latency is {{ $value }}s"
+
+    # Service down alert
+    - alert: DownloadServiceDown
+      expr: up{job="download-service"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: download-service
+      annotations:
+        summary: "Download Service is down"
+        description: "Download Service has been down for more than 1 minute"
+
+    # High memory usage alert
+    - alert: DownloadServiceHighMemoryUsage
+      expr: |
+        (
+          process_resident_memory_bytes{job="download-service"} /
+          (512 * 1024 * 1024)
+        ) * 100 > 90
+      for: 5m
+      labels:
+        severity: warning
+        service: download-service
+      annotations:
+        summary: "Download Service high memory usage"
+        description: "Download Service memory usage is {{ $value }}% of limit"
+
+    # High CPU usage alert
+    - alert: DownloadServiceHighCPUUsage
+      expr: |
+        rate(process_cpu_seconds_total{job="download-service"}[5m]) * 100 > 80
+      for: 5m
+      labels:
+        severity: warning
+        service: download-service
+      annotations:
+        summary: "Download Service high CPU usage"
+        description: "Download Service CPU usage is {{ $value }}%"
+
+    # Too many active downloads alert
+    - alert: DownloadServiceTooManyActiveDownloads
+      expr: downloads_active{job="download-service"} > 1000
+      for: 2m
+      labels:
+        severity: warning
+        service: download-service
+      annotations:
+        summary: "Download Service has too many active downloads"
+        description: "Download Service has {{ $value }} active downloads"
+
+    # Low download success rate alert
+    - alert: DownloadServiceLowSuccessRate
+      expr: |
+        (
+          rate(downloads_total{status="completed",job="download-service"}[10m]) /
+          rate(downloads_total{job="download-service"}[10m])
+        ) * 100 < 90
+      for: 5m
+      labels:
+        severity: warning
+        service: download-service
+      annotations:
+        summary: "Download Service has low success rate"
+        description: "Download Service success rate is {{ $value }}% over the last 10 minutes"
+
+    # No downloads for extended period
+    - alert: DownloadServiceNoActivity
+      expr: |
+        rate(downloads_total{job="download-service"}[30m]) == 0
+      for: 30m
+      labels:
+        severity: info
+        service: download-service
+      annotations:
+        summary: "Download Service has no activity"
+        description: "No downloads have been initiated in the last 30 minutes"
+
+    # Goroutine leak detection
+    - alert: DownloadServiceGoroutineLeak
+      expr: |
+        go_goroutines{job="download-service"} > 1000
+      for: 10m
+      labels:
+        severity: warning
+        service: download-service
+      annotations:
+        summary: "Download Service potential goroutine leak"
+        description: "Download Service has {{ $value }} goroutines running"

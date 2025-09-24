@@ -85,6 +85,70 @@ func (r *memDownloadRepo) ListByUser(ctx context.Context, userID string, limit, 
     return out, nil
 }
 
+func (r *memDownloadRepo) GetByIDWithFiles(ctx context.Context, id string) (*models.Download, error) {
+    return r.GetByID(ctx, id)
+}
+
+func (r *memDownloadRepo) UpdateStatus(ctx context.Context, id string, status models.DownloadStatus) error {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    if d, ok := r.m[id]; ok {
+        d.Status = status
+        d.UpdatedAt = time.Now()
+        r.m[id] = d
+        return nil
+    }
+    return gorm.ErrRecordNotFound
+}
+
+func (r *memDownloadRepo) UpdateProgress(ctx context.Context, id string, progress int, downloadedSize int64, speed int64) error {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    if d, ok := r.m[id]; ok {
+        d.Progress = progress
+        d.DownloadedSize = downloadedSize
+        d.Speed = speed
+        d.UpdatedAt = time.Now()
+        r.m[id] = d
+        return nil
+    }
+    return gorm.ErrRecordNotFound
+}
+
+func (r *memDownloadRepo) ListByUserAndStatus(ctx context.Context, userID string, status models.DownloadStatus, limit, offset int) ([]models.Download, error) {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    out := make([]models.Download, 0)
+    for _, v := range r.m {
+        if v.UserID == userID && v.Status == status {
+            out = append(out, v)
+        }
+    }
+    return out, nil
+}
+
+func (r *memDownloadRepo) Delete(ctx context.Context, id string) error {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    if _, ok := r.m[id]; !ok {
+        return gorm.ErrRecordNotFound
+    }
+    delete(r.m, id)
+    return nil
+}
+
+func (r *memDownloadRepo) CountByUser(ctx context.Context, userID string) (int64, error) {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    count := int64(0)
+    for _, v := range r.m {
+        if v.UserID == userID {
+            count++
+        }
+    }
+    return count, nil
+}
+
 type mockLibrary struct{ owned bool }
 
 func (m mockLibrary) CheckOwnership(ctx context.Context, userID, gameID string) (bool, error) { return m.owned, nil }

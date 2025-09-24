@@ -10,20 +10,13 @@ import (
     "syscall"
     "time"
 
-    "github.com/gin-contrib/cors"
-    "github.com/gin-contrib/gzip"
-    "github.com/gin-gonic/gin"
-    ginpprof "github.com/gin-contrib/pprof"
-    "github.com/prometheus/client_golang/prometheus/promhttp"
-
     "download-service/internal/cache"
     libclient "download-service/internal/clients/library"
     s3client "download-service/internal/clients/s3"
     "download-service/internal/handlers"
     "download-service/internal/database"
-    intramw "download-service/internal/middleware"
-    "download-service/internal/observability"
     "download-service/internal/repository"
+    "download-service/internal/router"
     "download-service/internal/services"
     "download-service/pkg/config"
     "download-service/pkg/logger"
@@ -31,30 +24,7 @@ import (
 
 func main() {
     cfg := config.Load()
-    logg := logger.New()
-
-    if cfg.Env == "production" {
-        gin.SetMode(gin.ReleaseMode)
-    }
-
-    r := gin.New()
-    // Recovery first to catch panics
-    r.Use(gin.Recovery())
-    // Request ID, logging
-    r.Use(intramw.RequestID())
-    r.Use(logger.GinLogger(logg))
-    // CORS and compression
-    r.Use(cors.Default())
-    r.Use(gzip.Gzip(gzip.DefaultCompression))
-
-    // Metrics middleware
-    r.Use(observability.GinMetrics())
-
-    // pprof
-    ginpprof.Register(r, "/debug/pprof")
-
-    // Health endpoints
-    r.GET("/api/v1/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
+    logg := logger.NewWithConfig(cfg.LogLevel, cfg.LogFormat)
 
 
     // Initialize database
@@ -70,7 +40,7 @@ func main() {
     }
 
     // Initialize Library Service client
-    lib := libclient.NewClient(libclient.Options{
+    baseLibClient := libclient.NewClient(libclient.Options{
         BaseURL:             cfg.LibraryBaseURL,
         Timeout:             time.Duration(cfg.LibraryTimeoutMs) * time.Millisecond,
         MaxRetries:          cfg.LibraryRetries,
@@ -79,6 +49,8 @@ func main() {
         CBThreshold:         cfg.LibraryCBThreshold,
         CBCooldown:          time.Duration(cfg.LibraryCBCooldownMs) * time.Millisecond,
     })
+    // Wrap with instrumentation for logging and monitoring
+    lib := libclient.NewInstrumentedClient(baseLibClient, logg)
 
     // Initialize S3 client
     s3, err := s3client.NewClient(context.Background(), s3client.Options{
@@ -98,63 +70,27 @@ func main() {
     fileSvc := services.NewFileService(s3)
     dlSvc := services.NewDownloadService(db, rdb, dlRepo, stream, lib, logg)
 
-    // Register HTTP routes with auth + rate limiting
+    // Create handlers
     h := handlers.NewDownloadHandler(dlSvc, rdb)
     fh := handlers.NewFileHandler(fileSvc, dlSvc)
-    api := r.Group("/api")
-    // Auth
-    api.Use(intramw.Auth(intramw.AuthOptions{
-        Enabled:  cfg.AuthJwtEnabled,
-        Secret:   cfg.AuthJwtSecret,
-        Issuer:   cfg.AuthJwtIssuer,
-        Audience: cfg.AuthJwtAudience,
-    }))
-    // Rate limiting (keyed by user when available, else IP)
-    api.Use(intramw.RateLimit(intramw.RateLimitOptions{
-        RPS:   float64(cfg.RateLimitRPS),
-        Burst: cfg.RateLimitBurst,
-        KeyFunc: func(c *gin.Context) string {
-            if uid, ok := intramw.UserIDFromContext(c); ok { return uid }
-            return ""
-        },
-    }))
-    h.RegisterRoutes(api)
-    fh.RegisterRoutes(api)
+    hh := handlers.NewHealthHandler(db, rdb, logg)
 
-    // Detailed health
-    r.GET("/health/detailed", func(c *gin.Context) {
-        type comp struct{ Status string `json:"status"`; Error string `json:"error,omitempty"` }
-        var dbStatus, redisStatus comp
-        // DB ping
-        if sqlDB, err2 := db.DB(); err2 == nil {
-            ctx, cancel := context.WithTimeout(c.Request.Context(), 500*time.Millisecond)
-            defer cancel()
-            if err := sqlDB.PingContext(ctx); err != nil {
-                dbStatus.Status = "error"
-                dbStatus.Error = err.Error()
-            } else {
-                dbStatus.Status = "ok"
-            }
-        } else {
-            dbStatus.Status = "error"
-            dbStatus.Error = err2.Error()
-        }
-        // Redis ping
-        if err := cache.Ping(c.Request.Context(), rdb); err != nil {
-            redisStatus.Status = "error"
-            redisStatus.Error = err.Error()
-        } else {
-            redisStatus.Status = "ok"
-        }
-        overall := http.StatusOK
-        if dbStatus.Status != "ok" || redisStatus.Status != "ok" {
-            overall = http.StatusServiceUnavailable
-        }
-        c.JSON(overall, gin.H{"status": map[string]any{"db": dbStatus, "redis": redisStatus}})
+    // Setup router with all middleware and routes
+    r := router.SetupRouter(router.RouterOptions{
+        Config:              &cfg,
+        Logger:              logg,
+        DownloadHandler:     h,
+        FileHandler:         fh,
+        HealthHandler:       hh,
+        EnableProfiling:     cfg.Env != "production", // Enable profiling in dev/test
+        EnableMetrics:       true,
+        CORSAllowedOrigins:  []string{}, // Will use production defaults
+        CORSAllowedMethods:  []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+        CORSAllowedHeaders:  []string{"Origin", "Content-Type", "Authorization", "X-Request-ID", "X-User-Id"},
+        CORSExposeHeaders:   []string{"X-Request-ID"},
+        CORSAllowCredentials: false,
+        CORSMaxAge:          12 * time.Hour,
     })
-
-    // Prometheus metrics endpoint
-    r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
     srv := &http.Server{
         Addr:              fmt.Sprintf(":%d", cfg.Port),

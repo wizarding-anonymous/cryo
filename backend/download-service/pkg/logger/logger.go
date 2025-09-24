@@ -33,6 +33,48 @@ func New() Logger {
     return zapWrapper{s: lg.Sugar()}
 }
 
+// NewWithConfig creates a logger with custom configuration options.
+func NewWithConfig(level, format string) Logger {
+    var cfg zap.Config
+    
+    // Set base config based on format
+    switch format {
+    case "console":
+        cfg = zap.NewDevelopmentConfig()
+        cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+    default: // json
+        cfg = zap.NewProductionConfig()
+        cfg.EncoderConfig.TimeKey = "ts"
+        cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+    }
+    
+    // Set log level
+    switch level {
+    case "debug":
+        cfg.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
+    case "info":
+        cfg.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
+    case "warn":
+        cfg.Level = zap.NewAtomicLevelAt(zapcore.WarnLevel)
+    case "error":
+        cfg.Level = zap.NewAtomicLevelAt(zapcore.ErrorLevel)
+    case "fatal":
+        cfg.Level = zap.NewAtomicLevelAt(zapcore.FatalLevel)
+    case "panic":
+        cfg.Level = zap.NewAtomicLevelAt(zapcore.PanicLevel)
+    default:
+        cfg.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
+    }
+    
+    lg, err := cfg.Build()
+    if err != nil {
+        // Fallback to default logger
+        return New()
+    }
+    
+    return zapWrapper{s: lg.Sugar()}
+}
+
 // GinLogger logs structured HTTP access logs with request id.
 func GinLogger(l Logger) gin.HandlerFunc {
     return func(c *gin.Context) {

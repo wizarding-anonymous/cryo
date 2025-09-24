@@ -40,6 +40,7 @@ func (h *DownloadHandler) RegisterRoutes(r *gin.RouterGroup) {
 
     users := r.Group("/users")
     users.GET("/:userId/downloads", h.listUserDownloads)
+    users.GET("/:userId/library/games", h.listUserLibraryGames)
 }
 
 func (h *DownloadHandler) setDownloadSpeed(c *gin.Context) {
@@ -99,6 +100,11 @@ func httpError(c *gin.Context, err error) {
     case derr.DownloadNotFoundError:
         c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
     default:
+        // Check for circuit breaker errors
+        if err != nil && err.Error() == "library client: circuit open" {
+            c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+            return
+        }
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
     }
 }
@@ -261,4 +267,29 @@ func (h *DownloadHandler) listUserDownloads(c *gin.Context) {
         resp = append(resp, dto.FromModel(*d))
     }
     c.JSON(http.StatusOK, gin.H{"items": resp, "limit": limit, "offset": offset, "count": len(resp)})
+}
+
+func (h *DownloadHandler) listUserLibraryGames(c *gin.Context) {
+    pathUserID := c.Param("userId")
+    if pathUserID == "" {
+        httpError(c, derr.ValidationError{Msg: "missing userId"})
+        return
+    }
+    authUserID, ok := intramw.UserIDFromContext(c)
+    if !ok {
+        httpError(c, derr.AccessDeniedError{Reason: "missing user identity"})
+        return
+    }
+    if pathUserID != authUserID {
+        httpError(c, derr.AccessDeniedError{Reason: "cannot view library for another user"})
+        return
+    }
+
+    games, err := h.svc.ListUserLibraryGames(c.Request.Context(), pathUserID)
+    if err != nil {
+        httpError(c, err)
+        return
+    }
+    
+    c.JSON(http.StatusOK, gin.H{"games": games})
 }
