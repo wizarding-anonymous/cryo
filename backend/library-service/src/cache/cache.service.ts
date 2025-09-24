@@ -72,7 +72,7 @@ export class CacheService {
   async get<T>(key: string): Promise<T | undefined> {
     try {
       const value = await this.cacheManager.get<T>(key);
-      
+
       if (value !== undefined && value !== null) {
         this.stats.hits++;
         this.logger.debug(`Cache HIT for key: ${key}`);
@@ -80,10 +80,13 @@ export class CacheService {
         this.stats.misses++;
         this.logger.debug(`Cache MISS for key: ${key}`);
       }
-      
+
       return value ?? undefined;
     } catch (error: unknown) {
-      this.logger.error(`Cache GET error for key ${key}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Cache GET error for key ${key}:`,
+        error instanceof Error ? error.message : String(error),
+      );
       this.stats.misses++;
       return undefined;
     }
@@ -98,7 +101,10 @@ export class CacheService {
       await this.cacheManager.set(key, value, finalTtl);
       this.logger.debug(`Cache SET for key: ${key}, TTL: ${finalTtl}s`);
     } catch (error: unknown) {
-      this.logger.error(`Cache SET error for key ${key}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Cache SET error for key ${key}:`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -110,7 +116,10 @@ export class CacheService {
       await this.cacheManager.del(key);
       this.logger.debug(`Cache DEL for key: ${key}`);
     } catch (error: unknown) {
-      this.logger.error(`Cache DEL error for key ${key}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Cache DEL error for key ${key}:`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -132,7 +141,10 @@ export class CacheService {
       await this.set(key, newData, ttl);
       return newData;
     } catch (error: unknown) {
-      this.logger.error(`Error in getOrSet for key ${key}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Error in getOrSet for key ${key}:`,
+        error instanceof Error ? error.message : String(error),
+      );
       throw error;
     }
   }
@@ -142,42 +154,52 @@ export class CacheService {
    */
   async mget<T>(keys: string[]): Promise<Map<string, T>> {
     const results = new Map<string, T>();
-    
+
     try {
       const promises = keys.map(async (key) => {
         const value = await this.get<T>(key);
         return { key, value };
       });
-      
+
       const resolved = await Promise.all(promises);
-      
+
       resolved.forEach(({ key, value }) => {
         if (value !== undefined) {
           results.set(key, value);
         }
       });
-      
-      this.logger.debug(`Bulk GET for ${keys.length} keys, found ${results.size} values`);
+
+      this.logger.debug(
+        `Bulk GET for ${keys.length} keys, found ${results.size} values`,
+      );
     } catch (error: unknown) {
-      this.logger.error('Bulk GET error:', error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        'Bulk GET error:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
-    
+
     return results;
   }
 
   /**
    * Bulk set operation for multiple key-value pairs
    */
-  async mset<T>(entries: Array<{ key: string; value: T; ttl?: number }>): Promise<void> {
+  async mset<T>(
+    entries: Array<{ key: string; value: T; ttl?: number }>,
+  ): Promise<void> {
     try {
-      const promises = entries.map(({ key, value, ttl }) => 
-        this.set(key, value, ttl)
+      const promises = entries.map(({ key, value, ttl }) =>
+        this.set(key, value, ttl),
       );
-      
+
       await Promise.all(promises);
       this.logger.debug(`Bulk SET for ${entries.length} keys`);
     } catch (error: unknown) {
-      this.logger.error('Bulk SET error:', error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        'Bulk SET error:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -189,18 +211,23 @@ export class CacheService {
       // Note: This is a simplified implementation
       // In production, you might want to use Redis SCAN for better performance
       const keysToDelete = await this.getKeysMatchingPattern(pattern);
-      
+
       if (keysToDelete.length === 0) {
         return 0;
       }
-      
-      const promises = keysToDelete.map(key => this.del(key));
+
+      const promises = keysToDelete.map((key) => this.del(key));
       await Promise.all(promises);
-      
-      this.logger.debug(`Deleted ${keysToDelete.length} keys matching pattern: ${pattern}`);
+
+      this.logger.debug(
+        `Deleted ${keysToDelete.length} keys matching pattern: ${pattern}`,
+      );
       return keysToDelete.length;
     } catch (error: unknown) {
-      this.logger.error(`Error deleting pattern ${pattern}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Error deleting pattern ${pattern}:`,
+        error instanceof Error ? error.message : String(error),
+      );
       return 0;
     }
   }
@@ -214,15 +241,20 @@ export class CacheService {
       const keysToDelete = await this.get<string[]>(userCacheKeysKey);
 
       if (keysToDelete && keysToDelete.length > 0) {
-        const promises = keysToDelete.map(key => this.del(key));
+        const promises = keysToDelete.map((key) => this.del(key));
         await Promise.all(promises);
-        this.logger.debug(`Invalidated ${keysToDelete.length} cache entries for user ${userId}`);
+        this.logger.debug(
+          `Invalidated ${keysToDelete.length} cache entries for user ${userId}`,
+        );
       }
 
       // Clean up the tracking key itself
       await this.del(userCacheKeysKey);
     } catch (error: unknown) {
-      this.logger.error(`Error invalidating user cache for ${userId}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Error invalidating user cache for ${userId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -233,38 +265,51 @@ export class CacheService {
   async invalidateUserLibraryCache(userId: string): Promise<void> {
     try {
       const userCacheKeysKey = `user-cache-keys:${userId}`;
-      const allUserKeys = await this.get<string[]>(userCacheKeysKey) ?? [];
-      
+      const allUserKeys = (await this.get<string[]>(userCacheKeysKey)) ?? [];
+
       // Filter for library and search related keys
-      const libraryKeys = allUserKeys.filter(key => 
-        key.startsWith('library_') || 
-        key.startsWith('search_') || 
-        key.startsWith('ownership_')
+      const libraryKeys = allUserKeys.filter(
+        (key) =>
+          key.startsWith('library_') ||
+          key.startsWith('search_') ||
+          key.startsWith('ownership_'),
       );
 
       if (libraryKeys.length > 0) {
-        const promises = libraryKeys.map(key => this.del(key));
+        const promises = libraryKeys.map((key) => this.del(key));
         await Promise.all(promises);
-        
+
         // Update the tracking key to remove deleted keys
-        const remainingKeys = allUserKeys.filter(key => !libraryKeys.includes(key));
+        const remainingKeys = allUserKeys.filter(
+          (key) => !libraryKeys.includes(key),
+        );
         if (remainingKeys.length > 0) {
           await this.set(userCacheKeysKey, remainingKeys, 0);
         } else {
           await this.del(userCacheKeysKey);
         }
-        
-        this.logger.debug(`Invalidated ${libraryKeys.length} library cache entries for user ${userId}`);
+
+        this.logger.debug(
+          `Invalidated ${libraryKeys.length} library cache entries for user ${userId}`,
+        );
       }
     } catch (error: unknown) {
-      this.logger.error(`Error invalidating user library cache for ${userId}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Error invalidating user library cache for ${userId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
   /**
    * Cache library data with optimized TTL and user tracking
    */
-  async cacheLibraryData<T>(userId: string, cacheKey: string, data: T, customTtl?: number): Promise<void> {
+  async cacheLibraryData<T>(
+    userId: string,
+    cacheKey: string,
+    data: T,
+    customTtl?: number,
+  ): Promise<void> {
     const ttl = customTtl ?? this.cachePatterns.library.ttl;
     await this.set(cacheKey, data, ttl);
     await this.recordUserCacheKey(userId, cacheKey);
@@ -273,7 +318,12 @@ export class CacheService {
   /**
    * Cache search results with optimized TTL and user tracking
    */
-  async cacheSearchResults<T>(userId: string, cacheKey: string, results: T, customTtl?: number): Promise<void> {
+  async cacheSearchResults<T>(
+    userId: string,
+    cacheKey: string,
+    results: T,
+    customTtl?: number,
+  ): Promise<void> {
     const ttl = customTtl ?? this.cachePatterns.search.ttl;
     await this.set(cacheKey, results, ttl);
     await this.recordUserCacheKey(userId, cacheKey);
@@ -286,9 +336,13 @@ export class CacheService {
     userId: string,
     cacheKey: string,
     fallbackFn: () => Promise<T>,
-    customTtl?: number
+    customTtl?: number,
   ): Promise<T> {
-    const result = await this.getOrSet(cacheKey, fallbackFn, customTtl ?? this.cachePatterns.library.ttl);
+    const result = await this.getOrSet(
+      cacheKey,
+      fallbackFn,
+      customTtl ?? this.cachePatterns.library.ttl,
+    );
     await this.recordUserCacheKey(userId, cacheKey);
     return result;
   }
@@ -300,9 +354,13 @@ export class CacheService {
     userId: string,
     cacheKey: string,
     fallbackFn: () => Promise<T>,
-    customTtl?: number
+    customTtl?: number,
   ): Promise<T> {
-    const result = await this.getOrSet(cacheKey, fallbackFn, customTtl ?? this.cachePatterns.search.ttl);
+    const result = await this.getOrSet(
+      cacheKey,
+      fallbackFn,
+      customTtl ?? this.cachePatterns.search.ttl,
+    );
     await this.recordUserCacheKey(userId, cacheKey);
     return result;
   }
@@ -316,18 +374,20 @@ export class CacheService {
       // This would require Redis SCAN in production
       // For now, we log the operation
       this.logger.debug(`Game cache invalidation requested for game ${gameId}`);
-      
+
       // In a real Redis implementation, you would:
       // 1. SCAN for keys matching patterns like "library_*", "search_*"
       // 2. Check if they contain the gameId
       // 3. Delete matching keys
-      
+
       // For now, we'll invalidate the game details cache
       const gameDetailsKey = `game_details_${gameId}`;
       await this.del(gameDetailsKey);
-      
     } catch (error: unknown) {
-      this.logger.error(`Error invalidating game cache for ${gameId}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Error invalidating game cache for ${gameId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -337,20 +397,23 @@ export class CacheService {
   async recordUserCacheKey(userId: string, key: string): Promise<void> {
     try {
       const userCacheKeysKey = `user-cache-keys:${userId}`;
-      const userKeys = await this.get<string[]>(userCacheKeysKey) ?? [];
-      
+      const userKeys = (await this.get<string[]>(userCacheKeysKey)) ?? [];
+
       if (!userKeys.includes(key)) {
         userKeys.push(key);
-        
+
         // Limit the number of tracked keys to prevent memory issues
         if (userKeys.length > 100) {
           userKeys.shift(); // Remove oldest key
         }
-        
+
         await this.set(userCacheKeysKey, userKeys, 0); // No TTL for tracking keys
       }
     } catch (error: unknown) {
-      this.logger.error(`Error recording user cache key for ${userId}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Error recording user cache key for ${userId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -360,7 +423,7 @@ export class CacheService {
   getStats(): CacheStats {
     const totalOperations = this.stats.hits + this.stats.misses;
     const hitRate = totalOperations > 0 ? this.stats.hits / totalOperations : 0;
-    
+
     return {
       hits: this.stats.hits,
       misses: this.stats.misses,
@@ -387,10 +450,18 @@ export class CacheService {
   /**
    * Warm up cache with commonly accessed data
    */
-  async warmUp(warmUpFunctions: Array<{ key: string; fn: () => Promise<any>; ttl?: number }>): Promise<void> {
+  async warmUp(
+    warmUpFunctions: Array<{
+      key: string;
+      fn: () => Promise<any>;
+      ttl?: number;
+    }>,
+  ): Promise<void> {
     try {
-      this.logger.log(`Starting cache warm-up for ${warmUpFunctions.length} entries`);
-      
+      this.logger.log(
+        `Starting cache warm-up for ${warmUpFunctions.length} entries`,
+      );
+
       const promises = warmUpFunctions.map(async ({ key, fn, ttl }) => {
         try {
           const exists = await this.get(key);
@@ -400,40 +471,50 @@ export class CacheService {
             this.logger.debug(`Warmed up cache key: ${key}`);
           }
         } catch (error: unknown) {
-          this.logger.warn(`Failed to warm up cache key ${key}:`, error instanceof Error ? error.message : String(error));
+          this.logger.warn(
+            `Failed to warm up cache key ${key}:`,
+            error instanceof Error ? error.message : String(error),
+          );
         }
       });
-      
+
       await Promise.all(promises);
       this.logger.log('Cache warm-up completed');
     } catch (error: unknown) {
-      this.logger.error('Cache warm-up error:', error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        'Cache warm-up error:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
   /**
    * Health check for cache service
    */
-  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; details: any }> {
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    details: any;
+  }> {
     try {
       const testKey = 'health-check-' + Date.now();
       const testValue = { timestamp: Date.now() };
-      
+
       // Test set operation
       await this.set(testKey, testValue, 10);
-      
+
       // Test get operation
       const retrieved = await this.get(testKey);
-      
+
       // Test delete operation
       await this.del(testKey);
-      
-      const isHealthy = retrieved !== undefined && 
-                       retrieved !== null &&
-                       typeof retrieved === 'object' &&
-                       'timestamp' in retrieved &&
-                       retrieved.timestamp === testValue.timestamp;
-      
+
+      const isHealthy =
+        retrieved !== undefined &&
+        retrieved !== null &&
+        typeof retrieved === 'object' &&
+        'timestamp' in retrieved &&
+        retrieved.timestamp === testValue.timestamp;
+
       return {
         status: isHealthy ? 'healthy' : 'unhealthy',
         details: {
@@ -443,7 +524,10 @@ export class CacheService {
         },
       };
     } catch (error: unknown) {
-      this.logger.error('Cache health check failed:', error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        'Cache health check failed:',
+        error instanceof Error ? error.message : String(error),
+      );
       return {
         status: 'unhealthy',
         details: {
@@ -464,7 +548,7 @@ export class CacheService {
         return config.ttl;
       }
     }
-    
+
     // Default TTL if no pattern matches
     return 300; // 5 minutes
   }
@@ -477,7 +561,9 @@ export class CacheService {
     // This is a simplified implementation
     // In a real Redis implementation, you would use the SCAN command
     // For now, we'll return an empty array as this would require direct Redis access
-    this.logger.warn(`Pattern deletion not fully implemented for pattern: ${pattern}`);
+    this.logger.warn(
+      `Pattern deletion not fully implemented for pattern: ${pattern}`,
+    );
     return [];
   }
 }

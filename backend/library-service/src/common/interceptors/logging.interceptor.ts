@@ -27,10 +27,11 @@ export class LoggingInterceptor implements NestInterceptor {
     const response = context.switchToHttp().getResponse();
     const { method, url, headers, user } = request;
     const now = Date.now();
-    
+
     // Generate correlation ID if not present
-    const correlationId = headers['x-correlation-id'] || this.generateCorrelationId();
-    
+    const correlationId =
+      headers['x-correlation-id'] || this.generateCorrelationId();
+
     // Set correlation ID in response headers
     if (response && response.setHeader) {
       response.setHeader('x-correlation-id', correlationId);
@@ -61,9 +62,15 @@ export class LoggingInterceptor implements NestInterceptor {
 
         // Log performance warning for slow requests
         if (duration > 1000) {
-          this.logger.warn(`[Slow Request] ${method} ${url} - ${duration}ms`, responseContext);
+          this.logger.warn(
+            `[Slow Request] ${method} ${url} - ${duration}ms`,
+            responseContext,
+          );
         } else {
-          this.logger.log(`[Response] ${method} ${url} - ${duration}ms`, responseContext);
+          this.logger.log(
+            `[Response] ${method} ${url} - ${duration}ms`,
+            responseContext,
+          );
         }
       }),
       catchError((error) => {
@@ -76,7 +83,10 @@ export class LoggingInterceptor implements NestInterceptor {
           statusCode: error.status || 500,
         };
 
-        this.logger.error(`[Error] ${method} ${url} - ${duration}ms`, errorContext);
+        this.logger.error(
+          `[Error] ${method} ${url} - ${duration}ms`,
+          errorContext,
+        );
         return throwError(() => error);
       }),
     );

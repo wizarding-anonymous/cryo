@@ -19,7 +19,10 @@ export const AppDataSource = new DataSource({
   entities: [LibraryGame, PurchaseHistory],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   synchronize: false, // Always false for production safety
-  logging: configService.get('NODE_ENV') === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  logging:
+    configService.get('NODE_ENV') === 'development'
+      ? ['query', 'error', 'warn']
+      : ['error'],
   migrationsRun: false, // Migrations should be run manually or via script
   migrationsTableName: 'migrations',
   // Optimized connection pooling configuration
@@ -70,9 +73,12 @@ export const AppDataSource = new DataSource({
     testOnBorrow: true,
     validateOnBorrow: true,
     // SSL configuration for production
-    ssl: configService.get('NODE_ENV') === 'production' ? {
-      rejectUnauthorized: false, // Set to true in production with proper certificates
-    } : false,
+    ssl:
+      configService.get('NODE_ENV') === 'production'
+        ? {
+            rejectUnauthorized: false, // Set to true in production with proper certificates
+          }
+        : false,
   },
   // Query result caching configuration
   cache: {

@@ -73,8 +73,6 @@ export class LibraryService {
     );
   }
 
-
-
   async addGameToLibrary(dto: AddGameToLibraryDto): Promise<LibraryGame> {
     const userExists = await this.userServiceClient.doesUserExist(dto.userId);
     if (!userExists) {
@@ -112,7 +110,7 @@ export class LibraryService {
     gameId: string,
   ): Promise<OwnershipResponseDto> {
     const cacheKey = `ownership_${userId}_${gameId}`;
-    
+
     const fetchFn = async (): Promise<OwnershipResponseDto> => {
       const entry = await this.libraryRepository.findOneByUserIdAndGameId(
         userId,
@@ -161,15 +159,15 @@ export class LibraryService {
     }
 
     const gameDetailsMap = new Map<string, GameDetailsDto>();
-    
+
     // Try to get cached game details first
     const cachedDetails = await this.cacheService.mget<GameDetailsDto>(
-      gameIds.map(id => `game_details_${id}`)
+      gameIds.map((id) => `game_details_${id}`),
     );
-    
+
     // Collect uncached game IDs
     const uncachedGameIds: string[] = [];
-    gameIds.forEach(gameId => {
+    gameIds.forEach((gameId) => {
       const cacheKey = `game_details_${gameId}`;
       const cached = cachedDetails.get(cacheKey);
       if (cached) {
@@ -181,17 +179,18 @@ export class LibraryService {
 
     // Fetch uncached game details
     if (uncachedGameIds.length > 0) {
-      const gameDetails = await this.gameCatalogClient.getGamesByIds(uncachedGameIds);
-      
+      const gameDetails =
+        await this.gameCatalogClient.getGamesByIds(uncachedGameIds);
+
       // Cache the fetched details and add to map
-      const cacheEntries = gameDetails.map(detail => ({
+      const cacheEntries = gameDetails.map((detail) => ({
         key: `game_details_${detail.id}`,
         value: detail,
         ttl: 1800, // 30 minutes for game details
       }));
-      
+
       await this.cacheService.mset(cacheEntries);
-      
+
       gameDetails.forEach((detail) => {
         gameDetailsMap.set(detail.id, detail);
       });

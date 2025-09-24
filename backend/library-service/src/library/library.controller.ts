@@ -70,28 +70,28 @@ export class LibraryController {
     description: 'Page number for pagination',
     required: false,
     type: 'number',
-    example: 1
+    example: 1,
   })
   @ApiQuery({
     name: 'limit',
     description: 'Number of items per page (max 100)',
     required: false,
     type: 'number',
-    example: 20
+    example: 20,
   })
   @ApiQuery({
     name: 'sortBy',
     description: 'Field to sort by',
     required: false,
     enum: ['purchaseDate', 'title', 'developer', 'price'],
-    example: 'purchaseDate'
+    example: 'purchaseDate',
   })
   @ApiQuery({
     name: 'sortOrder',
     description: 'Sort order',
     required: false,
     enum: ['asc', 'desc'],
-    example: 'desc'
+    example: 'desc',
   })
   @ApiOperation({
     summary: 'Get user library',
@@ -145,35 +145,35 @@ export class LibraryController {
     description: 'Search query string (minimum 2 characters)',
     required: true,
     type: 'string',
-    example: 'cyberpunk'
+    example: 'cyberpunk',
   })
   @ApiQuery({
     name: 'page',
     description: 'Page number for pagination',
     required: false,
     type: 'number',
-    example: 1
+    example: 1,
   })
   @ApiQuery({
     name: 'limit',
     description: 'Number of items per page (max 100)',
     required: false,
     type: 'number',
-    example: 20
+    example: 20,
   })
   @ApiQuery({
     name: 'sortBy',
     description: 'Field to sort by',
     required: false,
     enum: ['purchaseDate', 'title', 'developer', 'price'],
-    example: 'purchaseDate'
+    example: 'purchaseDate',
   })
   @ApiQuery({
     name: 'sortOrder',
     description: 'Sort order',
     required: false,
     enum: ['asc', 'desc'],
-    example: 'desc'
+    example: 'desc',
   })
   @ApiOperation({
     summary: 'Search in user library',
@@ -225,7 +225,7 @@ export class LibraryController {
     description: 'Unique identifier of the game to check ownership for',
     type: 'string',
     format: 'uuid',
-    example: '123e4567-e89b-12d3-a456-426614174001'
+    example: '123e4567-e89b-12d3-a456-426614174001',
   })
   @ApiOperation({
     summary: 'Check game ownership',
@@ -303,8 +303,8 @@ export class LibraryController {
       purchaseDate: '2024-01-15T10:30:00Z',
       purchasePrice: 59.99,
       currency: 'RUB',
-      orderId: '123e4567-e89b-12d3-a456-426614174002'
-    }
+      orderId: '123e4567-e89b-12d3-a456-426614174002',
+    },
   })
   @ApiResponse({
     status: 400,
@@ -378,7 +378,7 @@ export class LibraryController {
     description: 'Unique identifier of the user whose games to retrieve',
     type: 'string',
     format: 'uuid',
-    example: '123e4567-e89b-12d3-a456-426614174000'
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiOperation({
     summary: 'Get games for a specific user (internal)',

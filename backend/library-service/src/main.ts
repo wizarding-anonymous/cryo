@@ -27,11 +27,11 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Transport, type KafkaOptions } from '@nestjs/microservices';
 import { WinstonModule } from 'nest-winston';
 import { AppModule } from './app.module';
-import { 
+import {
   CustomValidationPipe,
   LoggingInterceptor,
   TransformInterceptor,
-  GlobalExceptionFilter 
+  GlobalExceptionFilter,
 } from './common';
 import { ProductionLoggingInterceptor } from './common/interceptors/production-logging.interceptor';
 import { createWinstonConfig } from './config/logging.config';
@@ -59,13 +59,13 @@ async function bootstrap(): Promise<void> {
   // Setup graceful shutdown
   app.enableShutdownHooks();
   const gracefulShutdown = app.get(GracefulShutdownService);
-  
+
   // Register shutdown handlers
   try {
     const dataSource = app.get('DataSource');
     if (dataSource) {
       gracefulShutdown.registerShutdownHandler(
-        GracefulShutdownService.createDatabaseShutdownHandler(dataSource)
+        GracefulShutdownService.createDatabaseShutdownHandler(dataSource),
       );
     }
   } catch (error) {
@@ -112,7 +112,7 @@ async function bootstrap(): Promise<void> {
 
   // Enhanced global interceptors for logging and response transformation
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   if (isProduction) {
     // Use production logging interceptor with structured logging and metrics
     try {
@@ -122,7 +122,9 @@ async function bootstrap(): Promise<void> {
         new TransformInterceptor(),
       );
     } catch (error) {
-      logger.warn('Failed to get PrometheusMetricsService, using production logging without metrics');
+      logger.warn(
+        'Failed to get PrometheusMetricsService, using production logging without metrics',
+      );
       app.useGlobalInterceptors(
         new ProductionLoggingInterceptor(configService),
         new TransformInterceptor(),
@@ -223,18 +225,14 @@ Service health and metrics are available at:
       'https://github.com/your-org/library-service',
       'library-service@yourcompany.com',
     )
-    .setLicense(
-      'MIT',
-      'https://opensource.org/licenses/MIT',
-    )
+    .setLicense('MIT', 'https://opensource.org/licenses/MIT')
     .addServer(
-      configService.get<string>('swagger.server.url') ?? 'http://localhost:3000',
-      configService.get<string>('swagger.server.description') ?? 'Development server',
+      configService.get<string>('swagger.server.url') ??
+        'http://localhost:3000',
+      configService.get<string>('swagger.server.description') ??
+        'Development server',
     )
-    .addServer(
-      'https://api.yourgamingplatform.ru',
-      'Production server',
-    )
+    .addServer('https://api.yourgamingplatform.ru', 'Production server')
     .addBearerAuth(
       {
         type: 'http',
@@ -253,12 +251,13 @@ Service health and metrics are available at:
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig, {
-    operationIdFactory: (_controllerKey: string, methodKey: string) => methodKey,
+    operationIdFactory: (_controllerKey: string, methodKey: string) =>
+      methodKey,
     extraModels: [],
   });
 
   // Examples are now defined directly in DTOs with @ApiProperty decorators
-  
+
   SwaggerModule.setup(
     configService.get<string>('swagger.path') ?? 'api/docs',
     app,

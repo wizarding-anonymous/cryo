@@ -350,8 +350,6 @@ function createSearchHash(query: string): string {
   return Math.abs(hash).toString(36);
 }
 
-
-
 /**
  * Enhanced similarity algorithm combining multiple techniques
  * Uses Jaro-Winkler with additional optimizations for better fuzzy matching

@@ -28,10 +28,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    
+
     // Generate correlation ID for tracking
     const correlationId = this.getCorrelationId(request);
-    
+
     let status: number;
     let errorResponse: string | object;
 
@@ -72,7 +72,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   ): { status: number; errorResponse: object } {
     const status = exception.getStatus();
     const exceptionResponse = exception.getResponse() as any;
-    
+
     const errorResponse = {
       error: 'VALIDATION_ERROR',
       message: 'Validation failed',
@@ -88,13 +88,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   ): { status: number; errorResponse: string | object } {
     const status = exception.getStatus();
     const exceptionResponse = exception.getResponse();
-    
+
     // If it's already a structured error response, use it as is
     if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
       return { status, errorResponse: exceptionResponse };
     }
-    
-    return { status, errorResponse: exceptionResponse as string };
+
+    return { status, errorResponse: exceptionResponse };
   }
 
   private handleDatabaseException(
@@ -139,7 +139,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (existingId) {
       return existingId;
     }
-    
+
     // Generate new correlation ID
     return randomUUID();
   }
@@ -150,9 +150,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     correlationId: string,
     status: number,
   ): void {
-    const errorMessage = exception instanceof Error ? exception.message : 'Unknown error';
+    const errorMessage =
+      exception instanceof Error ? exception.message : 'Unknown error';
     const stack = exception instanceof Error ? exception.stack : undefined;
-    
+
     const logContext = {
       method: request.method,
       url: request.url,

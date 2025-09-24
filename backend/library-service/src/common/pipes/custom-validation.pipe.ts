@@ -38,16 +38,21 @@ export class CustomValidationPipe extends ValidationPipe {
   async transform(value: any, metadata: ArgumentMetadata) {
     // Log validation attempts for debugging
     if (metadata.type === 'body' && value) {
-      this.logger.debug(`Validating ${metadata.metatype?.name || 'unknown'} body`);
+      this.logger.debug(
+        `Validating ${metadata.metatype?.name || 'unknown'} body`,
+      );
     }
 
     try {
       const result = await super.transform(value, metadata);
-      
+
       // Sanitize the result
       return this.sanitizeValue(result);
     } catch (error) {
-      this.logger.warn(`Validation failed for ${metadata.metatype?.name}:`, error instanceof Error ? error.message : String(error));
+      this.logger.warn(
+        `Validation failed for ${metadata.metatype?.name}:`,
+        error instanceof Error ? error.message : String(error),
+      );
       throw error;
     }
   }
@@ -60,7 +65,9 @@ export class CustomValidationPipe extends ValidationPipe {
       field: error.property,
       value: error.value,
       constraints: error.constraints,
-      children: error.children?.length ? this.formatErrors(error.children) : undefined,
+      children: error.children?.length
+        ? this.formatErrors(error.children)
+        : undefined,
     }));
   }
 

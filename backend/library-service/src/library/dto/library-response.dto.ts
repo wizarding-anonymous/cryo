@@ -22,10 +22,10 @@ export class LibraryResponseDto {
           publisher: 'CD Projekt',
           images: ['https://example.com/cyberpunk-cover.jpg'],
           tags: ['RPG', 'Open World', 'Cyberpunk'],
-          releaseDate: '2020-12-10T00:00:00Z'
-        }
-      }
-    ]
+          releaseDate: '2020-12-10T00:00:00Z',
+        },
+      },
+    ],
   })
   games!: LibraryGameDto[];
 
@@ -36,8 +36,8 @@ export class LibraryResponseDto {
       total: 150,
       page: 1,
       limit: 20,
-      totalPages: 8
-    }
+      totalPages: 8,
+    },
   })
   pagination!: PaginationMetaDto;
 }

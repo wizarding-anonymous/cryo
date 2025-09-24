@@ -3,7 +3,9 @@ import { PurchaseHistoryRepository } from './purchase-history.repository';
 
 describe('History Repositories Index', () => {
   it('should export PurchaseHistoryRepository', () => {
-    expect(repositoriesIndex.PurchaseHistoryRepository).toBe(PurchaseHistoryRepository);
+    expect(repositoriesIndex.PurchaseHistoryRepository).toBe(
+      PurchaseHistoryRepository,
+    );
   });
 
   it('should export all expected repositories', () => {

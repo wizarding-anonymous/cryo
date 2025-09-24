@@ -15,11 +15,18 @@ import { MonitoringModule } from '../monitoring/monitoring.module';
 import { metricsProviders } from './metrics.config';
 
 @Module({
-  imports: [TerminusModule, HttpModule, AppCacheModule, DatabaseModule, ClientsModule, MonitoringModule],
+  imports: [
+    TerminusModule,
+    HttpModule,
+    AppCacheModule,
+    DatabaseModule,
+    ClientsModule,
+    MonitoringModule,
+  ],
   controllers: [HealthController],
   providers: [
-    RedisHealthIndicator, 
-    CacheHealthIndicator, 
+    RedisHealthIndicator,
+    CacheHealthIndicator,
     ExternalServicesHealthIndicator,
     ProductionHealthService,
     MetricsService,

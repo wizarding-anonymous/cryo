@@ -101,11 +101,13 @@ describe('Search and Filtering E2E', () => {
 
       // Setup mock responses
       mockGameCatalogClient.doesGameExist.mockResolvedValue(true);
-      mockGameCatalogClient.getGamesByIds.mockImplementation((gameIds: string[]) => {
-        return Promise.resolve(
-          testGames.filter((game) => gameIds.includes(game.id)),
-        );
-      });
+      mockGameCatalogClient.getGamesByIds.mockImplementation(
+        (gameIds: string[]) => {
+          return Promise.resolve(
+            testGames.filter((game) => gameIds.includes(game.id)),
+          );
+        },
+      );
     } catch (error) {
       console.error('Failed to initialize test app:', error);
       throw error;
@@ -141,7 +143,9 @@ describe('Search and Filtering E2E', () => {
           purchaseId: randomUUID(),
           purchasePrice: 29.99 + i * 10,
           currency: 'USD',
-          purchaseDate: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(), // Different dates
+          purchaseDate: new Date(
+            Date.now() - i * 24 * 60 * 60 * 1000,
+          ).toISOString(), // Different dates
         })
         .expect(201);
     }
@@ -175,7 +179,9 @@ describe('Search and Filtering E2E', () => {
         .expect(200);
 
       expect(response.body.games).toHaveLength(2);
-      const developers = response.body.games.map((game: any) => game.gameDetails.developer);
+      const developers = response.body.games.map(
+        (game: any) => game.gameDetails.developer,
+      );
       expect(developers).toEqual(['CD Projekt RED', 'CD Projekt RED']);
     });
 
@@ -186,7 +192,9 @@ describe('Search and Filtering E2E', () => {
         .expect(200);
 
       expect(response.body.games).toHaveLength(2);
-      const publishers = response.body.games.map((game: any) => game.gameDetails.publisher);
+      const publishers = response.body.games.map(
+        (game: any) => game.gameDetails.publisher,
+      );
       expect(publishers).toEqual(['Valve Corporation', 'Valve Corporation']);
     });
 
@@ -266,11 +274,15 @@ describe('Search and Filtering E2E', () => {
         .expect(200);
 
       expect(response.body.games).toHaveLength(5);
-      
+
       // Verify sorting order (newest first)
-      const purchaseDates = response.body.games.map((game: any) => new Date(game.purchaseDate));
+      const purchaseDates = response.body.games.map(
+        (game: any) => new Date(game.purchaseDate),
+      );
       for (let i = 1; i < purchaseDates.length; i++) {
-        expect(purchaseDates[i-1].getTime()).toBeGreaterThanOrEqual(purchaseDates[i].getTime());
+        expect(purchaseDates[i - 1].getTime()).toBeGreaterThanOrEqual(
+          purchaseDates[i].getTime(),
+        );
       }
     });
 
@@ -281,11 +293,15 @@ describe('Search and Filtering E2E', () => {
         .expect(200);
 
       expect(response.body.games).toHaveLength(5);
-      
+
       // Verify sorting order (oldest first)
-      const purchaseDates = response.body.games.map((game: any) => new Date(game.purchaseDate));
+      const purchaseDates = response.body.games.map(
+        (game: any) => new Date(game.purchaseDate),
+      );
       for (let i = 1; i < purchaseDates.length; i++) {
-        expect(purchaseDates[i-1].getTime()).toBeLessThanOrEqual(purchaseDates[i].getTime());
+        expect(purchaseDates[i - 1].getTime()).toBeLessThanOrEqual(
+          purchaseDates[i].getTime(),
+        );
       }
     });
 
@@ -296,9 +312,11 @@ describe('Search and Filtering E2E', () => {
         .expect(200);
 
       expect(response.body.games).toHaveLength(5);
-      
+
       // Verify alphabetical sorting
-      const titles = response.body.games.map((game: any) => game.gameDetails.title);
+      const titles = response.body.games.map(
+        (game: any) => game.gameDetails.title,
+      );
       const sortedTitles = [...titles].sort();
       expect(titles).toEqual(sortedTitles);
     });
@@ -310,9 +328,11 @@ describe('Search and Filtering E2E', () => {
         .expect(200);
 
       expect(response.body.games).toHaveLength(5);
-      
+
       // Verify developer sorting
-      const developers = response.body.games.map((game: any) => game.gameDetails.developer);
+      const developers = response.body.games.map(
+        (game: any) => game.gameDetails.developer,
+      );
       const sortedDevelopers = [...developers].sort();
       expect(developers).toEqual(sortedDevelopers);
     });
@@ -356,9 +376,11 @@ describe('Search and Filtering E2E', () => {
 
         expect(page2Response.body.games).toHaveLength(1);
         expect(page2Response.body.pagination.page).toBe(2);
-        
+
         // Ensure different games on different pages
-        expect(page1Response.body.games[0].gameId).not.toBe(page2Response.body.games[0].gameId);
+        expect(page1Response.body.games[0].gameId).not.toBe(
+          page2Response.body.games[0].gameId,
+        );
       }
     });
 
@@ -439,7 +461,7 @@ describe('Search and Filtering E2E', () => {
       const searchPromises = Array.from({ length: 10 }, (_, i) =>
         request(app.getHttpServer())
           .get(`/api/library/my/search?query=game${i % 3}`)
-          .set('Authorization', `Bearer ${validToken}`)
+          .set('Authorization', `Bearer ${validToken}`),
       );
 
       const responses = await Promise.all(searchPromises);
@@ -450,7 +472,10 @@ describe('Search and Filtering E2E', () => {
 
     it('should handle search with URL-encoded special characters', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/library/my/search?query=' + encodeURIComponent('Counter-Strike: 2'))
+        .get(
+          '/api/library/my/search?query=' +
+            encodeURIComponent('Counter-Strike: 2'),
+        )
         .set('Authorization', `Bearer ${validToken}`)
         .expect(200);
 

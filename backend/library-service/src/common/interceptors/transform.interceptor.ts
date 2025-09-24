@@ -44,7 +44,12 @@ export class TransformInterceptor<T>
     return next.handle().pipe(
       map((data) => {
         // Handle already transformed responses (avoid double wrapping)
-        if (data && typeof data === 'object' && 'data' in data && 'meta' in data) {
+        if (
+          data &&
+          typeof data === 'object' &&
+          'data' in data &&
+          'meta' in data
+        ) {
           return data;
         }
 

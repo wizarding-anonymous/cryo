@@ -9,8 +9,8 @@ export class CacheController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get cache statistics' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Cache statistics retrieved successfully',
     schema: {
       type: 'object',
@@ -18,7 +18,10 @@ export class CacheController {
         hits: { type: 'number', description: 'Number of cache hits' },
         misses: { type: 'number', description: 'Number of cache misses' },
         hitRate: { type: 'number', description: 'Cache hit rate (0-1)' },
-        totalOperations: { type: 'number', description: 'Total cache operations' },
+        totalOperations: {
+          type: 'number',
+          description: 'Total cache operations',
+        },
       },
     },
   })
@@ -29,15 +32,18 @@ export class CacheController {
   @Post('stats/reset')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Reset cache statistics' })
-  @ApiResponse({ status: 204, description: 'Cache statistics reset successfully' })
+  @ApiResponse({
+    status: 204,
+    description: 'Cache statistics reset successfully',
+  })
   resetStats(): void {
     this.cacheService.resetStats();
   }
 
   @Get('patterns')
   @ApiOperation({ summary: 'Get cache patterns configuration' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Cache patterns retrieved successfully',
     schema: {
       type: 'object',
@@ -57,8 +63,8 @@ export class CacheController {
 
   @Get('health')
   @ApiOperation({ summary: 'Check cache health' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Cache health check completed',
     schema: {
       type: 'object',

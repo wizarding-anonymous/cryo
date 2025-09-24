@@ -47,7 +47,7 @@ describe('AppDataSource', () => {
   });
 
   it('should have correct extra configuration', () => {
-    const extra = AppDataSource.options.extra as any;
+    const extra = AppDataSource.options.extra;
     expect(extra.max).toBe(20);
     expect(extra.min).toBe(5);
     expect(extra.acquireTimeoutMillis).toBe(60000);

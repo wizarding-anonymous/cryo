@@ -97,15 +97,17 @@ describe('Performance E2E', () => {
           publisher: `Publisher ${(i % 5) + 1}`,
           images: [`game${i + 1}.jpg`],
           tags: [`tag${(i % 20) + 1}`, `category${(i % 8) + 1}`],
-          releaseDate: new Date(2020 + (i % 4), (i % 12), (i % 28) + 1),
+          releaseDate: new Date(2020 + (i % 4), i % 12, (i % 28) + 1),
         };
       });
 
-      mockGameCatalogClient.getGamesByIds.mockImplementation((ids: string[]) => {
-        return Promise.resolve(
-          mockGames.filter((game) => ids.includes(game.id)),
-        );
-      });
+      mockGameCatalogClient.getGamesByIds.mockImplementation(
+        (ids: string[]) => {
+          return Promise.resolve(
+            mockGames.filter((game) => ids.includes(game.id)),
+          );
+        },
+      );
 
       // Add games to library in batches to avoid timeout
       const batchSize = 100;
@@ -137,7 +139,9 @@ describe('Performance E2E', () => {
       const endTime = Date.now();
 
       const responseTime = endTime - startTime;
-      console.log(`Library retrieval time for ${gameCount} games: ${responseTime}ms`);
+      console.log(
+        `Library retrieval time for ${gameCount} games: ${responseTime}ms`,
+      );
 
       expect(response.body.games).toHaveLength(50);
       expect(response.body.pagination.total).toBe(gameCount);
@@ -171,15 +175,15 @@ describe('Performance E2E', () => {
 
       // Test different page sizes
       const pageSizes = [10, 25, 50, 100];
-      
+
       for (const pageSize of pageSizes) {
         const startTime = Date.now();
-        
+
         const response = await request(app.getHttpServer())
           .get(`/api/library/my?page=1&limit=${pageSize}`)
           .set('Authorization', `Bearer ${validToken}`)
           .expect(200);
-        
+
         const endTime = Date.now();
         const responseTime = endTime - startTime;
 
@@ -208,7 +212,13 @@ describe('Performance E2E', () => {
   describe('Search Performance', () => {
     it('should handle search queries efficiently on large datasets', async () => {
       const gameCount = 200;
-      const searchTerms = ['Action', 'RPG', 'Strategy', 'Adventure', 'Simulation'];
+      const searchTerms = [
+        'Action',
+        'RPG',
+        'Strategy',
+        'Adventure',
+        'Simulation',
+      ];
 
       // Create games with searchable content
       for (let i = 0; i < gameCount; i++) {
@@ -230,29 +240,31 @@ describe('Performance E2E', () => {
       }
 
       // Mock games with searchable content
-      mockGameCatalogClient.getGamesByIds.mockImplementation((ids: string[]) => {
-        return Promise.resolve(
-          ids.map((id, index) => ({
-            id,
-            title: `${searchTerms[index % searchTerms.length]} Game ${index}`,
-            developer: `${searchTerms[index % searchTerms.length]} Studios`,
-            publisher: 'Test Publisher',
-            images: [`game${index}.jpg`],
-            tags: [searchTerms[index % searchTerms.length], 'Gaming'],
-            releaseDate: new Date(2020 + (index % 4), 0, 1),
-          })),
-        );
-      });
+      mockGameCatalogClient.getGamesByIds.mockImplementation(
+        (ids: string[]) => {
+          return Promise.resolve(
+            ids.map((id, index) => ({
+              id,
+              title: `${searchTerms[index % searchTerms.length]} Game ${index}`,
+              developer: `${searchTerms[index % searchTerms.length]} Studios`,
+              publisher: 'Test Publisher',
+              images: [`game${index}.jpg`],
+              tags: [searchTerms[index % searchTerms.length], 'Gaming'],
+              releaseDate: new Date(2020 + (index % 4), 0, 1),
+            })),
+          );
+        },
+      );
 
       // Test search performance for different terms
       for (const searchTerm of searchTerms) {
         const startTime = Date.now();
-        
+
         const response = await request(app.getHttpServer())
           .get(`/api/library/my/search?query=${searchTerm}`)
           .set('Authorization', `Bearer ${validToken}`)
           .expect(200);
-        
+
         const endTime = Date.now();
         const responseTime = endTime - startTime;
 
@@ -294,12 +306,12 @@ describe('Performance E2E', () => {
 
       for (const query of complexQueries) {
         const startTime = Date.now();
-        
+
         await request(app.getHttpServer())
           .get(`/api/library/my/search?query=${encodeURIComponent(query)}`)
           .set('Authorization', `Bearer ${validToken}`)
           .expect(200);
-        
+
         const endTime = Date.now();
         const responseTime = endTime - startTime;
 
@@ -336,7 +348,7 @@ describe('Performance E2E', () => {
       const promises = Array.from({ length: concurrentRequests }, () =>
         request(app.getHttpServer())
           .get('/api/library/my')
-          .set('Authorization', `Bearer ${validToken}`)
+          .set('Authorization', `Bearer ${validToken}`),
       );
 
       const responses = await Promise.all(promises);
@@ -345,7 +357,9 @@ describe('Performance E2E', () => {
       const totalTime = endTime - startTime;
       const avgResponseTime = totalTime / concurrentRequests;
 
-      console.log(`${concurrentRequests} concurrent requests: ${totalTime}ms total, ${avgResponseTime}ms average`);
+      console.log(
+        `${concurrentRequests} concurrent requests: ${totalTime}ms total, ${avgResponseTime}ms average`,
+      );
 
       responses.forEach((response) => {
         expect(response.status).toBe(200);
@@ -382,8 +396,10 @@ describe('Performance E2E', () => {
 
       const promises = Array.from({ length: concurrentSearches }, (_, i) =>
         request(app.getHttpServer())
-          .get(`/api/library/my/search?query=${searchQueries[i % searchQueries.length]}`)
-          .set('Authorization', `Bearer ${validToken}`)
+          .get(
+            `/api/library/my/search?query=${searchQueries[i % searchQueries.length]}`,
+          )
+          .set('Authorization', `Bearer ${validToken}`),
       );
 
       const responses = await Promise.all(promises);
@@ -392,7 +408,9 @@ describe('Performance E2E', () => {
       const totalTime = endTime - startTime;
       const avgResponseTime = totalTime / concurrentSearches;
 
-      console.log(`${concurrentSearches} concurrent searches: ${totalTime}ms total, ${avgResponseTime}ms average`);
+      console.log(
+        `${concurrentSearches} concurrent searches: ${totalTime}ms total, ${avgResponseTime}ms average`,
+      );
 
       responses.forEach((response) => {
         expect(response.status).toBe(200);
@@ -422,7 +440,9 @@ describe('Performance E2E', () => {
       const finalMemory = process.memoryUsage();
       const memoryIncrease = finalMemory.heapUsed - initialMemory.heapUsed;
 
-      console.log(`Memory increase after 100 operations: ${memoryIncrease / 1024 / 1024}MB`);
+      console.log(
+        `Memory increase after 100 operations: ${memoryIncrease / 1024 / 1024}MB`,
+      );
 
       // Memory increase should be reasonable (less than 50MB)
       expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024);
@@ -434,21 +454,24 @@ describe('Performance E2E', () => {
 
       for (let i = 0; i < requestCount; i++) {
         const startTime = Date.now();
-        
+
         await request(app.getHttpServer())
           .get('/api/library/my')
           .set('Authorization', `Bearer ${validToken}`)
           .expect(200);
-        
+
         const endTime = Date.now();
         responseTimes.push(endTime - startTime);
       }
 
-      const avgResponseTime = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+      const avgResponseTime =
+        responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
       const maxResponseTime = Math.max(...responseTimes);
       const minResponseTime = Math.min(...responseTimes);
 
-      console.log(`Response times - Avg: ${avgResponseTime}ms, Min: ${minResponseTime}ms, Max: ${maxResponseTime}ms`);
+      console.log(
+        `Response times - Avg: ${avgResponseTime}ms, Min: ${minResponseTime}ms, Max: ${maxResponseTime}ms`,
+      );
 
       // Response times should be consistent
       expect(maxResponseTime - minResponseTime).toBeLessThan(1000); // Variance should be less than 1 second
@@ -479,20 +502,16 @@ describe('Performance E2E', () => {
       mockGameCatalogClient.getGamesByIds.mockResolvedValue([]);
 
       // Test different sorting options
-      const sortOptions = [
-        'purchaseDate',
-        'title',
-        'developer',
-      ];
+      const sortOptions = ['purchaseDate', 'title', 'developer'];
 
       for (const sortBy of sortOptions) {
         const startTime = Date.now();
-        
+
         const response = await request(app.getHttpServer())
           .get(`/api/library/my?sortBy=${sortBy}&sortOrder=desc&limit=50`)
           .set('Authorization', `Bearer ${validToken}`)
           .expect(200);
-        
+
         const endTime = Date.now();
         const responseTime = endTime - startTime;
 
@@ -534,16 +553,18 @@ describe('Performance E2E', () => {
 
       for (const testCase of testCases) {
         const startTime = Date.now();
-        
+
         const response = await request(app.getHttpServer())
           .get(`/api/library/my?page=${testCase.page}&limit=${testCase.limit}`)
           .set('Authorization', `Bearer ${validToken}`)
           .expect(200);
-        
+
         const endTime = Date.now();
         const responseTime = endTime - startTime;
 
-        console.log(`Page ${testCase.page}, Limit ${testCase.limit}: ${responseTime}ms`);
+        console.log(
+          `Page ${testCase.page}, Limit ${testCase.limit}: ${responseTime}ms`,
+        );
 
         expect(response.body.games).toHaveLength(testCase.limit);
         expect(responseTime).toBeLessThan(600);

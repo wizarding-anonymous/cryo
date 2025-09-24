@@ -18,7 +18,7 @@ export class HistoryResponseDto {
         metadata: {
           transactionId: 'tx_123456',
           gateway: 'stripe',
-          cardLast4: '1234'
+          cardLast4: '1234',
         },
         createdAt: '2024-01-15T10:30:00Z',
         updatedAt: '2024-01-15T10:30:00Z',
@@ -29,10 +29,10 @@ export class HistoryResponseDto {
           publisher: 'CD Projekt',
           images: ['https://example.com/cyberpunk-cover.jpg'],
           tags: ['RPG', 'Open World', 'Cyberpunk'],
-          releaseDate: '2020-12-10T00:00:00Z'
-        }
-      }
-    ]
+          releaseDate: '2020-12-10T00:00:00Z',
+        },
+      },
+    ],
   })
   purchases!: PurchaseHistoryDto[];
 
@@ -43,8 +43,8 @@ export class HistoryResponseDto {
       total: 25,
       page: 1,
       limit: 20,
-      totalPages: 2
-    }
+      totalPages: 2,
+    },
   })
   pagination!: PaginationMetaDto;
 }

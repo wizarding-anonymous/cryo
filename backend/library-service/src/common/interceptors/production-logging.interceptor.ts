@@ -42,10 +42,11 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
     const response = context.switchToHttp().getResponse();
     const { method, url, headers, user, body, query, params } = request;
     const startTime = Date.now();
-    
+
     // Generate or extract correlation ID
-    const correlationId = headers['x-correlation-id'] || this.generateCorrelationId();
-    
+    const correlationId =
+      headers['x-correlation-id'] || this.generateCorrelationId();
+
     // Set correlation ID in response headers
     if (response && response.setHeader) {
       response.setHeader('x-correlation-id', correlationId);
@@ -64,15 +65,22 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
       url,
       userAgent: headers['user-agent'],
       ip: this.getClientIp(request),
-      contentLength: headers['content-length'] ? parseInt(headers['content-length']) : 0,
+      contentLength: headers['content-length']
+        ? parseInt(headers['content-length'])
+        : 0,
       timestamp: new Date().toISOString(),
-      ...(this.shouldLogRequestBody(url) && body && { requestBody: this.sanitizeBody(body) }),
+      ...(this.shouldLogRequestBody(url) &&
+        body && { requestBody: this.sanitizeBody(body) }),
       ...(Object.keys(query || {}).length > 0 && { queryParams: query }),
       ...(Object.keys(params || {}).length > 0 && { pathParams: params }),
     };
 
     // Log request
-    this.structuredLogger.logWithContext('info', `Incoming request: ${method} ${url}`, requestContext);
+    this.structuredLogger.logWithContext(
+      'info',
+      `Incoming request: ${method} ${url}`,
+      requestContext,
+    );
 
     // Detect and log security events
     this.detectSecurityEvents(request, requestContext);
@@ -91,9 +99,10 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
           duration,
           statusCode,
           responseSize,
-          ...(this.shouldLogResponseBody(url, statusCode) && responseData && { 
-            responseBody: this.sanitizeResponseBody(responseData) 
-          }),
+          ...(this.shouldLogResponseBody(url, statusCode) &&
+            responseData && {
+              responseBody: this.sanitizeResponseBody(responseData),
+            }),
         };
 
         // Record metrics if service is available
@@ -111,11 +120,23 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
 
         // Log response based on performance and status
         if (statusCode >= 400) {
-          this.structuredLogger.logWithContext('error', `Request failed: ${method} ${url}`, responseContext);
+          this.structuredLogger.logWithContext(
+            'error',
+            `Request failed: ${method} ${url}`,
+            responseContext,
+          );
         } else if (duration > 1000) {
-          this.structuredLogger.logWithContext('warn', `Slow request: ${method} ${url}`, responseContext);
+          this.structuredLogger.logWithContext(
+            'warn',
+            `Slow request: ${method} ${url}`,
+            responseContext,
+          );
         } else {
-          this.structuredLogger.logWithContext('info', `Request completed: ${method} ${url}`, responseContext);
+          this.structuredLogger.logWithContext(
+            'info',
+            `Request completed: ${method} ${url}`,
+            responseContext,
+          );
         }
 
         // Log performance metrics
@@ -166,18 +187,25 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
         }
 
         // Log error with full context
-        this.structuredLogger.logWithContext('error', `Request error: ${method} ${url}`, errorContext);
+        this.structuredLogger.logWithContext(
+          'error',
+          `Request error: ${method} ${url}`,
+          errorContext,
+        );
 
         // Log security events for authentication/authorization errors
         if (statusCode === 401 || statusCode === 403) {
-          this.structuredLogger.logSecurityEvent('Authentication/Authorization failure', {
-            correlationId,
-            userId,
-            ip: requestContext.ip,
-            userAgent: requestContext.userAgent,
-            statusCode,
-            error: error.message,
-          });
+          this.structuredLogger.logSecurityEvent(
+            'Authentication/Authorization failure',
+            {
+              correlationId,
+              userId,
+              ip: requestContext.ip,
+              userAgent: requestContext.userAgent,
+              statusCode,
+              error: error.message,
+            },
+          );
         }
 
         return throwError(() => error);
@@ -224,7 +252,10 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
    */
   private normalizeRoute(url: string): string {
     return url
-      .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id') // UUIDs
+      .replace(
+        /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+        '/:id',
+      ) // UUIDs
       .replace(/\/\d+/g, '/:id') // Numeric IDs
       .replace(/\?.*$/, ''); // Remove query parameters
   }
@@ -235,7 +266,7 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
   private shouldLogRequestBody(url: string): boolean {
     // Don't log sensitive endpoints
     const sensitiveEndpoints = ['/auth', '/login', '/password', '/payment'];
-    return !sensitiveEndpoints.some(endpoint => url.includes(endpoint));
+    return !sensitiveEndpoints.some((endpoint) => url.includes(endpoint));
   }
 
   /**
@@ -253,17 +284,25 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
     if (!body || typeof body !== 'object') return body;
 
     const sanitized = { ...body };
-    const sensitiveFields = ['password', 'token', 'secret', 'key', 'authorization'];
+    const sensitiveFields = [
+      'password',
+      'token',
+      'secret',
+      'key',
+      'authorization',
+    ];
 
     const sanitizeObject = (obj: any): any => {
       if (Array.isArray(obj)) {
-        return obj.map(item => sanitizeObject(item));
+        return obj.map((item) => sanitizeObject(item));
       }
-      
+
       if (obj && typeof obj === 'object') {
         const result: any = {};
         for (const [key, value] of Object.entries(obj)) {
-          if (sensitiveFields.some(field => key.toLowerCase().includes(field))) {
+          if (
+            sensitiveFields.some((field) => key.toLowerCase().includes(field))
+          ) {
             result[key] = '[REDACTED]';
           } else {
             result[key] = sanitizeObject(value);
@@ -271,7 +310,7 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
         }
         return result;
       }
-      
+
       return obj;
     };
 
@@ -285,11 +324,11 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
     // Limit response body size for logging
     const maxSize = 1000;
     const stringified = JSON.stringify(data);
-    
+
     if (stringified.length > maxSize) {
       return `${stringified.substring(0, maxSize)}... [truncated]`;
     }
-    
+
     return data;
   }
 
@@ -307,7 +346,7 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
     ];
 
     const checkForSqlInjection = (value: string) => {
-      return sqlInjectionPatterns.some(pattern => pattern.test(value));
+      return sqlInjectionPatterns.some((pattern) => pattern.test(value));
     };
 
     // Check URL parameters
@@ -322,10 +361,13 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
     if (body && typeof body === 'object') {
       const bodyString = JSON.stringify(body);
       if (checkForSqlInjection(bodyString)) {
-        this.structuredLogger.logSecurityEvent('Potential SQL injection in request body', {
-          ...context,
-          suspiciousData: '[REDACTED]',
-        });
+        this.structuredLogger.logSecurityEvent(
+          'Potential SQL injection in request body',
+          {
+            ...context,
+            suspiciousData: '[REDACTED]',
+          },
+        );
       }
     }
 
@@ -343,7 +385,8 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
 
     // Detect unusual request sizes
     const contentLength = parseInt(headers['content-length'] || '0');
-    if (contentLength > 10 * 1024 * 1024) { // 10MB
+    if (contentLength > 10 * 1024 * 1024) {
+      // 10MB
       this.structuredLogger.logSecurityEvent('Unusually large request', {
         ...context,
         contentLength,
@@ -360,9 +403,15 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
     // Library operations
     if (url.includes('/library')) {
       if (method === 'POST' && url.includes('/add')) {
-        this.structuredLogger.logBusinessEvent('Game added to library', context);
+        this.structuredLogger.logBusinessEvent(
+          'Game added to library',
+          context,
+        );
       } else if (method === 'DELETE' && url.includes('/remove')) {
-        this.structuredLogger.logBusinessEvent('Game removed from library', context);
+        this.structuredLogger.logBusinessEvent(
+          'Game removed from library',
+          context,
+        );
       } else if (method === 'GET' && url.includes('/my')) {
         this.structuredLogger.logBusinessEvent('Library accessed', context);
       }
@@ -378,23 +427,37 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
 
     // Purchase history operations
     if (url.includes('/history')) {
-      this.structuredLogger.logBusinessEvent('Purchase history accessed', context);
+      this.structuredLogger.logBusinessEvent(
+        'Purchase history accessed',
+        context,
+      );
     }
 
     // Ownership checks
     if (url.includes('/ownership')) {
-      this.structuredLogger.logBusinessEvent('Ownership check performed', context);
+      this.structuredLogger.logBusinessEvent(
+        'Ownership check performed',
+        context,
+      );
     }
   }
 
   /**
    * Log business event completion
    */
-  private logBusinessEventCompletion(request: any, responseData: any, context: any): void {
+  private logBusinessEventCompletion(
+    request: any,
+    responseData: any,
+    context: any,
+  ): void {
     const { method, url } = request;
 
     // Log successful operations with results
-    if (method === 'GET' && url.includes('/library/my') && responseData?.games) {
+    if (
+      method === 'GET' &&
+      url.includes('/library/my') &&
+      responseData?.games
+    ) {
       this.structuredLogger.logBusinessEvent('Library retrieved successfully', {
         ...context,
         gameCount: responseData.games.length,
@@ -410,7 +473,11 @@ export class ProductionLoggingInterceptor implements NestInterceptor {
       });
     }
 
-    if (method === 'GET' && url.includes('/ownership') && responseData?.owns !== undefined) {
+    if (
+      method === 'GET' &&
+      url.includes('/ownership') &&
+      responseData?.owns !== undefined
+    ) {
       this.structuredLogger.logBusinessEvent('Ownership check completed', {
         ...context,
         ownershipResult: responseData.owns,

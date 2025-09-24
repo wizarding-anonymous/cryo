@@ -7,7 +7,9 @@ import {
 } from 'class-validator';
 
 @ValidatorConstraint({ async: false })
-export class IsPositiveNumberConstraint implements ValidatorConstraintInterface {
+export class IsPositiveNumberConstraint
+  implements ValidatorConstraintInterface
+{
   validate(value: any, _args: ValidationArguments) {
     const num = Number(value);
     return !isNaN(num) && num > 0 && isFinite(num);

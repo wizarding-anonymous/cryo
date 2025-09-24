@@ -212,8 +212,16 @@ describe('CacheService', () => {
 
       await service.mset(entries);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith('key1', entries[0].value, 300);
-      expect(mockCacheManager.set).toHaveBeenCalledWith('key2', entries[1].value, 300); // default TTL
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'key1',
+        entries[0].value,
+        300,
+      );
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'key2',
+        entries[1].value,
+        300,
+      ); // default TTL
     });
 
     it('should handle errors in bulk set', async () => {
@@ -236,7 +244,7 @@ describe('CacheService', () => {
       expect(mockCacheManager.set).toHaveBeenCalledWith(
         `user-cache-keys:${userId}`,
         [key],
-        0
+        0,
       );
     });
 
@@ -265,11 +273,13 @@ describe('CacheService', () => {
       expect(mockCacheManager.set).toHaveBeenCalledWith(
         `user-cache-keys:${userId}`,
         expect.arrayContaining(['new_key']),
-        0
+        0,
       );
-      
+
       // Should limit to 100 keys
-      const setCall = mockCacheManager.set.mock.calls.find(call => call[0] === `user-cache-keys:${userId}`);
+      const setCall = mockCacheManager.set.mock.calls.find(
+        (call) => call[0] === `user-cache-keys:${userId}`,
+      );
       expect(setCall[1]).toHaveLength(100);
     });
   });
@@ -283,10 +293,12 @@ describe('CacheService', () => {
 
       await service.invalidateUserCache(userId);
 
-      keysToDelete.forEach(key => {
+      keysToDelete.forEach((key) => {
         expect(mockCacheManager.del).toHaveBeenCalledWith(key);
       });
-      expect(mockCacheManager.del).toHaveBeenCalledWith(`user-cache-keys:${userId}`);
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        `user-cache-keys:${userId}`,
+      );
     });
 
     it('should handle empty user cache keys', async () => {
@@ -296,7 +308,9 @@ describe('CacheService', () => {
 
       await service.invalidateUserCache(userId);
 
-      expect(mockCacheManager.del).toHaveBeenCalledWith(`user-cache-keys:${userId}`);
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        `user-cache-keys:${userId}`,
+      );
     });
   });
 
@@ -374,8 +388,16 @@ describe('CacheService', () => {
 
       await service.warmUp(warmUpFunctions);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith('warm-key1', { data: 'warm1' }, 600);
-      expect(mockCacheManager.set).toHaveBeenCalledWith('warm-key2', { data: 'warm2' }, 300);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'warm-key1',
+        { data: 'warm1' },
+        600,
+      );
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'warm-key2',
+        { data: 'warm2' },
+        300,
+      );
     });
 
     it('should skip warm up for existing keys', async () => {
@@ -420,7 +442,7 @@ describe('CacheService', () => {
     it('should return unhealthy status when cache operations fail', async () => {
       // Reset all mocks first
       jest.clearAllMocks();
-      
+
       // Make set operation fail, which should trigger the catch block
       mockCacheManager.set.mockRejectedValue(new Error('Cache unavailable'));
 
@@ -440,7 +462,7 @@ describe('CacheService', () => {
         'search_user123_query',
         'ownership_user123_game1',
         'user_profile_user123',
-        'other_key_user123'
+        'other_key_user123',
       ];
 
       mockCacheManager.get.mockResolvedValue(allKeys);
@@ -448,15 +470,19 @@ describe('CacheService', () => {
       await service.invalidateUserLibraryCache(userId);
 
       // Should delete library, search, and ownership keys
-      expect(mockCacheManager.del).toHaveBeenCalledWith('library_user123_page1');
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        'library_user123_page1',
+      );
       expect(mockCacheManager.del).toHaveBeenCalledWith('search_user123_query');
-      expect(mockCacheManager.del).toHaveBeenCalledWith('ownership_user123_game1');
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        'ownership_user123_game1',
+      );
 
       // Should update tracking key with remaining keys
       expect(mockCacheManager.set).toHaveBeenCalledWith(
         `user-cache-keys:${userId}`,
         ['user_profile_user123', 'other_key_user123'],
-        0
+        0,
       );
     });
 
@@ -468,9 +494,13 @@ describe('CacheService', () => {
 
       await service.invalidateUserLibraryCache(userId);
 
-      expect(mockCacheManager.del).toHaveBeenCalledWith('library_user123_page1');
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        'library_user123_page1',
+      );
       expect(mockCacheManager.del).toHaveBeenCalledWith('search_user123_query');
-      expect(mockCacheManager.del).toHaveBeenCalledWith(`user-cache-keys:${userId}`);
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        `user-cache-keys:${userId}`,
+      );
     });
   });
 
@@ -483,7 +513,9 @@ describe('CacheService', () => {
       await service.cacheLibraryData(userId, cacheKey, data);
 
       expect(mockCacheManager.set).toHaveBeenCalledWith(cacheKey, data, 300);
-      expect(mockCacheManager.get).toHaveBeenCalledWith(`user-cache-keys:${userId}`);
+      expect(mockCacheManager.get).toHaveBeenCalledWith(
+        `user-cache-keys:${userId}`,
+      );
     });
 
     it('should cache library data with custom TTL', async () => {
@@ -494,7 +526,11 @@ describe('CacheService', () => {
 
       await service.cacheLibraryData(userId, cacheKey, data, customTtl);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith(cacheKey, data, customTtl);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        cacheKey,
+        data,
+        customTtl,
+      );
     });
   });
 
@@ -507,7 +543,9 @@ describe('CacheService', () => {
       await service.cacheSearchResults(userId, cacheKey, results);
 
       expect(mockCacheManager.set).toHaveBeenCalledWith(cacheKey, results, 300);
-      expect(mockCacheManager.get).toHaveBeenCalledWith(`user-cache-keys:${userId}`);
+      expect(mockCacheManager.get).toHaveBeenCalledWith(
+        `user-cache-keys:${userId}`,
+      );
     });
   });
 
@@ -520,11 +558,17 @@ describe('CacheService', () => {
 
       mockCacheManager.get.mockResolvedValue(cachedData);
 
-      const result = await service.getCachedLibraryData(userId, cacheKey, fallbackFn);
+      const result = await service.getCachedLibraryData(
+        userId,
+        cacheKey,
+        fallbackFn,
+      );
 
       expect(result).toEqual(cachedData);
       expect(fallbackFn).not.toHaveBeenCalled();
-      expect(mockCacheManager.get).toHaveBeenCalledWith(`user-cache-keys:${userId}`);
+      expect(mockCacheManager.get).toHaveBeenCalledWith(
+        `user-cache-keys:${userId}`,
+      );
     });
 
     it('should execute fallback function if data not cached', async () => {
@@ -537,7 +581,11 @@ describe('CacheService', () => {
         .mockResolvedValueOnce(undefined) // Cache miss
         .mockResolvedValueOnce(undefined); // User cache keys
 
-      const result = await service.getCachedLibraryData(userId, cacheKey, fallbackFn);
+      const result = await service.getCachedLibraryData(
+        userId,
+        cacheKey,
+        fallbackFn,
+      );
 
       expect(result).toEqual(newData);
       expect(fallbackFn).toHaveBeenCalledTimes(1);
@@ -554,7 +602,11 @@ describe('CacheService', () => {
 
       mockCacheManager.get.mockResolvedValue(cachedResults);
 
-      const result = await service.getCachedSearchResults(userId, cacheKey, fallbackFn);
+      const result = await service.getCachedSearchResults(
+        userId,
+        cacheKey,
+        fallbackFn,
+      );
 
       expect(result).toEqual(cachedResults);
       expect(fallbackFn).not.toHaveBeenCalled();
@@ -567,7 +619,9 @@ describe('CacheService', () => {
 
       await service.invalidateGameCache(gameId);
 
-      expect(mockCacheManager.del).toHaveBeenCalledWith(`game_details_${gameId}`);
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        `game_details_${gameId}`,
+      );
     });
   });
 });

@@ -11,11 +11,10 @@ import { CacheHealthIndicator } from './cache.health';
 import { ExternalServicesHealthIndicator } from './external-services.health';
 import { MetricsService } from './metrics.service';
 import { DatabaseHealthService } from '../database/database-health.service';
+import { ProductionHealthService } from './production-health.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
-  let healthCheckService: HealthCheckService;
-  let metricsService: MetricsService;
 
   const mockHealthCheckService = {
     check: jest.fn(),
@@ -40,10 +39,18 @@ describe('HealthController', () => {
   };
 
   const mockExternalServicesHealthIndicator = {
-    checkGameCatalogService: jest.fn().mockResolvedValue({ 'game-catalog-service': { status: 'up' } }),
-    checkPaymentService: jest.fn().mockResolvedValue({ 'payment-service': { status: 'up' } }),
-    checkUserService: jest.fn().mockResolvedValue({ 'user-service': { status: 'up' } }),
-    checkAllExternalServices: jest.fn().mockResolvedValue({ 'external-services': { status: 'up' } }),
+    checkGameCatalogService: jest
+      .fn()
+      .mockResolvedValue({ 'game-catalog-service': { status: 'up' } }),
+    checkPaymentService: jest
+      .fn()
+      .mockResolvedValue({ 'payment-service': { status: 'up' } }),
+    checkUserService: jest
+      .fn()
+      .mockResolvedValue({ 'user-service': { status: 'up' } }),
+    checkAllExternalServices: jest
+      .fn()
+      .mockResolvedValue({ 'external-services': { status: 'up' } }),
   };
 
   const mockMetricsService = {
@@ -54,6 +61,21 @@ describe('HealthController', () => {
 
   const mockDatabaseHealthService = {
     isHealthy: jest.fn().mockResolvedValue({ database: { status: 'up' } }),
+  };
+
+  const mockProductionHealthService = {
+    checkApplicationHealth: jest
+      .fn()
+      .mockResolvedValue({ application: { status: 'up' } }),
+    checkPerformanceHealth: jest
+      .fn()
+      .mockResolvedValue({ performance: { status: 'up' } }),
+    checkSecurityHealth: jest
+      .fn()
+      .mockResolvedValue({ security: { status: 'up' } }),
+    checkResourcesHealth: jest
+      .fn()
+      .mockResolvedValue({ resources: { status: 'up' } }),
   };
 
   const mockConfigService = {
@@ -86,16 +108,21 @@ describe('HealthController', () => {
         },
         { provide: RedisHealthIndicator, useValue: mockRedisHealthIndicator },
         { provide: CacheHealthIndicator, useValue: mockCacheHealthIndicator },
-        { provide: ExternalServicesHealthIndicator, useValue: mockExternalServicesHealthIndicator },
+        {
+          provide: ExternalServicesHealthIndicator,
+          useValue: mockExternalServicesHealthIndicator,
+        },
         { provide: MetricsService, useValue: mockMetricsService },
         { provide: DatabaseHealthService, useValue: mockDatabaseHealthService },
+        {
+          provide: ProductionHealthService,
+          useValue: mockProductionHealthService,
+        },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
-    healthCheckService = module.get<HealthCheckService>(HealthCheckService);
-    metricsService = module.get<MetricsService>(MetricsService);
     jest.clearAllMocks();
   });
 

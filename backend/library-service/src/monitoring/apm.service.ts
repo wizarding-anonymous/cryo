@@ -26,7 +26,7 @@ export class APMService implements OnModuleInit {
       try {
         // Import APM agent (should already be started in main.ts)
         this.apmAgent = require('elastic-apm-node');
-        
+
         if (this.apmAgent.isStarted()) {
           this.logger.log('APM service initialized successfully');
           this.setupCustomInstrumentation();
@@ -74,7 +74,12 @@ export class APMService implements OnModuleInit {
   /**
    * Start a custom span
    */
-  startSpan(name: string, type: string = 'custom', subtype?: string, action?: string): any {
+  startSpan(
+    name: string,
+    type: string = 'custom',
+    subtype?: string,
+    action?: string,
+  ): any {
     if (!this.isEnabled || !this.apmAgent) return null;
 
     try {
@@ -117,7 +122,11 @@ export class APMService implements OnModuleInit {
   /**
    * Set user context
    */
-  setUserContext(user: { id?: string; username?: string; email?: string }): void {
+  setUserContext(user: {
+    id?: string;
+    username?: string;
+    email?: string;
+  }): void {
     if (!this.isEnabled || !this.apmAgent) return;
 
     try {
@@ -156,7 +165,11 @@ export class APMService implements OnModuleInit {
   /**
    * Track business metrics
    */
-  trackBusinessMetric(name: string, value: number, labels?: Record<string, string>): void {
+  trackBusinessMetric(
+    name: string,
+    value: number,
+    labels?: Record<string, string>,
+  ): void {
     if (!this.isEnabled || !this.apmAgent) return;
 
     try {
@@ -177,7 +190,12 @@ export class APMService implements OnModuleInit {
   /**
    * Track library operations
    */
-  trackLibraryOperation(operation: string, userId: string, gameId?: string, duration?: number): void {
+  trackLibraryOperation(
+    operation: string,
+    userId: string,
+    gameId?: string,
+    duration?: number,
+  ): void {
     this.trackBusinessMetric('library_operation', duration || 0, {
       operation,
       user_id: userId,
@@ -188,7 +206,13 @@ export class APMService implements OnModuleInit {
   /**
    * Track search operations
    */
-  trackSearchOperation(type: string, userId: string, query: string, resultCount: number, duration?: number): void {
+  trackSearchOperation(
+    type: string,
+    userId: string,
+    query: string,
+    resultCount: number,
+    duration?: number,
+  ): void {
     this.trackBusinessMetric('search_operation', duration || 0, {
       search_type: type,
       user_id: userId,
@@ -200,7 +224,13 @@ export class APMService implements OnModuleInit {
   /**
    * Track external service calls
    */
-  trackExternalServiceCall(service: string, method: string, url: string, statusCode: number, duration: number): void {
+  trackExternalServiceCall(
+    service: string,
+    method: string,
+    url: string,
+    statusCode: number,
+    duration: number,
+  ): void {
     this.trackBusinessMetric('external_service_call', duration, {
       service,
       method,
@@ -212,7 +242,12 @@ export class APMService implements OnModuleInit {
   /**
    * Track database operations
    */
-  trackDatabaseOperation(operation: string, table: string, duration: number, rowCount?: number): void {
+  trackDatabaseOperation(
+    operation: string,
+    table: string,
+    duration: number,
+    rowCount?: number,
+  ): void {
     this.trackBusinessMetric('database_operation', duration, {
       operation,
       table,
@@ -223,7 +258,12 @@ export class APMService implements OnModuleInit {
   /**
    * Track cache operations
    */
-  trackCacheOperation(operation: string, key: string, hit: boolean, duration?: number): void {
+  trackCacheOperation(
+    operation: string,
+    key: string,
+    hit: boolean,
+    duration?: number,
+  ): void {
     this.trackBusinessMetric('cache_operation', duration || 0, {
       operation,
       key_type: this.getCacheKeyType(key),
@@ -242,7 +282,9 @@ export class APMService implements OnModuleInit {
       this.apmAgent.addFilter((payload: any) => {
         // Enhance transaction names for better grouping
         if (payload.transaction && payload.transaction.name) {
-          payload.transaction.name = this.normalizeTransactionName(payload.transaction.name);
+          payload.transaction.name = this.normalizeTransactionName(
+            payload.transaction.name,
+          );
         }
         return payload;
       });
@@ -271,7 +313,10 @@ export class APMService implements OnModuleInit {
   private normalizeTransactionName(name: string): string {
     // Replace UUIDs with placeholder
     return name
-      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '{id}')
+      .replace(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+        '{id}',
+      )
       .replace(/\/\d+/g, '/{id}');
   }
 
@@ -291,12 +336,19 @@ export class APMService implements OnModuleInit {
    * Create a decorator for automatic span tracking
    */
   static createSpanDecorator(type: string = 'custom') {
-    return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    return function (
+      target: any,
+      propertyKey: string,
+      descriptor: PropertyDescriptor,
+    ) {
       const originalMethod = descriptor.value;
 
       descriptor.value = async function (...args: any[]) {
         const apmService = (this as any).apmService as APMService;
-        const span = apmService?.startSpan(`${target.constructor.name}.${propertyKey}`, type);
+        const span = apmService?.startSpan(
+          `${target.constructor.name}.${propertyKey}`,
+          type,
+        );
 
         try {
           const result = await originalMethod.apply(this, args);
@@ -304,7 +356,7 @@ export class APMService implements OnModuleInit {
           return result;
         } catch (error) {
           if (span) {
-            (span as any).outcome = 'failure';
+            span.outcome = 'failure';
             apmService?.endSpan(span);
           }
           throw error;

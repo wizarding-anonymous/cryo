@@ -16,7 +16,8 @@ export class PerformanceOptimizerService implements OnModuleInit {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly cacheService: CacheService,
   ) {
-    this.performanceConfig = this.configService.get<PerformanceConfig>('performance')!;
+    this.performanceConfig =
+      this.configService.get<PerformanceConfig>('performance')!;
   }
 
   async onModuleInit() {
@@ -48,7 +49,7 @@ export class PerformanceOptimizerService implements OnModuleInit {
 
       // Check for missing indexes based on slow queries
       const slowQueries = await this.getSlowQueries();
-      
+
       for (const query of slowQueries) {
         await this.suggestIndexForQuery(query);
       }
@@ -74,8 +75,12 @@ export class PerformanceOptimizerService implements OnModuleInit {
     try {
       this.logger.log('Refreshing materialized views...');
 
-      await this.dataSource.query('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_user_library_stats');
-      await this.dataSource.query('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_user_purchase_stats');
+      await this.dataSource.query(
+        'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_user_library_stats',
+      );
+      await this.dataSource.query(
+        'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_user_purchase_stats',
+      );
 
       this.logger.log('Materialized views refreshed successfully');
     } catch (error) {
@@ -102,10 +107,14 @@ export class PerformanceOptimizerService implements OnModuleInit {
       const promises = activeUsers.map(async (userId) => {
         const cacheKey = `library:${userId}`;
         const exists = await this.cacheService.get(cacheKey);
-        
+
         if (!exists) {
           const library = await this.getUserLibraryForCache(userId);
-          await this.cacheService.set(cacheKey, library, this.performanceConfig.cache.libraryTtl);
+          await this.cacheService.set(
+            cacheKey,
+            library,
+            this.performanceConfig.cache.libraryTtl,
+          );
         }
       });
 
@@ -125,14 +134,18 @@ export class PerformanceOptimizerService implements OnModuleInit {
       this.logger.log('Optimizing database connection pool...');
 
       const poolStats = await this.getConnectionPoolStats();
-      
+
       if (poolStats.utilization > 80) {
-        this.logger.warn(`High connection pool utilization: ${poolStats.utilization}%`);
+        this.logger.warn(
+          `High connection pool utilization: ${poolStats.utilization}%`,
+        );
         // In a real implementation, you might adjust pool size dynamically
       }
 
       if (poolStats.waitingConnections > 5) {
-        this.logger.warn(`High number of waiting connections: ${poolStats.waitingConnections}`);
+        this.logger.warn(
+          `High number of waiting connections: ${poolStats.waitingConnections}`,
+        );
       }
 
       this.logger.log('Connection pool optimization completed');
@@ -151,13 +164,13 @@ export class PerformanceOptimizerService implements OnModuleInit {
 
       // Get cache statistics
       const stats = this.cacheService.getStats();
-      
-      if (stats.hitRate < 0.5) { // If hit rate is low, clear some cache
+
+      if (stats.hitRate < 0.5) {
+        // If hit rate is low, clear some cache
         // Reset cache statistics to improve monitoring
         this.cacheService.resetStats();
         this.logger.log('Cache statistics reset completed due to low hit rate');
       }
-
     } catch (error) {
       this.logger.error('Failed to cleanup cache:', error);
     }
@@ -170,12 +183,14 @@ export class PerformanceOptimizerService implements OnModuleInit {
   async monitorQueryPerformance(): Promise<void> {
     try {
       const slowQueries = await this.getSlowQueries(10);
-      
+
       if (slowQueries.length > 0) {
         this.logger.warn(`Found ${slowQueries.length} slow queries`);
-        
+
         for (const query of slowQueries) {
-          this.logger.warn(`Slow query: ${query.query.substring(0, 100)}... (${query.duration}ms)`);
+          this.logger.warn(
+            `Slow query: ${query.query.substring(0, 100)}... (${query.duration}ms)`,
+          );
         }
       }
 
@@ -184,7 +199,6 @@ export class PerformanceOptimizerService implements OnModuleInit {
       if (locks.length > 0) {
         this.logger.warn(`Found ${locks.length} lock contentions`);
       }
-
     } catch (error) {
       this.logger.error('Failed to monitor query performance:', error);
     }
@@ -196,11 +210,12 @@ export class PerformanceOptimizerService implements OnModuleInit {
   @Cron(CronExpression.EVERY_MINUTE)
   async optimizeMemoryUsage(): Promise<void> {
     const memoryUsage = process.memoryUsage();
-    const memoryUsagePercent = (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
+    const memoryUsagePercent =
+      (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
 
     if (memoryUsagePercent > this.performanceConfig.scaling.memoryThreshold) {
       this.logger.warn(`High memory usage: ${memoryUsagePercent.toFixed(1)}%`);
-      
+
       // Force garbage collection if available
       if (global.gc) {
         global.gc();
@@ -220,7 +235,9 @@ export class PerformanceOptimizerService implements OnModuleInit {
   /**
    * Get slow queries from the database
    */
-  private async getSlowQueries(limit: number = 50): Promise<Array<{ query: string; duration: number; calls: number }>> {
+  private async getSlowQueries(
+    limit: number = 50,
+  ): Promise<Array<{ query: string; duration: number; calls: number }>> {
     try {
       // This would typically query pg_stat_statements or similar
       // For now, return empty array as we don't have pg_stat_statements enabled
@@ -234,16 +251,27 @@ export class PerformanceOptimizerService implements OnModuleInit {
   /**
    * Suggest index for a slow query
    */
-  private async suggestIndexForQuery(query: { query: string; duration: number; calls: number }): Promise<void> {
+  private async suggestIndexForQuery(query: {
+    query: string;
+    duration: number;
+    calls: number;
+  }): Promise<void> {
     // This is a simplified implementation
     // In a real scenario, you'd analyze the query plan and suggest appropriate indexes
-    
-    if (query.query.includes('WHERE "userId" =') && query.query.includes('ORDER BY "purchaseDate"')) {
-      this.logger.log(`Suggested index: CREATE INDEX ON library_games ("userId", "purchaseDate" DESC)`);
+
+    if (
+      query.query.includes('WHERE "userId" =') &&
+      query.query.includes('ORDER BY "purchaseDate"')
+    ) {
+      this.logger.log(
+        `Suggested index: CREATE INDEX ON library_games ("userId", "purchaseDate" DESC)`,
+      );
     }
-    
+
     if (query.query.includes('WHERE "gameId" =')) {
-      this.logger.log(`Suggested index: CREATE INDEX ON library_games ("gameId")`);
+      this.logger.log(
+        `Suggested index: CREATE INDEX ON library_games ("gameId")`,
+      );
     }
   }
 
@@ -253,7 +281,7 @@ export class PerformanceOptimizerService implements OnModuleInit {
   private async updateTableStatistics(): Promise<void> {
     await this.dataSource.query('ANALYZE library_games');
     await this.dataSource.query('ANALYZE purchase_history');
-    
+
     // Update statistics on materialized views if they exist
     try {
       await this.dataSource.query('ANALYZE mv_user_library_stats');
@@ -267,14 +295,17 @@ export class PerformanceOptimizerService implements OnModuleInit {
    * Get most active users for cache warming
    */
   private async getActiveUsers(limit: number): Promise<string[]> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT "userId"
       FROM library_games
       WHERE "createdAt" >= NOW() - INTERVAL '7 days'
       GROUP BY "userId"
       ORDER BY COUNT(*) DESC
       LIMIT $1
-    `, [limit]);
+    `,
+      [limit],
+    );
 
     return result.map((row: any) => row.userId);
   }
@@ -283,13 +314,16 @@ export class PerformanceOptimizerService implements OnModuleInit {
    * Get user library data for caching
    */
   private async getUserLibraryForCache(userId: string): Promise<any> {
-    const games = await this.dataSource.query(`
+    const games = await this.dataSource.query(
+      `
       SELECT "gameId", "purchaseDate", "purchasePrice", "currency"
       FROM library_games
       WHERE "userId" = $1
       ORDER BY "purchaseDate" DESC
       LIMIT 50
-    `, [userId]);
+    `,
+      [userId],
+    );
 
     return {
       userId,
@@ -314,14 +348,14 @@ export class PerformanceOptimizerService implements OnModuleInit {
       // This is a simplified implementation
       // In a real scenario, you'd query the actual connection pool
       const pool = (this.dataSource.driver as any).pool;
-      
+
       if (pool) {
         const active = pool.numUsed || 0;
         const idle = pool.numFree || 0;
         const waiting = pool.numPendingAcquires || 0;
         const total = active + idle;
         const utilization = total > 0 ? (active / total) * 100 : 0;
-        
+
         return {
           total,
           active,
@@ -334,7 +368,7 @@ export class PerformanceOptimizerService implements OnModuleInit {
     } catch (error) {
       this.logger.error('Failed to get connection pool stats:', error);
     }
-    
+
     return {
       total: 0,
       active: 0,
@@ -348,7 +382,9 @@ export class PerformanceOptimizerService implements OnModuleInit {
   /**
    * Check for database lock contention
    */
-  private async checkLockContention(): Promise<Array<{ query: string; lockType: string; duration: number }>> {
+  private async checkLockContention(): Promise<
+    Array<{ query: string; lockType: string; duration: number }>
+  > {
     try {
       const result = await this.dataSource.query(`
         SELECT 
@@ -383,37 +419,52 @@ export class PerformanceOptimizerService implements OnModuleInit {
     try {
       // Check memory usage
       const memoryUsage = process.memoryUsage();
-      const memoryUsagePercent = (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
-      
+      const memoryUsagePercent =
+        (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
+
       if (memoryUsagePercent > 80) {
-        recommendations.push('Consider increasing heap size or optimizing memory usage');
+        recommendations.push(
+          'Consider increasing heap size or optimizing memory usage',
+        );
       }
 
       // Check connection pool
       const poolStats = await this.getConnectionPoolStats();
       if (poolStats.utilization > 80) {
-        recommendations.push('Consider increasing database connection pool size');
+        recommendations.push(
+          'Consider increasing database connection pool size',
+        );
       }
 
       // Check slow queries
       const slowQueries = await this.getSlowQueries(5);
       if (slowQueries.length > 0) {
-        recommendations.push('Optimize slow database queries or add missing indexes');
+        recommendations.push(
+          'Optimize slow database queries or add missing indexes',
+        );
       }
 
       // Check cache performance
       const cacheStats = this.cacheService.getStats();
       if (cacheStats.hitRate < 0.7) {
-        recommendations.push('Improve cache hit rate by optimizing cache keys and TTL values');
+        recommendations.push(
+          'Improve cache hit rate by optimizing cache keys and TTL values',
+        );
       }
 
       if (recommendations.length === 0) {
-        recommendations.push('System is performing well within acceptable parameters');
+        recommendations.push(
+          'System is performing well within acceptable parameters',
+        );
       }
-
     } catch (error) {
-      this.logger.error('Failed to generate performance recommendations:', error);
-      recommendations.push('Unable to generate recommendations due to monitoring error');
+      this.logger.error(
+        'Failed to generate performance recommendations:',
+        error,
+      );
+      recommendations.push(
+        'Unable to generate recommendations due to monitoring error',
+      );
     }
 
     return recommendations;

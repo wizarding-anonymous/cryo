@@ -41,9 +41,7 @@ describe('Authentication & Authorization E2E', () => {
 
   describe('JWT Authentication', () => {
     it('should reject requests without Authorization header', async () => {
-      await request(app.getHttpServer())
-        .get('/api/library/my')
-        .expect(401);
+      await request(app.getHttpServer()).get('/api/library/my').expect(401);
     });
 
     it('should reject requests with invalid Bearer token format', async () => {

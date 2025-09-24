@@ -25,7 +25,10 @@ export class GracefulShutdownService implements OnApplicationShutdown {
   private shutdownTimeout: number;
 
   constructor(private readonly configService: ConfigService) {
-    this.shutdownTimeout = this.configService.get<number>('server.shutdownTimeout', 30000);
+    this.shutdownTimeout = this.configService.get<number>(
+      'server.shutdownTimeout',
+      30000,
+    );
     this.setupSignalHandlers();
   }
 
@@ -62,17 +65,25 @@ export class GracefulShutdownService implements OnApplicationShutdown {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      this.logger.error('Uncaught exception, initiating emergency shutdown', error.stack);
+      this.logger.error(
+        'Uncaught exception, initiating emergency shutdown',
+        error.stack,
+      );
       this.emergencyShutdown(error);
     });
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason, promise) => {
-      this.logger.error('Unhandled promise rejection, initiating emergency shutdown', {
-        reason,
-        promise,
-      });
-      this.emergencyShutdown(new Error(`Unhandled promise rejection: ${reason}`));
+      this.logger.error(
+        'Unhandled promise rejection, initiating emergency shutdown',
+        {
+          reason,
+          promise,
+        },
+      );
+      this.emergencyShutdown(
+        new Error(`Unhandled promise rejection: ${reason}`),
+      );
     });
   }
 
@@ -97,23 +108,29 @@ export class GracefulShutdownService implements OnApplicationShutdown {
     try {
       // Execute shutdown handlers in reverse order (LIFO)
       const handlers = [...this.shutdownHandlers].reverse();
-      
+
       for (const handler of handlers) {
         const handlerTimeout = handler.timeout || 5000;
-        
+
         try {
           this.logger.log(`Executing shutdown handler: ${handler.name}`);
-          
+
           await Promise.race([
             handler.handler(),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error(`Handler timeout: ${handler.name}`)), handlerTimeout)
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error(`Handler timeout: ${handler.name}`)),
+                handlerTimeout,
+              ),
             ),
           ]);
-          
+
           this.logger.log(`Completed shutdown handler: ${handler.name}`);
         } catch (error) {
-          this.logger.error(`Error in shutdown handler ${handler.name}:`, error);
+          this.logger.error(
+            `Error in shutdown handler ${handler.name}:`,
+            error,
+          );
           // Continue with other handlers even if one fails
         }
       }
@@ -133,7 +150,7 @@ export class GracefulShutdownService implements OnApplicationShutdown {
    */
   private emergencyShutdown(error: Error): void {
     this.logger.error('Emergency shutdown initiated', error.stack);
-    
+
     // Try to log the error and exit quickly
     setTimeout(() => {
       process.exit(1);
@@ -145,7 +162,9 @@ export class GracefulShutdownService implements OnApplicationShutdown {
    */
   async onApplicationShutdown(signal?: string): Promise<void> {
     if (signal && !this.isShuttingDown) {
-      this.logger.log(`Application shutdown hook called with signal: ${signal}`);
+      this.logger.log(
+        `Application shutdown hook called with signal: ${signal}`,
+      );
       await this.initiateShutdown(signal);
     }
   }

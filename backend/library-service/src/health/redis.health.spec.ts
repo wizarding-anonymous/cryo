@@ -5,7 +5,7 @@ import { RedisHealthIndicator } from './redis.health';
 
 describe('RedisHealthIndicator', () => {
   let healthIndicator: RedisHealthIndicator;
-  let cacheManager: any;
+  // let cacheManager: any;
 
   const mockCacheManager = {
     set: jest.fn(),
@@ -24,7 +24,6 @@ describe('RedisHealthIndicator', () => {
     }).compile();
 
     healthIndicator = module.get<RedisHealthIndicator>(RedisHealthIndicator);
-    cacheManager = module.get(CACHE_MANAGER);
     jest.clearAllMocks();
   });
 
@@ -40,7 +39,11 @@ describe('RedisHealthIndicator', () => {
           status: 'up',
         },
       });
-      expect(mockCacheManager.set).toHaveBeenCalledWith('health-check', 'ok', 10);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'health-check',
+        'ok',
+        10,
+      );
       expect(mockCacheManager.get).toHaveBeenCalledWith('health-check');
     });
 
@@ -52,7 +55,11 @@ describe('RedisHealthIndicator', () => {
         HealthCheckError,
       );
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith('health-check', 'ok', 10);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'health-check',
+        'ok',
+        10,
+      );
     });
 
     it('should throw HealthCheckError when Redis get operation fails', async () => {
@@ -64,7 +71,11 @@ describe('RedisHealthIndicator', () => {
         HealthCheckError,
       );
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith('health-check', 'ok', 10);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'health-check',
+        'ok',
+        10,
+      );
       expect(mockCacheManager.get).toHaveBeenCalledWith('health-check');
     });
 
@@ -76,7 +87,11 @@ describe('RedisHealthIndicator', () => {
         HealthCheckError,
       );
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith('health-check', 'ok', 10);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'health-check',
+        'ok',
+        10,
+      );
       expect(mockCacheManager.get).toHaveBeenCalledWith('health-check');
     });
 

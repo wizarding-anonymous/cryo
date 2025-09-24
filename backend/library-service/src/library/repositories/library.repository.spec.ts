@@ -450,9 +450,12 @@ describe('LibraryRepository', () => {
 
       await repository.searchUserLibrary(userId, searchOptions, queryDto);
 
-      expect(qb.andWhere).toHaveBeenCalledWith('lg."purchaseDate" >= :dateFrom', {
-        dateFrom: searchOptions.dateRange.from,
-      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'lg."purchaseDate" >= :dateFrom',
+        {
+          dateFrom: searchOptions.dateRange.from,
+        },
+      );
       expect(qb.andWhere).toHaveBeenCalledWith('lg."purchaseDate" <= :dateTo', {
         dateTo: searchOptions.dateRange.to,
       });
@@ -480,9 +483,12 @@ describe('LibraryRepository', () => {
 
       await repository.searchUserLibrary(userId, searchOptions, queryDto);
 
-      expect(qb.andWhere).toHaveBeenCalledWith('lg."purchaseDate" >= :dateFrom', {
-        dateFrom: searchOptions.dateRange.from,
-      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'lg."purchaseDate" >= :dateFrom',
+        {
+          dateFrom: searchOptions.dateRange.from,
+        },
+      );
     });
 
     it('applies only to date when from date is not provided', async () => {
@@ -580,18 +586,30 @@ describe('LibraryRepository', () => {
       expect(qb.andWhere).toHaveBeenCalledWith('lg."orderId" = :orderId', {
         orderId: 'order1',
       });
-      expect(qb.andWhere).toHaveBeenCalledWith('lg."purchaseId" = :purchaseId', {
-        purchaseId: 'purchase1',
-      });
-      expect(qb.andWhere).toHaveBeenCalledWith('lg."purchasePrice" >= :priceMin', {
-        priceMin: 10,
-      });
-      expect(qb.andWhere).toHaveBeenCalledWith('lg."purchasePrice" <= :priceMax', {
-        priceMax: 50,
-      });
-      expect(qb.andWhere).toHaveBeenCalledWith('lg."purchaseDate" >= :dateFrom', {
-        dateFrom: filters.dateFrom,
-      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'lg."purchaseId" = :purchaseId',
+        {
+          purchaseId: 'purchase1',
+        },
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'lg."purchasePrice" >= :priceMin',
+        {
+          priceMin: 10,
+        },
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'lg."purchasePrice" <= :priceMax',
+        {
+          priceMax: 50,
+        },
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'lg."purchaseDate" >= :dateFrom',
+        {
+          dateFrom: filters.dateFrom,
+        },
+      );
       expect(qb.andWhere).toHaveBeenCalledWith('lg."purchaseDate" <= :dateTo', {
         dateTo: filters.dateTo,
       });

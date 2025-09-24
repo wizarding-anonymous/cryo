@@ -219,9 +219,15 @@ describe('HistoryService', () => {
       query.page = 2;
       query.limit = 1;
 
-      const purchase1 = createPurchaseHistory({ id: 'purchase-1', gameId: 'game1' });
-      const purchase2 = createPurchaseHistory({ id: 'purchase-2', gameId: 'game2' });
-      
+      const purchase1 = createPurchaseHistory({
+        id: 'purchase-1',
+        gameId: 'game1',
+      });
+      const purchase2 = createPurchaseHistory({
+        id: 'purchase-2',
+        gameId: 'game2',
+      });
+
       mockHistoryRepository.find.mockResolvedValue([purchase1, purchase2]);
       mockGameCatalogClient.getGamesByIds.mockResolvedValue([
         { id: 'game1', title: 'test game 1' },
@@ -243,19 +249,23 @@ describe('HistoryService', () => {
     it('handles game catalog client errors gracefully', async () => {
       const query = new SearchHistoryDto();
       query.query = 'test';
-      
+
       const purchase = createPurchaseHistory();
       mockHistoryRepository.find.mockResolvedValue([purchase]);
-      mockGameCatalogClient.getGamesByIds.mockRejectedValue(new Error('Catalog service error'));
+      mockGameCatalogClient.getGamesByIds.mockRejectedValue(
+        new Error('Catalog service error'),
+      );
 
       // The service should throw the error since it doesn't handle catalog errors
-      await expect(service.searchPurchaseHistory('user1', query)).rejects.toThrow('Catalog service error');
+      await expect(
+        service.searchPurchaseHistory('user1', query),
+      ).rejects.toThrow('Catalog service error');
     });
 
     it('handles fuzzy matching with high score matches', async () => {
       const query = new SearchHistoryDto();
       query.query = 'awesome';
-      
+
       const purchase = createPurchaseHistory();
       mockHistoryRepository.find.mockResolvedValue([purchase]);
       mockGameCatalogClient.getGamesByIds.mockResolvedValue([
@@ -271,7 +281,7 @@ describe('HistoryService', () => {
     it('filters out low score fuzzy matches', async () => {
       const query = new SearchHistoryDto();
       query.query = 'xyz';
-      
+
       const purchase = createPurchaseHistory();
       mockHistoryRepository.find.mockResolvedValue([purchase]);
       mockGameCatalogClient.getGamesByIds.mockResolvedValue([
@@ -288,7 +298,7 @@ describe('HistoryService', () => {
     it('handles missing game details gracefully', async () => {
       const query = new SearchHistoryDto();
       query.query = 'test';
-      
+
       const purchase = createPurchaseHistory();
       mockHistoryRepository.find.mockResolvedValue([purchase]);
       mockGameCatalogClient.getGamesByIds.mockResolvedValue([
@@ -304,10 +314,16 @@ describe('HistoryService', () => {
     it('sorts fuzzy search results by score', async () => {
       const query = new SearchHistoryDto();
       query.query = 'game';
-      
-      const purchase1 = createPurchaseHistory({ id: 'purchase-1', gameId: 'game1' });
-      const purchase2 = createPurchaseHistory({ id: 'purchase-2', gameId: 'game2' });
-      
+
+      const purchase1 = createPurchaseHistory({
+        id: 'purchase-1',
+        gameId: 'game1',
+      });
+      const purchase2 = createPurchaseHistory({
+        id: 'purchase-2',
+        gameId: 'game2',
+      });
+
       mockHistoryRepository.find.mockResolvedValue([purchase1, purchase2]);
       mockGameCatalogClient.getGamesByIds.mockResolvedValue([
         { id: 'game1', title: 'Game' }, // Exact match - higher score
@@ -340,7 +356,7 @@ describe('HistoryService', () => {
         currency: 'EUR',
         purchaseDate: new Date().toISOString(),
       };
-      
+
       const newRecord = createPurchaseHistory({ currency: 'EUR' });
       mockHistoryRepository.create.mockReturnValue(newRecord);
       mockHistoryRepository.save.mockResolvedValue(newRecord);
@@ -369,12 +385,14 @@ describe('HistoryService', () => {
         currency: 'USD',
         purchaseDate: new Date().toISOString(),
       };
-      
+
       const newRecord = createPurchaseHistory();
       mockHistoryRepository.create.mockReturnValue(newRecord);
       mockHistoryRepository.save.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.createPurchaseRecord(dto)).rejects.toThrow('Database error');
+      await expect(service.createPurchaseRecord(dto)).rejects.toThrow(
+        'Database error',
+      );
     });
   });
 

@@ -16,7 +16,10 @@ export class MonitoringController {
   @Get('metrics')
   @Header('Content-Type', 'text/plain')
   @ApiOperation({ summary: 'Get Prometheus metrics' })
-  @ApiResponse({ status: 200, description: 'Prometheus metrics in text format' })
+  @ApiResponse({
+    status: 200,
+    description: 'Prometheus metrics in text format',
+  })
   async getMetrics(): Promise<string> {
     return this.prometheusMetricsService.getMetrics();
   }

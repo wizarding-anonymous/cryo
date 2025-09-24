@@ -37,14 +37,15 @@ describe('EventsModule', () => {
   });
 
   it('should provide EventEmitterService', () => {
-    const eventEmitterService = module.get<EventEmitterService>(EventEmitterService);
+    const eventEmitterService =
+      module.get<EventEmitterService>(EventEmitterService);
     expect(eventEmitterService).toBeDefined();
   });
 
   it('should configure TCP transport when Kafka is disabled', async () => {
     const configService = module.get<ConfigService>(ConfigService);
     expect(configService.get('kafka.enabled')).toBe(false);
-    
+
     // The module should be properly configured with TCP transport
     expect(module).toBeDefined();
   });
@@ -81,7 +82,7 @@ describe('EventsModule', () => {
       const configService = kafkaModule.get<ConfigService>(ConfigService);
       expect(configService.get('kafka.enabled')).toBe(true);
       expect(configService.get('kafka.broker')).toBe('test-broker:9092');
-      
+
       // The module should be properly configured with Kafka transport
       expect(kafkaModule).toBeDefined();
     });
@@ -106,7 +107,7 @@ describe('EventsModule', () => {
 
       const configService = defaultModule.get<ConfigService>(ConfigService);
       expect(configService.get('kafka.broker')).toBeUndefined();
-      
+
       await defaultModule.close();
     });
   });
@@ -136,7 +137,8 @@ describe('EventsModule', () => {
               name: 'TEST_SERVICE',
               imports: [ConfigModule],
               useFactory: async (configService: ConfigService) => {
-                const kafkaEnabled = configService.get<boolean>('kafka.enabled', false) === true;
+                const kafkaEnabled =
+                  configService.get<boolean>('kafka.enabled', false) === true;
                 if (!kafkaEnabled) {
                   return {
                     transport: Transport.TCP,

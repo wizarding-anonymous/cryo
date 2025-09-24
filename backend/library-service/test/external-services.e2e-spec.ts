@@ -131,7 +131,9 @@ describe('External Services Integration E2E', () => {
 
       expect(response.body.games).toHaveLength(1);
       expect(response.body.games[0].gameDetails).toEqual(gameDetails);
-      expect(mockGameCatalogClient.getGamesByIds).toHaveBeenCalledWith([gameId]);
+      expect(mockGameCatalogClient.getGamesByIds).toHaveBeenCalledWith([
+        gameId,
+      ]);
     });
 
     it('should handle game catalog service unavailability', async () => {
@@ -174,7 +176,9 @@ describe('External Services Integration E2E', () => {
         // Missing other fields
       };
 
-      mockGameCatalogClient.getGamesByIds.mockResolvedValue([partialGameDetails]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([
+        partialGameDetails,
+      ]);
 
       // Add game to library
       await request(app.getHttpServer())
@@ -205,9 +209,10 @@ describe('External Services Integration E2E', () => {
 
       // Mock timeout
       mockGameCatalogClient.getGamesByIds.mockImplementation(
-        () => new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 100)
-        ),
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), 100),
+          ),
       );
 
       // Add game to library
@@ -278,7 +283,9 @@ describe('External Services Integration E2E', () => {
         })
         .expect(404);
 
-      expect(mockUserServiceClient.doesUserExist).toHaveBeenCalledWith(testUserId);
+      expect(mockUserServiceClient.doesUserExist).toHaveBeenCalledWith(
+        testUserId,
+      );
     });
 
     it('should handle user service unavailability', async () => {
@@ -347,7 +354,9 @@ describe('External Services Integration E2E', () => {
       };
 
       mockPaymentServiceClient.validatePurchase.mockResolvedValue(true);
-      mockPaymentServiceClient.getPurchaseDetails.mockResolvedValue(purchaseDetails);
+      mockPaymentServiceClient.getPurchaseDetails.mockResolvedValue(
+        purchaseDetails,
+      );
 
       // Add game with purchase validation
       await request(app.getHttpServer())
@@ -363,7 +372,9 @@ describe('External Services Integration E2E', () => {
         })
         .expect(201);
 
-      expect(mockPaymentServiceClient.validatePurchase).toHaveBeenCalledWith(purchaseId);
+      expect(mockPaymentServiceClient.validatePurchase).toHaveBeenCalledWith(
+        purchaseId,
+      );
     });
 
     it('should reject invalid purchases', async () => {
@@ -387,7 +398,9 @@ describe('External Services Integration E2E', () => {
         })
         .expect(400);
 
-      expect(mockPaymentServiceClient.validatePurchase).toHaveBeenCalledWith(purchaseId);
+      expect(mockPaymentServiceClient.validatePurchase).toHaveBeenCalledWith(
+        purchaseId,
+      );
     });
 
     it('should handle payment service circuit breaker', async () => {
@@ -421,9 +434,15 @@ describe('External Services Integration E2E', () => {
       const gameId = randomUUID();
 
       // Mock all services failing
-      mockUserServiceClient.doesUserExist.mockRejectedValue(new Error('User service down'));
-      mockGameCatalogClient.doesGameExist.mockRejectedValue(new Error('Catalog service down'));
-      mockPaymentServiceClient.validatePurchase.mockRejectedValue(new Error('Payment service down'));
+      mockUserServiceClient.doesUserExist.mockRejectedValue(
+        new Error('User service down'),
+      );
+      mockGameCatalogClient.doesGameExist.mockRejectedValue(
+        new Error('Catalog service down'),
+      );
+      mockPaymentServiceClient.validatePurchase.mockRejectedValue(
+        new Error('Payment service down'),
+      );
 
       // Request should fail gracefully
       await request(app.getHttpServer())
@@ -443,15 +462,17 @@ describe('External Services Integration E2E', () => {
     it('should cache external service responses', async () => {
       const gameId = randomUUID();
 
-      mockGameCatalogClient.getGamesByIds.mockResolvedValue([{
-        id: gameId,
-        title: 'Cached Game',
-        developer: 'Test Developer',
-        publisher: 'Test Publisher',
-        images: ['test.jpg'],
-        tags: ['test'],
-        releaseDate: new Date(),
-      }]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([
+        {
+          id: gameId,
+          title: 'Cached Game',
+          developer: 'Test Developer',
+          publisher: 'Test Publisher',
+          images: ['test.jpg'],
+          tags: ['test'],
+          releaseDate: new Date(),
+        },
+      ]);
 
       // Add game to library
       await request(app.getHttpServer())
@@ -487,12 +508,14 @@ describe('External Services Integration E2E', () => {
       const gameId = randomUUID();
 
       // Mock unexpected response format
-      mockGameCatalogClient.getGamesByIds.mockResolvedValue([{
-        id: gameId,
-        name: 'Game Title', // Different field name
-        studio: 'Developer Name', // Different field name
-        // Missing expected fields
-      }]);
+      mockGameCatalogClient.getGamesByIds.mockResolvedValue([
+        {
+          id: gameId,
+          name: 'Game Title', // Different field name
+          studio: 'Developer Name', // Different field name
+          // Missing expected fields
+        },
+      ]);
 
       // Add game to library
       await request(app.getHttpServer())
@@ -522,7 +545,7 @@ describe('External Services Integration E2E', () => {
 
       // Mock long-running service call
       mockGameCatalogClient.getGamesByIds.mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 10000)) // 10 second delay
+        () => new Promise((resolve) => setTimeout(resolve, 10000)), // 10 second delay
       );
 
       // Add game to library

@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { PurchaseHistoryRepository, HistoryFilterOptions, HistorySearchOptions } from './purchase-history.repository';
+import {
+  PurchaseHistoryRepository,
+  HistoryFilterOptions,
+  HistorySearchOptions,
+} from './purchase-history.repository';
 import {
   PurchaseHistory,
   PurchaseStatus,
@@ -11,7 +15,7 @@ import { HistorySortBy, SortOrder } from '../../common/enums';
 
 describe('PurchaseHistoryRepository', () => {
   let repository: PurchaseHistoryRepository;
-  let typeormRepository: Repository<PurchaseHistory>;
+  // let typeormRepository: Repository<PurchaseHistory>;
 
   const mockTypeormRepository = {
     findAndCount: jest.fn(),
@@ -32,9 +36,6 @@ describe('PurchaseHistoryRepository', () => {
 
     repository = module.get<PurchaseHistoryRepository>(
       PurchaseHistoryRepository,
-    );
-    typeormRepository = module.get<Repository<PurchaseHistory>>(
-      getRepositoryToken(PurchaseHistory),
     );
     jest.clearAllMocks();
   });
@@ -148,7 +149,9 @@ describe('PurchaseHistoryRepository', () => {
       );
 
       expect(result).toEqual([[], 0]);
-      expect(qb.where).toHaveBeenCalledWith('ph."userId" = :userId', { userId });
+      expect(qb.where).toHaveBeenCalledWith('ph."userId" = :userId', {
+        userId,
+      });
       expect(qb.andWhere).toHaveBeenCalledWith('ph."status" = :status', {
         status: PurchaseStatus.COMPLETED,
       });

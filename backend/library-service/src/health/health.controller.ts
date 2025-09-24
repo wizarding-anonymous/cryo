@@ -24,13 +24,14 @@ export class HealthController {
     private productionHealth: ProductionHealthService,
     private metricsService: MetricsService,
     private databaseHealth: DatabaseHealthService,
-  ) { }
+  ) {}
 
   @Get()
   @HealthCheck()
   @ApiOperation({
     summary: 'Basic health check',
-    description: 'Performs basic health checks for database and Redis (if not in test environment)',
+    description:
+      'Performs basic health checks for database and Redis (if not in test environment)',
   })
   @ApiResponse({
     status: 200,
@@ -111,7 +112,7 @@ export class HealthController {
           this.metricsService.recordHealthCheck('database', 'failure');
           throw error;
         }
-      }
+      },
     ];
 
     if (!isTest) {
@@ -134,7 +135,8 @@ export class HealthController {
   @HealthCheck()
   @ApiOperation({
     summary: 'Detailed health check',
-    description: 'Performs comprehensive health checks including database, Redis, cache, and external services',
+    description:
+      'Performs comprehensive health checks including database, Redis, cache, and external services',
   })
   @ApiResponse({
     status: 200,
@@ -233,19 +235,30 @@ export class HealthController {
       checks.push(
         async () => {
           try {
-            const result = await this.externalServices.checkGameCatalogService('game-catalog-service');
-            this.metricsService.recordHealthCheck('game-catalog-service', 'success');
+            const result = await this.externalServices.checkGameCatalogService(
+              'game-catalog-service',
+            );
+            this.metricsService.recordHealthCheck(
+              'game-catalog-service',
+              'success',
+            );
             this.metricsService.setExternalServiceStatus('game-catalog', 1);
             return result;
           } catch (error) {
-            this.metricsService.recordHealthCheck('game-catalog-service', 'failure');
+            this.metricsService.recordHealthCheck(
+              'game-catalog-service',
+              'failure',
+            );
             this.metricsService.setExternalServiceStatus('game-catalog', 0);
             throw error;
           }
         },
         async () => {
           try {
-            const result = await this.externalServices.checkPaymentService('payment-service');
+            const result =
+              await this.externalServices.checkPaymentService(
+                'payment-service',
+              );
             this.metricsService.recordHealthCheck('payment-service', 'success');
             this.metricsService.setExternalServiceStatus('payment', 1);
             return result;
@@ -257,7 +270,8 @@ export class HealthController {
         },
         async () => {
           try {
-            const result = await this.externalServices.checkUserService('user-service');
+            const result =
+              await this.externalServices.checkUserService('user-service');
             this.metricsService.recordHealthCheck('user-service', 'success');
             this.metricsService.setExternalServiceStatus('user', 1);
             return result;
@@ -266,7 +280,7 @@ export class HealthController {
             this.metricsService.setExternalServiceStatus('user', 0);
             throw error;
           }
-        }
+        },
       );
     }
 
@@ -277,7 +291,8 @@ export class HealthController {
   @HealthCheck()
   @ApiOperation({
     summary: 'External services health check',
-    description: 'Checks the health of all external services (Game Catalog, Payment, User services)',
+    description:
+      'Checks the health of all external services (Game Catalog, Payment, User services)',
   })
   @ApiResponse({
     status: 200,
@@ -295,7 +310,7 @@ export class HealthController {
     }
 
     const checks = [
-      () => this.externalServices.checkAllExternalServices('external-services')
+      () => this.externalServices.checkAllExternalServices('external-services'),
     ];
 
     return this.health.check(checks);
@@ -305,7 +320,8 @@ export class HealthController {
   @HealthCheck()
   @ApiOperation({
     summary: 'Production readiness health check',
-    description: 'Comprehensive production readiness check including system, performance, security, resources, and external services',
+    description:
+      'Comprehensive production readiness check including system, performance, security, resources, and external services',
   })
   @ApiResponse({
     status: 200,
@@ -351,7 +367,11 @@ export class HealthController {
     schema: {
       type: 'object',
       properties: {
-        timestamp: { type: 'string', format: 'date-time', example: '2024-01-15T10:30:00.000Z' },
+        timestamp: {
+          type: 'string',
+          format: 'date-time',
+          example: '2024-01-15T10:30:00.000Z',
+        },
         service: { type: 'string', example: 'library-service' },
         version: { type: 'string', example: '1.0.0' },
         environment: { type: 'string', example: 'development' },

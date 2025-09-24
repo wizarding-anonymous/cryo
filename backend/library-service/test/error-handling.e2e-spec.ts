@@ -198,7 +198,7 @@ describe('Error Handling E2E', () => {
           gameId: randomUUID(),
           orderId: randomUUID(),
           purchaseId: randomUUID(),
-          purchasePrice: -10.00,
+          purchasePrice: -10.0,
           currency: 'USD',
           purchaseDate: new Date().toISOString(),
         })
@@ -350,7 +350,7 @@ describe('Error Handling E2E', () => {
     it('should handle database connection errors gracefully', async () => {
       // This would require mocking the database connection
       // For now, we'll test that the app handles database errors
-      
+
       // Close the database connection to simulate error
       await dataSource.destroy();
 
@@ -365,9 +365,10 @@ describe('Error Handling E2E', () => {
 
     it('should handle timeout errors from external services', async () => {
       mockGameCatalogClient.getGamesByIds.mockImplementation(
-        () => new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 100)
-        ),
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), 100),
+          ),
       );
 
       // Add game first
@@ -428,7 +429,9 @@ describe('Error Handling E2E', () => {
       const maliciousQuery = "'; DROP TABLE library_games; --";
 
       const response = await request(app.getHttpServer())
-        .get('/api/library/my/search?query=' + encodeURIComponent(maliciousQuery))
+        .get(
+          '/api/library/my/search?query=' + encodeURIComponent(maliciousQuery),
+        )
         .set('Authorization', `Bearer ${validToken}`)
         .expect(200);
 
@@ -490,13 +493,15 @@ describe('Error Handling E2E', () => {
 
       // Correlation ID might be in headers or body depending on implementation
       expect(
-        response.headers['x-correlation-id'] || response.body.correlationId
+        response.headers['x-correlation-id'] || response.body.correlationId,
       ).toBeDefined();
     });
 
     it('should not expose sensitive information in error messages', async () => {
       mockUserServiceClient.doesUserExist.mockRejectedValue(
-        new Error('Database connection string: postgres://user:password@host:5432/db'),
+        new Error(
+          'Database connection string: postgres://user:password@host:5432/db',
+        ),
       );
 
       const response = await request(app.getHttpServer())
@@ -522,7 +527,7 @@ describe('Error Handling E2E', () => {
     it('should continue working when cache is unavailable', async () => {
       // This would require mocking the cache service
       // For now, test that basic functionality works
-      
+
       const response = await request(app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${validToken}`)

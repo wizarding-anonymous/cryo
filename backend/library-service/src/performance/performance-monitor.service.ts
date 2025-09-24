@@ -64,7 +64,11 @@ export class PerformanceMonitorService {
   private readonly maxMetricsHistory = 10000;
   private queryCount = 0;
   private slowQueryThreshold = 1000; // 1 second
-  private slowQueries: Array<{ query: string; duration: number; timestamp: Date }> = [];
+  private slowQueries: Array<{
+    query: string;
+    duration: number;
+    timestamp: Date;
+  }> = [];
   private readonly startTime = Date.now();
 
   constructor(
@@ -122,7 +126,7 @@ export class PerformanceMonitorService {
     try {
       // Get connection pool stats
       const poolStats = await this.getConnectionPoolStats();
-      
+
       // Get query statistics
       const queryStats = this.getQueryStatistics();
 
@@ -158,7 +162,7 @@ export class PerformanceMonitorService {
   async getCacheMetrics(): Promise<CacheMetrics> {
     try {
       const cacheStats = this.cacheService.getStats();
-      
+
       return {
         hitRate: cacheStats.hitRate,
         missRate: 1 - cacheStats.hitRate,
@@ -188,7 +192,7 @@ export class PerformanceMonitorService {
   getSystemMetrics(): SystemMetrics {
     const memoryUsage = process.memoryUsage();
     const uptime = process.uptime();
-    
+
     return {
       memoryUsage,
       cpuUsage: this.getCpuUsage(),
@@ -206,11 +210,15 @@ export class PerformanceMonitorService {
     averageResponseTime: number;
     errorRate: number;
     slowRequestCount: number;
-    topSlowEndpoints: Array<{ endpoint: string; averageTime: number; count: number }>;
+    topSlowEndpoints: Array<{
+      endpoint: string;
+      averageTime: number;
+      count: number;
+    }>;
     statusCodeDistribution: Record<number, number>;
   } {
     const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
-    const recentMetrics = this.metrics.filter(m => m.timestamp >= cutoffTime);
+    const recentMetrics = this.metrics.filter((m) => m.timestamp >= cutoffTime);
 
     if (recentMetrics.length === 0) {
       return {
@@ -224,14 +232,20 @@ export class PerformanceMonitorService {
     }
 
     const requestCount = recentMetrics.length;
-    const averageResponseTime = recentMetrics.reduce((sum, m) => sum + m.responseTime, 0) / requestCount;
-    const errorCount = recentMetrics.filter(m => m.statusCode >= 400).length;
+    const averageResponseTime =
+      recentMetrics.reduce((sum, m) => sum + m.responseTime, 0) / requestCount;
+    const errorCount = recentMetrics.filter((m) => m.statusCode >= 400).length;
     const errorRate = errorCount / requestCount;
-    const slowRequestCount = recentMetrics.filter(m => m.responseTime > 1000).length;
+    const slowRequestCount = recentMetrics.filter(
+      (m) => m.responseTime > 1000,
+    ).length;
 
     // Group by endpoint for slow endpoint analysis
-    const endpointStats = new Map<string, { totalTime: number; count: number }>();
-    recentMetrics.forEach(m => {
+    const endpointStats = new Map<
+      string,
+      { totalTime: number; count: number }
+    >();
+    recentMetrics.forEach((m) => {
       const key = `${m.method} ${m.endpoint}`;
       const existing = endpointStats.get(key) || { totalTime: 0, count: 0 };
       endpointStats.set(key, {
@@ -251,8 +265,9 @@ export class PerformanceMonitorService {
 
     // Status code distribution
     const statusCodeDistribution: Record<number, number> = {};
-    recentMetrics.forEach(m => {
-      statusCodeDistribution[m.statusCode] = (statusCodeDistribution[m.statusCode] || 0) + 1;
+    recentMetrics.forEach((m) => {
+      statusCodeDistribution[m.statusCode] =
+        (statusCodeDistribution[m.statusCode] || 0) + 1;
     });
 
     return {
@@ -277,7 +292,11 @@ export class PerformanceMonitorService {
       averageResponseTime: number;
       errorRate: number;
       slowRequestCount: number;
-      topSlowEndpoints: Array<{ endpoint: string; averageTime: number; count: number }>;
+      topSlowEndpoints: Array<{
+        endpoint: string;
+        averageTime: number;
+        count: number;
+      }>;
       statusCodeDistribution: Record<number, number>;
     };
     recommendations: string[];
@@ -331,7 +350,9 @@ export class PerformanceMonitorService {
 
     // Check response time
     if (summary.averageResponseTime > 1000) {
-      issues.push(`High average response time: ${summary.averageResponseTime}ms`);
+      issues.push(
+        `High average response time: ${summary.averageResponseTime}ms`,
+      );
       status = 'critical';
     } else if (summary.averageResponseTime > 500) {
       issues.push(`Elevated response time: ${summary.averageResponseTime}ms`);
@@ -343,12 +364,15 @@ export class PerformanceMonitorService {
       issues.push(`High error rate: ${(summary.errorRate * 100).toFixed(2)}%`);
       status = 'critical';
     } else if (summary.errorRate > 0.01) {
-      issues.push(`Elevated error rate: ${(summary.errorRate * 100).toFixed(2)}%`);
+      issues.push(
+        `Elevated error rate: ${(summary.errorRate * 100).toFixed(2)}%`,
+      );
       if (status === 'healthy') status = 'warning';
     }
 
     // Check memory usage
-    const memoryUsagePercent = (system.memoryUsage.heapUsed / system.memoryUsage.heapTotal) * 100;
+    const memoryUsagePercent =
+      (system.memoryUsage.heapUsed / system.memoryUsage.heapTotal) * 100;
     if (memoryUsagePercent > 90) {
       issues.push(`Critical memory usage: ${memoryUsagePercent.toFixed(1)}%`);
       status = 'critical';
@@ -359,10 +383,14 @@ export class PerformanceMonitorService {
 
     // Check database connections
     if (database.connectionPoolUtilization > 90) {
-      issues.push(`High database connection pool utilization: ${database.connectionPoolUtilization.toFixed(1)}%`);
+      issues.push(
+        `High database connection pool utilization: ${database.connectionPoolUtilization.toFixed(1)}%`,
+      );
       status = 'critical';
     } else if (database.connectionPoolUtilization > 80) {
-      issues.push(`Elevated database connection pool utilization: ${database.connectionPoolUtilization.toFixed(1)}%`);
+      issues.push(
+        `Elevated database connection pool utilization: ${database.connectionPoolUtilization.toFixed(1)}%`,
+      );
       if (status === 'healthy') status = 'warning';
     }
 
@@ -393,32 +421,37 @@ export class PerformanceMonitorService {
     // This would typically be done through TypeORM logging configuration
     // For now, we'll track query count
     const originalQuery = this.dataSource.query.bind(this.dataSource);
-    
-    this.dataSource.query = async (query: string, parameters?: any[]): Promise<any> => {
+
+    this.dataSource.query = async (
+      query: string,
+      parameters?: any[],
+    ): Promise<any> => {
       const startTime = Date.now();
       this.queryCount++;
-      
+
       try {
         const result = await originalQuery(query, parameters);
         const duration = Date.now() - startTime;
-        
+
         if (duration > this.slowQueryThreshold) {
           this.slowQueries.push({
             query: query.substring(0, 200) + (query.length > 200 ? '...' : ''),
             duration,
             timestamp: new Date(),
           });
-          
+
           // Keep only recent slow queries
           if (this.slowQueries.length > 100) {
             this.slowQueries = this.slowQueries.slice(-100);
           }
         }
-        
+
         return result;
       } catch (error) {
         const duration = Date.now() - startTime;
-        this.logger.error(`Query failed after ${duration}ms: ${query.substring(0, 100)}...`);
+        this.logger.error(
+          `Query failed after ${duration}ms: ${query.substring(0, 100)}...`,
+        );
         throw error;
       }
     };
@@ -431,17 +464,20 @@ export class PerformanceMonitorService {
     // Collect system metrics every 30 seconds
     setInterval(() => {
       const metrics = this.getSystemMetrics();
-      
+
       // Log warnings for high resource usage
-      const memoryUsagePercent = (metrics.memoryUsage.heapUsed / metrics.memoryUsage.heapTotal) * 100;
+      const memoryUsagePercent =
+        (metrics.memoryUsage.heapUsed / metrics.memoryUsage.heapTotal) * 100;
       if (memoryUsagePercent > 85) {
-        this.logger.warn(`High memory usage: ${memoryUsagePercent.toFixed(1)}%`);
+        this.logger.warn(
+          `High memory usage: ${memoryUsagePercent.toFixed(1)}%`,
+        );
       }
-      
+
       if (metrics.cpuUsage > 80) {
         this.logger.warn(`High CPU usage: ${metrics.cpuUsage.toFixed(1)}%`);
       }
-      
+
       if (metrics.eventLoopDelay > 100) {
         this.logger.warn(`High event loop delay: ${metrics.eventLoopDelay}ms`);
       }
@@ -461,19 +497,19 @@ export class PerformanceMonitorService {
       // This is a simplified implementation
       // In a real scenario, you'd query the actual connection pool
       const pool = (this.dataSource.driver as any).pool;
-      
+
       if (pool) {
         const active = pool.numUsed || 0;
         const idle = pool.numFree || 0;
         const total = active + idle;
         const utilization = total > 0 ? (active / total) * 100 : 0;
-        
+
         return { active, idle, total, utilization };
       }
     } catch (error) {
       this.logger.error('Failed to get connection pool stats:', error);
     }
-    
+
     return { active: 0, idle: 0, total: 0, utilization: 0 };
   }
 
@@ -482,9 +518,9 @@ export class PerformanceMonitorService {
    */
   private getQueryStatistics(): DatabaseMetrics['queryStats'] {
     const recentSlowQueries = this.slowQueries.filter(
-      q => q.timestamp > new Date(Date.now() - 5 * 60 * 1000)
+      (q) => q.timestamp > new Date(Date.now() - 5 * 60 * 1000),
     );
-    
+
     if (recentSlowQueries.length === 0) {
       return {
         totalQueries: this.queryCount,
@@ -493,12 +529,13 @@ export class PerformanceMonitorService {
         fastestQuery: 0,
       };
     }
-    
-    const durations = recentSlowQueries.map(q => q.duration);
-    const averageQueryTime = durations.reduce((sum, d) => sum + d, 0) / durations.length;
+
+    const durations = recentSlowQueries.map((q) => q.duration);
+    const averageQueryTime =
+      durations.reduce((sum, d) => sum + d, 0) / durations.length;
     const slowestQuery = Math.max(...durations);
     const fastestQuery = Math.min(...durations);
-    
+
     return {
       totalQueries: this.queryCount,
       averageQueryTime: Math.round(averageQueryTime),
@@ -547,16 +584,25 @@ export class PerformanceMonitorService {
       averageResponseTime: number;
       errorRate: number;
       slowRequestCount: number;
-      topSlowEndpoints: Array<{ endpoint: string; averageTime: number; count: number }>;
+      topSlowEndpoints: Array<{
+        endpoint: string;
+        averageTime: number;
+        count: number;
+      }>;
       statusCodeDistribution: Record<number, number>;
     };
   }): string[] {
     const recommendations: string[] = [];
 
     // Memory recommendations
-    const memoryUsagePercent = (metrics.system.memoryUsage.heapUsed / metrics.system.memoryUsage.heapTotal) * 100;
+    const memoryUsagePercent =
+      (metrics.system.memoryUsage.heapUsed /
+        metrics.system.memoryUsage.heapTotal) *
+      100;
     if (memoryUsagePercent > 80) {
-      recommendations.push('Consider increasing heap size or optimizing memory usage');
+      recommendations.push(
+        'Consider increasing heap size or optimizing memory usage',
+      );
     }
 
     // Database recommendations
@@ -565,21 +611,29 @@ export class PerformanceMonitorService {
     }
 
     if (metrics.database.slowQueries.length > 5) {
-      recommendations.push('Optimize slow database queries or add missing indexes');
+      recommendations.push(
+        'Optimize slow database queries or add missing indexes',
+      );
     }
 
     // Cache recommendations
     if (metrics.cache.hitRate < 0.7) {
-      recommendations.push('Improve cache hit rate by optimizing cache keys and TTL values');
+      recommendations.push(
+        'Improve cache hit rate by optimizing cache keys and TTL values',
+      );
     }
 
     // Request recommendations
     if (metrics.requests.averageResponseTime > 500) {
-      recommendations.push('Optimize slow endpoints or add caching for frequently accessed data');
+      recommendations.push(
+        'Optimize slow endpoints or add caching for frequently accessed data',
+      );
     }
 
     if (metrics.requests.errorRate > 0.02) {
-      recommendations.push('Investigate and fix sources of errors to improve reliability');
+      recommendations.push(
+        'Investigate and fix sources of errors to improve reliability',
+      );
     }
 
     return recommendations;

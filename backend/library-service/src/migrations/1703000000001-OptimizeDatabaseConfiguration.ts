@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInterface {
+export class OptimizeDatabaseConfiguration1703000000001
+  implements MigrationInterface
+{
   name = 'OptimizeDatabaseConfiguration1703000000001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -19,11 +21,11 @@ export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInte
       FROM "library_games"
       GROUP BY "userId";
     `);
-    
+
     await queryRunner.query(`
       CREATE UNIQUE INDEX ON "mv_user_library_stats" ("userId");
     `);
-    
+
     await queryRunner.query(`
       CREATE MATERIALIZED VIEW IF NOT EXISTS "mv_user_purchase_stats" AS
       SELECT 
@@ -39,11 +41,11 @@ export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInte
       FROM "purchase_history"
       GROUP BY "userId";
     `);
-    
+
     await queryRunner.query(`
       CREATE UNIQUE INDEX ON "mv_user_purchase_stats" ("userId");
     `);
-    
+
     // Create function for refreshing materialized views
     await queryRunner.query(`
       CREATE OR REPLACE FUNCTION refresh_user_stats_views()
@@ -54,20 +56,20 @@ export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInte
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
+
     // Create partitioned tables for large datasets (future-proofing)
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "library_games_archive" (
         LIKE "library_games" INCLUDING ALL
       ) PARTITION BY RANGE ("purchaseDate");
     `);
-    
+
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "purchase_history_archive" (
         LIKE "purchase_history" INCLUDING ALL
       ) PARTITION BY RANGE ("createdAt");
     `);
-    
+
     // Create stored procedures for common operations
     await queryRunner.query(`
       CREATE OR REPLACE FUNCTION get_user_library_page(
@@ -120,7 +122,7 @@ export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInte
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
+
     await queryRunner.query(`
       CREATE OR REPLACE FUNCTION search_user_library(
         p_user_id UUID,
@@ -176,7 +178,7 @@ export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInte
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
+
     // Create function for bulk operations
     await queryRunner.query(`
       CREATE OR REPLACE FUNCTION bulk_add_library_games(
@@ -212,7 +214,7 @@ export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInte
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
+
     // Create triggers for automatic stats refresh
     await queryRunner.query(`
       CREATE OR REPLACE FUNCTION trigger_refresh_user_stats()
@@ -225,35 +227,35 @@ export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInte
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
+
     await queryRunner.query(`
       CREATE TRIGGER library_games_stats_refresh
         AFTER INSERT OR UPDATE OR DELETE ON library_games
         FOR EACH ROW EXECUTE FUNCTION trigger_refresh_user_stats();
     `);
-    
+
     await queryRunner.query(`
       CREATE TRIGGER purchase_history_stats_refresh
         AFTER INSERT OR UPDATE OR DELETE ON purchase_history
         FOR EACH ROW EXECUTE FUNCTION trigger_refresh_user_stats();
     `);
-    
+
     // Create indexes on materialized views
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "IDX_mv_user_library_stats_total_games" 
       ON "mv_user_library_stats" ("totalGames" DESC);
     `);
-    
+
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "IDX_mv_user_library_stats_total_spent" 
       ON "mv_user_library_stats" ("totalSpent" DESC);
     `);
-    
+
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "IDX_mv_user_purchase_stats_total_purchases" 
       ON "mv_user_purchase_stats" ("totalPurchases" DESC);
     `);
-    
+
     // Update table statistics
     await queryRunner.query(`ANALYZE "library_games";`);
     await queryRunner.query(`ANALYZE "purchase_history";`);
@@ -263,20 +265,38 @@ export class OptimizeDatabaseConfiguration1703000000001 implements MigrationInte
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop triggers
-    await queryRunner.query(`DROP TRIGGER IF EXISTS library_games_stats_refresh ON library_games;`);
-    await queryRunner.query(`DROP TRIGGER IF EXISTS purchase_history_stats_refresh ON purchase_history;`);
-    
+    await queryRunner.query(
+      `DROP TRIGGER IF EXISTS library_games_stats_refresh ON library_games;`,
+    );
+    await queryRunner.query(
+      `DROP TRIGGER IF EXISTS purchase_history_stats_refresh ON purchase_history;`,
+    );
+
     // Drop functions
-    await queryRunner.query(`DROP FUNCTION IF EXISTS trigger_refresh_user_stats();`);
-    await queryRunner.query(`DROP FUNCTION IF EXISTS bulk_add_library_games(JSONB);`);
-    await queryRunner.query(`DROP FUNCTION IF EXISTS search_user_library(UUID, TEXT, INTEGER, INTEGER);`);
-    await queryRunner.query(`DROP FUNCTION IF EXISTS get_user_library_page(UUID, INTEGER, INTEGER, TEXT, TEXT);`);
-    await queryRunner.query(`DROP FUNCTION IF EXISTS refresh_user_stats_views();`);
-    
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS trigger_refresh_user_stats();`,
+    );
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS bulk_add_library_games(JSONB);`,
+    );
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS search_user_library(UUID, TEXT, INTEGER, INTEGER);`,
+    );
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS get_user_library_page(UUID, INTEGER, INTEGER, TEXT, TEXT);`,
+    );
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS refresh_user_stats_views();`,
+    );
+
     // Drop materialized views
-    await queryRunner.query(`DROP MATERIALIZED VIEW IF EXISTS "mv_user_purchase_stats";`);
-    await queryRunner.query(`DROP MATERIALIZED VIEW IF EXISTS "mv_user_library_stats";`);
-    
+    await queryRunner.query(
+      `DROP MATERIALIZED VIEW IF EXISTS "mv_user_purchase_stats";`,
+    );
+    await queryRunner.query(
+      `DROP MATERIALIZED VIEW IF EXISTS "mv_user_library_stats";`,
+    );
+
     // Drop partitioned tables
     await queryRunner.query(`DROP TABLE IF EXISTS "purchase_history_archive";`);
     await queryRunner.query(`DROP TABLE IF EXISTS "library_games_archive";`);

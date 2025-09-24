@@ -42,7 +42,10 @@ describe('TransformInterceptor', () => {
           expect(data.meta).toBeDefined();
           expect(data.meta!).toHaveProperty('timestamp');
           expect(data.meta!).toHaveProperty('version', '1.0');
-          expect(data.meta!).toHaveProperty('correlationId', 'test-correlation-id');
+          expect(data.meta!).toHaveProperty(
+            'correlationId',
+            'test-correlation-id',
+          );
           resolve(data);
         },
       });

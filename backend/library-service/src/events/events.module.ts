@@ -13,7 +13,7 @@ import { EventEmitterService } from './event.emitter.service';
       {
         name: 'KAFKA_SERVICE',
         imports: [ConfigModule],
-        useFactory: async (configService: ConfigService) => {
+        useFactory: (configService: ConfigService) => {
           const kafkaEnabled =
             configService.get<boolean>('kafka.enabled', false) === true;
           if (!kafkaEnabled) {

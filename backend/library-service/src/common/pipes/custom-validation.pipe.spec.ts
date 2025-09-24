@@ -40,9 +40,9 @@ describe('CustomValidationPipe', () => {
   });
 
   it('should sanitize XSS attempts', async () => {
-    const maliciousData = { 
-      name: '<script>alert("xss")</script>John', 
-      age: 25 
+    const maliciousData = {
+      name: '<script>alert("xss")</script>John',
+      age: 25,
     };
     const metadata: ArgumentMetadata = {
       type: 'body',
@@ -56,9 +56,9 @@ describe('CustomValidationPipe', () => {
   });
 
   it('should remove javascript: protocols', async () => {
-    const maliciousData = { 
-      name: 'javascript:alert("xss")John', 
-      age: 25 
+    const maliciousData = {
+      name: 'javascript:alert("xss")John',
+      age: 25,
     };
     const metadata: ArgumentMetadata = {
       type: 'body',
@@ -97,7 +97,10 @@ describe('CustomValidationPipe', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(BadRequestException);
       const badRequestError = error as BadRequestException;
-      expect(badRequestError.getResponse()).toHaveProperty('message', 'Validation failed');
+      expect(badRequestError.getResponse()).toHaveProperty(
+        'message',
+        'Validation failed',
+      );
       expect(badRequestError.getResponse()).toHaveProperty('errors');
       expect(badRequestError.getResponse()).toHaveProperty('timestamp');
     }
@@ -108,8 +111,8 @@ describe('CustomValidationPipe', () => {
       name: 'John',
       age: 25,
       nested: {
-        value: '<script>alert("xss")</script>test'
-      }
+        value: '<script>alert("xss")</script>test',
+      },
     };
     const metadata: ArgumentMetadata = {
       type: 'body',
@@ -126,7 +129,7 @@ describe('CustomValidationPipe', () => {
     const arrayData = {
       name: 'John',
       age: 25,
-      tags: ['<script>alert("xss")</script>tag1', 'tag2']
+      tags: ['<script>alert("xss")</script>tag1', 'tag2'],
     };
     const metadata: ArgumentMetadata = {
       type: 'body',

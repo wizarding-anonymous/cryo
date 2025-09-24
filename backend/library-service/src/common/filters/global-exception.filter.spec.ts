@@ -1,5 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ArgumentsHost, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  BadRequestException,
+} from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { GlobalExceptionFilter } from './global-exception.filter';
 
@@ -192,7 +197,10 @@ describe('GlobalExceptionFilter', () => {
       message: 'User does not own game',
       statusCode: 403,
     };
-    const exception = new HttpException(structuredResponse, HttpStatus.FORBIDDEN);
+    const exception = new HttpException(
+      structuredResponse,
+      HttpStatus.FORBIDDEN,
+    );
 
     filter.catch(exception, host);
 

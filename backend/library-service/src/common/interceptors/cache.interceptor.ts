@@ -61,7 +61,9 @@ export class CacheInterceptor extends NestCacheInterceptor {
         try {
           const ttl = this.getTTL(request.originalUrl);
           await this.cacheManager.set(key, response, ttl);
-          this.logger.debug(`Cached response for key: ${key} with TTL: ${ttl}s`);
+          this.logger.debug(
+            `Cached response for key: ${key} with TTL: ${ttl}s`,
+          );
 
           // Track user-specific cache keys for invalidation
           if (userId && key.startsWith(`cache:${userId}:/api/library/my`)) {
@@ -114,22 +116,22 @@ export class CacheInterceptor extends NestCacheInterceptor {
     if (url.includes('/api/library/my')) {
       return 300;
     }
-    
+
     // Search results - 2 minutes
     if (url.includes('/search')) {
       return 120;
     }
-    
+
     // History data - 10 minutes
     if (url.includes('/history')) {
       return 600;
     }
-    
+
     // Game details - 30 minutes
     if (url.includes('/games/')) {
       return 1800;
     }
-    
+
     // Default TTL - 5 minutes
     return 300;
   }

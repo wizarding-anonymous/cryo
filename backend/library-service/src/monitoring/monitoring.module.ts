@@ -29,16 +29,8 @@ import { PerformanceMonitorService } from './performance-monitor.service';
       },
     }),
   ],
-  providers: [
-    PrometheusMetricsService,
-    APMService,
-    PerformanceMonitorService,
-  ],
+  providers: [PrometheusMetricsService, APMService, PerformanceMonitorService],
   controllers: [MonitoringController],
-  exports: [
-    PrometheusMetricsService,
-    APMService,
-    PerformanceMonitorService,
-  ],
+  exports: [PrometheusMetricsService, APMService, PerformanceMonitorService],
 })
 export class MonitoringModule {}

@@ -50,7 +50,9 @@ describe('ExternalServicesHealthIndicator', () => {
       ],
     }).compile();
 
-    service = module.get<ExternalServicesHealthIndicator>(ExternalServicesHealthIndicator);
+    service = module.get<ExternalServicesHealthIndicator>(
+      ExternalServicesHealthIndicator,
+    );
     gameCatalogClient = module.get(GameCatalogClient);
     paymentServiceClient = module.get(PaymentServiceClient);
     userServiceClient = module.get(UserServiceClient);
@@ -93,7 +95,9 @@ describe('ExternalServicesHealthIndicator', () => {
     });
 
     it('should detect circuit breaker open state', async () => {
-      const error = new Error('Circuit breaker is OPEN - GameCatalog service unavailable');
+      const error = new Error(
+        'Circuit breaker is OPEN - GameCatalog service unavailable',
+      );
       gameCatalogClient.doesGameExist.mockRejectedValue(error);
 
       const result = await service.checkGameCatalogService('game-catalog');
@@ -112,12 +116,14 @@ describe('ExternalServicesHealthIndicator', () => {
 
   describe('checkPaymentService', () => {
     it('should return healthy status when service is operational', async () => {
-      paymentServiceClient.getOrderStatus.mockResolvedValue({ status: 'completed' });
+      paymentServiceClient.getOrderStatus.mockResolvedValue({
+        status: 'completed',
+      });
 
       const result = await service.checkPaymentService('payment');
 
       expect(result).toEqual({
-        'payment': {
+        payment: {
           status: 'up',
           responseTime: expect.any(Number),
           healthStatus: 'operational',
@@ -132,7 +138,7 @@ describe('ExternalServicesHealthIndicator', () => {
       const result = await service.checkPaymentService('payment');
 
       expect(result).toEqual({
-        'payment': {
+        payment: {
           status: 'down',
           responseTime: expect.any(Number),
           error: 'Payment service error',
@@ -150,7 +156,7 @@ describe('ExternalServicesHealthIndicator', () => {
       const result = await service.checkUserService('user');
 
       expect(result).toEqual({
-        'user': {
+        user: {
           status: 'up',
           responseTime: expect.any(Number),
           healthStatus: 'operational',
@@ -165,7 +171,7 @@ describe('ExternalServicesHealthIndicator', () => {
       const result = await service.checkUserService('user');
 
       expect(result).toEqual({
-        'user': {
+        user: {
           status: 'down',
           responseTime: expect.any(Number),
           error: 'User service error',
@@ -179,10 +185,13 @@ describe('ExternalServicesHealthIndicator', () => {
   describe('checkAllExternalServices', () => {
     it('should return overall healthy status when all services are operational', async () => {
       gameCatalogClient.doesGameExist.mockResolvedValue(false);
-      paymentServiceClient.getOrderStatus.mockResolvedValue({ status: 'completed' });
+      paymentServiceClient.getOrderStatus.mockResolvedValue({
+        status: 'completed',
+      });
       userServiceClient.doesUserExist.mockResolvedValue(false);
 
-      const result = await service.checkAllExternalServices('external-services');
+      const result =
+        await service.checkAllExternalServices('external-services');
 
       expect(result['external-services'].status).toBe('up');
       expect(result['external-services'].services).toEqual({
@@ -191,12 +200,12 @@ describe('ExternalServicesHealthIndicator', () => {
           responseTime: expect.any(Number),
           circuitBreakerState: 'CLOSED',
         },
-        'payment': {
+        payment: {
           isHealthy: true,
           responseTime: expect.any(Number),
           circuitBreakerState: 'CLOSED',
         },
-        'user': {
+        user: {
           isHealthy: true,
           responseTime: expect.any(Number),
           circuitBreakerState: 'CLOSED',
@@ -206,10 +215,13 @@ describe('ExternalServicesHealthIndicator', () => {
 
     it('should return overall unhealthy status when any service fails', async () => {
       gameCatalogClient.doesGameExist.mockResolvedValue(false);
-      paymentServiceClient.getOrderStatus.mockRejectedValue(new Error('Payment error'));
+      paymentServiceClient.getOrderStatus.mockRejectedValue(
+        new Error('Payment error'),
+      );
       userServiceClient.doesUserExist.mockResolvedValue(false);
 
-      const result = await service.checkAllExternalServices('external-services');
+      const result =
+        await service.checkAllExternalServices('external-services');
 
       expect(result['external-services'].status).toBe('down');
       expect(result['external-services'].summary).toEqual({

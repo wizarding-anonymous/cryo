@@ -9,7 +9,8 @@ export class MetricsController {
   @Get()
   @ApiOperation({
     summary: 'Get Prometheus metrics',
-    description: 'Returns Prometheus-formatted metrics for monitoring and alerting',
+    description:
+      'Returns Prometheus-formatted metrics for monitoring and alerting',
   })
   @ApiResponse({
     status: 200,

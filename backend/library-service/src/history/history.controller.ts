@@ -9,17 +9,22 @@ import {
   Req,
   UseInterceptors,
 } from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiBearerAuth, 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
   ApiResponse,
   ApiParam,
-  ApiQuery
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { HistoryService } from './history.service';
-import { HistoryQueryDto, SearchHistoryDto, HistoryResponseDto, PurchaseDetailsDto } from './dto';
+import {
+  HistoryQueryDto,
+  SearchHistoryDto,
+  HistoryResponseDto,
+  PurchaseDetailsDto,
+} from './dto';
 import { AddGameToLibraryDto } from '../library/dto';
 import {
   ValidationErrorResponseDto,
@@ -57,51 +62,51 @@ export class HistoryController {
     description: 'Page number for pagination',
     required: false,
     type: 'number',
-    example: 1
+    example: 1,
   })
   @ApiQuery({
     name: 'limit',
     description: 'Number of items per page (max 100)',
     required: false,
     type: 'number',
-    example: 20
+    example: 20,
   })
   @ApiQuery({
     name: 'sortBy',
     description: 'Field to sort by',
     required: false,
     enum: ['createdAt', 'amount', 'status'],
-    example: 'createdAt'
+    example: 'createdAt',
   })
   @ApiQuery({
     name: 'sortOrder',
     description: 'Sort order',
     required: false,
     enum: ['asc', 'desc'],
-    example: 'desc'
+    example: 'desc',
   })
   @ApiQuery({
     name: 'status',
     description: 'Filter by purchase status',
     required: false,
     enum: ['completed', 'refunded', 'cancelled'],
-    example: 'completed'
+    example: 'completed',
   })
   @ApiQuery({
     name: 'fromDate',
     description: 'Filter purchases from this date (ISO 8601 format)',
     required: false,
     type: 'string',
-    example: '2024-01-01T00:00:00Z'
+    example: '2024-01-01T00:00:00Z',
   })
   @ApiQuery({
     name: 'toDate',
     description: 'Filter purchases to this date (ISO 8601 format)',
     required: false,
     type: 'string',
-    example: '2024-12-31T23:59:59Z'
+    example: '2024-12-31T23:59:59Z',
   })
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get purchase history for the current user',
     description: `Retrieve the authenticated user's purchase history with comprehensive filtering and pagination.
     
@@ -116,7 +121,7 @@ export class HistoryController {
 - All purchases: \`GET /api/library/history\`
 - Recent purchases: \`GET /api/library/history?fromDate=2024-01-01T00:00:00Z\`
 - Completed only: \`GET /api/library/history?status=completed\`
-- Sort by amount: \`GET /api/library/history?sortBy=amount&sortOrder=desc\``
+- Sort by amount: \`GET /api/library/history?sortBy=amount&sortOrder=desc\``,
   })
   @ApiResponse({
     status: 200,
@@ -155,58 +160,58 @@ export class HistoryController {
     description: 'Search query string for game titles (minimum 2 characters)',
     required: true,
     type: 'string',
-    example: 'cyberpunk'
+    example: 'cyberpunk',
   })
   @ApiQuery({
     name: 'page',
     description: 'Page number for pagination',
     required: false,
     type: 'number',
-    example: 1
+    example: 1,
   })
   @ApiQuery({
     name: 'limit',
     description: 'Number of items per page (max 100)',
     required: false,
     type: 'number',
-    example: 20
+    example: 20,
   })
   @ApiQuery({
     name: 'sortBy',
     description: 'Field to sort by',
     required: false,
     enum: ['createdAt', 'amount', 'status'],
-    example: 'createdAt'
+    example: 'createdAt',
   })
   @ApiQuery({
     name: 'sortOrder',
     description: 'Sort order',
     required: false,
     enum: ['asc', 'desc'],
-    example: 'desc'
+    example: 'desc',
   })
   @ApiQuery({
     name: 'status',
     description: 'Filter by purchase status',
     required: false,
     enum: ['completed', 'refunded', 'cancelled'],
-    example: 'completed'
+    example: 'completed',
   })
   @ApiQuery({
     name: 'fromDate',
     description: 'Filter purchases from this date (ISO 8601 format)',
     required: false,
     type: 'string',
-    example: '2024-01-01T00:00:00Z'
+    example: '2024-01-01T00:00:00Z',
   })
   @ApiQuery({
     name: 'toDate',
     description: 'Filter purchases to this date (ISO 8601 format)',
     required: false,
     type: 'string',
-    example: '2024-12-31T23:59:59Z'
+    example: '2024-12-31T23:59:59Z',
   })
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Search in purchase history',
     description: `Search through the authenticated user's purchase history by game title with advanced filtering.
     
@@ -220,7 +225,7 @@ export class HistoryController {
 **Example Searches:**
 - By game title: \`GET /api/library/history/search?query=cyberpunk\`
 - Recent purchases of specific game: \`GET /api/library/history/search?query=witcher&fromDate=2024-01-01T00:00:00Z\`
-- Completed purchases only: \`GET /api/library/history/search?query=game&status=completed\``
+- Completed purchases only: \`GET /api/library/history/search?query=game&status=completed\``,
   })
   @ApiResponse({
     status: 200,
@@ -254,15 +259,16 @@ export class HistoryController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(1800) // 30 minutes for purchase details
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get details of a specific purchase',
-    description: 'Retrieve detailed information about a specific purchase by its ID'
+    description:
+      'Retrieve detailed information about a specific purchase by its ID',
   })
   @ApiParam({
     name: 'purchaseId',
     description: 'Unique identifier of the purchase',
     type: 'string',
-    example: '123e4567-e89b-12d3-a456-426614174000'
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
     status: 200,
@@ -297,7 +303,8 @@ export class HistoryController {
   @Post()
   @ApiOperation({
     summary: 'Create a purchase record (Internal)',
-    description: 'Internal endpoint to create a purchase record. Should only be called by other services like Payment Service.',
+    description:
+      'Internal endpoint to create a purchase record. Should only be called by other services like Payment Service.',
   })
   @ApiResponse({
     status: 201,

@@ -126,16 +126,23 @@ export class SecretsManagerService implements OnModuleInit {
       if (secret) {
         // Validate minimum length
         if (config.minLength && secret.length < config.minLength) {
-          errors.push(`Secret '${config.name}' is too short (minimum ${config.minLength} characters)`);
+          errors.push(
+            `Secret '${config.name}' is too short (minimum ${config.minLength} characters)`,
+          );
         }
 
         // Validate pattern
         if (config.pattern && !config.pattern.test(secret)) {
-          errors.push(`Secret '${config.name}' does not match required pattern`);
+          errors.push(
+            `Secret '${config.name}' does not match required pattern`,
+          );
         }
 
         // Validate strength for passwords
-        if (config.name.includes('password') && !this.isStrongPassword(secret)) {
+        if (
+          config.name.includes('password') &&
+          !this.isStrongPassword(secret)
+        ) {
           errors.push(`Secret '${config.name}' is not strong enough`);
         }
       }
@@ -150,18 +157,22 @@ export class SecretsManagerService implements OnModuleInit {
   /**
    * Generate a new secret
    */
-  generateSecret(length: number = 32, includeSpecialChars: boolean = true): string {
-    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  generateSecret(
+    length: number = 32,
+    includeSpecialChars: boolean = true,
+  ): string {
+    const charset =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
     const chars = includeSpecialChars ? charset + specialChars : charset;
-    
+
     let result = '';
     const bytes = randomBytes(length);
-    
+
     for (let i = 0; i < length; i++) {
       result += chars[bytes[i] % chars.length];
     }
-    
+
     return result;
   }
 
@@ -176,7 +187,7 @@ export class SecretsManagerService implements OnModuleInit {
         const secretValue = this.generateSecretForConfig(config);
         await this.saveSecretToFile(config.name, secretValue);
         this.secrets.set(config.name, secretValue);
-        
+
         this.logger.log(`Generated new secret: ${config.name}`);
       }
     }
@@ -186,7 +197,7 @@ export class SecretsManagerService implements OnModuleInit {
    * Rotate a secret (generate new value)
    */
   async rotateSecret(name: string): Promise<void> {
-    const config = this.secretConfigs.find(c => c.name === name);
+    const config = this.secretConfigs.find((c) => c.name === name);
     if (!config) {
       throw new Error(`Unknown secret configuration: ${name}`);
     }
@@ -216,7 +227,11 @@ export class SecretsManagerService implements OnModuleInit {
       }
 
       const secret = this.getSecret(config.name);
-      if (secret && config.name.includes('password') && !this.isStrongPassword(secret)) {
+      if (
+        secret &&
+        config.name.includes('password') &&
+        !this.isStrongPassword(secret)
+      ) {
         weak.push(config.name);
       }
     }
@@ -244,7 +259,9 @@ export class SecretsManagerService implements OnModuleInit {
           if (this.isProduction) {
             throw new Error(`Required secret '${config.name}' not found`);
           } else {
-            this.logger.warn(`Required secret '${config.name}' not found, generating default`);
+            this.logger.warn(
+              `Required secret '${config.name}' not found, generating default`,
+            );
             const defaultSecret = this.generateSecretForConfig(config);
             await this.saveSecretToFile(config.name, defaultSecret);
             this.secrets.set(config.name, defaultSecret);
@@ -292,7 +309,7 @@ export class SecretsManagerService implements OnModuleInit {
     // Try default environment variable naming
     const defaultEnvVar = config.name.toUpperCase().replace(/-/g, '_');
     if (process.env[defaultEnvVar]) {
-      return process.env[defaultEnvVar]!;
+      return process.env[defaultEnvVar];
     }
 
     return null;
@@ -330,7 +347,7 @@ export class SecretsManagerService implements OnModuleInit {
    */
   private generateSecretForConfig(config: SecretConfig): string {
     const length = Math.max(config.minLength || 32, 32);
-    
+
     if (config.name.includes('jwt')) {
       // JWT secrets should be longer and more complex
       return this.generateSecret(64, true);
@@ -351,12 +368,12 @@ export class SecretsManagerService implements OnModuleInit {
    */
   private isStrongPassword(password: string): boolean {
     if (password.length < 12) return false;
-    
+
     const hasLowerCase = /[a-z]/.test(password);
     const hasUpperCase = /[A-Z]/.test(password);
     const hasNumbers = /\d/.test(password);
     const hasSpecialChars = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
-    
+
     return hasLowerCase && hasUpperCase && hasNumbers && hasSpecialChars;
   }
 }

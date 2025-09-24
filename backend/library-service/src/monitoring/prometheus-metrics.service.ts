@@ -50,9 +50,12 @@ export class PrometheusMetricsService {
 
   constructor(private readonly configService: ConfigService) {
     this.register = new promClient.Registry();
-    
+
     // Set default labels
-    const defaultLabels = this.configService.get('monitoring.prometheus.defaultLabels', {});
+    const defaultLabels = this.configService.get(
+      'monitoring.prometheus.defaultLabels',
+      {},
+    );
     this.register.setDefaultLabels(defaultLabels);
 
     // Initialize metrics
@@ -302,14 +305,14 @@ export class PrometheusMetricsService {
     userId?: string,
   ): void {
     const labels = { method, route, status_code: statusCode.toString() };
-    
+
     this.httpRequestsTotal.inc({ ...labels, user_id: userId || 'anonymous' });
     this.httpRequestDuration.observe(labels, duration / 1000); // Convert to seconds
-    
+
     if (requestSize) {
       this.httpRequestSize.observe({ method, route }, requestSize);
     }
-    
+
     if (responseSize) {
       this.httpResponseSize.observe({ ...labels }, responseSize);
     }
@@ -318,7 +321,11 @@ export class PrometheusMetricsService {
   /**
    * Record library operation
    */
-  recordLibraryOperation(operation: string, userId: string, status: 'success' | 'error'): void {
+  recordLibraryOperation(
+    operation: string,
+    userId: string,
+    status: 'success' | 'error',
+  ): void {
     this.libraryOperationsTotal.inc({ operation, user_id: userId, status });
   }
 
@@ -332,33 +339,53 @@ export class PrometheusMetricsService {
   /**
    * Record purchase history operation
    */
-  recordPurchaseHistoryOperation(operation: string, userId: string, status: 'success' | 'error'): void {
+  recordPurchaseHistoryOperation(
+    operation: string,
+    userId: string,
+    status: 'success' | 'error',
+  ): void {
     this.purchaseHistoryOperations.inc({ operation, user_id: userId, status });
   }
 
   /**
    * Record search operation
    */
-  recordSearchOperation(type: string, userId: string, resultsCount: number): void {
-    this.searchOperations.inc({ 
-      type, 
-      user_id: userId, 
-      results_count: resultsCount.toString() 
+  recordSearchOperation(
+    type: string,
+    userId: string,
+    resultsCount: number,
+  ): void {
+    this.searchOperations.inc({
+      type,
+      user_id: userId,
+      results_count: resultsCount.toString(),
     });
   }
 
   /**
    * Record cache operation
    */
-  recordCacheOperation(operation: 'hit' | 'miss' | 'set' | 'delete', keyType: string, status: 'success' | 'error' = 'success'): void {
+  recordCacheOperation(
+    operation: 'hit' | 'miss' | 'set' | 'delete',
+    keyType: string,
+    status: 'success' | 'error' = 'success',
+  ): void {
     this.cacheOperations.inc({ operation, key_type: keyType, status });
   }
 
   /**
    * Record database query
    */
-  recordDatabaseQuery(queryType: string, table: string, duration: number, status: 'success' | 'error'): void {
-    this.databaseQueryDuration.observe({ query_type: queryType, table }, duration / 1000);
+  recordDatabaseQuery(
+    queryType: string,
+    table: string,
+    duration: number,
+    status: 'success' | 'error',
+  ): void {
+    this.databaseQueryDuration.observe(
+      { query_type: queryType, table },
+      duration / 1000,
+    );
     this.databaseOperationsTotal.inc({ operation: queryType, table, status });
   }
 
@@ -372,8 +399,17 @@ export class PrometheusMetricsService {
   /**
    * Record external service call
    */
-  recordExternalServiceCall(service: string, method: string, statusCode: number, duration: number): void {
-    this.externalServiceCalls.inc({ service, method, status_code: statusCode.toString() });
+  recordExternalServiceCall(
+    service: string,
+    method: string,
+    statusCode: number,
+    duration: number,
+  ): void {
+    this.externalServiceCalls.inc({
+      service,
+      method,
+      status_code: statusCode.toString(),
+    });
     this.externalServiceDuration.observe({ service, method }, duration / 1000);
   }
 
@@ -387,7 +423,15 @@ export class PrometheusMetricsService {
   /**
    * Record business error
    */
-  recordBusinessError(errorCode: string, operation: string, userId: string): void {
-    this.businessErrorsTotal.inc({ error_code: errorCode, operation, user_id: userId });
+  recordBusinessError(
+    errorCode: string,
+    operation: string,
+    userId: string,
+  ): void {
+    this.businessErrorsTotal.inc({
+      error_code: errorCode,
+      operation,
+      user_id: userId,
+    });
   }
 }

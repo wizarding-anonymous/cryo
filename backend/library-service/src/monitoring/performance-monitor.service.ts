@@ -58,7 +58,7 @@ export class PerformanceMonitorService implements OnModuleInit {
   private readonly alerts: PerformanceAlert[] = [];
   private readonly maxMetricsHistory = 1000;
   private readonly maxAlertsHistory = 100;
-  
+
   private lastCpuUsage = process.cpuUsage();
   private gcStats = { collections: 0, duration: 0 };
   private performanceObserver: any;
@@ -113,8 +113,9 @@ export class PerformanceMonitorService implements OnModuleInit {
   getCurrentMetrics(): PerformanceMetrics {
     const memUsage = process.memoryUsage();
     const currentCpuUsage = process.cpuUsage(this.lastCpuUsage);
-    const cpuPercent = ((currentCpuUsage.user + currentCpuUsage.system) / 1000000) * 100;
-    
+    const cpuPercent =
+      ((currentCpuUsage.user + currentCpuUsage.system) / 1000000) * 100;
+
     const metrics: PerformanceMetrics = {
       timestamp: new Date(),
       memory: {
@@ -180,22 +181,32 @@ export class PerformanceMonitorService implements OnModuleInit {
   } {
     const current = this.getCurrentMetrics();
     const recent = this.getMetricsHistory(60); // Last 60 measurements
-    
+
     const averages = {
-      memoryUsage: recent.length > 0 
-        ? recent.reduce((sum, m) => sum + (m.memory.heapUsed / m.memory.heapTotal), 0) / recent.length
-        : 0,
-      cpuUsage: recent.length > 0
-        ? recent.reduce((sum, m) => sum + m.cpu.percent, 0) / recent.length
-        : 0,
-      eventLoopLag: recent.length > 0
-        ? recent.reduce((sum, m) => sum + m.eventLoop.lag, 0) / recent.length
-        : 0,
+      memoryUsage:
+        recent.length > 0
+          ? recent.reduce(
+              (sum, m) => sum + m.memory.heapUsed / m.memory.heapTotal,
+              0,
+            ) / recent.length
+          : 0,
+      cpuUsage:
+        recent.length > 0
+          ? recent.reduce((sum, m) => sum + m.cpu.percent, 0) / recent.length
+          : 0,
+      eventLoopLag:
+        recent.length > 0
+          ? recent.reduce((sum, m) => sum + m.eventLoop.lag, 0) / recent.length
+          : 0,
     };
 
     const recentAlerts = this.getRecentAlerts(10);
-    const warnings = recentAlerts.filter(a => a.severity === 'warning').length;
-    const critical = recentAlerts.filter(a => a.severity === 'critical').length;
+    const warnings = recentAlerts.filter(
+      (a) => a.severity === 'warning',
+    ).length;
+    const critical = recentAlerts.filter(
+      (a) => a.severity === 'critical',
+    ).length;
 
     return {
       current,
@@ -216,55 +227,101 @@ export class PerformanceMonitorService implements OnModuleInit {
     // Memory checks
     const heapUsagePercent = metrics.memory.heapUsed / metrics.memory.heapTotal;
     if (heapUsagePercent > this.thresholds.memory.heapUsedCritical) {
-      this.createAlert('memory', 'critical', 
+      this.createAlert(
+        'memory',
+        'critical',
         `Heap usage critical: ${(heapUsagePercent * 100).toFixed(1)}%`,
-        heapUsagePercent, this.thresholds.memory.heapUsedCritical);
+        heapUsagePercent,
+        this.thresholds.memory.heapUsedCritical,
+      );
     } else if (heapUsagePercent > this.thresholds.memory.heapUsedWarning) {
-      this.createAlert('memory', 'warning',
+      this.createAlert(
+        'memory',
+        'warning',
         `Heap usage high: ${(heapUsagePercent * 100).toFixed(1)}%`,
-        heapUsagePercent, this.thresholds.memory.heapUsedWarning);
+        heapUsagePercent,
+        this.thresholds.memory.heapUsedWarning,
+      );
     }
 
     if (metrics.memory.rss > this.thresholds.memory.rssCritical) {
-      this.createAlert('memory', 'critical',
+      this.createAlert(
+        'memory',
+        'critical',
         `RSS memory critical: ${(metrics.memory.rss / 1024 / 1024).toFixed(0)}MB`,
-        metrics.memory.rss, this.thresholds.memory.rssCritical);
+        metrics.memory.rss,
+        this.thresholds.memory.rssCritical,
+      );
     } else if (metrics.memory.rss > this.thresholds.memory.rssWarning) {
-      this.createAlert('memory', 'warning',
+      this.createAlert(
+        'memory',
+        'warning',
         `RSS memory high: ${(metrics.memory.rss / 1024 / 1024).toFixed(0)}MB`,
-        metrics.memory.rss, this.thresholds.memory.rssWarning);
+        metrics.memory.rss,
+        this.thresholds.memory.rssWarning,
+      );
     }
 
     // CPU checks
     if (metrics.cpu.percent > this.thresholds.cpu.critical) {
-      this.createAlert('cpu', 'critical',
+      this.createAlert(
+        'cpu',
+        'critical',
         `CPU usage critical: ${metrics.cpu.percent.toFixed(1)}%`,
-        metrics.cpu.percent, this.thresholds.cpu.critical);
+        metrics.cpu.percent,
+        this.thresholds.cpu.critical,
+      );
     } else if (metrics.cpu.percent > this.thresholds.cpu.warning) {
-      this.createAlert('cpu', 'warning',
+      this.createAlert(
+        'cpu',
+        'warning',
         `CPU usage high: ${metrics.cpu.percent.toFixed(1)}%`,
-        metrics.cpu.percent, this.thresholds.cpu.warning);
+        metrics.cpu.percent,
+        this.thresholds.cpu.warning,
+      );
     }
 
     // Event loop checks
     if (metrics.eventLoop.lag > this.thresholds.eventLoop.lagCritical) {
-      this.createAlert('eventloop', 'critical',
+      this.createAlert(
+        'eventloop',
+        'critical',
         `Event loop lag critical: ${metrics.eventLoop.lag.toFixed(1)}ms`,
-        metrics.eventLoop.lag, this.thresholds.eventLoop.lagCritical);
+        metrics.eventLoop.lag,
+        this.thresholds.eventLoop.lagCritical,
+      );
     } else if (metrics.eventLoop.lag > this.thresholds.eventLoop.lagWarning) {
-      this.createAlert('eventloop', 'warning',
+      this.createAlert(
+        'eventloop',
+        'warning',
         `Event loop lag high: ${metrics.eventLoop.lag.toFixed(1)}ms`,
-        metrics.eventLoop.lag, this.thresholds.eventLoop.lagWarning);
+        metrics.eventLoop.lag,
+        this.thresholds.eventLoop.lagWarning,
+      );
     }
 
-    if (metrics.eventLoop.utilization > this.thresholds.eventLoop.utilizationCritical) {
-      this.createAlert('eventloop', 'critical',
+    if (
+      metrics.eventLoop.utilization >
+      this.thresholds.eventLoop.utilizationCritical
+    ) {
+      this.createAlert(
+        'eventloop',
+        'critical',
         `Event loop utilization critical: ${(metrics.eventLoop.utilization * 100).toFixed(1)}%`,
-        metrics.eventLoop.utilization, this.thresholds.eventLoop.utilizationCritical);
-    } else if (metrics.eventLoop.utilization > this.thresholds.eventLoop.utilizationWarning) {
-      this.createAlert('eventloop', 'warning',
+        metrics.eventLoop.utilization,
+        this.thresholds.eventLoop.utilizationCritical,
+      );
+    } else if (
+      metrics.eventLoop.utilization >
+      this.thresholds.eventLoop.utilizationWarning
+    ) {
+      this.createAlert(
+        'eventloop',
+        'warning',
         `Event loop utilization high: ${(metrics.eventLoop.utilization * 100).toFixed(1)}%`,
-        metrics.eventLoop.utilization, this.thresholds.eventLoop.utilizationWarning);
+        metrics.eventLoop.utilization,
+        this.thresholds.eventLoop.utilizationWarning,
+      );
     }
   }
 
@@ -288,7 +345,7 @@ export class PerformanceMonitorService implements OnModuleInit {
     };
 
     this.alerts.push(alert);
-    
+
     // Keep only recent alerts
     if (this.alerts.length > this.maxAlertsHistory) {
       this.alerts.splice(0, this.alerts.length - this.maxAlertsHistory);
@@ -296,7 +353,9 @@ export class PerformanceMonitorService implements OnModuleInit {
 
     // Log the alert
     const logLevel = severity === 'critical' ? 'error' : 'warn';
-    this.logger[logLevel](`Performance Alert [${severity.toUpperCase()}]: ${message}`);
+    this.logger[logLevel](
+      `Performance Alert [${severity.toUpperCase()}]: ${message}`,
+    );
 
     // Send to APM if available
     if (severity === 'critical') {
@@ -316,10 +375,10 @@ export class PerformanceMonitorService implements OnModuleInit {
   private collectMetrics(): void {
     try {
       const metrics = this.getCurrentMetrics();
-      
+
       // Store metrics
       this.metrics.push(metrics);
-      
+
       // Keep only recent metrics
       if (this.metrics.length > this.maxMetricsHistory) {
         this.metrics.splice(0, this.metrics.length - this.maxMetricsHistory);
@@ -330,7 +389,6 @@ export class PerformanceMonitorService implements OnModuleInit {
 
       // Update Prometheus metrics
       this.updatePrometheusMetrics(metrics);
-
     } catch (error) {
       this.logger.error('Failed to collect performance metrics:', error);
     }
@@ -343,12 +401,12 @@ export class PerformanceMonitorService implements OnModuleInit {
     try {
       // Memory metrics are already handled by default metrics
       // Add custom business metrics here if needed
-      
+
       // Track performance alerts
       const recentAlerts = this.alerts.filter(
-        a => Date.now() - a.timestamp.getTime() < 60000 // Last minute
+        (a) => Date.now() - a.timestamp.getTime() < 60000, // Last minute
       );
-      
+
       // Update custom metrics if metricsService is available
       if (this.metricsService) {
         // Update database connections if available
@@ -375,18 +433,26 @@ export class PerformanceMonitorService implements OnModuleInit {
           const start = process.hrtime.bigint();
           originalGC();
           const duration = Number(process.hrtime.bigint() - start) / 1e6;
-          
+
           this.gcStats.collections++;
           this.gcStats.duration += duration;
-          
+
           if (duration > this.thresholds.gc.durationCritical) {
-            this.createAlert('gc', 'critical',
+            this.createAlert(
+              'gc',
+              'critical',
               `GC duration critical: ${duration.toFixed(1)}ms`,
-              duration, this.thresholds.gc.durationCritical);
+              duration,
+              this.thresholds.gc.durationCritical,
+            );
           } else if (duration > this.thresholds.gc.durationWarning) {
-            this.createAlert('gc', 'warning',
+            this.createAlert(
+              'gc',
+              'warning',
               `GC duration high: ${duration.toFixed(1)}ms`,
-              duration, this.thresholds.gc.durationWarning);
+              duration,
+              this.thresholds.gc.durationWarning,
+            );
           }
         };
       }
@@ -401,7 +467,7 @@ export class PerformanceMonitorService implements OnModuleInit {
   private setupPerformanceObserver(): void {
     try {
       const { PerformanceObserver, performance } = require('perf_hooks');
-      
+
       this.performanceObserver = new PerformanceObserver((list: any) => {
         const entries = list.getEntries();
         for (const entry of entries) {
@@ -463,7 +529,9 @@ export class PerformanceMonitorService implements OnModuleInit {
       global.gc();
       this.logger.log('Forced garbage collection');
     } else {
-      this.logger.warn('Garbage collection not available (run with --expose-gc)');
+      this.logger.warn(
+        'Garbage collection not available (run with --expose-gc)',
+      );
     }
   }
 
@@ -480,7 +548,7 @@ export class PerformanceMonitorService implements OnModuleInit {
     };
   } {
     const recent = this.getMetricsHistory(60); // Last 60 measurements (30 minutes)
-    
+
     if (recent.length < 10) {
       return {
         suspected: false,
@@ -496,17 +564,25 @@ export class PerformanceMonitorService implements OnModuleInit {
     const first = recent[0];
     const last = recent[recent.length - 1];
     const timeDiff = last.timestamp.getTime() - first.timestamp.getTime();
-    
-    const heapGrowthRate = (last.memory.heapUsed - first.memory.heapUsed) / timeDiff;
+
+    const heapGrowthRate =
+      (last.memory.heapUsed - first.memory.heapUsed) / timeDiff;
     const rssGrowthRate = (last.memory.rss - first.memory.rss) / timeDiff;
-    
+
     const suspected = heapGrowthRate > 1000 || rssGrowthRate > 1000; // Growing by 1KB/ms
-    const trend = heapGrowthRate > 100 ? 'increasing' : heapGrowthRate < -100 ? 'decreasing' : 'stable';
-    
+    const trend =
+      heapGrowthRate > 100
+        ? 'increasing'
+        : heapGrowthRate < -100
+          ? 'decreasing'
+          : 'stable';
+
     const recommendations: string[] = [];
     if (suspected) {
       recommendations.push('Monitor for memory leaks in application code');
-      recommendations.push('Check for unclosed database connections or event listeners');
+      recommendations.push(
+        'Check for unclosed database connections or event listeners',
+      );
       recommendations.push('Review caching strategies and TTL settings');
       recommendations.push('Consider implementing memory profiling');
     }

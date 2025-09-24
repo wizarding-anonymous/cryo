@@ -1,4 +1,9 @@
-import { createWinstonConfig, StructuredLogger, LOG_LEVELS, PERFORMANCE_THRESHOLDS } from './logging.config';
+import {
+  createWinstonConfig,
+  StructuredLogger,
+  LOG_LEVELS,
+  PERFORMANCE_THRESHOLDS,
+} from './logging.config';
 
 describe('LoggingConfig', () => {
   const originalEnv = process.env;
@@ -20,7 +25,11 @@ describe('LoggingConfig', () => {
 
       expect(config.level).toBe('debug');
       expect(config.transports).toBeDefined();
-      expect(Array.isArray(config.transports) ? config.transports : [config.transports]).toHaveLength(1); // Only console transport
+      expect(
+        Array.isArray(config.transports)
+          ? config.transports
+          : [config.transports],
+      ).toHaveLength(1); // Only console transport
       expect(config.handleExceptions).toBe(true);
       expect(config.handleRejections).toBe(true);
     });
@@ -32,7 +41,9 @@ describe('LoggingConfig', () => {
 
       expect(config.level).toBe('info');
       expect(config.transports).toBeDefined();
-      const transportsArray = Array.isArray(config.transports) ? config.transports : [config.transports];
+      const transportsArray = Array.isArray(config.transports)
+        ? config.transports
+        : [config.transports];
       expect(transportsArray.length).toBeGreaterThan(1); // Console + file transports
     });
 
@@ -42,7 +53,9 @@ describe('LoggingConfig', () => {
       const config = createWinstonConfig();
 
       expect(config.transports).toBeDefined();
-      const transportsArray = Array.isArray(config.transports) ? config.transports : [config.transports];
+      const transportsArray = Array.isArray(config.transports)
+        ? config.transports
+        : [config.transports];
       expect(transportsArray).toHaveLength(1);
       // Console transport should be silent in test mode
     });
@@ -90,11 +103,15 @@ describe('LoggingConfig', () => {
         correlationId: 'test-123',
       });
 
-      expect(logSpy).toHaveBeenCalledWith('warn', 'Performance: test-operation', {
-        correlationId: 'test-123',
-        duration: 1500,
-        performanceMetric: true,
-      });
+      expect(logSpy).toHaveBeenCalledWith(
+        'warn',
+        'Performance: test-operation',
+        {
+          correlationId: 'test-123',
+          duration: 1500,
+          performanceMetric: true,
+        },
+      );
     });
 
     it('should log performance as info for fast operations', () => {
@@ -104,11 +121,15 @@ describe('LoggingConfig', () => {
         correlationId: 'test-123',
       });
 
-      expect(logSpy).toHaveBeenCalledWith('info', 'Performance: fast-operation', {
-        correlationId: 'test-123',
-        duration: 500,
-        performanceMetric: true,
-      });
+      expect(logSpy).toHaveBeenCalledWith(
+        'info',
+        'Performance: fast-operation',
+        {
+          correlationId: 'test-123',
+          duration: 500,
+          performanceMetric: true,
+        },
+      );
     });
 
     it('should log business events', () => {
@@ -119,11 +140,15 @@ describe('LoggingConfig', () => {
         correlationId: 'req-456',
       });
 
-      expect(logSpy).toHaveBeenCalledWith('info', 'Business Event: user-registered', {
-        userId: 'user-123',
-        correlationId: 'req-456',
-        businessEvent: true,
-      });
+      expect(logSpy).toHaveBeenCalledWith(
+        'info',
+        'Business Event: user-registered',
+        {
+          userId: 'user-123',
+          correlationId: 'req-456',
+          businessEvent: true,
+        },
+      );
     });
 
     it('should log security events', () => {
@@ -135,48 +160,74 @@ describe('LoggingConfig', () => {
         userAgent: 'Mozilla/5.0',
       });
 
-      expect(logSpy).toHaveBeenCalledWith('warn', 'Security Event: failed-login-attempt', {
-        userId: 'user-123',
-        ip: '192.168.1.1',
-        userAgent: 'Mozilla/5.0',
-        securityEvent: true,
-      });
+      expect(logSpy).toHaveBeenCalledWith(
+        'warn',
+        'Security Event: failed-login-attempt',
+        {
+          userId: 'user-123',
+          ip: '192.168.1.1',
+          userAgent: 'Mozilla/5.0',
+          securityEvent: true,
+        },
+      );
     });
 
     it('should log external service calls', () => {
       const logSpy = jest.spyOn(logger['logger'], 'log');
 
-      logger.logExternalCall('payment-service', 'POST', '/api/payments', 2500, 500, {
-        correlationId: 'req-123',
-      });
+      logger.logExternalCall(
+        'payment-service',
+        'POST',
+        '/api/payments',
+        2500,
+        500,
+        {
+          correlationId: 'req-123',
+        },
+      );
 
-      expect(logSpy).toHaveBeenCalledWith('error', 'External Call: payment-service POST /api/payments', {
-        correlationId: 'req-123',
-        service: 'payment-service',
-        method: 'POST',
-        url: '/api/payments',
-        duration: 2500,
-        statusCode: 500,
-        externalCall: true,
-      });
+      expect(logSpy).toHaveBeenCalledWith(
+        'error',
+        'External Call: payment-service POST /api/payments',
+        {
+          correlationId: 'req-123',
+          service: 'payment-service',
+          method: 'POST',
+          url: '/api/payments',
+          duration: 2500,
+          statusCode: 500,
+          externalCall: true,
+        },
+      );
     });
 
     it('should log successful external calls as info', () => {
       const logSpy = jest.spyOn(logger['logger'], 'log');
 
-      logger.logExternalCall('user-service', 'GET', '/api/users/123', 150, 200, {
-        correlationId: 'req-123',
-      });
+      logger.logExternalCall(
+        'user-service',
+        'GET',
+        '/api/users/123',
+        150,
+        200,
+        {
+          correlationId: 'req-123',
+        },
+      );
 
-      expect(logSpy).toHaveBeenCalledWith('info', 'External Call: user-service GET /api/users/123', {
-        correlationId: 'req-123',
-        service: 'user-service',
-        method: 'GET',
-        url: '/api/users/123',
-        duration: 150,
-        statusCode: 200,
-        externalCall: true,
-      });
+      expect(logSpy).toHaveBeenCalledWith(
+        'info',
+        'External Call: user-service GET /api/users/123',
+        {
+          correlationId: 'req-123',
+          service: 'user-service',
+          method: 'GET',
+          url: '/api/users/123',
+          duration: 150,
+          statusCode: 200,
+          externalCall: true,
+        },
+      );
     });
 
     it('should log slow external calls as warning', () => {
@@ -186,15 +237,19 @@ describe('LoggingConfig', () => {
         correlationId: 'req-123',
       });
 
-      expect(logSpy).toHaveBeenCalledWith('warn', 'External Call: game-catalog GET /api/games', {
-        correlationId: 'req-123',
-        service: 'game-catalog',
-        method: 'GET',
-        url: '/api/games',
-        duration: 2500,
-        statusCode: 200,
-        externalCall: true,
-      });
+      expect(logSpy).toHaveBeenCalledWith(
+        'warn',
+        'External Call: game-catalog GET /api/games',
+        {
+          correlationId: 'req-123',
+          service: 'game-catalog',
+          method: 'GET',
+          url: '/api/games',
+          duration: 2500,
+          statusCode: 200,
+          externalCall: true,
+        },
+      );
     });
   });
 

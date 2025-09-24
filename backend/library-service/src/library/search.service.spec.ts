@@ -35,9 +35,11 @@ describe('SearchService', () => {
     getOrSet: jest.fn().mockImplementation(async (_key, fetchFn) => {
       return await fetchFn();
     }),
-    getCachedSearchResults: jest.fn().mockImplementation(async (_userId, _cacheKey, fetchFn) => {
-      return await fetchFn();
-    }),
+    getCachedSearchResults: jest
+      .fn()
+      .mockImplementation(async (_userId, _cacheKey, fetchFn) => {
+        return await fetchFn();
+      }),
     recordUserCacheKey: jest.fn(),
   };
 

@@ -1,4 +1,8 @@
-import { makeCounterProvider, makeGaugeProvider, makeHistogramProvider } from '@willsoto/nestjs-prometheus';
+import {
+  makeCounterProvider,
+  makeGaugeProvider,
+  makeHistogramProvider,
+} from '@willsoto/nestjs-prometheus';
 
 export const metricsProviders = [
   // Health check metrics

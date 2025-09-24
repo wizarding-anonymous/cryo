@@ -27,7 +27,7 @@ export class ExternalServicesHealthIndicator extends HealthIndicator {
 
   async checkGameCatalogService(key: string): Promise<HealthIndicatorResult> {
     const startTime = Date.now();
-    
+
     try {
       // Use a lightweight operation to check service health
       await this.gameCatalogClient.doesGameExist('health-check-dummy-id');
@@ -39,12 +39,17 @@ export class ExternalServicesHealthIndicator extends HealthIndicator {
       });
     } catch (error: unknown) {
       const responseTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      this.logger.warn(`Game Catalog Service health check failed: ${errorMessage}`);
-      
-      const isCircuitBreakerOpen = errorMessage.includes('Circuit breaker is OPEN');
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      this.logger.warn(
+        `Game Catalog Service health check failed: ${errorMessage}`,
+      );
+
+      const isCircuitBreakerOpen = errorMessage.includes(
+        'Circuit breaker is OPEN',
+      );
+
       return this.getStatus(key, false, {
         responseTime,
         error: errorMessage,
@@ -56,7 +61,7 @@ export class ExternalServicesHealthIndicator extends HealthIndicator {
 
   async checkPaymentService(key: string): Promise<HealthIndicatorResult> {
     const startTime = Date.now();
-    
+
     try {
       // Use a lightweight operation to check service health
       await this.paymentServiceClient.getOrderStatus('health-check-dummy-id');
@@ -68,12 +73,15 @@ export class ExternalServicesHealthIndicator extends HealthIndicator {
       });
     } catch (error: unknown) {
       const responseTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       this.logger.warn(`Payment Service health check failed: ${errorMessage}`);
-      
-      const isCircuitBreakerOpen = errorMessage.includes('Circuit breaker is OPEN');
-      
+
+      const isCircuitBreakerOpen = errorMessage.includes(
+        'Circuit breaker is OPEN',
+      );
+
       return this.getStatus(key, false, {
         responseTime,
         error: errorMessage,
@@ -85,7 +93,7 @@ export class ExternalServicesHealthIndicator extends HealthIndicator {
 
   async checkUserService(key: string): Promise<HealthIndicatorResult> {
     const startTime = Date.now();
-    
+
     try {
       // Use a lightweight operation to check service health
       await this.userServiceClient.doesUserExist('health-check-dummy-id');
@@ -97,12 +105,15 @@ export class ExternalServicesHealthIndicator extends HealthIndicator {
       });
     } catch (error: unknown) {
       const responseTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       this.logger.warn(`User Service health check failed: ${errorMessage}`);
-      
-      const isCircuitBreakerOpen = errorMessage.includes('Circuit breaker is OPEN');
-      
+
+      const isCircuitBreakerOpen = errorMessage.includes(
+        'Circuit breaker is OPEN',
+      );
+
       return this.getStatus(key, false, {
         responseTime,
         error: errorMessage,
@@ -126,13 +137,15 @@ export class ExternalServicesHealthIndicator extends HealthIndicator {
 
     checks.forEach((result, index) => {
       const serviceName = services[index];
-      
+
       if (result.status === 'fulfilled') {
         const healthResult = result.value;
         results[serviceName] = {
           isHealthy: healthResult[serviceName].status === 'up',
           responseTime: healthResult[serviceName].responseTime,
-          circuitBreakerState: healthResult[serviceName].circuitBreakerOpen ? 'OPEN' : 'CLOSED',
+          circuitBreakerState: healthResult[serviceName].circuitBreakerOpen
+            ? 'OPEN'
+            : 'CLOSED',
         };
       } else {
         results[serviceName] = {
@@ -151,8 +164,8 @@ export class ExternalServicesHealthIndicator extends HealthIndicator {
       services: results,
       summary: {
         total: services.length,
-        healthy: Object.values(results).filter(r => r.isHealthy).length,
-        degraded: Object.values(results).filter(r => !r.isHealthy).length,
+        healthy: Object.values(results).filter((r) => r.isHealthy).length,
+        degraded: Object.values(results).filter((r) => !r.isHealthy).length,
       },
     });
   }

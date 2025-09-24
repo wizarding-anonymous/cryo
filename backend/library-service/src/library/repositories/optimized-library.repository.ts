@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { LibraryGame } from '../../entities/library-game.entity';
 
 export interface LibraryQueryOptions {
@@ -255,10 +255,13 @@ export class OptimizedLibraryRepository {
       .groupBy('lg.currency')
       .getRawMany();
 
-    return result.reduce((acc, row) => {
-      acc[row.currency] = parseInt(row.count, 10);
-      return acc;
-    }, {} as Record<string, number>);
+    return result.reduce(
+      (acc, row) => {
+        acc[row.currency] = parseInt(row.count, 10);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   /**
@@ -369,10 +372,7 @@ export class OptimizedLibraryRepository {
 
     // Apply pagination
     const offset = (page - 1) * limit;
-    queryBuilder
-      .orderBy('lg.purchaseDate', 'DESC')
-      .skip(offset)
-      .take(limit);
+    queryBuilder.orderBy('lg.purchaseDate', 'DESC').skip(offset).take(limit);
 
     const [games, total] = await queryBuilder.getManyAndCount();
     return { games, total };
@@ -381,7 +381,9 @@ export class OptimizedLibraryRepository {
   /**
    * Fallback bulk add method
    */
-  private async bulkAddGamesFallback(games: Partial<LibraryGame>[]): Promise<number> {
+  private async bulkAddGamesFallback(
+    games: Partial<LibraryGame>[],
+  ): Promise<number> {
     let insertedCount = 0;
 
     // Use transaction for better performance
@@ -393,7 +395,13 @@ export class OptimizedLibraryRepository {
             .insert()
             .into(LibraryGame)
             .values(gameData)
-            .orUpdate(['purchasePrice', 'purchaseDate', 'orderId', 'purchaseId', 'updatedAt'])
+            .orUpdate([
+              'purchasePrice',
+              'purchaseDate',
+              'orderId',
+              'purchaseId',
+              'updatedAt',
+            ])
             .execute();
           insertedCount++;
         } catch (error) {
@@ -409,7 +417,9 @@ export class OptimizedLibraryRepository {
   /**
    * Fallback stats calculation method
    */
-  private async calculateLibraryStatsFallback(userId: string): Promise<LibraryStats | null> {
+  private async calculateLibraryStatsFallback(
+    userId: string,
+  ): Promise<LibraryStats | null> {
     const games = await this.libraryGameRepository.find({
       where: { userId },
       select: ['purchasePrice', 'purchaseDate', 'currency'],
@@ -419,10 +429,13 @@ export class OptimizedLibraryRepository {
       return null;
     }
 
-    const totalSpent = games.reduce((sum, game) => sum + Number(game.purchasePrice), 0);
+    const totalSpent = games.reduce(
+      (sum, game) => sum + Number(game.purchasePrice),
+      0,
+    );
     const averagePrice = totalSpent / games.length;
-    const currencies = [...new Set(games.map(game => game.currency))];
-    const purchaseDates = games.map(game => game.purchaseDate).sort();
+    const currencies = [...new Set(games.map((game) => game.currency))];
+    const purchaseDates = games.map((game) => game.purchaseDate).sort();
 
     return {
       totalGames: games.length,

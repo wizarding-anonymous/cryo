@@ -20,7 +20,10 @@ import { PaymentServiceClient } from './payment-service.client';
         },
         // Connection pooling for better performance
         maxSockets: configService.get<number>('services.maxSockets', 100),
-        maxFreeSockets: configService.get<number>('services.maxFreeSockets', 10),
+        maxFreeSockets: configService.get<number>(
+          'services.maxFreeSockets',
+          10,
+        ),
         // Keep-alive settings
         keepAlive: true,
         keepAliveMsecs: 30000,

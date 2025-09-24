@@ -18,28 +18,38 @@ const logFormat = winston.format.combine(
   }),
   winston.format.errors({ stack: true }),
   winston.format.json(),
-  winston.format.printf(({ timestamp, level, message, context, correlationId, userId, ...meta }) => {
-    const logEntry: any = {
+  winston.format.printf(
+    ({
       timestamp,
       level,
       message,
-      service: 'library-service',
-      environment: process.env.NODE_ENV || 'development',
-      ...meta,
-    };
+      context,
+      correlationId,
+      userId,
+      ...meta
+    }) => {
+      const logEntry: any = {
+        timestamp,
+        level,
+        message,
+        service: 'library-service',
+        environment: process.env.NODE_ENV || 'development',
+        ...meta,
+      };
 
-    if (context) {
-      logEntry.context = context;
-    }
-    if (correlationId) {
-      logEntry.correlationId = correlationId;
-    }
-    if (userId) {
-      logEntry.userId = userId;
-    }
+      if (context) {
+        logEntry.context = context;
+      }
+      if (correlationId) {
+        logEntry.correlationId = correlationId;
+      }
+      if (userId) {
+        logEntry.userId = userId;
+      }
 
-    return JSON.stringify(logEntry);
-  }),
+      return JSON.stringify(logEntry);
+    },
+  ),
 );
 
 // Development format for better readability
@@ -48,14 +58,27 @@ const devFormat = winston.format.combine(
     format: 'HH:mm:ss.SSS',
   }),
   winston.format.colorize(),
-  winston.format.printf(({ timestamp, level, message, context, correlationId, userId, ...meta }) => {
-    const contextStr = context ? `[${context}]` : '';
-    const correlationStr = correlationId ? `[${correlationId}]` : '';
-    const userStr = userId ? `[User:${userId}]` : '';
-    const metaStr = Object.keys(meta).length > 0 ? `\n${JSON.stringify(meta, null, 2)}` : '';
-    
-    return `${timestamp} ${level} ${contextStr}${correlationStr}${userStr} ${message}${metaStr}`;
-  }),
+  winston.format.printf(
+    ({
+      timestamp,
+      level,
+      message,
+      context,
+      correlationId,
+      userId,
+      ...meta
+    }) => {
+      const contextStr = context ? `[${context}]` : '';
+      const correlationStr = correlationId ? `[${correlationId}]` : '';
+      const userStr = userId ? `[User:${userId}]` : '';
+      const metaStr =
+        Object.keys(meta).length > 0
+          ? `\n${JSON.stringify(meta, null, 2)}`
+          : '';
+
+      return `${timestamp} ${level} ${contextStr}${correlationStr}${userStr} ${message}${metaStr}`;
+    },
+  ),
 );
 
 /**
@@ -64,7 +87,7 @@ const devFormat = winston.format.combine(
 export function createWinstonConfig(): WinstonModuleOptions {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const isTest = process.env.NODE_ENV === 'test';
-  
+
   // Base transports
   const transports: winston.transport[] = [];
 
@@ -227,7 +250,8 @@ export class StructuredLogger {
       [key: string]: any;
     } = {},
   ): void {
-    const level = statusCode >= 400 ? 'error' : duration > 2000 ? 'warn' : 'info';
+    const level =
+      statusCode >= 400 ? 'error' : duration > 2000 ? 'warn' : 'info';
     this.logWithContext(level, `External Call: ${service} ${method} ${url}`, {
       ...meta,
       service,

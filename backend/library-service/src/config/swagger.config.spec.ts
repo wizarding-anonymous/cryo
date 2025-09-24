@@ -6,7 +6,7 @@ describe('Swagger Configuration', () => {
   describe('createSwaggerConfig', () => {
     it('should create a valid Swagger configuration with default values', () => {
       const config = createSwaggerConfig();
-      
+
       expect(config.info.title).toBe('Library Service API');
       expect(config.info.version).toBe('1.0.0');
       expect(config.info.description).toContain('Library Service API');
@@ -26,7 +26,7 @@ describe('Swagger Configuration', () => {
         customDescription,
         customVersion,
         customServerUrl,
-        customServerDescription
+        customServerDescription,
       );
 
       expect(config.info.title).toBe(customTitle);
@@ -34,16 +34,16 @@ describe('Swagger Configuration', () => {
       expect(config.info.version).toBe(customVersion);
       expect(config.servers).toContainEqual({
         url: customServerUrl,
-        description: customServerDescription
+        description: customServerDescription,
       });
     });
 
     it('should include required security schemes', () => {
       const config = createSwaggerConfig();
-      
+
       expect(config.components?.securitySchemes).toBeDefined();
       expect(config.components?.securitySchemes?.['JWT-auth']).toBeDefined();
-      
+
       // Type assertion to access properties safely
       const jwtAuth = config.components?.securitySchemes?.['JWT-auth'];
       if (jwtAuth && 'type' in jwtAuth) {
@@ -55,22 +55,22 @@ describe('Swagger Configuration', () => {
     it('should include all required tags', () => {
       const config = createSwaggerConfig();
       const expectedTags = ['Library', 'Purchase History', 'Health', 'Metrics'];
-      
+
       expect(config.tags).toBeDefined();
-      const tagNames = config.tags?.map(tag => tag.name) || [];
-      
-      expectedTags.forEach(expectedTag => {
+      const tagNames = config.tags?.map((tag) => tag.name) || [];
+
+      expectedTags.forEach((expectedTag) => {
         expect(tagNames).toContain(expectedTag);
       });
     });
 
     it('should include multiple servers', () => {
       const config = createSwaggerConfig();
-      
+
       expect(config.servers).toBeDefined();
       expect(config.servers?.length).toBeGreaterThanOrEqual(2);
-      
-      const serverUrls = config.servers?.map(server => server.url) || [];
+
+      const serverUrls = config.servers?.map((server) => server.url) || [];
       expect(serverUrls).toContain('http://localhost:3000');
       expect(serverUrls).toContain('https://api.yourgamingplatform.ru');
     });
@@ -85,8 +85,12 @@ describe('Swagger Configuration', () => {
     });
 
     it('should have custom styling', () => {
-      expect(swaggerOptions.customSiteTitle).toBe('Library Service API Documentation');
-      expect(swaggerOptions.customCss).toContain('.swagger-ui .topbar { display: none; }');
+      expect(swaggerOptions.customSiteTitle).toBe(
+        'Library Service API Documentation',
+      );
+      expect(swaggerOptions.customCss).toContain(
+        '.swagger-ui .topbar { display: none; }',
+      );
       expect(swaggerOptions.customCssUrl).toBeDefined();
       expect(swaggerOptions.customJs).toBeDefined();
     });
@@ -128,7 +132,7 @@ describe('Swagger Configuration', () => {
 
     it('should have valid example data structure', () => {
       const libraryExample = SwaggerExamples.library.userLibrary.value;
-      
+
       expect(libraryExample.games).toBeDefined();
       expect(Array.isArray(libraryExample.games)).toBe(true);
       expect(libraryExample.pagination).toBeDefined();
@@ -146,7 +150,7 @@ describe('Swagger Configuration', () => {
         expect(game.purchasePrice).toBeDefined();
         expect(game.currency).toBeDefined();
         expect(game.orderId).toBeDefined();
-        
+
         if (game.gameDetails) {
           expect(game.gameDetails.title).toBeDefined();
           expect(game.gameDetails.developer).toBeDefined();
@@ -158,12 +162,12 @@ describe('Swagger Configuration', () => {
     it('should have valid ownership example data', () => {
       const ownedExample = SwaggerExamples.ownership.owned.value;
       const notOwnedExample = SwaggerExamples.ownership.notOwned.value;
-      
+
       expect(ownedExample.owns).toBe(true);
       expect(ownedExample.purchaseDate).toBeDefined();
       expect(ownedExample.purchasePrice).toBeDefined();
       expect(ownedExample.currency).toBeDefined();
-      
+
       expect(notOwnedExample.owns).toBe(false);
       // Check that optional properties are not present in notOwned example
       expect('purchaseDate' in notOwnedExample).toBe(false);
@@ -173,13 +177,13 @@ describe('Swagger Configuration', () => {
 
     it('should have valid error example data', () => {
       const validationError = SwaggerExamples.errors.validation.value;
-      
+
       expect(validationError.statusCode).toBe(400);
       expect(validationError.message).toBeDefined();
       expect(validationError.error).toBe('VALIDATION_ERROR');
       expect(validationError.details).toBeDefined();
       expect(Array.isArray(validationError.details)).toBe(true);
-      
+
       if (validationError.details.length > 0) {
         const detail = validationError.details[0];
         expect(detail.field).toBeDefined();
@@ -191,7 +195,7 @@ describe('Swagger Configuration', () => {
   describe('DocumentBuilder Integration', () => {
     it('should work with NestJS DocumentBuilder', () => {
       const builder = new DocumentBuilder();
-      
+
       expect(() => {
         builder
           .setTitle('Test API')
@@ -208,11 +212,14 @@ describe('Swagger Configuration', () => {
         .setTitle('Library Service API')
         .setDescription('API for managing user game libraries')
         .setVersion('1.0.0')
-        .addBearerAuth({
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        }, 'JWT-auth')
+        .addBearerAuth(
+          {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+          'JWT-auth',
+        )
         .addTag('Library')
         .addTag('Purchase History')
         .addTag('Health')

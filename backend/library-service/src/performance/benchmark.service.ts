@@ -36,15 +36,19 @@ export class BenchmarkService {
   /**
    * Run comprehensive benchmark suite for library operations
    */
-  async runLibraryBenchmarkSuite(options: {
-    userCount?: number;
-    gamesPerUser?: number;
-    iterations?: number;
-  } = {}): Promise<BenchmarkSuite> {
+  async runLibraryBenchmarkSuite(
+    options: {
+      userCount?: number;
+      gamesPerUser?: number;
+      iterations?: number;
+    } = {},
+  ): Promise<BenchmarkSuite> {
     const { userCount = 10, gamesPerUser = 100, iterations = 5 } = options;
-    
-    this.logger.log(`Starting library benchmark suite: ${userCount} users, ${gamesPerUser} games per user, ${iterations} iterations`);
-    
+
+    this.logger.log(
+      `Starting library benchmark suite: ${userCount} users, ${gamesPerUser} games per user, ${iterations} iterations`,
+    );
+
     const startTime = Date.now();
     const initialMemory = process.memoryUsage();
     const results: BenchmarkResult[] = [];
@@ -55,22 +59,21 @@ export class BenchmarkService {
     try {
       // Benchmark library retrieval
       results.push(await this.benchmarkLibraryRetrieval(testUsers, iterations));
-      
+
       // Benchmark search operations
       results.push(await this.benchmarkSearchOperations(testUsers, iterations));
-      
+
       // Benchmark ownership checks
       results.push(await this.benchmarkOwnershipChecks(testUsers, iterations));
-      
+
       // Benchmark pagination
       results.push(await this.benchmarkPagination(testUsers, iterations));
-      
+
       // Benchmark bulk operations
       results.push(await this.benchmarkBulkOperations(testUsers, iterations));
-      
+
       // Benchmark cache operations
       results.push(await this.benchmarkCacheOperations(testUsers, iterations));
-
     } finally {
       // Cleanup test data
       await this.cleanupTestUsers(testUsers);
@@ -79,8 +82,9 @@ export class BenchmarkService {
     const totalDuration = Date.now() - startTime;
     const finalMemory = process.memoryUsage();
     const memoryDelta = finalMemory.heapUsed - initialMemory.heapUsed;
-    
-    const averageThroughput = results.reduce((sum, r) => sum + r.throughput, 0) / results.length;
+
+    const averageThroughput =
+      results.reduce((sum, r) => sum + r.throughput, 0) / results.length;
 
     return {
       name: 'Library Service Benchmark Suite',
@@ -96,19 +100,19 @@ export class BenchmarkService {
    */
   async benchmarkDatabaseQueries(): Promise<BenchmarkResult[]> {
     const results: BenchmarkResult[] = [];
-    
+
     // Test simple queries
     results.push(await this.benchmarkSimpleQueries());
-    
+
     // Test complex queries with JOINs
     results.push(await this.benchmarkComplexQueries());
-    
+
     // Test aggregation queries
     results.push(await this.benchmarkAggregationQueries());
-    
+
     // Test concurrent queries
     results.push(await this.benchmarkConcurrentQueries());
-    
+
     return results;
   }
 
@@ -117,29 +121,32 @@ export class BenchmarkService {
    */
   async benchmarkCachePerformance(): Promise<BenchmarkResult[]> {
     const results: BenchmarkResult[] = [];
-    
+
     // Test cache writes
     results.push(await this.benchmarkCacheWrites());
-    
+
     // Test cache reads
     results.push(await this.benchmarkCacheReads());
-    
+
     // Test cache invalidation
     results.push(await this.benchmarkCacheInvalidation());
-    
+
     return results;
   }
 
   /**
    * Setup test users with library data
    */
-  private async setupTestUsers(userCount: number, gamesPerUser: number): Promise<string[]> {
+  private async setupTestUsers(
+    userCount: number,
+    gamesPerUser: number,
+  ): Promise<string[]> {
     const userIds: string[] = [];
-    
+
     for (let i = 0; i < userCount; i++) {
       const userId = randomUUID();
       userIds.push(userId);
-      
+
       // Create library games for user
       const games: Partial<LibraryGame>[] = [];
       for (let j = 0; j < gamesPerUser; j++) {
@@ -150,10 +157,12 @@ export class BenchmarkService {
           purchaseId: randomUUID(),
           purchasePrice: Math.random() * 60 + 10,
           currency: ['USD', 'EUR', 'GBP'][Math.floor(Math.random() * 3)],
-          purchaseDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
+          purchaseDate: new Date(
+            Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000,
+          ),
         });
       }
-      
+
       // Batch insert games
       await this.dataSource
         .createQueryBuilder()
@@ -162,7 +171,7 @@ export class BenchmarkService {
         .values(games)
         .execute();
     }
-    
+
     return userIds;
   }
 
@@ -176,7 +185,7 @@ export class BenchmarkService {
       .from(LibraryGame)
       .where('userId IN (:...userIds)', { userIds })
       .execute();
-      
+
     await this.dataSource
       .createQueryBuilder()
       .delete()
@@ -188,7 +197,10 @@ export class BenchmarkService {
   /**
    * Benchmark library retrieval operations
    */
-  private async benchmarkLibraryRetrieval(userIds: string[], iterations: number): Promise<BenchmarkResult> {
+  private async benchmarkLibraryRetrieval(
+    userIds: string[],
+    iterations: number,
+  ): Promise<BenchmarkResult> {
     const startTime = Date.now();
     const startMemory = process.memoryUsage();
     let recordsProcessed = 0;
@@ -198,13 +210,11 @@ export class BenchmarkService {
     try {
       for (let i = 0; i < iterations; i++) {
         for (const userId of userIds) {
-          const games = await this.dataSource
-            .getRepository(LibraryGame)
-            .find({
-              where: { userId },
-              take: 20,
-              order: { purchaseDate: 'DESC' },
-            });
+          const games = await this.dataSource.getRepository(LibraryGame).find({
+            where: { userId },
+            take: 20,
+            order: { purchaseDate: 'DESC' },
+          });
           recordsProcessed += games.length;
         }
       }
@@ -230,23 +240,35 @@ export class BenchmarkService {
   /**
    * Benchmark search operations
    */
-  private async benchmarkSearchOperations(userIds: string[], iterations: number): Promise<BenchmarkResult> {
+  private async benchmarkSearchOperations(
+    userIds: string[],
+    iterations: number,
+  ): Promise<BenchmarkResult> {
     const startTime = Date.now();
     let recordsProcessed = 0;
     let success = true;
     let error: string | undefined;
 
-    const searchTerms = ['Action', 'RPG', 'Strategy', 'Adventure', 'Simulation'];
+    const searchTerms = [
+      'Action',
+      'RPG',
+      'Strategy',
+      'Adventure',
+      'Simulation',
+    ];
 
     try {
       for (let i = 0; i < iterations; i++) {
         for (const userId of userIds) {
-          const searchTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+          const searchTerm =
+            searchTerms[Math.floor(Math.random() * searchTerms.length)];
           const games = await this.dataSource
             .getRepository(LibraryGame)
             .createQueryBuilder('lg')
             .where('lg.userId = :userId', { userId })
-            .andWhere('lg.gameId::text ILIKE :search', { search: `%${searchTerm}%` })
+            .andWhere('lg.gameId::text ILIKE :search', {
+              search: `%${searchTerm}%`,
+            })
             .take(20)
             .getMany();
           recordsProcessed += games.length;
@@ -274,7 +296,10 @@ export class BenchmarkService {
   /**
    * Benchmark ownership checks
    */
-  private async benchmarkOwnershipChecks(userIds: string[], iterations: number): Promise<BenchmarkResult> {
+  private async benchmarkOwnershipChecks(
+    userIds: string[],
+    iterations: number,
+  ): Promise<BenchmarkResult> {
     const startTime = Date.now();
     let recordsProcessed = 0;
     let success = true;
@@ -288,7 +313,10 @@ export class BenchmarkService {
             .getRepository(LibraryGame)
             .createQueryBuilder('lg')
             .select('1')
-            .where('lg.userId = :userId AND lg.gameId = :gameId', { userId, gameId })
+            .where('lg.userId = :userId AND lg.gameId = :gameId', {
+              userId,
+              gameId,
+            })
             .limit(1)
             .getRawOne();
           recordsProcessed += exists ? 1 : 0;
@@ -316,7 +344,10 @@ export class BenchmarkService {
   /**
    * Benchmark pagination performance
    */
-  private async benchmarkPagination(userIds: string[], iterations: number): Promise<BenchmarkResult> {
+  private async benchmarkPagination(
+    userIds: string[],
+    iterations: number,
+  ): Promise<BenchmarkResult> {
     const startTime = Date.now();
     let recordsProcessed = 0;
     let success = true;
@@ -328,15 +359,13 @@ export class BenchmarkService {
           const page = Math.floor(Math.random() * 5) + 1;
           const limit = 20;
           const offset = (page - 1) * limit;
-          
-          const games = await this.dataSource
-            .getRepository(LibraryGame)
-            .find({
-              where: { userId },
-              skip: offset,
-              take: limit,
-              order: { purchaseDate: 'DESC' },
-            });
+
+          const games = await this.dataSource.getRepository(LibraryGame).find({
+            where: { userId },
+            skip: offset,
+            take: limit,
+            order: { purchaseDate: 'DESC' },
+          });
           recordsProcessed += games.length;
         }
       }
@@ -362,7 +391,10 @@ export class BenchmarkService {
   /**
    * Benchmark bulk operations
    */
-  private async benchmarkBulkOperations(userIds: string[], iterations: number): Promise<BenchmarkResult> {
+  private async benchmarkBulkOperations(
+    userIds: string[],
+    iterations: number,
+  ): Promise<BenchmarkResult> {
     const startTime = Date.now();
     let recordsProcessed = 0;
     let success = true;
@@ -372,7 +404,7 @@ export class BenchmarkService {
       for (let i = 0; i < iterations; i++) {
         const userId = userIds[Math.floor(Math.random() * userIds.length)];
         const games: Partial<LibraryGame>[] = [];
-        
+
         for (let j = 0; j < 10; j++) {
           games.push({
             userId,
@@ -384,7 +416,7 @@ export class BenchmarkService {
             purchaseDate: new Date(),
           });
         }
-        
+
         await this.dataSource
           .createQueryBuilder()
           .insert()
@@ -392,7 +424,7 @@ export class BenchmarkService {
           .values(games)
           .orIgnore()
           .execute();
-          
+
         recordsProcessed += games.length;
       }
     } catch (err) {
@@ -417,7 +449,10 @@ export class BenchmarkService {
   /**
    * Benchmark cache operations
    */
-  private async benchmarkCacheOperations(userIds: string[], iterations: number): Promise<BenchmarkResult> {
+  private async benchmarkCacheOperations(
+    userIds: string[],
+    iterations: number,
+  ): Promise<BenchmarkResult> {
     const startTime = Date.now();
     let recordsProcessed = 0;
     let success = true;
@@ -427,10 +462,10 @@ export class BenchmarkService {
       for (let i = 0; i < iterations; i++) {
         for (const userId of userIds) {
           const cacheKey = `library:${userId}`;
-          
+
           // Cache write
           await this.cacheService.set(cacheKey, { userId, games: [] }, 300);
-          
+
           // Cache read
           const cached = await this.cacheService.get(cacheKey);
           if (cached) {
@@ -468,7 +503,9 @@ export class BenchmarkService {
 
     try {
       for (let i = 0; i < 100; i++) {
-        const result = await this.dataSource.query('SELECT COUNT(*) FROM library_games');
+        const result = await this.dataSource.query(
+          'SELECT COUNT(*) FROM library_games',
+        );
         recordsProcessed += parseInt(result[0].count, 10);
       }
     } catch (err) {
@@ -586,12 +623,18 @@ export class BenchmarkService {
       const promises = [];
       for (let i = 0; i < 20; i++) {
         promises.push(
-          this.dataSource.query('SELECT COUNT(*) FROM library_games WHERE "purchasePrice" > $1', [Math.random() * 50])
+          this.dataSource.query(
+            'SELECT COUNT(*) FROM library_games WHERE "purchasePrice" > $1',
+            [Math.random() * 50],
+          ),
         );
       }
-      
+
       const results = await Promise.all(promises);
-      recordsProcessed = results.reduce((sum, result) => sum + parseInt(result[0].count, 10), 0);
+      recordsProcessed = results.reduce(
+        (sum, result) => sum + parseInt(result[0].count, 10),
+        0,
+      );
     } catch (err) {
       success = false;
       error = err instanceof Error ? err.message : 'Unknown error';

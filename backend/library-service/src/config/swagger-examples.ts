@@ -8,7 +8,8 @@ export const SwaggerExamples = {
   library: {
     userLibrary: {
       summary: 'User library with games',
-      description: 'Example response showing a user library with purchased games',
+      description:
+        'Example response showing a user library with purchased games',
       value: {
         games: [
           {
@@ -26,11 +27,11 @@ export const SwaggerExamples = {
               publisher: 'CD Projekt',
               images: [
                 'https://example.com/cyberpunk-cover.jpg',
-                'https://example.com/cyberpunk-screenshot1.jpg'
+                'https://example.com/cyberpunk-screenshot1.jpg',
               ],
               tags: ['RPG', 'Open World', 'Cyberpunk', 'Action'],
-              releaseDate: '2020-12-10T00:00:00Z'
-            }
+              releaseDate: '2020-12-10T00:00:00Z',
+            },
           },
           {
             id: '123e4567-e89b-12d3-a456-426614174005',
@@ -45,21 +46,19 @@ export const SwaggerExamples = {
               title: 'The Witcher 3: Wild Hunt',
               developer: 'CD Projekt RED',
               publisher: 'CD Projekt',
-              images: [
-                'https://example.com/witcher3-cover.jpg'
-              ],
+              images: ['https://example.com/witcher3-cover.jpg'],
               tags: ['RPG', 'Fantasy', 'Open World'],
-              releaseDate: '2015-05-19T00:00:00Z'
-            }
-          }
+              releaseDate: '2015-05-19T00:00:00Z',
+            },
+          },
         ],
         pagination: {
           total: 25,
           page: 1,
           limit: 20,
-          totalPages: 2
-        }
-      }
+          totalPages: 2,
+        },
+      },
     },
     emptyLibrary: {
       summary: 'Empty user library',
@@ -70,9 +69,9 @@ export const SwaggerExamples = {
           total: 0,
           page: 1,
           limit: 20,
-          totalPages: 0
-        }
-      }
+          totalPages: 0,
+        },
+      },
     },
     searchResults: {
       summary: 'Search results',
@@ -94,18 +93,18 @@ export const SwaggerExamples = {
               publisher: 'CD Projekt',
               images: ['https://example.com/cyberpunk-cover.jpg'],
               tags: ['RPG', 'Open World', 'Cyberpunk'],
-              releaseDate: '2020-12-10T00:00:00Z'
-            }
-          }
+              releaseDate: '2020-12-10T00:00:00Z',
+            },
+          },
         ],
         pagination: {
           total: 1,
           page: 1,
           limit: 20,
-          totalPages: 1
-        }
-      }
-    }
+          totalPages: 1,
+        },
+      },
+    },
   },
 
   // Ownership Examples
@@ -117,16 +116,16 @@ export const SwaggerExamples = {
         owns: true,
         purchaseDate: '2024-01-15T10:30:00Z',
         purchasePrice: 59.99,
-        currency: 'RUB'
-      }
+        currency: 'RUB',
+      },
     },
     notOwned: {
       summary: 'User does not own the game',
       description: 'Example response when user does not own the requested game',
       value: {
-        owns: false
-      }
-    }
+        owns: false,
+      },
+    },
   },
 
   // Purchase History Examples
@@ -148,7 +147,7 @@ export const SwaggerExamples = {
               transactionId: 'tx_123456789',
               gateway: 'stripe',
               cardLast4: '1234',
-              authCode: 'AUTH123456'
+              authCode: 'AUTH123456',
             },
             createdAt: '2024-01-15T10:30:00Z',
             updatedAt: '2024-01-15T10:30:00Z',
@@ -159,8 +158,8 @@ export const SwaggerExamples = {
               publisher: 'CD Projekt',
               images: ['https://example.com/cyberpunk-cover.jpg'],
               tags: ['RPG', 'Open World', 'Cyberpunk'],
-              releaseDate: '2020-12-10T00:00:00Z'
-            }
+              releaseDate: '2020-12-10T00:00:00Z',
+            },
           },
           {
             id: '123e4567-e89b-12d3-a456-426614174009',
@@ -173,7 +172,7 @@ export const SwaggerExamples = {
             metadata: {
               transactionId: 'tx_987654321',
               gateway: 'yandex_money',
-              walletId: 'wallet_456'
+              walletId: 'wallet_456',
             },
             createdAt: '2024-01-10T14:20:00Z',
             updatedAt: '2024-01-10T14:20:00Z',
@@ -184,17 +183,17 @@ export const SwaggerExamples = {
               publisher: 'CD Projekt',
               images: ['https://example.com/witcher3-cover.jpg'],
               tags: ['RPG', 'Fantasy', 'Open World'],
-              releaseDate: '2015-05-19T00:00:00Z'
-            }
-          }
+              releaseDate: '2015-05-19T00:00:00Z',
+            },
+          },
         ],
         pagination: {
           total: 15,
           page: 1,
           limit: 20,
-          totalPages: 1
-        }
-      }
+          totalPages: 1,
+        },
+      },
     },
     refundedPurchase: {
       summary: 'Purchase history with refunded item',
@@ -213,7 +212,7 @@ export const SwaggerExamples = {
               transactionId: 'tx_refund_123',
               gateway: 'stripe',
               refundReason: 'customer_request',
-              refundDate: '2024-01-20T16:45:00Z'
+              refundDate: '2024-01-20T16:45:00Z',
             },
             createdAt: '2024-01-18T12:00:00Z',
             updatedAt: '2024-01-20T16:45:00Z',
@@ -224,18 +223,18 @@ export const SwaggerExamples = {
               publisher: 'Example Publisher',
               images: ['https://example.com/game-cover.jpg'],
               tags: ['Action', 'Adventure'],
-              releaseDate: '2024-01-01T00:00:00Z'
-            }
-          }
+              releaseDate: '2024-01-01T00:00:00Z',
+            },
+          },
         ],
         pagination: {
           total: 1,
           page: 1,
           limit: 20,
-          totalPages: 1
-        }
-      }
-    }
+          totalPages: 1,
+        },
+      },
+    },
   },
 
   // Error Examples
@@ -253,10 +252,10 @@ export const SwaggerExamples = {
         details: [
           {
             field: 'query',
-            message: 'query must be longer than or equal to 2 characters'
-          }
-        ]
-      }
+            message: 'query must be longer than or equal to 2 characters',
+          },
+        ],
+      },
     },
     unauthorized: {
       summary: 'Unauthorized access',
@@ -264,8 +263,8 @@ export const SwaggerExamples = {
       value: {
         statusCode: 401,
         message: 'Unauthorized',
-        error: 'UNAUTHORIZED'
-      }
+        error: 'UNAUTHORIZED',
+      },
     },
     gameNotOwned: {
       summary: 'Game not owned',
@@ -276,21 +275,22 @@ export const SwaggerExamples = {
         error: 'NOT_FOUND',
         correlationId: '123e4567-e89b-12d3-a456-426614174015',
         timestamp: '2024-01-15T10:30:00Z',
-        path: '/api/library/ownership/123e4567-e89b-12d3-a456-426614174001'
-      }
+        path: '/api/library/ownership/123e4567-e89b-12d3-a456-426614174001',
+      },
     },
     duplicateGame: {
       summary: 'Duplicate game in library',
-      description: 'Example error when trying to add a game that already exists in library',
+      description:
+        'Example error when trying to add a game that already exists in library',
       value: {
         statusCode: 409,
         message: 'Game already exists in user library',
         error: 'CONFLICT',
         correlationId: '123e4567-e89b-12d3-a456-426614174016',
         timestamp: '2024-01-15T10:30:00Z',
-        path: '/api/library/add'
-      }
-    }
+        path: '/api/library/add',
+      },
+    },
   },
 
   // Request Body Examples
@@ -305,16 +305,16 @@ export const SwaggerExamples = {
         purchaseId: '123e4567-e89b-12d3-a456-426614174003',
         purchasePrice: 59.99,
         currency: 'RUB',
-        purchaseDate: '2024-01-15T10:30:00Z'
-      }
+        purchaseDate: '2024-01-15T10:30:00Z',
+      },
     },
     removeGameFromLibrary: {
       summary: 'Remove game from library request',
       description: 'Example request body for removing a game from user library',
       value: {
         userId: '123e4567-e89b-12d3-a456-426614174000',
-        gameId: '123e4567-e89b-12d3-a456-426614174001'
-      }
-    }
-  }
+        gameId: '123e4567-e89b-12d3-a456-426614174001',
+      },
+    },
+  },
 };

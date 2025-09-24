@@ -1,4 +1,7 @@
-import { productionConfig, validateProductionConfig } from './production.config';
+import {
+  productionConfig,
+  validateProductionConfig,
+} from './production.config';
 
 describe('ProductionConfig', () => {
   const originalEnv = process.env;
@@ -28,6 +31,9 @@ describe('ProductionConfig', () => {
       process.env.NODE_ENV = 'production';
       process.env.PORT = '8080';
       process.env.LOG_LEVEL = 'info';
+      process.env.DATABASE_PASSWORD = 'test-db-password';
+      process.env.REDIS_PASSWORD = 'test-redis-password';
+      process.env.JWT_SECRET = 'test-jwt-secret';
 
       const config = productionConfig();
 
@@ -43,7 +49,7 @@ describe('ProductionConfig', () => {
 
       expect(config.server.cors.origin).toEqual([
         'https://example.com',
-        'https://api.example.com'
+        'https://api.example.com',
       ]);
     });
 
@@ -60,6 +66,9 @@ describe('ProductionConfig', () => {
     it('should configure database SSL for production', () => {
       process.env.NODE_ENV = 'production';
       process.env.DATABASE_SSL_CA = 'ca-cert';
+      process.env.DATABASE_PASSWORD = 'test-db-password';
+      process.env.REDIS_PASSWORD = 'test-redis-password';
+      process.env.JWT_SECRET = 'test-jwt-secret';
 
       const config = productionConfig();
 
@@ -130,7 +139,9 @@ describe('ProductionConfig', () => {
       process.env.NODE_ENV = 'production';
       // Missing required environment variables
 
-      expect(() => validateProductionConfig()).toThrow(/Missing required environment variables/);
+      expect(() => validateProductionConfig()).toThrow(
+        /Missing required environment variables/,
+      );
     });
 
     it('should fail validation in production with missing secrets', () => {

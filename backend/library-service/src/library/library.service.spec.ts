@@ -40,9 +40,11 @@ describe('LibraryService', () => {
     set: jest.fn(),
     del: jest.fn(),
     getOrSet: jest.fn(),
-    getCachedLibraryData: jest.fn().mockImplementation(async (_userId, _cacheKey, fetchFn) => {
-      return await fetchFn();
-    }),
+    getCachedLibraryData: jest
+      .fn()
+      .mockImplementation(async (_userId, _cacheKey, fetchFn) => {
+        return await fetchFn();
+      }),
     invalidateUserLibraryCache: jest.fn(),
     mget: jest.fn().mockResolvedValue(new Map()),
     mset: jest.fn(),
