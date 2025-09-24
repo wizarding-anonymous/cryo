@@ -1,17 +1,25 @@
 # Dependencies
 node_modules
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Testing
 coverage
 *.lcov
 .nyc_output
+test/
+*.spec.ts
+*.test.ts
+jest.config.js
+jest-e2e.json
 
 # Development
 .env
 .env.local
 .env.development
 .env.test
+.env.example
 
 # Build artifacts
 dist
@@ -46,14 +54,12 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
-
 # IDE files
 .vscode
 .idea
 *.swp
 *.swo
+*.sublime-*
 
 # OS generated files
 .DS_Store
@@ -67,6 +73,7 @@ Thumbs.db
 # Git
 .git
 .gitignore
+.gitattributes
 
 # Docker
 Dockerfile*
@@ -75,12 +82,33 @@ docker-compose*
 
 # Documentation
 README.md
+README.Docker.md
+TESTING.md
 docs/
-
-# Test files
-test/
-*.spec.ts
-*.test.ts
 
 # Scripts
 scripts/
+
+# Load tests
+load-tests/
+
+# Kubernetes
+k8s/
+
+# Mocks (not needed in production)
+mocks/
+
+# TypeScript config (needed for build, excluded from production)
+# tsconfig*.json
+
+# ESLint and Prettier config
+.eslintrc*
+.prettierrc*
+eslint.config.*
+
+# Nest CLI config (needed for build)
+# nest-cli.json
+
+# Development database files
+*.sqlite
+*.db

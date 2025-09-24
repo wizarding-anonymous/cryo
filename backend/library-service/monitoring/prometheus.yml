@@ -1,0 +1,109 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'library-service-monitor'
+    environment: 'production'
+
+rule_files:
+  - "prometheus-alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Library Service metrics
+  - job_name: 'library-service'
+    static_configs:
+      - targets: ['library-service:3000']
+    metrics_path: '/monitoring/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # Library Service health checks
+  - job_name: 'library-service-health'
+    static_configs:
+      - targets: ['library-service:3000']
+    metrics_path: '/health'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # PostgreSQL metrics (if postgres_exporter is used)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+
+  # Redis metrics (if redis_exporter is used)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+
+  # Node.js process metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Nginx metrics (if nginx-prometheus-exporter is used)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 15s
+
+  # Self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+# Recording rules for aggregated metrics
+recording_rules:
+  - name: library_service_aggregations
+    rules:
+      # Request rate
+      - record: library_service:http_requests:rate5m
+        expr: rate(library_service_http_requests_total[5m])
+      
+      # Error rate
+      - record: library_service:http_errors:rate5m
+        expr: rate(library_service_http_requests_total{status_code=~"4..|5.."}[5m])
+      
+      # Response time percentiles
+      - record: library_service:http_request_duration:p95
+        expr: histogram_quantile(0.95, rate(library_service_http_request_duration_seconds_bucket[5m]))
+      
+      - record: library_service:http_request_duration:p99
+        expr: histogram_quantile(0.99, rate(library_service_http_request_duration_seconds_bucket[5m]))
+      
+      # Database query performance
+      - record: library_service:database_query_duration:p95
+        expr: histogram_quantile(0.95, rate(library_service_database_query_duration_seconds_bucket[5m]))
+      
+      # Memory usage percentage
+      - record: library_service:memory_usage:percentage
+        expr: (library_service_memory_usage_bytes{type="heapUsed"} / library_service_memory_usage_bytes{type="heapTotal"}) * 100
+      
+      # Business metrics aggregations
+      - record: library_service:library_operations:rate5m
+        expr: rate(library_service_library_operations_total[5m])
+      
+      - record: library_service:search_operations:rate5m
+        expr: rate(library_service_search_operations_total[5m])
+      
+      - record: library_service:cache_hit_rate
+        expr: rate(library_service_cache_operations_total{operation="hit"}[5m]) / rate(library_service_cache_operations_total{operation=~"hit|miss"}[5m])
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 30d
+    retention.size: 10GB
+    wal-compression: true

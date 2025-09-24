@@ -1,4 +1,3 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
 import { BaseQueryDto } from '../../common/dto';
 
 export class LibraryQueryDto extends BaseQueryDto {

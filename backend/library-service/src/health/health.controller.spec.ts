@@ -3,15 +3,19 @@ import { HealthController } from './health.controller';
 import {
   HealthCheckService,
   TypeOrmHealthIndicator,
-  MicroserviceHealthIndicator,
+  HttpHealthIndicator,
 } from '@nestjs/terminus';
 import { ConfigService } from '@nestjs/config';
 import { RedisHealthIndicator } from './redis.health';
 import { CacheHealthIndicator } from './cache.health';
+import { ExternalServicesHealthIndicator } from './external-services.health';
+import { MetricsService } from './metrics.service';
+import { DatabaseHealthService } from '../database/database-health.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
   let healthCheckService: HealthCheckService;
+  let metricsService: MetricsService;
 
   const mockHealthCheckService = {
     check: jest.fn(),
@@ -21,7 +25,7 @@ describe('HealthController', () => {
     pingCheck: jest.fn().mockResolvedValue({ database: { status: 'up' } }),
   };
 
-  const mockMicroserviceHealthIndicator = {
+  const mockHttpHealthIndicator = {
     pingCheck: jest
       .fn()
       .mockResolvedValue({ 'game-catalog-service': { status: 'up' } }),
@@ -35,10 +39,33 @@ describe('HealthController', () => {
     isHealthy: jest.fn().mockResolvedValue({ cache: { status: 'up' } }),
   };
 
+  const mockExternalServicesHealthIndicator = {
+    checkGameCatalogService: jest.fn().mockResolvedValue({ 'game-catalog-service': { status: 'up' } }),
+    checkPaymentService: jest.fn().mockResolvedValue({ 'payment-service': { status: 'up' } }),
+    checkUserService: jest.fn().mockResolvedValue({ 'user-service': { status: 'up' } }),
+    checkAllExternalServices: jest.fn().mockResolvedValue({ 'external-services': { status: 'up' } }),
+  };
+
+  const mockMetricsService = {
+    recordHealthCheck: jest.fn(),
+    setExternalServiceStatus: jest.fn(),
+    recordExternalServiceResponseTime: jest.fn(),
+  };
+
+  const mockDatabaseHealthService = {
+    isHealthy: jest.fn().mockResolvedValue({ database: { status: 'up' } }),
+  };
+
   const mockConfigService = {
     get: jest.fn().mockImplementation((key: string) => {
       if (key === 'services.gamesCatalog.url') {
         return 'http://localhost:3001';
+      }
+      if (key === 'services.payment.url') {
+        return 'http://localhost:3002';
+      }
+      if (key === 'services.user.url') {
+        return 'http://localhost:3003';
       }
       return 'mock-value';
     }),
@@ -54,17 +81,21 @@ describe('HealthController', () => {
           useValue: mockTypeOrmHealthIndicator,
         },
         {
-          provide: MicroserviceHealthIndicator,
-          useValue: mockMicroserviceHealthIndicator,
+          provide: HttpHealthIndicator,
+          useValue: mockHttpHealthIndicator,
         },
         { provide: RedisHealthIndicator, useValue: mockRedisHealthIndicator },
         { provide: CacheHealthIndicator, useValue: mockCacheHealthIndicator },
+        { provide: ExternalServicesHealthIndicator, useValue: mockExternalServicesHealthIndicator },
+        { provide: MetricsService, useValue: mockMetricsService },
+        { provide: DatabaseHealthService, useValue: mockDatabaseHealthService },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
     healthCheckService = module.get<HealthCheckService>(HealthCheckService);
+    metricsService = module.get<MetricsService>(MetricsService);
     jest.clearAllMocks();
   });
 
@@ -103,9 +134,8 @@ describe('HealthController', () => {
         'database',
         { timeout: 300 },
       );
-      // In test environment, Redis and microservice checks should not be called
+      // In test environment, Redis checks should not be called
       expect(mockRedisHealthIndicator.isHealthy).not.toHaveBeenCalled();
-      expect(mockMicroserviceHealthIndicator.pingCheck).not.toHaveBeenCalled();
 
       // Restore original NODE_ENV
       process.env.NODE_ENV = originalEnv;
@@ -197,10 +227,6 @@ describe('HealthController', () => {
         { timeout: 300 },
       );
       expect(mockRedisHealthIndicator.isHealthy).toHaveBeenCalledWith('redis');
-      expect(mockMicroserviceHealthIndicator.pingCheck).toHaveBeenCalledWith(
-        'game-catalog-service',
-        expect.any(Object),
-      );
 
       // Restore original NODE_ENV
       process.env.NODE_ENV = originalEnv;

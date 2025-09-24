@@ -1,0 +1,276 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Library Service - Production Monitoring",
+    "tags": ["library-service", "production", "microservices"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Overview",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"library-service\"}",
+            "legendFormat": "Service Status"
+          },
+          {
+            "expr": "library_service_http_requests_total",
+            "legendFormat": "Total Requests"
+          },
+          {
+            "expr": "rate(library_service_http_requests_total[5m]) * 60",
+            "legendFormat": "Requests/min"
+          },
+          {
+            "expr": "rate(library_service_http_requests_total{status_code=~\"4..|5..\"}[5m]) / rate(library_service_http_requests_total[5m]) * 100",
+            "legendFormat": "Error Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {"displayMode": "list", "orientation": "horizontal"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "rate(library_service_http_requests_total[5m]) * 60",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "Requests/min", "min": 0},
+          {"show": false}
+        ],
+        "legend": {"show": true, "values": false, "min": false, "max": false, "current": false, "total": false, "avg": false}
+      },
+      {
+        "id": 3,
+        "title": "Response Time",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(library_service_http_request_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(library_service_http_request_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(library_service_http_request_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "yAxes": [
+          {"label": "Milliseconds", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Error Rate by Status Code",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "rate(library_service_http_requests_total{status_code=~\"4..\"}[5m]) * 60",
+            "legendFormat": "4xx Errors"
+          },
+          {
+            "expr": "rate(library_service_http_requests_total{status_code=~\"5..\"}[5m]) * 60",
+            "legendFormat": "5xx Errors"
+          }
+        ],
+        "yAxes": [
+          {"label": "Errors/min", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Business Metrics",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "rate(library_service_library_operations_total[5m]) * 60",
+            "legendFormat": "Library Operations/min"
+          },
+          {
+            "expr": "rate(library_service_search_operations_total[5m]) * 60",
+            "legendFormat": "Search Operations/min"
+          },
+          {
+            "expr": "rate(library_service_purchase_history_operations_total[5m]) * 60",
+            "legendFormat": "History Operations/min"
+          }
+        ],
+        "yAxes": [
+          {"label": "Operations/min", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Memory Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "library_service_memory_usage_bytes{type=\"heapUsed\"} / 1024 / 1024",
+            "legendFormat": "Heap Used (MB)"
+          },
+          {
+            "expr": "library_service_memory_usage_bytes{type=\"heapTotal\"} / 1024 / 1024",
+            "legendFormat": "Heap Total (MB)"
+          },
+          {
+            "expr": "library_service_memory_usage_bytes{type=\"rss\"} / 1024 / 1024",
+            "legendFormat": "RSS (MB)"
+          }
+        ],
+        "yAxes": [
+          {"label": "Megabytes", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Database Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+        "targets": [
+          {
+            "expr": "library_service_database_connections_active",
+            "legendFormat": "Active Connections"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(library_service_database_query_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "95th percentile query time (ms)"
+          },
+          {
+            "expr": "rate(library_service_database_operations_total{status=\"error\"}[5m]) * 60",
+            "legendFormat": "DB Errors/min"
+          }
+        ],
+        "yAxes": [
+          {"label": "Count / Milliseconds", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Cache Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "rate(library_service_cache_operations_total{operation=\"hit\"}[5m]) / (rate(library_service_cache_operations_total{operation=\"hit\"}[5m]) + rate(library_service_cache_operations_total{operation=\"miss\"}[5m])) * 100",
+            "legendFormat": "Cache Hit Rate %"
+          },
+          {
+            "expr": "rate(library_service_cache_operations_total[5m]) * 60",
+            "legendFormat": "Cache Operations/min"
+          }
+        ],
+        "yAxes": [
+          {"label": "Percentage / Operations", "min": 0, "max": 100},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 9,
+        "title": "External Service Calls",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+        "targets": [
+          {
+            "expr": "rate(library_service_external_service_calls_total[5m]) * 60",
+            "legendFormat": "{{service}} calls/min"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(library_service_external_service_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "{{service}} 95th percentile (ms)"
+          }
+        ],
+        "yAxes": [
+          {"label": "Calls/min / Milliseconds", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Top Slow Endpoints",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36},
+        "targets": [
+          {
+            "expr": "topk(10, histogram_quantile(0.95, rate(library_service_http_request_duration_seconds_bucket[5m])) * 1000)",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true, "__name__": true},
+              "indexByName": {},
+              "renameByName": {
+                "method": "Method",
+                "route": "Route",
+                "Value": "95th Percentile (ms)"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(library_service_http_requests_total, instance)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "prometheus",
+          "expr": "changes(library_service_info[1d])",
+          "titleFormat": "Deployment",
+          "textFormat": "New version deployed"
+        }
+      ]
+    }
+  }
+}

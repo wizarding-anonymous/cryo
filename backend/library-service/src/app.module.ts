@@ -12,6 +12,9 @@ import { ClientsModule } from './clients/clients.module';
 import { AppCacheModule } from './cache/cache.module';
 import { EventsModule } from './events/events.module';
 import { DatabaseModule } from './database/database.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { GracefulShutdownService } from './common/services/graceful-shutdown.service';
+import { SecretsManagerService } from './common/services/secrets-manager.service';
 
 @Module({
   imports: [
@@ -25,8 +28,9 @@ import { DatabaseModule } from './database/database.module';
     LibraryModule,
     HistoryModule,
     HealthModule,
+    MonitoringModule,
   ],
   controllers: [AppController, MetricsController],
-  providers: [AppService],
+  providers: [AppService, GracefulShutdownService, SecretsManagerService],
 })
 export class AppModule {}

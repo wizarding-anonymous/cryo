@@ -1,27 +1,35 @@
-version: '3.8'
+# Development-only docker-compose file
+# Use this for local development with minimal services
 
 services:
+  # PostgreSQL Database - Development
   postgres:
     image: postgres:14-alpine
-    container_name: library-service-postgres
+    container_name: library-service-postgres-dev
     environment:
       POSTGRES_DB: library_service
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d library_service"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    networks:
+      - library-dev-network
+    restart: unless-stopped
 
+  # Redis Cache - Development
   redis:
     image: redis:7-alpine
-    container_name: library-service-redis
+    container_name: library-service-redis-dev
     ports:
       - "6379:6379"
     volumes:
@@ -31,13 +39,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    networks:
+      - library-dev-network
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
 
+  # Library Service - Development
   library-service:
     build:
       context: .
       dockerfile: Dockerfile
       target: development
-    container_name: library-service-app
+    container_name: library-service-dev-app
     ports:
       - "3000:3000"
     environment:
@@ -47,18 +66,39 @@ services:
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: password
       DATABASE_NAME: library_service
+      DATABASE_SYNCHRONIZE: "true"
+      DATABASE_LOGGING: "true"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_TTL: 300
+      JWT_SECRET: dev-secret-key-change-in-production
+      LOG_LEVEL: debug
+      PROMETHEUS_ENABLED: "false"
+      HEALTH_CHECK_TIMEOUT: 5000
     volumes:
-      - .:/app
-      - /app/node_modules
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: npm run start:dev
+    networks:
+      - library-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
+
+networks:
+  library-dev-network:
+    driver: bridge
