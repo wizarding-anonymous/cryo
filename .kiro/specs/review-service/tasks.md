@@ -11,7 +11,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать новый проект с `nest new review-service`
   - Установить зависимости: @nestjs/typeorm, @nestjs/axios, @nestjs/cache-manager, class-validator, class-transformer
   - Настроить TypeScript, ESLint, Prettier, Jest (встроенные в NestJS)
@@ -25,7 +25,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Настроить TypeORM модуль в NestJS с PostgreSQL
   - Создать Review и GameRating entities с декораторами TypeORM
   - Настроить систему миграций TypeORM
@@ -39,7 +39,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать Review entity с декораторами TypeORM (@Entity, @Column, @PrimaryGeneratedColumn, @Index)
   - Создать GameRating entity с составным ключом по gameId
   - Создать DTO классы с class-validator декораторами (CreateReviewDto, UpdateReviewDto, PaginationDto)
@@ -52,7 +52,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать ReviewService с методами: createReview, getGameReviews, updateReview, deleteReview, getUserReviews
   - Создать RatingService с методами: calculateGameRating, updateGameRating, getGameRating
   - Создать OwnershipService для проверки владения игрой через Library Service
@@ -66,7 +66,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Настроить HttpModule для взаимодействия с Library Service
   - Реализовать проверку владения игрой перед созданием отзыва
   - Добавить обработку ошибок внешних сервисов
@@ -79,7 +79,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать ReviewController с эндпоинтами: POST /reviews, GET /reviews/game/:gameId, PUT /reviews/:id, DELETE /reviews/:id
   - Создать RatingController с эндпоинтом: GET /ratings/game/:gameId
   - Добавить Swagger декораторы для автоматической документации API
@@ -92,7 +92,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Настроить JwtAuthGuard для защиты эндпоинтов создания/редактирования отзывов
   - Создать OwnershipGuard для проверки прав на редактирование отзыва
   - Добавить ValidationPipe для автоматической валидации DTO
@@ -114,7 +114,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Реализовать автоматический пересчет рейтинга игры при создании/обновлении/удалении отзыва
   - Добавить кеширование рейтингов в Redis с TTL 5 минут
   - Создать фоновую задачу для пересчета рейтингов всех игр
@@ -142,7 +142,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Написать unit тесты для всех сервисов (ReviewService, RatingService, OwnershipService)
   - Создать integration тесты для REST API эндпоинтов с supertest
   - Добавить e2e тесты для полных сценариев создания и просмотра отзывов
@@ -159,7 +159,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать webhook для уведомления Achievement Service о создании первого отзыва
   - Интегрировать с Notification Service для уведомлений о новых отзывах
   - Добавить API для Game Catalog Service для получения рейтингов игр
@@ -173,7 +173,7 @@
 
 
 
-
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать оптимизированный Dockerfile
   - Настроить базовые Kubernetes манифесты (Deployment, Service, ConfigMap)
   - Добавить health check endpoints

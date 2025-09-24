@@ -7,6 +7,7 @@
 ## Tasks
 
 - [ ] 1. Настройка NestJS проекта и базовой инфраструктуры
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать новый NestJS проект с CLI
   - Настроить TypeScript конфигурацию с strict режимом
   - Установить и настроить ESLint, Prettier для code quality
@@ -15,6 +16,7 @@
   - _Requirements: 5_
 
 - [ ] 2. Настройка Redis и конфигурации
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Установить и настроить Redis клиент (@nestjs/redis)
   - Создать ConfigModule с валидацией переменных окружения
   - Настроить конфигурацию для всех микросервисов (URLs, timeouts)
@@ -22,6 +24,7 @@
   - _Requirements: 1, 3_
 
 - [ ] 3. Создание базовых DTO и интерфейсов
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать TypeScript интерфейсы для RouteConfig, ServiceConfig
   - Реализовать DTO классы с class-validator декораторами
   - Создать enum для HTTP методов и статусов
@@ -29,6 +32,7 @@
   - _Requirements: 1, 4_
 
 - [ ] 4. Реализация ProxyController с NestJS декораторами
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать ProxyController с @Controller('api') декоратором
   - Реализовать методы для всех HTTP операций (GET, POST, PUT, DELETE)
   - Добавить @UseGuards для аутентификации и rate limiting
@@ -36,6 +40,7 @@
   - _Requirements: 1, 2_
 
 - [ ] 5. Создание JWT Authentication Guard
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Реализовать JwtAuthGuard с CanActivate интерфейсом
   - Добавить валидацию JWT токенов через User Service
   - Создать OptionalAuthGuard для публичных маршрутов
@@ -43,6 +48,7 @@
   - _Requirements: 2_
 
 - [ ] 6. Реализация Rate Limiting Guard
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать RateLimitGuard с Redis backend
   - Реализовать sliding window rate limiting алгоритм
   - Добавить конфигурацию лимитов для разных маршрутов
@@ -50,6 +56,7 @@
   - _Requirements: 3_
 
 - [ ] 7. Создание ProxyService для маршрутизации
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Реализовать ProxyService с dependency injection
   - Добавить HTTP клиент с axios для запросов к микросервисам
   - Реализовать retry логику с exponential backoff
@@ -57,6 +64,7 @@
   - _Requirements: 1, 4_
 
 - [ ] 8. Реализация глобальной обработки ошибок
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать GlobalExceptionFilter с @Catch() декоратором
   - Реализовать стандартизированные error responses
   - Добавить кастомные exception классы (ServiceUnavailableException, etc.)
@@ -64,6 +72,7 @@
   - _Requirements: 4_
 
 - [ ] 9. Создание Interceptors для логирования и кеширования
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Реализовать LoggingInterceptor для трассировки запросов
   - Создать ResponseInterceptor для стандартизации ответов
   - Добавить CacheInterceptor для кеширования GET запросов
@@ -71,6 +80,7 @@
   - _Requirements: 4_
 
 - [ ] 10. Реализация HealthController и мониторинга
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать HealthController с health check endpoints
   - Добавить проверку доступности всех микросервисов
   - Реализовать ServiceHealthService для мониторинга
@@ -78,6 +88,7 @@
   - _Requirements: 4_
 
 - [ ] 11. Настройка Validation Pipes
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать глобальный ValidationPipe с class-validator
   - Добавить валидацию входящих данных для всех endpoints
   - Реализовать кастомные validation decorators
@@ -85,6 +96,7 @@
   - _Requirements: 2, 4_
 
 - [ ] 12. Написание comprehensive unit тестов
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать unit тесты для всех Guards (Auth, RateLimit)
   - Написать тесты для ProxyService и ServiceRegistry
   - Добавить тесты для всех Interceptors и Exception Filters
@@ -93,6 +105,7 @@
   - _Requirements: Все требования_
 
 - [ ] 13. Создание integration тестов с Supertest
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Написать integration тесты для всех API endpoints
   - Протестировать аутентификацию и авторизацию flows
   - Добавить тесты для rate limiting и error handling
@@ -100,6 +113,7 @@
   - _Requirements: Все требования_
 
 - [ ] 14. Настройка Docker контейнеризации
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать оптимизированный Dockerfile с multi-stage build
   - Настроить docker-compose для development окружения
   - Добавить Redis и mock сервисы в compose
@@ -107,6 +121,7 @@
   - _Requirements: 5_
 
 - [ ] 15. Подготовка к Kubernetes deployment
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверитьм
   - Создать Kubernetes manifests (Deployment, Service, ConfigMap)
   - Настроить health checks и readiness probes
   - Добавить HorizontalPodAutoscaler для автомасштабирования
@@ -114,6 +129,7 @@
   - _Requirements: 5_
 
 - [ ] 16. Настройка Swagger/OpenAPI документации
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Добавить @nestjs/swagger для автогенерации документации
   - Создать API decorators для всех endpoints
   - Настроить Swagger UI для interactive documentation
@@ -121,12 +137,14 @@
   - _Requirements: 4_
 
 - [ ] 17. Performance тестирование для MVP
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать базовые load тесты для 1000 concurrent users
   - Протестировать response time < 200ms
   - Проверить стабильность под MVP нагрузкой
   - _Requirements: 5_
 
 - [ ] 18. Production готовность MVP
+  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Настроить базовое логирование
   - Создать production конфигурацию
   - Настроить graceful shutdown
