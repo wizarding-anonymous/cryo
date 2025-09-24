@@ -18,4 +18,3 @@ describe('AppController (unit)', () => {
     expect(res.service).toBe('security-service');
   });
 });
-

@@ -31,12 +31,17 @@ export class UserServiceClient {
   async getUserExists(userId: string): Promise<boolean | undefined> {
     if (!this.baseUrl) return undefined;
     try {
-      const resp = await fetch(`${this.baseUrl}/api/users/${userId}/exists`, { headers: this.headers });
+      const resp = await fetch(`${this.baseUrl}/api/users/${userId}/exists`, {
+        headers: this.headers,
+      });
       if (!resp.ok) return undefined;
       const data = (await resp.json()) as { exists?: boolean };
       return data?.exists;
     } catch (e) {
-      this.logger.warn('UserServiceClient.getUserExists failed', { userId, error: (e as Error).message });
+      this.logger.warn('UserServiceClient.getUserExists failed', {
+        userId,
+        error: (e as Error).message,
+      });
       return undefined;
     }
   }
@@ -44,14 +49,18 @@ export class UserServiceClient {
   async getUserSecurityInfo(userId: string): Promise<UserSecurityInfo | undefined> {
     if (!this.baseUrl) return undefined;
     try {
-      const resp = await fetch(`${this.baseUrl}/api/users/${userId}/security-info`, { headers: this.headers });
+      const resp = await fetch(`${this.baseUrl}/api/users/${userId}/security-info`, {
+        headers: this.headers,
+      });
       if (!resp.ok) return undefined;
       const data = (await resp.json()) as UserSecurityInfo;
       return data;
     } catch (e) {
-      this.logger.warn('UserServiceClient.getUserSecurityInfo failed', { userId, error: (e as Error).message });
+      this.logger.warn('UserServiceClient.getUserSecurityInfo failed', {
+        userId,
+        error: (e as Error).message,
+      });
       return undefined;
     }
   }
 }
-

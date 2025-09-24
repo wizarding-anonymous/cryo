@@ -1,33 +1,205 @@
 groups:
   - name: security-service.rules
+    interval: 30s
     rules:
+      # Recording rules for better performance
       - record: job:security_checks_rate:5m
         expr: rate(security_checks_total[5m])
+      
+      - record: job:security_checks_error_rate:5m
+        expr: rate(security_checks_total{allowed="false"}[5m]) / rate(security_checks_total[5m])
+      
+      - record: job:http_request_rate:5m
+        expr: rate(http_requests_total{job="security-service"}[5m])
+      
+      - record: job:http_error_rate:5m
+        expr: rate(http_requests_total{job="security-service",status_code=~"4..|5.."}[5m]) / rate(http_requests_total{job="security-service"}[5m])
 
-      - alert: SecurityHighErrorRate
-        expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (job) > 0.1
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High 5xx rate on security-service"
-          description: ">10% requests failing with 5xx for 10m"
-
-      - alert: SecurityHighRiskEventsSpike
-        expr: rate(high_risk_events_total[10m]) > 5
-        for: 10m
+  - name: security-service.alerts
+    interval: 30s
+    rules:
+      # Service availability alerts
+      - alert: SecurityServiceDown
+        expr: up{job="security-service"} == 0
+        for: 1m
         labels:
           severity: critical
+          service: security-service
         annotations:
-          summary: "Spike in high risk events"
-          description: "High risk events growing fast (>5/10m)"
+          summary: "Security Service is down"
+          description: "Security Service instance {{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-down"
 
-      - alert: ManyActiveAlerts
-        expr: security_active_alerts > 20
-        for: 15m
+      - alert: SecurityServiceHighErrorRate
+        expr: job:http_error_rate:5m > 0.05
+        for: 5m
         labels:
           severity: warning
+          service: security-service
         annotations:
-          summary: "Many active (unresolved) alerts"
-          description: "> 20 active alerts for 15m"
+          summary: "High error rate in Security Service"
+          description: "Security Service error rate is {{ $value | humanizePercentage }} for more than 5 minutes"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-errors"
+
+      - alert: SecurityServiceCriticalErrorRate
+        expr: job:http_error_rate:5m > 0.15
+        for: 2m
+        labels:
+          severity: critical
+          service: security-service
+        annotations:
+          summary: "Critical error rate in Security Service"
+          description: "Security Service error rate is {{ $value | humanizePercentage }} for more than 2 minutes"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-critical-errors"
+
+      # Security-specific alerts
+      - alert: SecurityHighRiskEventsSpike
+        expr: rate(high_risk_events_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: security-service
+          alert_type: security_incident
+        annotations:
+          summary: "Spike in high risk security events"
+          description: "High risk security events rate is {{ $value }} events/sec for more than 2 minutes"
+          runbook_url: "https://wiki.company.com/runbooks/security-incident-response"
+
+      - alert: SecurityMassiveAttackDetected
+        expr: rate(high_risk_events_total[1m]) > 20
+        for: 30s
+        labels:
+          severity: critical
+          service: security-service
+          alert_type: security_attack
+        annotations:
+          summary: "Massive security attack detected"
+          description: "Extremely high rate of security events: {{ $value }} events/sec - possible coordinated attack"
+          runbook_url: "https://wiki.company.com/runbooks/security-attack-response"
+
+      - alert: SecurityManyActiveAlerts
+        expr: security_active_alerts > 50
+        for: 10m
+        labels:
+          severity: warning
+          service: security-service
+        annotations:
+          summary: "Many unresolved security alerts"
+          description: "{{ $value }} active security alerts for more than 10 minutes"
+          runbook_url: "https://wiki.company.com/runbooks/security-alert-management"
+
+      - alert: SecurityCriticalActiveAlerts
+        expr: security_active_alerts > 100
+        for: 5m
+        labels:
+          severity: critical
+          service: security-service
+        annotations:
+          summary: "Critical number of unresolved security alerts"
+          description: "{{ $value }} active security alerts - immediate attention required"
+          runbook_url: "https://wiki.company.com/runbooks/security-alert-critical"
+
+      - alert: SecurityIPBlocksSpike
+        expr: rate(ip_blocks_total[5m]) > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: security-service
+        annotations:
+          summary: "High rate of IP blocks"
+          description: "IP blocking rate is {{ $value }} blocks/sec for more than 3 minutes"
+          runbook_url: "https://wiki.company.com/runbooks/security-ip-blocks"
+
+      # Performance alerts
+      - alert: SecurityServiceHighLatency
+        expr: histogram_quantile(0.95, sum(rate(security_check_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: security-service
+        annotations:
+          summary: "High latency in security checks"
+          description: "95th percentile latency is {{ $value }}s for more than 5 minutes"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-performance"
+
+      - alert: SecurityServiceCriticalLatency
+        expr: histogram_quantile(0.95, sum(rate(security_check_duration_seconds_bucket[5m])) by (le)) > 2.0
+        for: 2m
+        labels:
+          severity: critical
+          service: security-service
+        annotations:
+          summary: "Critical latency in security checks"
+          description: "95th percentile latency is {{ $value }}s - SLA breach"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-sla-breach"
+
+      # Resource alerts
+      - alert: SecurityServiceHighMemoryUsage
+        expr: (nodejs_heap_size_used_bytes{job="security-service"} / nodejs_heap_size_total_bytes{job="security-service"}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: security-service
+        annotations:
+          summary: "High memory usage in Security Service"
+          description: "Memory usage is {{ $value | humanizePercentage }} for more than 5 minutes"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-memory"
+
+      - alert: SecurityServiceCriticalMemoryUsage
+        expr: (nodejs_heap_size_used_bytes{job="security-service"} / nodejs_heap_size_total_bytes{job="security-service"}) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          service: security-service
+        annotations:
+          summary: "Critical memory usage in Security Service"
+          description: "Memory usage is {{ $value | humanizePercentage }} - service may crash"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-memory-critical"
+
+      # Database connectivity alerts
+      - alert: SecurityServiceDatabaseConnectionIssues
+        expr: increase(nodejs_active_handles{job="security-service"}[5m]) > 100
+        for: 3m
+        labels:
+          severity: warning
+          service: security-service
+        annotations:
+          summary: "Potential database connection issues"
+          description: "Rapid increase in active handles - possible connection leaks"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-database"
+
+      # Redis connectivity alerts
+      - alert: SecurityServiceRedisConnectionLoss
+        expr: redis_connected_clients{job="redis"} < 1
+        for: 1m
+        labels:
+          severity: critical
+          service: security-service
+        annotations:
+          summary: "Redis connection lost"
+          description: "No Redis clients connected - rate limiting and caching unavailable"
+          runbook_url: "https://wiki.company.com/runbooks/redis-connection-issues"
+
+      # Business logic alerts
+      - alert: SecurityServiceLowSecurityCheckRate
+        expr: rate(security_checks_total[10m]) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: security-service
+        annotations:
+          summary: "Unusually low security check rate"
+          description: "Security check rate is {{ $value }} checks/sec - possible integration issues"
+          runbook_url: "https://wiki.company.com/runbooks/security-service-integration"
+
+      - alert: SecurityServiceHighRejectionRate
+        expr: job:security_checks_error_rate:5m > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          service: security-service
+        annotations:
+          summary: "High security check rejection rate"
+          description: "{{ $value | humanizePercentage }} of security checks are being rejected"
+          runbook_url: "https://wiki.company.com/runbooks/security-check-rejections"
 

@@ -21,4 +21,3 @@ export class CreateEnumTypes1699999999999 implements MigrationInterface {
     // No down migration to avoid dropping enum types in shared DB
   }
 }
-

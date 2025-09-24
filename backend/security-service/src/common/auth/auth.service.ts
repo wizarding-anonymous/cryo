@@ -12,7 +12,10 @@ export interface AuthUser {
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwt: JwtService, private readonly config: ConfigService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly config: ConfigService,
+  ) {}
 
   async verifyBearerToken(authHeader?: string): Promise<AuthUser | null> {
     if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -30,4 +33,3 @@ export class AuthService {
     }
   }
 }
-

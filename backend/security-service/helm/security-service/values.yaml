@@ -1,24 +1,157 @@
+# Default values for security-service
+# This is a YAML-formatted file.
+
+# Deployment configuration
 replicaCount: 2
 
 image:
   repository: your-registry/security-service
-  tag: latest
+  tag: "latest"
   pullPolicy: IfNotPresent
+  pullSecrets: []
 
+# Service configuration
 service:
   type: ClusterIP
   port: 80
   targetPort: 3008
+  annotations: {}
 
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: security-api.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# ServiceAccount configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+  automountServiceAccountToken: false
+
+# Security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+
+# Resource limits and requests
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+    ephemeral-storage: 1Gi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+    ephemeral-storage: 2Gi
+
+# Autoscaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Network Policy
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+    from:
+      - namespaceSelector:
+          matchLabels:
+            name: api-gateway
+      - namespaceSelector:
+          matchLabels:
+            name: monitoring
+  egress:
+    enabled: true
+    to:
+      - podSelector:
+          matchLabels:
+            app: postgres
+        ports:
+          - protocol: TCP
+            port: 5432
+      - podSelector:
+          matchLabels:
+            app: redis
+        ports:
+          - protocol: TCP
+            port: 6379
+
+# Health checks
+healthChecks:
+  livenessProbe:
+    enabled: true
+    path: /api/health/live
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  readinessProbe:
+    enabled: true
+    path: /api/health/ready
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startupProbe:
+    enabled: true
+    path: /api/health/live
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
+
+# Environment variables
 env:
   NODE_ENV: production
   PORT: "3008"
-  DB_HOST: postgres
+  LOG_LEVEL: info
+  LOG_FORMAT: json
+  
+  # Database configuration
+  DB_HOST: postgres-service
   DB_PORT: "5432"
   DB_USER: postgres
   DB_NAME: security_service
-  REDIS_HOST: redis
+  DB_SYNCHRONIZE: "false"
+  DB_LOGGING: "false"
+  DB_MAX_CONNECTIONS: "10"
+  DB_SSL: "false"
+  
+  # Redis configuration
+  REDIS_HOST: redis-service
   REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_KEY_PREFIX: "security:"
+  REDIS_CONNECT_TIMEOUT: "10000"
+  REDIS_COMMAND_TIMEOUT: "5000"
+  
+  # Security thresholds
   SECURITY_LOGIN_PER_MINUTE_IP: "20"
   SECURITY_LOGIN_PER_MINUTE_USER: "10"
   SECURITY_TXN_PER_MINUTE_USER: "15"
@@ -28,26 +161,68 @@ env:
   SECURITY_SUSPICIOUS_EVENTS_THRESHOLD: "20"
   SECURITY_ALERT_RISK_THRESHOLD: "80"
   SECURITY_BEHAVIOR_WINDOW_DAYS: "7"
+  
+  # Rate limiting
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  RATE_LIMIT_SKIP_SUCCESSFUL_REQUESTS: "false"
+  
+  # CORS configuration
+  CORS_ORIGINS: "https://yourdomain.com,https://api.yourdomain.com"
+  CORS_CREDENTIALS: "true"
+  
+  # Kafka configuration
+  KAFKA_BROKERS: "kafka-service:9092"
+  KAFKA_CLIENT_ID: "security-service"
+  KAFKA_GROUP_ID: "security-service-group"
+  
+  # Metrics configuration
+  METRICS_ENABLED: "true"
+  METRICS_PATH: "/api/metrics"
+  
+  # Health check configuration
+  HEALTH_CHECK_TIMEOUT: "5000"
+  HEALTH_CHECK_DATABASE: "true"
+  HEALTH_CHECK_REDIS: "true"
 
-secret:
+# Secret values (should be overridden in production)
+secrets:
   DB_PASSWORD: postgres
-  JWT_SECRET: change-me-in-prod
+  JWT_SECRET: change-me-in-production-use-strong-secret
+  JWT_EXPIRES_IN: 24h
+  REDIS_PASSWORD: ""
+  KAFKA_USERNAME: ""
+  KAFKA_PASSWORD: ""
+  EXTERNAL_API_KEY: ""
+  ENCRYPTION_KEY: change-me-in-production-32-char-key
 
-resources:
-  requests:
-    cpu: 100m
-    memory: 128Mi
-  limits:
-    cpu: 500m
-    memory: 256Mi
+# Node selector and tolerations
+nodeSelector: {}
+tolerations: []
+affinity: {}
 
-livenessProbe:
-  path: /health/live
-  initialDelaySeconds: 15
-  periodSeconds: 10
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3008"
+  prometheus.io/path: "/api/metrics"
 
-readinessProbe:
-  path: /health/ready
-  initialDelaySeconds: 10
-  periodSeconds: 5
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+
+# Termination grace period
+terminationGracePeriodSeconds: 30
+
+# Volume mounts for temporary files
+volumes:
+  tmp:
+    enabled: true
+    emptyDir: {}
+  cache:
+    enabled: true
+    emptyDir: {}
 

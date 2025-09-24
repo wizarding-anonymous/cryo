@@ -2,21 +2,36 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: security-service-config
+  labels:
+    app: security-service
 data:
+  # Application Configuration
   NODE_ENV: "production"
   PORT: "3008"
-
-  # Database (if not using DATABASE_URL)
-  DB_HOST: "postgres"
+  
+  # Logging Configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  
+  # Database Configuration
+  DB_HOST: "postgres-service"
   DB_PORT: "5432"
   DB_USER: "postgres"
   DB_NAME: "security_service"
+  DB_SYNCHRONIZE: "false"
+  DB_LOGGING: "false"
+  DB_MAX_CONNECTIONS: "10"
+  DB_SSL: "false"
 
-  # Redis
-  REDIS_HOST: "redis"
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
   REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_KEY_PREFIX: "security:"
+  REDIS_CONNECT_TIMEOUT: "10000"
+  REDIS_COMMAND_TIMEOUT: "5000"
 
-  # Security thresholds (safe defaults)
+  # Security Thresholds
   SECURITY_LOGIN_PER_MINUTE_IP: "20"
   SECURITY_LOGIN_PER_MINUTE_USER: "10"
   SECURITY_TXN_PER_MINUTE_USER: "15"
@@ -26,4 +41,27 @@ data:
   SECURITY_SUSPICIOUS_EVENTS_THRESHOLD: "20"
   SECURITY_ALERT_RISK_THRESHOLD: "80"
   SECURITY_BEHAVIOR_WINDOW_DAYS: "7"
+  
+  # Rate Limiting Configuration
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  RATE_LIMIT_SKIP_SUCCESSFUL_REQUESTS: "false"
+  
+  # CORS Configuration
+  CORS_ORIGINS: "https://yourdomain.com,https://api.yourdomain.com"
+  CORS_CREDENTIALS: "true"
+  
+  # Kafka Configuration (if using)
+  KAFKA_BROKERS: "kafka-service:9092"
+  KAFKA_CLIENT_ID: "security-service"
+  KAFKA_GROUP_ID: "security-service-group"
+  
+  # Metrics Configuration
+  METRICS_ENABLED: "true"
+  METRICS_PATH: "/api/metrics"
+  
+  # Health Check Configuration
+  HEALTH_CHECK_TIMEOUT: "5000"
+  HEALTH_CHECK_DATABASE: "true"
+  HEALTH_CHECK_REDIS: "true"
 

@@ -9,4 +9,3 @@ export interface RateLimitOptions {
 
 export const RATE_LIMIT_META_KEY = 'rateLimitOptions';
 export const RateLimit = (options: RateLimitOptions) => SetMetadata(RATE_LIMIT_META_KEY, options);
-

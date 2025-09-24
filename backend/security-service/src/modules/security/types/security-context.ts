@@ -5,4 +5,3 @@ export interface SecurityContext {
   currency?: string;
   metadata?: Record<string, unknown>;
 }
-

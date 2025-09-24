@@ -17,7 +17,7 @@ describe('SecurityController (Integration)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
-    
+
     // Apply the same configuration as main app
     app.useGlobalPipes(
       new ValidationPipe({
@@ -26,12 +26,10 @@ describe('SecurityController (Integration)', () => {
         transform: true,
       }),
     );
-    
+
     await app.init();
 
-    eventRepository = app.get<Repository<SecurityEvent>>(
-      getRepositoryToken(SecurityEvent),
-    );
+    eventRepository = app.get<Repository<SecurityEvent>>(getRepositoryToken(SecurityEvent));
   }, 30000); // Increase timeout to 30 seconds
 
   afterAll(async () => {
@@ -47,17 +45,14 @@ describe('SecurityController (Integration)', () => {
 
   it('/security/report-event (POST) should create a security event in the database', async () => {
     const dto = {
-      type: SecurityEventType.OTHER,
+      type: SecurityEventType.SUSPICIOUS_ACTIVITY,
       ip: '1.2.3.4',
-      userId: '22222222-2222-2222-2222-222222222222',
+      userId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
       data: { test: 'data' },
     };
 
     // Act: send the request
-    await request(app.getHttpServer())
-      .post('/security/report-event')
-      .send(dto)
-      .expect(204);
+    await request(app.getHttpServer()).post('/security/report-event').send(dto).expect(204);
 
     // Assert: check the database
     const events = await eventRepository.find();

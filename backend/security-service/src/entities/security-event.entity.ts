@@ -1,10 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { SecurityEventType } from '../common/enums/security-event-type.enum';
 
 @Entity('security_events')
@@ -16,7 +10,6 @@ export class SecurityEvent {
   @Column({
     type: 'enum',
     enum: SecurityEventType,
-    default: SecurityEventType.OTHER,
   })
   type!: SecurityEventType;
 

@@ -1,0 +1,74 @@
+# Staging environment values
+replicaCount: 2
+
+image:
+  repository: your-registry/security-service
+  tag: "staging"
+  pullPolicy: IfNotPresent
+
+# Enable autoscaling with conservative settings
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 85
+
+# Enable network policy for staging
+networkPolicy:
+  enabled: true
+
+# Enable pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Staging environment variables
+env:
+  NODE_ENV: staging
+  LOG_LEVEL: info
+  DB_SYNCHRONIZE: "false"
+  DB_LOGGING: "false"
+  
+  # Staging database
+  DB_HOST: postgres-staging
+  DB_NAME: security_service_staging
+  
+  # Staging Redis
+  REDIS_HOST: redis-staging
+  
+  # Production-like security thresholds
+  SECURITY_LOGIN_PER_MINUTE_IP: "20"
+  SECURITY_LOGIN_PER_MINUTE_USER: "10"
+  SECURITY_TXN_PER_MINUTE_USER: "15"
+  
+  # Staging CORS
+  CORS_ORIGINS: "https://staging.yourdomain.com,https://staging-api.yourdomain.com"
+
+# Staging secrets (should be overridden with actual values)
+secrets:
+  DB_PASSWORD: staging-password-change-me
+  JWT_SECRET: staging-jwt-secret-change-me
+  REDIS_PASSWORD: staging-redis-password
+
+# Moderate resource requirements for staging
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Standard health checks for staging
+healthChecks:
+  livenessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+  startupProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 20

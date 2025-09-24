@@ -3,4 +3,3 @@ export interface BehaviorAnalysis {
   countsByType: Record<string, number>;
   lastActiveAt?: string;
 }
-

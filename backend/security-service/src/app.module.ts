@@ -15,13 +15,17 @@ import { LoggingMiddleware } from './common/middleware/logging.middleware';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { SecurityLoggingInterceptor } from './common/interceptors/security-logging.interceptor';
 import { JwtModule } from '@nestjs/jwt';
-import { HealthController } from './modules/health/health.controller';
+import { HealthModule } from './modules/health/health.module';
 import { MetricsModule } from './common/metrics/metrics.module';
 import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'], validationSchema: envValidationSchema }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
+      validationSchema: envValidationSchema,
+    }),
     WinstonModule.forRoot(winstonLogger),
     JwtModule.register({ global: true }),
     DatabaseModule,
@@ -31,8 +35,9 @@ import { KafkaModule } from './kafka/kafka.module';
     SecurityModule,
     LogsModule,
     AlertsModule,
+    HealthModule,
   ],
-  controllers: [AppController, HealthController],
+  controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_INTERCEPTOR, useClass: SecurityLoggingInterceptor },
@@ -45,4 +50,3 @@ export class AppModule implements NestModule {
     consumer.apply(LoggingMiddleware, IpBlockMiddleware).forRoutes('*');
   }
 }
-

@@ -12,7 +12,11 @@ export interface RateLimitResult {
 export class RateLimitService {
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 
-  async checkRateLimit(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult> {
+  async checkRateLimit(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+  ): Promise<RateLimitResult> {
     const penaltyKey = `${key}:penalty`;
 
     const p = this.redis.multi();
@@ -58,7 +62,7 @@ export class RateLimitService {
     return Number(countResult?.[1] ?? 0);
   }
 
-  async getRemainingRequests(key: string, limit: number, windowSeconds: number): Promise<number> {
+  async getRemainingRequests(key: string, limit: number): Promise<number> {
     const val = await this.redis.get(key);
     const count = Number(val ?? 0);
     return Math.max(0, limit - count);

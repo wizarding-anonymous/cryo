@@ -11,7 +11,6 @@ export class SecurityAlert {
   @Column({
     type: 'enum',
     enum: SecurityAlertType,
-    default: SecurityAlertType.SUSPICIOUS_ACTIVITY,
   })
   type!: SecurityAlertType;
 
@@ -19,7 +18,6 @@ export class SecurityAlert {
   @Column({
     type: 'enum',
     enum: SecurityAlertSeverity,
-    default: SecurityAlertSeverity.LOW,
   })
   severity!: SecurityAlertSeverity;
 

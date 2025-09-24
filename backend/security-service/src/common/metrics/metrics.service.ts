@@ -6,7 +6,9 @@ import type { Counter, Histogram, Gauge } from 'prom-client';
 export class MetricsService {
   constructor(
     @Optional() @InjectMetric('security_checks_total') private checks?: Counter<string>,
-    @Optional() @InjectMetric('security_check_duration_seconds') private checkDuration?: Histogram<string>,
+    @Optional()
+    @InjectMetric('security_check_duration_seconds')
+    private checkDuration?: Histogram<string>,
     @Optional() @InjectMetric('security_alerts_total') private alerts?: Counter<string>,
     @Optional() @InjectMetric('ip_blocks_total') private ipBlocks?: Counter<string>,
     @Optional() @InjectMetric('high_risk_events_total') private highRisk?: Counter<string>,
@@ -34,4 +36,3 @@ export class MetricsService {
     this.activeAlerts?.set(count);
   }
 }
-

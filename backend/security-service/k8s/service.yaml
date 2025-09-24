@@ -2,12 +2,20 @@ apiVersion: v1
 kind: Service
 metadata:
   name: security-service
+  labels:
+    app: security-service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+    prometheus.io/path: "/api/metrics"
 spec:
+  type: ClusterIP
   selector:
     app: security-service
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 3008
-  type: ClusterIP
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: http
+  sessionAffinity: None
 

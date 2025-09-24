@@ -4,8 +4,16 @@ metadata:
   name: security-service
   labels:
     app: security-service
+    version: v1
+  annotations:
+    deployment.kubernetes.io/revision: "1"
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: security-service
@@ -13,34 +21,104 @@ spec:
     metadata:
       labels:
         app: security-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3008"
+        prometheus.io/path: "/api/metrics"
     spec:
+      serviceAccountName: security-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
       containers:
       - name: security-service
         image: your-registry/security-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 3008
+        - name: http
+          containerPort: 3008
+          protocol: TCP
         envFrom:
         - configMapRef:
             name: security-service-config
         - secretRef:
             name: security-service-secret
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         resources:
           requests:
             memory: "128Mi"
             cpu: "100m"
+            ephemeral-storage: "1Gi"
           limits:
-            memory: "256Mi"
-            cpu: "500m"
+            memory: "512Mi"
+            cpu: "1000m"
+            ephemeral-storage: "2Gi"
         readinessProbe:
           httpGet:
-            path: /health/ready
-            port: 3008
+            path: /api/health/ready
+            port: http
+            scheme: HTTP
           initialDelaySeconds: 10
           periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
         livenessProbe:
           httpGet:
-            path: /health/live
-            port: 3008
+            path: /api/health/live
+            port: http
+            scheme: HTTP
           initialDelaySeconds: 15
           periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 30
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 15"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /usr/src/app/.cache
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      terminationGracePeriodSeconds: 30
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
 

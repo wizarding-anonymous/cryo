@@ -1,11 +1,20 @@
-import { CanActivate, ExecutionContext, Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RATE_LIMIT_META_KEY, RateLimitOptions } from '../decorators/rate-limit.decorator';
 import { RateLimitService } from '../../modules/security/rate-limit.service';
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector, private readonly rl: RateLimitService) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly rl: RateLimitService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const opts = this.reflector.getAllAndOverride<RateLimitOptions | undefined>(

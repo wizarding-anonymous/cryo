@@ -12,4 +12,3 @@ import { DatabaseConfig } from './database.config';
   exports: [TypeOrmModule],
 })
 export class DatabaseModule {}
-

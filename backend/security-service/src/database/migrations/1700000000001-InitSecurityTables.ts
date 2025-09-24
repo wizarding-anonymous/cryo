@@ -21,9 +21,13 @@ export class InitSecurityTables1700000000001 implements MigrationInterface {
       )
     `);
     await queryRunner.query(`CREATE INDEX "IDX_security_event_type" ON "security_events" ("type")`);
-    await queryRunner.query(`CREATE INDEX "IDX_security_event_user" ON "security_events" ("user_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_security_event_user" ON "security_events" ("user_id")`,
+    );
     await queryRunner.query(`CREATE INDEX "IDX_security_event_ip" ON "security_events" ("ip")`);
-    await queryRunner.query(`CREATE INDEX "IDX_security_event_created_at" ON "security_events" ("created_at")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_security_event_created_at" ON "security_events" ("created_at")`,
+    );
 
     // security_alerts
     await queryRunner.query(`
@@ -41,7 +45,9 @@ export class InitSecurityTables1700000000001 implements MigrationInterface {
         CONSTRAINT "PK_security_alerts_id" PRIMARY KEY ("id")
       )
     `);
-    await queryRunner.query(`CREATE INDEX "IDX_security_alert_resolved" ON "security_alerts" ("resolved")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_security_alert_resolved" ON "security_alerts" ("resolved")`,
+    );
 
     // ip_blocks
     await queryRunner.query(`
@@ -75,4 +81,3 @@ export class InitSecurityTables1700000000001 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "security_events"`);
   }
 }
-

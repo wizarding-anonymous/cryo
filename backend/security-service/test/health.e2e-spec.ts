@@ -12,7 +12,7 @@ describe('Security Service - Health (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Apply the same configuration as main app
     app.useGlobalPipes(
       new ValidationPipe({
@@ -21,7 +21,7 @@ describe('Security Service - Health (e2e)', () => {
         transform: true,
       }),
     );
-    
+
     await app.init();
   }, 30000); // Increase timeout to 30 seconds
 
@@ -31,13 +31,13 @@ describe('Security Service - Health (e2e)', () => {
     }
   });
 
-  it('/health/ready (GET) should return ok', async () => {
-    const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
+  it('/v1/health/ready (GET) should return ok', async () => {
+    const res = await request(app.getHttpServer()).get('/v1/health/ready').expect(200);
     expect(res.body.status).toBe('ok');
   });
 
-  it('/health/live (GET) should return ok', async () => {
-    const res = await request(app.getHttpServer()).get('/health/live').expect(200);
+  it('/v1/health/live (GET) should return ok', async () => {
+    const res = await request(app.getHttpServer()).get('/v1/health/live').expect(200);
     expect(res.body.status).toBe('ok');
   });
 });

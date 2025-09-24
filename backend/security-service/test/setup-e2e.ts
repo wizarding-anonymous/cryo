@@ -6,11 +6,11 @@ jest.setTimeout(30000);
 // Global test setup
 beforeAll(async () => {
   // Wait a bit for services to be ready
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 });
 
 // Global test teardown
 afterAll(async () => {
   // Clean up any global resources
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 500));
 });

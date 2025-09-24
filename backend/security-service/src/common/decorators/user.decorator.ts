@@ -11,9 +11,7 @@ import { AuthUser } from '../auth/auth.service';
  * }
  * ```
  */
-export const User = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): AuthUser => {
-    const request = ctx.switchToHttp().getRequest();
-    return request.user;
-  },
-);
+export const User = createParamDecorator((data: unknown, ctx: ExecutionContext): AuthUser => {
+  const request = ctx.switchToHttp().getRequest();
+  return request.user;
+});

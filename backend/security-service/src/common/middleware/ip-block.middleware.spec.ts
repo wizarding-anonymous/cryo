@@ -25,4 +25,3 @@ describe('IpBlockMiddleware', () => {
     expect(next).toHaveBeenCalled();
   });
 });
-

@@ -1,10 +1,10 @@
 export enum SecurityEventType {
-  LOGIN = 'LOGIN',
-  TRANSACTION = 'TRANSACTION',
-  SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
-  IP_BLOCK = 'IP_BLOCK',
-  ACCOUNT_LOCK = 'ACCOUNT_LOCK',
-  PASSWORD_RESET = 'PASSWORD_RESET',
-  OTHER = 'OTHER',
+  LOGIN = 'login',
+  FAILED_LOGIN = 'failed_login',
+  PASSWORD_CHANGE = 'password_change',
+  PURCHASE = 'purchase',
+  ACCOUNT_LOCKED = 'account_locked',
+  SUSPICIOUS_ACTIVITY = 'suspicious_activity',
+  DATA_ACCESS = 'data_access',
+  PERMISSION_CHANGE = 'permission_change'
 }
-

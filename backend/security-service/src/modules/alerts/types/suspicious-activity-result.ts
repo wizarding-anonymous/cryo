@@ -3,4 +3,3 @@ export interface SuspiciousActivityResult {
   score: number;
   reasons: string[];
 }
-

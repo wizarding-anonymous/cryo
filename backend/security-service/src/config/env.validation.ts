@@ -12,6 +12,11 @@ export const envValidationSchema = Joi.object({
   REDIS_HOST: Joi.string().default('localhost'),
   REDIS_PORT: Joi.number().port().default(6379),
   REDIS_PASSWORD: Joi.string().optional().allow(''),
-  JWT_SECRET: Joi.string().when('JWT_PUBLIC_KEY', { is: Joi.exist(), then: Joi.optional(), otherwise: Joi.required() }),
+  JWT_SECRET: Joi.string().when('JWT_PUBLIC_KEY', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
   JWT_PUBLIC_KEY: Joi.string().optional(),
+  CORS_ORIGINS: Joi.string().optional().default('http://localhost:3000'),
 });

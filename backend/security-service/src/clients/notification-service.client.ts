@@ -50,10 +50,9 @@ export class NotificationServiceClient {
         });
       }
     } catch (e) {
-      this.logger.error(
-        'NotificationServiceClient.sendNotification failed',
-        { error: (e as Error).message },
-      );
+      this.logger.error('NotificationServiceClient.sendNotification failed', {
+        error: (e as Error).message,
+      });
     }
   }
 }

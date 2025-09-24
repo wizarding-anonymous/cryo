@@ -8,4 +8,3 @@ import { NotificationServiceClient } from './notification-service.client';
   exports: [UserServiceClient, NotificationServiceClient],
 })
 export class ClientsModule {}
-

@@ -54,14 +54,18 @@ export class SecurityService {
     const perMinLimitIp = this.config.get<number>('SECURITY_LOGIN_PER_MINUTE_IP', 20);
     const perMinLimitUser = this.config.get<number>('SECURITY_LOGIN_PER_MINUTE_USER', 10);
 
-    const rlIp = await this.rl.checkRateLimit(this.key(`rl:login:ip:${dto.ip}:1m`), perMinLimitIp, 60);
+    const rlIp = await this.rl.checkRateLimit(
+      this.key(`rl:login:ip:${dto.ip}:1m`),
+      perMinLimitIp,
+      60,
+    );
     const rlUser = await this.rl.checkRateLimit(
       this.key(`rl:login:user:${dto.userId}:1m`),
       perMinLimitUser,
       60,
     );
 
-    let allowed = rlIp.allowed && rlUser.allowed;
+    const allowed = rlIp.allowed && rlUser.allowed;
     let risk = 10;
     risk += Math.floor(((perMinLimitIp - rlIp.remaining) / Math.max(1, perMinLimitIp)) * 40);
     risk += Math.floor(((perMinLimitUser - rlUser.remaining) / Math.max(1, perMinLimitUser)) * 40);
@@ -110,9 +114,7 @@ export class SecurityService {
     return result;
   }
 
-  async checkTransactionSecurity(
-    dto: CheckTransactionSecurityDto,
-  ): Promise<SecurityCheckResult> {
+  async checkTransactionSecurity(dto: CheckTransactionSecurityDto): Promise<SecurityCheckResult> {
     const blocked = await this.isIPBlocked(dto.ip);
     if (blocked) {
       const result: SecurityCheckResult = {
@@ -122,7 +124,7 @@ export class SecurityService {
         recommendations: ['BLOCK_IP'],
       };
       const event: CreateSecurityEventDto = {
-        type: SecurityEventType.TRANSACTION,
+        type: SecurityEventType.PURCHASE,
         userId: dto.userId,
         ip: dto.ip,
         data: { policy: 'blocked-ip', amount: dto.amount, method: dto.paymentMethod },
@@ -141,8 +143,9 @@ export class SecurityService {
       60,
     );
 
-    let allowed = rlTxn.allowed;
-    let risk = 15 + Math.floor(((txnPerMinUser - rlTxn.remaining) / Math.max(1, txnPerMinUser)) * 40);
+    const allowed = rlTxn.allowed;
+    let risk =
+      15 + Math.floor(((txnPerMinUser - rlTxn.remaining) / Math.max(1, txnPerMinUser)) * 40);
     let reason: string | undefined;
 
     if (dto.amount && dto.amount >= amountThreshold) {
@@ -164,7 +167,7 @@ export class SecurityService {
     };
 
     const event: CreateSecurityEventDto = {
-      type: SecurityEventType.TRANSACTION,
+      type: SecurityEventType.PURCHASE,
       userId: dto.userId,
       ip: dto.ip,
       data: { rlTxn, amount: dto.amount, method: dto.paymentMethod, context: dto.context },
@@ -185,7 +188,7 @@ export class SecurityService {
     // Warm redis to speed up checks
     await this.redis.set(this.key(`block:ip:${ip}`), '1', 'EX', durationSeconds);
     const event: CreateSecurityEventDto = {
-      type: SecurityEventType.IP_BLOCK,
+      type: SecurityEventType.SUSPICIOUS_ACTIVITY,
       ip,
       data: { reason, blockedUntil: until.toISOString() },
     };
@@ -214,7 +217,11 @@ export class SecurityService {
 
   async validateUserActivity(userId: string, activityType: string): Promise<boolean> {
     const userLimit = this.config.get<number>('SECURITY_ACTIVITY_PER_MINUTE', 60);
-    const res = await this.rl.checkRateLimit(this.key(`rl:act:${activityType}:user:${userId}:1m`), userLimit, 60);
+    const res = await this.rl.checkRateLimit(
+      this.key(`rl:act:${activityType}:user:${userId}:1m`),
+      userLimit,
+      60,
+    );
     return res.allowed;
   }
 
@@ -226,19 +233,28 @@ export class SecurityService {
       const rlIp = await this.rl.getRemainingRequests(
         this.key(`rl:login:ip:${context.ip}:1m`),
         this.config.get('SECURITY_LOGIN_PER_MINUTE_IP', 20),
-        60,
       );
-      score += Math.floor(((this.config.get('SECURITY_LOGIN_PER_MINUTE_IP', 20) - rlIp) / Math.max(1, this.config.get('SECURITY_LOGIN_PER_MINUTE_IP', 20))) * 40);
+      score += Math.floor(
+        ((this.config.get('SECURITY_LOGIN_PER_MINUTE_IP', 20) - rlIp) /
+          Math.max(1, this.config.get('SECURITY_LOGIN_PER_MINUTE_IP', 20))) *
+          40,
+      );
     }
 
     const rlUser = await this.rl.getRemainingRequests(
       this.key(`rl:login:user:${userId}:1m`),
       this.config.get('SECURITY_LOGIN_PER_MINUTE_USER', 10),
-      60,
     );
-    score += Math.floor(((this.config.get('SECURITY_LOGIN_PER_MINUTE_USER', 10) - rlUser) / Math.max(1, this.config.get('SECURITY_LOGIN_PER_MINUTE_USER', 10))) * 40);
+    score += Math.floor(
+      ((this.config.get('SECURITY_LOGIN_PER_MINUTE_USER', 10) - rlUser) /
+        Math.max(1, this.config.get('SECURITY_LOGIN_PER_MINUTE_USER', 10))) *
+        40,
+    );
 
-    if (context.amount && context.amount >= this.config.get('SECURITY_TXN_AMOUNT_THRESHOLD', 10000)) {
+    if (
+      context.amount &&
+      context.amount >= this.config.get('SECURITY_TXN_AMOUNT_THRESHOLD', 10000)
+    ) {
       score += 20;
     }
 

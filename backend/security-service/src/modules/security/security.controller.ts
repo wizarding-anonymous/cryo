@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, UseGuards, BadRequestException } from '@nestjs/common';
 import { SecurityService } from './security.service';
 import { CheckLoginSecurityDto } from '../../dto/requests/check-login-security.dto';
 import { CheckTransactionSecurityDto } from '../../dto/requests/check-transaction-security.dto';
@@ -14,6 +14,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IPBlock } from '../../entities/ip-block.entity';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { isIP } from 'class-validator';
 
 @ApiTags('Security')
 @Controller('security')
@@ -68,6 +69,11 @@ export class SecurityController {
   @Get('ip-status/:ip')
   @ApiOperation({ summary: 'Проверить статус IP (заблокирован/нет)' })
   async checkIPStatus(@Param('ip') ip: string): Promise<IPStatusResult> {
+    // Validate IP format
+    if (!isIP(ip)) {
+      throw new BadRequestException('Invalid IP address format');
+    }
+    
     const isBlocked = await this.security.isIPBlocked(ip);
     let reason: string | undefined;
     let blockedUntil: Date | undefined;

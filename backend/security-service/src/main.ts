@@ -20,8 +20,33 @@ async function bootstrap() {
     }),
   );
 
-  app.enableCors({ origin: '*', credentials: false });
-  app.use(helmet());
+  // CORS configuration
+  const corsOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'];
+  app.enableCors({
+    origin: process.env.NODE_ENV === 'production' ? corsOrigins : true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-Forwarded-For'],
+  });
+
+  // Helmet security headers
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+    }),
+  );
 
   // Global exception filter
   const httpAdapterHost = app.get(HttpAdapterHost);
@@ -42,24 +67,46 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   const server = await app.listen(port);
-  // eslint-disable-next-line no-console
+
   console.log(`Security Service is running on: http://localhost:${port}`);
-  // eslint-disable-next-line no-console
+
   console.log(`Swagger docs available at: http://localhost:${port}/api/docs`);
 
+  // Graceful shutdown handling
   const shutdown = async (signal: string) => {
-    // eslint-disable-next-line no-console
     console.log(`Received ${signal}, shutting down gracefully...`);
+    
     try {
+      // Stop accepting new connections
+      server.close(() => {
+        console.log('HTTP server closed');
+      });
+
+      // Close the NestJS application
       await app.close();
-      server.close?.();
-    } finally {
+      console.log('Application closed successfully');
+      
       process.exit(0);
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+      process.exit(1);
     }
   };
 
+  // Handle termination signals
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+  
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    shutdown('UNCAUGHT_EXCEPTION');
+  });
+  
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    shutdown('UNHANDLED_REJECTION');
+  });
 }
 
 bootstrap();

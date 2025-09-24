@@ -1,4 +1,4 @@
-import { IsEnum, IsIP, IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsIP, IsObject, IsOptional, IsUUID } from 'class-validator';
 import { SecurityAlertType } from '../../common/enums/security-alert-type.enum';
 import { SecurityAlertSeverity } from '../../common/enums/security-alert-severity.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';

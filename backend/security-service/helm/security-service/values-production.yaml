@@ -1,0 +1,134 @@
+# Production environment values
+replicaCount: 3
+
+image:
+  repository: your-registry/security-service
+  tag: "v1.0.0"
+  pullPolicy: IfNotPresent
+
+# Enable autoscaling for production
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Enable all security features for production
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Production environment variables
+env:
+  NODE_ENV: production
+  LOG_LEVEL: warn
+  LOG_FORMAT: json
+  DB_SYNCHRONIZE: "false"
+  DB_LOGGING: "false"
+  DB_SSL: "true"
+  
+  # Production database
+  DB_HOST: postgres-production
+  DB_NAME: security_service_production
+  DB_MAX_CONNECTIONS: "20"
+  
+  # Production Redis
+  REDIS_HOST: redis-production
+  REDIS_DB: "0"
+  
+  # Production security thresholds
+  SECURITY_LOGIN_PER_MINUTE_IP: "10"
+  SECURITY_LOGIN_PER_MINUTE_USER: "5"
+  SECURITY_TXN_PER_MINUTE_USER: "10"
+  SECURITY_TXN_AMOUNT_THRESHOLD: "5000"
+  SECURITY_ALERT_RISK_THRESHOLD: "70"
+  
+  # Production CORS
+  CORS_ORIGINS: "https://yourdomain.com,https://api.yourdomain.com"
+  
+  # Production Kafka
+  KAFKA_BROKERS: "kafka-production:9092"
+
+# Production secrets (MUST be overridden with secure values)
+secrets:
+  DB_PASSWORD: CHANGE-ME-IN-PRODUCTION
+  JWT_SECRET: CHANGE-ME-IN-PRODUCTION-USE-STRONG-SECRET
+  JWT_EXPIRES_IN: "1h"
+  REDIS_PASSWORD: CHANGE-ME-IN-PRODUCTION
+  KAFKA_USERNAME: CHANGE-ME-IN-PRODUCTION
+  KAFKA_PASSWORD: CHANGE-ME-IN-PRODUCTION
+  ENCRYPTION_KEY: CHANGE-ME-IN-PRODUCTION-32-CHAR-KEY
+
+# Production resource requirements
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+    ephemeral-storage: 1Gi
+  limits:
+    cpu: 2000m
+    memory: 1Gi
+    ephemeral-storage: 2Gi
+
+# Conservative health checks for production
+healthChecks:
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  startupProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+# Production deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 2
+
+# Production node affinity (spread across zones)
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - security-service
+        topologyKey: kubernetes.io/hostname
+    - weight: 50
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - security-service
+        topologyKey: topology.kubernetes.io/zone
+
+# Production tolerations for dedicated nodes
+tolerations:
+- key: "security-workload"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+# Production node selector
+nodeSelector:
+  workload-type: security

@@ -30,4 +30,3 @@ export class AddMissingIndexes1700000000002 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX IF EXISTS "public"."security_alert_type_idx"`);
   }
 }
-
