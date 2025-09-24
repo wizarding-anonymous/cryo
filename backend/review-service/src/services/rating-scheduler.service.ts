@@ -34,6 +34,7 @@ export class RatingSchedulerService {
     
     try {
       this.logger.log('Starting bulk rating recalculation for all games');
+      this.metricsService.recordBulkOperation('recalculate', 'success');
 
       // Получаем все уникальные gameId из отзывов
       const gameIds = await this.reviewRepository
@@ -46,6 +47,9 @@ export class RatingSchedulerService {
 
       let processedGames = 0;
       let errors = 0;
+
+      // Обновляем системную нагрузку
+      this.metricsService.updateRatingSystemLoad(0.8); // Высокая нагрузка во время пересчета
 
       // Обрабатываем игры батчами по 10
       const batchSize = 10;
@@ -67,6 +71,10 @@ export class RatingSchedulerService {
             
             if (processedGames % 50 === 0) {
               this.logger.debug(`Processed ${processedGames}/${totalGames} games`);
+              
+              // Обновляем прогресс в метриках
+              const progress = processedGames / totalGames;
+              this.metricsService.updateRatingSystemLoad(0.8 * (1 - progress) + 0.2);
             }
           } catch (error) {
             errors++;
@@ -83,6 +91,7 @@ export class RatingSchedulerService {
       }
 
       const totalDuration = (Date.now() - startTime) / 1000;
+      this.metricsService.recordBulkOperationDuration('recalculate', totalDuration);
       
       this.logger.log(
         `Bulk rating recalculation completed. ` +
@@ -94,7 +103,16 @@ export class RatingSchedulerService {
       // Обновляем статистику кеша
       await this.updateCacheStatistics();
 
+      // Сбрасываем системную нагрузку
+      this.metricsService.updateRatingSystemLoad(0.1);
+
+      if (errors > 0) {
+        this.metricsService.recordBulkOperation('recalculate', 'error');
+      }
+
     } catch (error) {
+      this.metricsService.recordBulkOperation('recalculate', 'error');
+      this.metricsService.updateRatingSystemLoad(0.1);
       this.logger.error('Bulk rating recalculation failed', error);
     } finally {
       this.isRecalculationRunning = false;
@@ -132,6 +150,7 @@ export class RatingSchedulerService {
   async updateMetrics(): Promise<void> {
     try {
       await this.updateCacheStatistics();
+      await this.updateCachePerformanceMetrics();
       
       // Логируем текущие метрики
       const summary = await this.metricsService.getRatingMetricsSummary();
@@ -314,6 +333,29 @@ export class RatingSchedulerService {
       this.metricsService.updateCachedRatingsCount(totalRatings);
     } catch (error) {
       this.logger.error('Failed to update cache statistics', error);
+    }
+  }
+
+  private async updateCachePerformanceMetrics(): Promise<void> {
+    try {
+      const summary = await this.metricsService.getRatingMetricsSummary();
+      
+      // Вычисляем hit rate из операций кеша
+      if (summary.totalCacheOperations > 0) {
+        // Примерная оценка hit rate на основе соотношения операций
+        const estimatedHitRate = Math.min(0.95, Math.max(0.1, 
+          (summary.totalCacheOperations - summary.totalCalculations) / summary.totalCacheOperations
+        ));
+        this.metricsService.updateCacheHitRatio(estimatedHitRate);
+      }
+
+      // Обновляем системную нагрузку на основе активных вычислений
+      const maxConcurrentCalculations = 50; // Максимальное количество одновременных вычислений
+      const currentLoad = Math.min(1, summary.activeCalculations / maxConcurrentCalculations);
+      this.metricsService.updateRatingSystemLoad(currentLoad);
+
+    } catch (error) {
+      this.logger.error('Failed to update cache performance metrics', error);
     }
   }
 }

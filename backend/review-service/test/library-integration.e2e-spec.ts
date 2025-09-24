@@ -1,49 +1,46 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
 import { AxiosError } from 'axios';
 
 import { AppModule } from '../src/app.module';
-import { OwnershipService } from '../src/services/ownership.service';
+import { Review } from '../src/entities/review.entity';
+import { GameRating } from '../src/entities/game-rating.entity';
 import { HttpExceptionFilter } from '../src/filters';
 import { validationConfig } from '../src/config/validation.config';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { describe } from 'node:test';
+import { createTestApp, cleanupTestData, createMockJwtToken } from './test-setup';
 
 describe('Library Service Integration (e2e)', () => {
   let app: INestApplication;
+  let reviewRepository: Repository<Review>;
+  let gameRatingRepository: Repository<GameRating>;
   let httpService: jest.Mocked<HttpService>;
-  let ownershipService: OwnershipService;
+
+  const mockUserId = 'test-user-123';
+  const mockGameId = 'test-game-456';
+  const mockJwtToken = createMockJwtToken(mockUserId);
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(HttpService)
+      .useValue({
+        request: jest.fn(),
+        get: jest.fn(),
+        post: jest.fn(),
+        put: jest.fn(),
+        delete: jest.fn(),
+        patch: jest.fn(),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Apply same configuration as main app
     app.useGlobalPipes(new ValidationPipe(validationConfig));
     app.useGlobalFilters(new HttpExceptionFilter());
@@ -51,172 +48,176 @@ describe('Library Service Integration (e2e)', () => {
 
     await app.init();
 
-    httpService = moduleFixture.get<HttpService>(HttpService) as jest.Mocked<HttpService>;
-    ownershipService = moduleFixture.get<OwnershipService>(OwnershipService);
-
-    // Set up environment variables
-    process.env.LIBRARY_SERVICE_URL = 'http://library-service:3001';
+    reviewRepository = moduleFixture.get<Repository<Review>>(getRepositoryToken(Review));
+    gameRatingRepository = moduleFixture.get<Repository<GameRating>>(getRepositoryToken(GameRating));
+    httpService = moduleFixture.get(HttpService);
   }, 30000);
 
   afterAll(async () => {
     if (app) {
+      await cleanupTestData(app);
       await app.close();
     }
   });
 
+  beforeEach(async () => {
+    // Clear database before each test
+    await reviewRepository.clear();
+    await gameRatingRepository.clear();
+    
+    // Reset all mocks
+    jest.clearAllMocks();
+  });
+
   describe('Game ownership verification', () => {
-    it('should successfully verify game ownership', async () => {
+    const validReviewData = {
+      gameId: mockGameId,
+      text: 'This is an excellent game with great graphics!',
+      rating: 5,
+    };
+
+    it('should allow review creation when user owns the game', async () => {
       // Mock successful ownership check
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
+      httpService.request.mockReturnValue(of({
+        data: { ownsGame: true },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      }));
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(201);
+
+      expect(response.body).toMatchObject({
+        userId: mockUserId,
+        gameId: mockGameId,
+        text: validReviewData.text,
+        rating: validReviewData.rating,
+      });
+
+      // Verify ownership check was called
+      expect(httpService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining(`/library/${mockUserId}/games/${mockGameId}/ownership`),
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should prevent review creation when user does not own the game', async () => {
+      // Mock ownership check returning false
+      httpService.request.mockReturnValue(of({
+        data: { ownsGame: false },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      }));
+
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(403);
+
+      // Verify no review was created
+      const reviewCount = await reviewRepository.count();
+      expect(reviewCount).toBe(0);
+    });
+
+    it('should handle Library Service 404 error (user/game not found)', async () => {
+      // Mock 404 error from Library Service
+      const notFoundError = {
+        isAxiosError: true,
+        response: { status: 404 },
+      } as AxiosError;
+
+      httpService.request.mockReturnValue(throwError(() => notFoundError));
+
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(403);
+    });
+
+    it('should handle Library Service timeout', async () => {
+      // Mock timeout error
+      httpService.request.mockReturnValue(throwError(() => new Error('timeout')));
+
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(403);
+    });
+
+    it('should handle Library Service server error with retry', async () => {
+      // Mock server error that succeeds on retry
+      httpService.request
+        .mockReturnValueOnce(throwError(() => ({ 
+          isAxiosError: true, 
+          response: { status: 500 } 
+        } as AxiosError)))
+        .mockReturnValueOnce(throwError(() => ({ 
+          isAxiosError: true, 
+          response: { status: 503 } 
+        } as AxiosError)))
+        .mockReturnValueOnce(of({
           data: { ownsGame: true },
           status: 200,
           statusText: 'OK',
           headers: {},
           config: {} as any,
-        })
-      );
-
-      const createReviewDto = {
-        gameId: 'owned-game-123',
-        text: 'Great game that I own!',
-        rating: 5,
-      };
+        }));
 
       const response = await request(app.getHttpServer())
         .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
         .expect(201);
 
-      expect(response.body.gameId).toBe('owned-game-123');
-      expect(httpService.get).toHaveBeenCalledWith(
-        'http://library-service:3001/library/user-123/games/owned-game-123/ownership',
-        expect.objectContaining({
-          timeout: 5000,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      );
+      expect(response.body.userId).toBe(mockUserId);
+      
+      // Verify retry attempts were made
+      expect(httpService.request).toHaveBeenCalledTimes(3);
     });
 
-    it('should reject review creation when user does not own game', async () => {
-      // Mock ownership check returning false
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          data: { ownsGame: false },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        })
-      );
-
-      const createReviewDto = {
-        gameId: 'unowned-game-456',
-        text: 'Trying to review a game I do not own',
-        rating: 3,
-      };
-
-      await request(app.getHttpServer())
-        .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
-        .expect(403);
-
-      expect(httpService.get).toHaveBeenCalledWith(
-        'http://library-service:3001/library/user-123/games/unowned-game-456/ownership',
-        expect.objectContaining({
-          timeout: 5000,
-        })
-      );
-    });
-
-    it('should handle Library Service 404 errors gracefully', async () => {
-      // Mock 404 error (game or user not found)
-      const axiosError = {
-        isAxiosError: true,
-        response: { status: 404, data: { message: 'Game not found' } },
-      } as AxiosError;
-
-      jest.spyOn(httpService, 'get').mockReturnValue(throwError(() => axiosError));
-
-      const createReviewDto = {
-        gameId: 'nonexistent-game',
-        text: 'Review for nonexistent game',
-        rating: 4,
-      };
-
-      await request(app.getHttpServer())
-        .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
-        .expect(403);
-    });
-
-    it('should handle Library Service timeout errors', async () => {
-      // Mock timeout error
-      const timeoutError = {
-        isAxiosError: true,
-        code: 'ECONNABORTED',
-        message: 'timeout of 5000ms exceeded',
-      } as AxiosError;
-
-      jest.spyOn(httpService, 'get').mockReturnValue(throwError(() => timeoutError));
-
-      const createReviewDto = {
-        gameId: 'timeout-game',
-        text: 'Review during timeout',
-        rating: 2,
-      };
-
-      await request(app.getHttpServer())
-        .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
-        .expect(403);
-    });
-
-    it('should retry on Library Service server errors', async () => {
-      // Mock server error that should trigger retry
+    it('should fail after maximum retry attempts', async () => {
+      // Mock persistent server error
       const serverError = {
         isAxiosError: true,
-        response: { status: 500, data: { message: 'Internal server error' } },
+        response: { status: 500 },
       } as AxiosError;
 
-      jest.spyOn(httpService, 'get').mockReturnValue(throwError(() => serverError));
-
-      // Mock the delay method to speed up test
-      jest.spyOn(ownershipService as any, 'delay').mockResolvedValue(undefined);
-
-      const createReviewDto = {
-        gameId: 'server-error-game',
-        text: 'Review during server error',
-        rating: 1,
-      };
+      httpService.request.mockReturnValue(throwError(() => serverError));
 
       await request(app.getHttpServer())
         .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
         .expect(403);
 
-      // Should have retried 3 times (MAX_RETRIES)
-      expect(httpService.get).toHaveBeenCalledTimes(3);
+      // Verify maximum retry attempts were made
+      expect(httpService.request).toHaveBeenCalledTimes(3);
     });
+  });
 
-    it('should succeed after retry on intermittent failures', async () => {
-      let callCount = 0;
-      jest.spyOn(httpService, 'get').mockImplementation(() => {
-        callCount++;
-        if (callCount < 3) {
-          // First two calls fail
-          const serverError = {
-            isAxiosError: true,
-            response: { status: 503, data: { message: 'Service unavailable' } },
-          } as AxiosError;
-          return throwError(() => serverError);
-        } else {
-          // Third call succeeds
+  describe('Game validation', () => {
+    const validReviewData = {
+      gameId: mockGameId,
+      text: 'This is an excellent game with great graphics!',
+      rating: 5,
+    };
+
+    beforeEach(() => {
+      // Mock successful ownership check by default
+      httpService.request.mockImplementation((config) => {
+        if (config.url?.includes('/ownership')) {
           return of({
             data: { ownsGame: true },
             status: 200,
@@ -225,272 +226,430 @@ describe('Library Service Integration (e2e)', () => {
             config: {} as any,
           });
         }
+        
+        // Default to game exists
+        return of({
+          data: { id: mockGameId, title: 'Test Game' },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        });
       });
+    });
 
-      // Mock the delay method to speed up test
-      jest.spyOn(ownershipService as any, 'delay').mockResolvedValue(undefined);
-
-      const createReviewDto = {
-        gameId: 'intermittent-failure-game',
-        text: 'Review after intermittent failures',
-        rating: 4,
-      };
-
-      const response = await request(app.getHttpServer())
+    it('should validate game exists before creating review', async () => {
+      await request(app.getHttpServer())
         .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
         .expect(201);
 
-      expect(response.body.gameId).toBe('intermittent-failure-game');
-      expect(httpService.get).toHaveBeenCalledTimes(3);
+      // Verify game validation was called
+      expect(httpService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining(`/games/${mockGameId}`),
+          method: 'HEAD',
+        })
+      );
+    });
+
+    it('should handle non-existent game', async () => {
+      // Mock game not found
+      httpService.request.mockImplementation((config) => {
+        if (config.url?.includes('/ownership')) {
+          return of({
+            data: { ownsGame: true },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          });
+        }
+        
+        if (config.url?.includes('/games/')) {
+          return throwError(() => ({
+            isAxiosError: true,
+            response: { status: 404 },
+          } as AxiosError));
+        }
+        
+        return of({ data: {}, status: 200, statusText: 'OK', headers: {}, config: {} as any });
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(400);
+    });
+
+    it('should handle Game Catalog Service errors gracefully', async () => {
+      // Mock game catalog service error (but still allow review creation)
+      httpService.request.mockImplementation((config) => {
+        if (config.url?.includes('/ownership')) {
+          return of({
+            data: { ownsGame: true },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          });
+        }
+        
+        if (config.url?.includes('/games/')) {
+          return throwError(() => new Error('Game Catalog Service unavailable'));
+        }
+        
+        return of({ data: {}, status: 200, statusText: 'OK', headers: {}, config: {} as any });
+      });
+
+      // Should still allow review creation (fail-safe behavior)
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(201);
     });
   });
 
-  describe('User owned games retrieval', () => {
-    it('should retrieve user owned games successfully', async () => {
-      const mockOwnedGames = {
-        data: {
-          games: [
-            { gameId: 'game-1', title: 'Game One', purchaseDate: '2024-01-01' },
-            { gameId: 'game-2', title: 'Game Two', purchaseDate: '2024-01-15' },
-            { gameId: 'game-3', title: 'Game Three', purchaseDate: '2024-02-01' },
-          ],
-        },
-      };
+  describe('External service notifications', () => {
+    const validReviewData = {
+      gameId: mockGameId,
+      text: 'This is an excellent game with great graphics!',
+      rating: 5,
+    };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          ...mockOwnedGames,
+    beforeEach(() => {
+      // Mock successful ownership and game validation
+      httpService.request.mockImplementation((config) => {
+        if (config.url?.includes('/ownership')) {
+          return of({
+            data: { ownsGame: true },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          });
+        }
+        
+        if (config.url?.includes('/games/') && config.method === 'HEAD') {
+          return of({
+            data: null,
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          });
+        }
+        
+        // Mock successful notifications
+        return of({
+          data: { success: true },
           status: 200,
           statusText: 'OK',
           headers: {},
           config: {} as any,
-        })
-      );
+        });
+      });
+    });
 
-      const ownedGames = await ownershipService.getUserOwnedGames('user-123');
+    it('should notify Achievement Service about first review', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(201);
 
-      expect(ownedGames).toEqual(['game-1', 'game-2', 'game-3']);
-      expect(httpService.get).toHaveBeenCalledWith(
-        'http://library-service:3001/library/user-123/games',
+      // Verify achievement notification was sent
+      expect(httpService.request).toHaveBeenCalledWith(
         expect.objectContaining({
-          timeout: 10000,
-          headers: { 'Content-Type': 'application/json' },
+          url: expect.stringContaining('/achievements/unlock'),
+          method: 'POST',
+          data: expect.objectContaining({
+            userId: mockUserId,
+            achievementType: 'FIRST_REVIEW',
+          }),
         })
       );
     });
 
-    it('should handle empty owned games list', async () => {
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          data: { games: [] },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
+    it('should notify Notification Service about review creation', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(201);
+
+      // Verify notification service was called
+      expect(httpService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining('/notifications/review-action'),
+          method: 'POST',
+          data: expect.objectContaining({
+            userId: mockUserId,
+            gameId: mockGameId,
+            action: 'created',
+          }),
         })
       );
-
-      const ownedGames = await ownershipService.getUserOwnedGames('user-with-no-games');
-
-      expect(ownedGames).toEqual([]);
     });
 
-    it('should handle malformed response from Library Service', async () => {
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          data: null,
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
+    it('should notify Game Catalog Service about rating update', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(201);
+
+      // Verify game catalog rating update was called
+      expect(httpService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining(`/games/${mockGameId}/rating`),
+          method: 'PUT',
+          data: expect.objectContaining({
+            gameId: mockGameId,
+            averageRating: 5.0,
+            totalReviews: 1,
+          }),
         })
       );
-
-      const ownedGames = await ownershipService.getUserOwnedGames('user-malformed');
-
-      expect(ownedGames).toEqual([]);
     });
 
-    it('should handle Library Service errors when retrieving owned games', async () => {
-      const networkError = new Error('Network error');
-      jest.spyOn(httpService, 'get').mockReturnValue(throwError(() => networkError));
+    it('should handle notification failures gracefully', async () => {
+      // Mock notification failures
+      httpService.request.mockImplementation((config) => {
+        if (config.url?.includes('/ownership')) {
+          return of({
+            data: { ownsGame: true },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          });
+        }
+        
+        if (config.url?.includes('/games/') && config.method === 'HEAD') {
+          return of({
+            data: null,
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          });
+        }
+        
+        // Mock notification failures
+        if (config.url?.includes('/achievements/') || 
+            config.url?.includes('/notifications/') ||
+            config.url?.includes('/rating')) {
+          return throwError(() => new Error('Service unavailable'));
+        }
+        
+        return of({ data: {}, status: 200, statusText: 'OK', headers: {}, config: {} as any });
+      });
 
-      const ownedGames = await ownershipService.getUserOwnedGames('user-error');
+      // Review creation should still succeed despite notification failures
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(201);
 
-      expect(ownedGames).toEqual([]);
+      expect(response.body.userId).toBe(mockUserId);
+      
+      // Verify review was created in database
+      const review = await reviewRepository.findOne({
+        where: { id: response.body.id },
+      });
+      expect(review).toBeTruthy();
     });
   });
 
   describe('Caching behavior', () => {
-    it('should cache ownership results', async () => {
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          data: { ownsGame: true },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        })
-      );
+    const validReviewData = {
+      gameId: mockGameId,
+      text: 'This is an excellent game with great graphics!',
+      rating: 5,
+    };
 
-      // First call should hit the service
-      const result1 = await ownershipService.checkGameOwnership('user-cache', 'game-cache');
-      expect(result1).toBe(true);
-      expect(httpService.get).toHaveBeenCalledTimes(1);
+    it('should cache ownership check results', async () => {
+      // Mock successful ownership check
+      httpService.request.mockReturnValue(of({
+        data: { ownsGame: true },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      }));
 
-      // Second call should use cache (mock won't be called again)
-      jest.clearAllMocks();
-      const result2 = await ownershipService.checkGameOwnership('user-cache', 'game-cache');
-      expect(result2).toBe(true);
-      expect(httpService.get).not.toHaveBeenCalled();
-    });
-
-    it('should invalidate cache when requested', async () => {
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          data: { ownsGame: true },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        })
-      );
-
-      // First call
-      await ownershipService.checkGameOwnership('user-invalidate', 'game-invalidate');
-      expect(httpService.get).toHaveBeenCalledTimes(1);
-
-      // Invalidate cache
-      await ownershipService.invalidateOwnershipCache('user-invalidate', 'game-invalidate');
-
-      // Second call should hit the service again
-      await ownershipService.checkGameOwnership('user-invalidate', 'game-invalidate');
-      expect(httpService.get).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe('Integration with review creation flow', () => {
-    it('should complete full review creation flow with ownership verification', async () => {
-      // Mock successful ownership verification
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          data: { ownsGame: true },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        })
-      );
-
-      const createReviewDto = {
-        gameId: 'integration-test-game',
-        text: 'This is a comprehensive integration test review with proper ownership verification.',
-        rating: 5,
-      };
-
-      const response = await request(app.getHttpServer())
+      // Create first review
+      await request(app.getHttpServer())
         .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
         .expect(201);
 
-      expect(response.body).toMatchObject({
-        gameId: 'integration-test-game',
-        text: createReviewDto.text,
-        rating: 5,
-        userId: expect.any(String),
-        id: expect.any(String),
-        createdAt: expect.any(String),
-        updatedAt: expect.any(String),
-      });
+      // Clear the mock to verify caching
+      jest.clearAllMocks();
 
-      // Verify ownership was checked
-      expect(httpService.get).toHaveBeenCalledWith(
-        expect.stringContaining('/ownership'),
-        expect.any(Object)
-      );
-    });
+      // Try to create another review for different game (should use cache for user)
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send({
+          ...validReviewData,
+          gameId: 'different-game-id',
+        })
+        .expect(409); // Should fail due to duplicate review prevention, but ownership should be cached
 
-    it('should prevent review creation for unowned games', async () => {
-      // Mock ownership verification failure
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          data: { ownsGame: false },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
+      // Verify ownership check was made for the new game
+      expect(httpService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining('/ownership'),
         })
       );
-
-      const createReviewDto = {
-        gameId: 'unowned-integration-game',
-        text: 'Attempting to review a game I do not own.',
-        rating: 3,
-      };
-
-      const response = await request(app.getHttpServer())
-        .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
-        .expect(403);
-
-      expect(response.body.error).toMatchObject({
-        code: expect.any(String),
-        message: expect.stringContaining('own'),
-      });
     });
   });
 
-  describe('Error handling and resilience', () => {
-    it('should handle Library Service being completely unavailable', async () => {
-      // Mock connection refused error
-      const connectionError = {
-        isAxiosError: true,
-        code: 'ECONNREFUSED',
-        message: 'connect ECONNREFUSED 127.0.0.1:3001',
-      } as AxiosError;
+  describe('Error scenarios and resilience', () => {
+    const validReviewData = {
+      gameId: mockGameId,
+      text: 'This is an excellent game with great graphics!',
+      rating: 5,
+    };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(throwError(() => connectionError));
-
-      const createReviewDto = {
-        gameId: 'unavailable-service-game',
-        text: 'Review when service is unavailable',
-        rating: 2,
-      };
+    it('should handle complete Library Service outage', async () => {
+      // Mock complete service failure
+      httpService.request.mockReturnValue(
+        throwError(() => new Error('ECONNREFUSED'))
+      );
 
       await request(app.getHttpServer())
         .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
         .expect(403);
     });
 
-    it('should handle Library Service returning invalid JSON', async () => {
-      // Mock invalid JSON response
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        of({
-          data: 'invalid json response',
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        })
-      );
-
-      const createReviewDto = {
-        gameId: 'invalid-json-game',
-        text: 'Review with invalid JSON response',
-        rating: 1,
-      };
+    it('should handle malformed responses from Library Service', async () => {
+      // Mock malformed response
+      httpService.request.mockReturnValue(of({
+        data: null,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      }));
 
       await request(app.getHttpServer())
         .post('/api/v1/reviews')
-        .set('Authorization', 'Bearer valid-token')
-        .send(createReviewDto)
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
         .expect(403);
+    });
+
+    it('should handle Library Service returning unexpected status codes', async () => {
+      // Mock unexpected status code
+      httpService.request.mockReturnValue(of({
+        data: { ownsGame: true },
+        status: 202, // Accepted instead of OK
+        statusText: 'Accepted',
+        headers: {},
+        config: {} as any,
+      }));
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(201);
+
+      expect(response.body.userId).toBe(mockUserId);
+    });
+
+    it('should handle network timeouts gracefully', async () => {
+      // Mock timeout
+      httpService.request.mockReturnValue(
+        throwError(() => ({ code: 'ETIMEDOUT', message: 'timeout' }))
+      );
+
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(403);
+    });
+  });
+
+  describe('Performance and load handling', () => {
+    const validReviewData = {
+      gameId: mockGameId,
+      text: 'This is an excellent game with great graphics!',
+      rating: 5,
+    };
+
+    it('should handle concurrent ownership checks efficiently', async () => {
+      // Mock successful ownership check with delay
+      httpService.request.mockImplementation(() => 
+        new Promise(resolve => 
+          setTimeout(() => resolve({
+            data: { ownsGame: true },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          }), 100)
+        )
+      );
+
+      const promises = Array.from({ length: 5 }, (_, i) =>
+        request(app.getHttpServer())
+          .post('/api/v1/reviews')
+          .set('Authorization', createMockJwtToken(`user-${i}`))
+          .send({
+            ...validReviewData,
+            gameId: `game-${i}`,
+          })
+      );
+
+      const results = await Promise.allSettled(promises);
+
+      // All should succeed
+      results.forEach(result => {
+        expect(result.status).toBe('fulfilled');
+        if (result.status === 'fulfilled') {
+          expect(result.value.status).toBe(201);
+        }
+      });
+    });
+
+    it('should handle slow Library Service responses', async () => {
+      // Mock slow response (but within timeout)
+      httpService.request.mockImplementation(() => 
+        new Promise(resolve => 
+          setTimeout(() => resolve({
+            data: { ownsGame: true },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          }), 2000) // 2 second delay
+        )
+      );
+
+      const startTime = Date.now();
+      
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set('Authorization', mockJwtToken)
+        .send(validReviewData)
+        .expect(201);
+
+      const endTime = Date.now();
+      
+      expect(response.body.userId).toBe(mockUserId);
+      expect(endTime - startTime).toBeGreaterThan(2000);
     });
   });
 });

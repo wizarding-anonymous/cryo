@@ -8,15 +8,19 @@ export class MetricsService implements OnModuleDestroy {
   // Счетчики для операций с рейтингами
   private ratingCalculationsCounter: Counter<string>;
   private ratingCacheOperationsCounter: Counter<string>;
+  private ratingBulkOperationsCounter: Counter<string>;
 
   // Гистограммы для времени выполнения
   private ratingCalculationDuration: Histogram<string>;
   private ratingCacheOperationDuration: Histogram<string>;
+  private ratingBulkOperationDuration: Histogram<string>;
 
   // Gauge для текущих метрик
   private activeRatingCalculations: Gauge<string>;
   private cachedRatingsCount: Gauge<string>;
   private averageRatingCalculationTime: Gauge<string>;
+  private cacheHitRatio: Gauge<string>;
+  private ratingSystemLoad: Gauge<string>;
 
   // Счетчики для webhook операций
   private webhooksReceivedCounter: Counter<string>;
@@ -46,6 +50,12 @@ export class MetricsService implements OnModuleDestroy {
       labelNames: ['operation', 'result'],
     });
 
+    this.ratingBulkOperationsCounter = new Counter({
+      name: 'rating_bulk_operations_total',
+      help: 'Total number of bulk rating operations',
+      labelNames: ['operation_type', 'status'],
+    });
+
     this.ratingCalculationDuration = new Histogram({
       name: 'rating_calculation_duration_seconds',
       help: 'Duration of rating calculations in seconds',
@@ -58,6 +68,13 @@ export class MetricsService implements OnModuleDestroy {
       help: 'Duration of rating cache operations in seconds',
       labelNames: ['operation'],
       buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
+    });
+
+    this.ratingBulkOperationDuration = new Histogram({
+      name: 'rating_bulk_operation_duration_seconds',
+      help: 'Duration of bulk rating operations in seconds',
+      labelNames: ['operation_type'],
+      buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
     });
 
     this.activeRatingCalculations = new Gauge({
@@ -73,6 +90,16 @@ export class MetricsService implements OnModuleDestroy {
     this.averageRatingCalculationTime = new Gauge({
       name: 'average_rating_calculation_time_seconds',
       help: 'Average time for rating calculations in seconds',
+    });
+
+    this.cacheHitRatio = new Gauge({
+      name: 'rating_cache_hit_ratio',
+      help: 'Cache hit ratio for rating operations (0-1)',
+    });
+
+    this.ratingSystemLoad = new Gauge({
+      name: 'rating_system_load',
+      help: 'Current load of the rating system (0-1)',
     });
 
     this.webhooksReceivedCounter = new Counter({
@@ -127,6 +154,22 @@ export class MetricsService implements OnModuleDestroy {
 
   updateCachedRatingsCount(count: number): void {
     this.cachedRatingsCount.set(count);
+  }
+
+  recordBulkOperation(operationType: 'recalculate' | 'preload' | 'invalidate', status: 'success' | 'error'): void {
+    this.ratingBulkOperationsCounter.inc({ operation_type: operationType, status });
+  }
+
+  recordBulkOperationDuration(operationType: string, duration: number): void {
+    this.ratingBulkOperationDuration.observe({ operation_type: operationType }, duration);
+  }
+
+  updateCacheHitRatio(hitRatio: number): void {
+    this.cacheHitRatio.set(Math.max(0, Math.min(1, hitRatio)));
+  }
+
+  updateRatingSystemLoad(load: number): void {
+    this.ratingSystemLoad.set(Math.max(0, Math.min(1, load)));
   }
 
   private async updateAverageCalculationTime(): Promise<void> {

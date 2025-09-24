@@ -12,6 +12,8 @@ import { MetricsService } from './metrics.service';
 export class RatingService {
   private readonly logger = new Logger(RatingService.name);
   private readonly CACHE_TTL = 300; // 5 минут в секундах
+  private readonly CACHE_PREFIX = 'game_rating_';
+  private readonly BULK_CACHE_PREFIX = 'bulk_ratings_';
 
   constructor(
     @InjectRepository(GameRating)
@@ -102,7 +104,7 @@ export class RatingService {
     const cacheStartTime = Date.now();
 
     // Проверяем кеш с обработкой ошибок
-    const cacheKey = `game_rating_${gameId}`;
+    const cacheKey = `${this.CACHE_PREFIX}${gameId}`;
     let cachedRating: GameRating | undefined;
 
     try {
@@ -188,11 +190,19 @@ export class RatingService {
   }
 
   async invalidateGameRatingCache(gameId: string): Promise<void> {
-    const cacheKey = `game_rating_${gameId}`;
+    const cacheKey = `${this.CACHE_PREFIX}${gameId}`;
+    const startTime = Date.now();
+    
     try {
       await this.cacheManager.del(cacheKey);
-      this.logger.debug(`Invalidated rating cache for game ${gameId}`);
+      
+      const duration = (Date.now() - startTime) / 1000;
+      this.metricsService.recordCacheOperation('delete', 'success');
+      this.metricsService.recordCacheOperationDuration('delete', duration);
+      
+      this.logger.debug(`Invalidated rating cache for game ${gameId} in ${duration.toFixed(3)}s`);
     } catch (error) {
+      this.metricsService.recordCacheOperation('delete', 'error');
       this.logger.warn(`Failed to invalidate cache for game ${gameId}: ${error.message}`);
       // Don't throw error - cache invalidation failure shouldn't break the flow
     }
@@ -465,6 +475,170 @@ export class RatingService {
         memoryUsage: process.memoryUsage().heapUsed / 1024 / 1024, // MB
       },
     };
+  }
+
+  // Массовое получение рейтингов с оптимизированным кешированием
+  async getBulkGameRatings(gameIds: string[]): Promise<Map<string, GameRating>> {
+    const startTime = Date.now();
+    const results = new Map<string, GameRating>();
+    const uncachedGameIds: string[] = [];
+
+    this.logger.debug(`Getting bulk ratings for ${gameIds.length} games`);
+
+    // Проверяем кеш для всех игр
+    for (const gameId of gameIds) {
+      const cacheKey = `${this.CACHE_PREFIX}${gameId}`;
+      
+      try {
+        const cachedRating = await this.cacheManager.get<GameRating>(cacheKey);
+        if (cachedRating) {
+          results.set(gameId, cachedRating);
+          this.metricsService.recordCacheOperation('get', 'hit');
+        } else {
+          uncachedGameIds.push(gameId);
+          this.metricsService.recordCacheOperation('get', 'miss');
+        }
+      } catch (error) {
+        this.logger.warn(`Cache error for game ${gameId}: ${error.message}`);
+        uncachedGameIds.push(gameId);
+        this.metricsService.recordCacheOperation('get', 'error');
+      }
+    }
+
+    // Получаем некешированные рейтинги из БД
+    if (uncachedGameIds.length > 0) {
+      const dbRatings = await this.gameRatingRepository.find({
+        where: { gameId: uncachedGameIds as any },
+      });
+
+      // Создаем Map для быстрого поиска
+      const dbRatingsMap = new Map(dbRatings.map(rating => [rating.gameId, rating]));
+
+      // Обрабатываем каждую игру без кеша
+      for (const gameId of uncachedGameIds) {
+        let gameRating = dbRatingsMap.get(gameId);
+
+        if (!gameRating) {
+          // Вычисляем рейтинг для игр без записи в БД
+          const { averageRating, totalReviews } = await this.calculateGameRating(gameId);
+          
+          if (totalReviews > 0) {
+            gameRating = await this.gameRatingRepository.save({
+              gameId,
+              averageRating,
+              totalReviews,
+            });
+          } else {
+            gameRating = {
+              gameId,
+              averageRating: 0,
+              totalReviews: 0,
+              updatedAt: new Date(),
+            } as GameRating;
+          }
+        }
+
+        results.set(gameId, gameRating);
+
+        // Кешируем результат
+        const cacheKey = `${this.CACHE_PREFIX}${gameId}`;
+        await this.setCacheWithMetrics(cacheKey, gameRating);
+      }
+    }
+
+    const duration = (Date.now() - startTime) / 1000;
+    this.logger.debug(
+      `Bulk rating retrieval completed in ${duration.toFixed(3)}s. ` +
+      `Cached: ${gameIds.length - uncachedGameIds.length}/${gameIds.length}, ` +
+      `DB queries: ${uncachedGameIds.length}`
+    );
+
+    return results;
+  }
+
+  // Предварительная загрузка рейтингов в кеш с приоритизацией
+  async preloadRatingsByPriority(options: {
+    highPriorityGames?: string[];
+    includePopular?: boolean;
+    includeRecent?: boolean;
+    maxGames?: number;
+  } = {}): Promise<{
+    preloaded: number;
+    errors: number;
+    duration: number;
+  }> {
+    const startTime = Date.now();
+    const { 
+      highPriorityGames = [], 
+      includePopular = true, 
+      includeRecent = true, 
+      maxGames = 100 
+    } = options;
+
+    let preloaded = 0;
+    let errors = 0;
+    const gamesToPreload = new Set<string>();
+
+    this.logger.debug('Starting prioritized rating preload');
+
+    // Добавляем высокоприоритетные игры
+    highPriorityGames.forEach(gameId => gamesToPreload.add(gameId));
+
+    // Добавляем популярные игры
+    if (includePopular) {
+      const popularGames = await this.gameRatingRepository.find({
+        where: { totalReviews: 5 as any }, // Минимум 5 отзывов
+        order: { totalReviews: 'DESC', averageRating: 'DESC' },
+        take: Math.floor(maxGames * 0.6), // 60% от лимита
+      });
+      popularGames.forEach(rating => gamesToPreload.add(rating.gameId));
+    }
+
+    // Добавляем недавно обновленные игры
+    if (includeRecent) {
+      const recentThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 часа
+      const recentGames = await this.gameRatingRepository.find({
+        where: { updatedAt: recentThreshold as any },
+        order: { updatedAt: 'DESC' },
+        take: Math.floor(maxGames * 0.4), // 40% от лимита
+      });
+      recentGames.forEach(rating => gamesToPreload.add(rating.gameId));
+    }
+
+    const gameIds = Array.from(gamesToPreload).slice(0, maxGames);
+
+    // Предварительно загружаем рейтинги батчами
+    const batchSize = 20;
+    for (let i = 0; i < gameIds.length; i += batchSize) {
+      const batch = gameIds.slice(i, i + batchSize);
+
+      const preloadPromises = batch.map(async (gameId) => {
+        try {
+          await this.getGameRating(gameId);
+          preloaded++;
+        } catch (error) {
+          errors++;
+          this.logger.warn(`Failed to preload rating for game ${gameId}`, error);
+        }
+      });
+
+      await Promise.allSettled(preloadPromises);
+
+      // Небольшая пауза между батчами
+      if (i + batchSize < gameIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+
+    const duration = (Date.now() - startTime) / 1000;
+
+    this.logger.log(
+      `Prioritized rating preload completed. ` +
+      `Preloaded: ${preloaded}/${gameIds.length} games, ` +
+      `Errors: ${errors}, Duration: ${duration.toFixed(2)}s`
+    );
+
+    return { preloaded, errors, duration };
   }
 
   // Оптимизированный пересчет рейтингов с приоритизацией
