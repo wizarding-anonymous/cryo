@@ -150,10 +150,10 @@ export class OwnershipService {
                     ),
             );
 
-            const ownsGame = response.data?.owned || false;
+            const ownsGame = response.data?.owned;
             
-            // Validate response structure
-            if (typeof ownsGame !== 'boolean') {
+            // Validate response structure - must be explicitly true or false
+            if (ownsGame !== true && ownsGame !== false) {
                 this.logger.warn(`Invalid ownership response format from Library Service:`, response.data);
                 return false;
             }

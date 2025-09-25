@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { RatingService } from './rating.service';
+import { MetricsService } from './metrics.service';
 import { Review } from '../entities/review.entity';
 import { GameRating } from '../entities/game-rating.entity';
 
@@ -12,6 +13,7 @@ describe('RatingService', () => {
     let reviewRepository: jest.Mocked<Repository<Review>>;
     let gameRatingRepository: jest.Mocked<Repository<GameRating>>;
     let cacheManager: jest.Mocked<Cache>;
+    let metricsService: jest.Mocked<MetricsService>;
 
     const mockGameRating: GameRating = {
         gameId: 'game1',
@@ -35,6 +37,11 @@ describe('RatingService', () => {
             get: jest.fn(),
             set: jest.fn(),
             del: jest.fn(),
+        };
+
+        const mockMetricsService = {
+            measureOperation: jest.fn(),
+            recordMetric: jest.fn(),
         };
 
         const mockQueryBuilder = {
@@ -61,6 +68,10 @@ describe('RatingService', () => {
                     provide: CACHE_MANAGER,
                     useValue: mockCacheManager,
                 },
+                {
+                    provide: MetricsService,
+                    useValue: mockMetricsService,
+                },
             ],
         }).compile();
 
@@ -68,6 +79,12 @@ describe('RatingService', () => {
         reviewRepository = module.get(getRepositoryToken(Review));
         gameRatingRepository = module.get(getRepositoryToken(GameRating));
         cacheManager = module.get(CACHE_MANAGER);
+        metricsService = module.get(MetricsService);
+
+        // Setup default behavior for measureOperation to just execute the operation
+        metricsService.measureOperation.mockImplementation(async (type, operation) => {
+            return await operation();
+        });
     });
 
     it('should be defined', () => {
@@ -88,6 +105,11 @@ describe('RatingService', () => {
                 averageRating: 4.5,
                 totalReviews: 2,
             });
+            expect(metricsService.measureOperation).toHaveBeenCalledWith(
+                'calculate',
+                expect.any(Function),
+                'game1'
+            );
         });
 
         it('should return zero values when no reviews exist', async () => {
@@ -128,6 +150,11 @@ describe('RatingService', () => {
                 totalReviews: 2,
             });
             expect(cacheManager.del).toHaveBeenCalledWith('game_rating_game1');
+            expect(metricsService.measureOperation).toHaveBeenCalledWith(
+                'update',
+                expect.any(Function),
+                'game1'
+            );
         });
 
         it('should update existing game rating', async () => {
@@ -187,6 +214,35 @@ describe('RatingService', () => {
 
             expect(result).toBeNull();
             expect(cacheManager.set).not.toHaveBeenCalled();
+        });
+
+        it('should record cache hit metric when rating is cached', async () => {
+            cacheManager.get.mockResolvedValue(mockGameRating);
+
+            await service.getGameRating('game1');
+
+            expect(metricsService.recordMetric).toHaveBeenCalledWith({
+                operationType: 'cache_hit',
+                gameId: 'game1',
+                duration: 0,
+                timestamp: expect.any(Date),
+                success: true,
+            });
+        });
+
+        it('should record cache miss metric when rating is not cached', async () => {
+            cacheManager.get.mockResolvedValue(null);
+            gameRatingRepository.findOne.mockResolvedValue(mockGameRating);
+
+            await service.getGameRating('game1');
+
+            expect(metricsService.recordMetric).toHaveBeenCalledWith({
+                operationType: 'cache_miss',
+                gameId: 'game1',
+                duration: 0,
+                timestamp: expect.any(Date),
+                success: true,
+            });
         });
     });
 });

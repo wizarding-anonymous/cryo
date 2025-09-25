@@ -1,0 +1,20 @@
+{
+  "unit": {
+    "passed": 0,
+    "failed": 0,
+    "total": 0,
+    "coverage": 81.58
+  },
+  "e2e": {
+    "passed": 0,
+    "failed": 0,
+    "total": 0
+  },
+  "integration": {
+    "passed": 0,
+    "failed": 0,
+    "total": 0
+  },
+  "startTime": "2025-09-25T18:47:42.942Z",
+  "endTime": "2025-09-25T18:48:32.514Z"
+}

@@ -5,7 +5,10 @@ Review Service is a critical microservice for the MVP Russian gaming platform th
 ## Features
 
 - User review creation and management
-- Game rating system with caching
+- Game rating system with Redis caching (5-minute TTL)
+- Automatic rating recalculation on review changes
+- Background task for bulk rating recalculation
+- Performance metrics tracking for rating operations
 - Integration with other MVP services (Library, Achievement, Notification, Game Catalog)
 - JWT authentication and authorization
 - PostgreSQL database with TypeORM
@@ -76,6 +79,13 @@ npm run start:prod
 ### Ratings
 - `GET /ratings/game/:gameId` - Get game rating (cached)
 
+### Admin (requires authentication)
+- `POST /admin/recalculate-ratings` - Trigger manual recalculation of all game ratings
+- `GET /admin/recalculation-status` - Get status of rating recalculation process
+- `GET /admin/metrics` - Get performance metrics summary
+- `GET /admin/metrics/raw` - Get raw performance metrics data
+- `POST /admin/metrics/clear` - Clear all performance metrics
+
 ### Health
 - `GET /health` - Health check endpoint
 
@@ -100,6 +110,7 @@ Key variables:
 - `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `DATABASE_NAME` - PostgreSQL configuration
 - `REDIS_HOST`, `REDIS_PORT` - Redis configuration
 - `JWT_SECRET` - JWT secret for authentication
+- `RATING_RECALCULATION_INTERVAL_HOURS` - Interval for automatic rating recalculation (default: 24 hours)
 - External service URLs for integration
 
 ## Docker

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { BackgroundTasksService } from './services/background-tasks.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -31,6 +32,7 @@ async function bootstrap() {
     )
     .addTag('reviews', 'Game review management endpoints')
     .addTag('ratings', 'Game rating retrieval endpoints')
+    .addTag('admin', 'Administrative endpoints for rating management and metrics')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -40,8 +42,14 @@ async function bootstrap() {
     },
   });
 
+  // Start periodic rating recalculation
+  const backgroundTasksService = app.get(BackgroundTasksService);
+  const recalculationInterval = parseInt(process.env.RATING_RECALCULATION_INTERVAL_HOURS || '24', 10);
+  await backgroundTasksService.schedulePeriodicRecalculation(recalculationInterval);
+
   await app.listen(process.env.PORT ?? 3000);
   console.log(`Review Service is running on: http://localhost:${process.env.PORT ?? 3000}`);
   console.log(`Swagger documentation available at: http://localhost:${process.env.PORT ?? 3000}/api/docs`);
+  console.log(`Periodic rating recalculation scheduled every ${recalculationInterval} hours`);
 }
 bootstrap();

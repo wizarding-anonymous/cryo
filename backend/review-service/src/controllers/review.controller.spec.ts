@@ -3,6 +3,7 @@ import { ReviewController } from './review.controller';
 import { ReviewService } from '../services/review.service';
 import { CreateReviewDto, UpdateReviewDto, PaginationDto } from '../dto';
 import { Review } from '../entities/review.entity';
+import { AuthenticatedRequest } from '../guards/jwt-auth.guard';
 
 describe('ReviewController', () => {
   let controller: ReviewController;
@@ -57,7 +58,9 @@ describe('ReviewController', () => {
         rating: 5,
       };
 
-      const mockRequest = { user: { id: 'user-123' } };
+      const mockRequest = { 
+        user: { id: 'user-123', email: 'test@example.com' } 
+      } as AuthenticatedRequest;
       mockReviewService.createReview.mockResolvedValue(mockReview);
 
       const result = await controller.createReview(mockRequest, createReviewDto);
@@ -73,7 +76,9 @@ describe('ReviewController', () => {
         rating: 5,
       };
 
-      const mockRequest = { user: { id: 'user-123', email: 'test@example.com' } };
+      const mockRequest = { 
+        user: { id: 'user-123', email: 'test@example.com' } 
+      } as AuthenticatedRequest;
       mockReviewService.createReview.mockResolvedValue(mockReview);
 
       const result = await controller.createReview(mockRequest, createReviewDto);
@@ -109,7 +114,9 @@ describe('ReviewController', () => {
         rating: 4,
       };
 
-      const mockRequest = { user: { id: 'user-123' } };
+      const mockRequest = { 
+        user: { id: 'user-123', email: 'test@example.com' } 
+      } as AuthenticatedRequest;
       const updatedReview = { ...mockReview, ...updateReviewDto };
       mockReviewService.updateReview.mockResolvedValue(updatedReview);
 
@@ -123,7 +130,9 @@ describe('ReviewController', () => {
   describe('deleteReview', () => {
     it('should delete a review successfully', async () => {
       const reviewId = '123e4567-e89b-12d3-a456-426614174000';
-      const mockRequest = { user: { id: 'user-123' } };
+      const mockRequest = { 
+        user: { id: 'user-123', email: 'test@example.com' } 
+      } as AuthenticatedRequest;
 
       mockReviewService.deleteReview.mockResolvedValue(undefined);
 

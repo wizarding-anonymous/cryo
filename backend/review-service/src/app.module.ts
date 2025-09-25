@@ -9,8 +9,8 @@ import { ConfigModule } from './config/config.module';
 import { databaseConfig } from './config/database.config';
 import { redisConfig } from './config/redis.config';
 import { Review, GameRating } from './entities';
-import { ReviewService, RatingService, OwnershipService } from './services';
-import { ReviewController, RatingController } from './controllers';
+import { ReviewService, RatingService, OwnershipService, MetricsService, BackgroundTasksService } from './services';
+import { ReviewController, RatingController, AdminController } from './controllers';
 import { HttpExceptionFilter } from './filters';
 
 @Module({
@@ -24,12 +24,14 @@ import { HttpExceptionFilter } from './filters';
       maxRedirects: 3,
     }),
   ],
-  controllers: [AppController, ReviewController, RatingController],
+  controllers: [AppController, ReviewController, RatingController, AdminController],
   providers: [
     AppService,
     ReviewService,
     RatingService,
     OwnershipService,
+    MetricsService,
+    BackgroundTasksService,
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,
