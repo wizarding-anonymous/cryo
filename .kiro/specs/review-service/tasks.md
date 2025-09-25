@@ -1,12 +1,24 @@
-# Implementation Plan - Review Service MVP
+# Implementation Plan
 
-## Overview
-
-Создать базовый сервис отзывов для MVP российской игровой платформы с простыми отзывами и рейтингами за 1 месяц.
+Create a basic review service for the MVP Russian gaming platform with simple reviews and ratings functionality.
 
 ## Tasks
 
-- [с] 1. Настройка проекта и базовой инфраструктуры
+- [x] 1. Set up project and basic infrastructure
+
+
+
+
+
+  - Create new project with `nest new review-service`
+  - Install dependencies: @nestjs/typeorm, @nestjs/axios, @nestjs/cache-manager, class-validator, class-transformer
+  - Configure TypeScript, ESLint, Prettier, Jest (built into NestJS)
+  - Create Dockerfile for development and production
+  - Set up docker-compose with PostgreSQL and Redis
+  - Create NestJS configuration modules
+  - _Requirements: 5_
+
+- [x] 2. Set up database and caching
 
 
 
@@ -16,71 +28,39 @@
 
 
 
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Создать новый проект с `nest new review-service`
-  - Установить зависимости: @nestjs/typeorm, @nestjs/axios, @nestjs/cache-manager, class-validator, class-transformer
-  - Настроить TypeScript, ESLint, Prettier, Jest (встроенные в NestJS)
-  - Создать Dockerfile для development и production
-  - Настроить docker-compose с PostgreSQL и Redis
-  - Создать конфигурационные модули NestJS
-  - _Requirements: Все требования_
-
-- [м] 2. Настройка базы данных и кеширования
-
-
-
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Настроить TypeORM модуль в NestJS с PostgreSQL
-  - Создать Review и GameRating entities с декораторами TypeORM
-  - Настроить систему миграций TypeORM
-  - Создать индексы для gameId, userId и составной индекс (gameId, userId)
-  - Настроить Redis для кеширования рейтингов игр
+  - Configure TypeORM module in NestJS with PostgreSQL
+  - Create Review and GameRating entities with TypeORM decorators
+  - Set up TypeORM migration system
+  - Create indexes for gameId, userId and composite index (gameId, userId)
+  - Configure Redis for game rating caching
   - _Requirements: 1, 2, 3, 4_
 
-- [x] 3. Реализация базовых доменных моделей
+- [x] 3. Implement basic domain models
 
 
 
 
 
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Создать Review entity с декораторами TypeORM (@Entity, @Column, @PrimaryGeneratedColumn, @Index)
-  - Создать GameRating entity с составным ключом по gameId
-  - Создать DTO классы с class-validator декораторами (CreateReviewDto, UpdateReviewDto, PaginationDto)
-  - Реализовать валидацию текста отзыва (10-1000 символов) и рейтинга (1-5 звезд)
+  - Create Review entity with TypeORM decorators (@Entity, @Column, @PrimaryGeneratedColumn, @Index)
+  - Create GameRating entity with composite key by gameId
+  - Create DTO classes with class-validator decorators (CreateReviewDto, UpdateReviewDto, PaginationDto)
+  - Implement validation for review text (10-1000 characters) and rating (1-5 stars)
   - _Requirements: 1, 2_
 
-- [x] 4. Реализация сервисов бизнес-логики
+- [x] 4. Implement business logic services
 
 
 
 
 
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Создать ReviewService с методами: createReview, getGameReviews, updateReview, deleteReview, getUserReviews
-  - Создать RatingService с методами: calculateGameRating, updateGameRating, getGameRating
-  - Создать OwnershipService для проверки владения игрой через Library Service
-  - Реализовать проверку уникальности отзыва (один отзыв на игру от пользователя)
-  - Добавить dependency injection через NestJS декораторы
+  - Create ReviewService with methods: createReview, getGameReviews, updateview, deleteReview, getUserReviews
+  - Cre
+atingService with methods: calculateGameRating, updateGameRating, getGameRating
+  - Create OwnershipService for checking game ownership through Library Service
+  - Implement review uniqueness check (one review per game per user)
+  - Add dependency injection through NestJS decorators
   - _Requirements: 1, 3, 4_
-
-- [x] 5. Реализация интеграции с внешними сервисами
-
+- [x] 5. Implement external service integratрвисами
 
 
 
@@ -90,210 +70,105 @@
 
 
 
-
-
-
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Настроить HttpModule для взаимодействия с Library Service
-  - Реализовать проверку владения игрой перед созданием отзыва
-  - Добавить обработку ошибок внешних сервисов
-  - Создать retry механизм для HTTP запросов
-  - Добавить кеширование результатов проверки владения
+  - Configure HttpModule for Library Service interaction
+  - Implement game ownership verification before review creation
+  - Add external service error handling
+  - Create retry mechanism for HTTP requests
+  - Add caching for ownership verification results
   - _Requirements: 1, 4_
 
-- [x] 6. Создание REST API контроллеров
+- [x] 6. Create REST API controllers
 
 
 
 
-
-
-
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Создать ReviewController с эндпоинтами: POST /reviews, GET /reviews/game/:gameId, PUT /reviews/:id, DELETE /reviews/:id
-  - Создать RatingController с эндпоинтом: GET /ratings/game/:gameId
-  - Добавить Swagger декораторы для автоматической документации API
-  - Реализовать валидацию входных данных через ValidationPipe
-  - Добавить пагинацию для списка отзывов (по 10 штук)
+  - Create ReviewController with endpoints: POST /reviews, GET /reviews/game/:gameId, PUT /reviews/:id, DELETE /reviews/:id
+  - Create RatingController with endpoint: GET /ratings/game/:gameId
+  - Add Swagger decorators for automatic API documentation
+  - Implement input validation through ValidationPipe
+  - Add pagination for review lists (10 per page)
   - _Requirements: 1, 2, 3, 4_
 
-- [x] 7. Добавление middleware и guards
+- [x] 7. Add middleware and guards
 
 
 
 
 
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Настроить JwtAuthGuard для защиты эндпоинтов создания/редактирования отзывов
-  - Создать OwnershipGuard для проверки прав на редактирование отзыва
-  - Добавить ValidationPipe для автоматической валидации DTO
-  - Настроить CacheInterceptor для кеширования рейтингов игр
-  - Создать ExceptionFilter для унифицированной обработки ошибок
+  - Configure JwtAuthGuard to protect review creation/editing endpoints
+  - Create OwnershipGuard to check review editing permissions
+  - Add ValidationPipe for automatic DTO validation
+  - Configure CacheInterceptor for game rating caching
+  - Create ExceptionFilter for unified error handling
   - _Requirements: 4, 5_
 
-- [x] 8. Реализация системы рейтингов и кеширования
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Реализовать автоматический пересчет рейтинга игры при создании/обновлении/удалении отзыва
-  - Добавить кеширование рейтингов в Redis с TTL 5 минут
-  - Создать фоновую задачу для пересчета рейтингов всех игр
-  - Реализовать инвалидацию кеша при изменении отзывов
-  - Добавить метрики производительности для операций с рейтингами
+- [ ] 8. Implement rating system and caching
+  - Implement automatic game rating recalculation on review create/update/delete
+  - Add rating caching in Redis with 5-minute TTL
+  - Create background task for recalculating all game ratings
+  - Implement cache invalidation on review changes
+  - Add performance metrics for rating operations
   - _Requirements: 2, 3_
 
-- [ ] 9. Тестирование и документация API
+- [ ] 9. Testing and API documentation
+  - Write unit tests for all services (ReviewService, RatingService, OwnershipService)
+  - Create integration tests for REST API endpoints with supertest
+  - Add e2e tests for complete review creation and viewing scenarios
+  - Test Library Service integration (mock external calls)
+  - Configure automatic Swagger documentation generation
+  - Create health check endpoint GET /health for monitoring
+  - Ensure all microservice tests pass and are working correctly
+  - _Requirements: 5_
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Написать unit тесты для всех сервисов (ReviewService, RatingService, OwnershipService)
-  - Создать integration тесты для REST API эндпоинтов с supertest
-  - Добавить e2e тесты для полных сценариев создания и просмотра отзывов
-  - Протестировать интеграцию с Library Service (mock внешние вызовы)
-  - Настроить автоматическую генерацию Swagger документации
-  - Создать health check эндпоинт GET /health для мониторинга
-  - Убедись что все тесты микросервиса проходят и исправны
-  - _Requirements: Все требования_
-
-- [ ] 10. Интеграция с MVP сервисами
-
-
-
-
-
-
-
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Создать webhook для уведомления Achievement Service о создании первого отзыва
-  - Интегрировать с Notification Service для уведомлений о новых отзывах
-  - Добавить API для Game Catalog Service для получения рейтингов игр
-  - Создать интеграцию с Library Service для проверки владения играми
-  - Протестировать все интеграции в рамках MVP
+- [ ] 10. Integration with MVP services
+  - Create webhook to notify Achievement Service about first review creation
+  - Integrate with Notification Service for new review notifications
+  - Add API for Game Catalog Service to get game ratings
+  - Create integration with Library Service for game ownership verification
+  - Test all integrations within MVP scope
   - _Requirements: 4_
 
-- [ ] 11. Подготовка к production развертыванию MVP
+- [ ] 11. Prepare for production deployment
+  - Create optimized Dockerfile
+  - Configure basic Kubernetes manifests (Deployment, Service, ConfigMap)
+  - Add health check endpoints
+  - Configure basic logging
+  - Conduct load testing for 1000 users
+  - Create monitoring for service integrations
+  - _Requirements: 5_
 
+- [ ] 12. Integration testing with MVP ecosystem
+  - Test integration with Library Service for game ownership verification before review creation
+  - Verify integration with Game Catalog Service for game rating updates
+  - Test integration with Achievement Service for review creation achievements
+  - Verify integration with Notification Service for new review notifications
+  - Create end-to-end tests for complete cycle: game purchase → review creation → rating update
+  - Test rating synchronization between Review Service and Game Catalog Service
+  - _Requirements: 6_
 
+- [ ] 13. Load testing of review system
+  - Conduct load testing for 1000+ concurrent users creating reviews
+  - Test rating calculation performance under high load
+  - Optimize game rating caching in Redis for fast access
+  - Conduct stress testing for review creation and update operations
+  - Measure and optimize review API response time (target < 200ms)
+  - Test auto-scaling during mass review creation
+  - _Requirements: 7_
 
+- [ ] 14. Security and protection of review system
+  - Conduct security audit of all review API endpoints
+  - Test protection against spam and fake reviews
+  - Verify protection against unauthorized editing of other users' reviews
+  - Test review content validation and protection against malicious content
+  - Analyze vulnerabilities in rating system and manipulation attempts
+  - Verify protection against rating manipulation and review system abuse
+  - _Requirements: 8_
 
-
-
-
-
-
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Создать оптимизированный Dockerfile
-  - Настроить базовые Kubernetes манифесты (Deployment, Service, ConfigMap)
-  - Добавить health check endpoints
-  - Настроить базовое логирование
-  - Провести нагрузочное тестирование для 1000 пользователей
-  - Создать мониторинг интеграций между сервисами
-  - _Requirements: Все требования_
-
-## Задачи Месяца 4: Интеграционное тестирование и финализация MVP
-
-- [ ] 12. Интеграционное тестирование системы отзывов с MVP экосистемой
-  - Протестировать интеграцию с Library Service для проверки владения играми перед созданием отзывов
-  - Проверить интеграцию с Game Catalog Service для обновления рейтингов игр
-  - Протестировать интеграцию с Achievement Service для достижений за создание отзывов
-  - Проверить интеграцию с Notification Service для уведомлений о новых отзывах
-  - Создать end-to-end тесты для полного цикла: покупка игры → создание отзыва → обновление рейтинга
-  - Протестировать синхронизацию рейтингов между Review Service и Game Catalog Service
-  - _Requirements: Интеграционная готовность MVP_
-
-- [ ] 13. Нагрузочное тестирование системы отзывов
-  - Провести нагрузочное тестирование для 1000+ одновременных пользователей создающих отзывы
-  - Протестировать производительность расчета рейтингов под высокой нагрузкой
-  - Оптимизировать кеширование рейтингов игр в Redis для быстрого доступа
-  - Провести stress testing для операций создания и обновления отзывов
-  - Измерить и оптимизировать время ответа API отзывов (цель < 200ms)
-  - Протестировать автомасштабирование при массовом создании отзывов
-  - _Requirements: Производительность MVP_
-
-- [ ] 14. Безопасность и защита системы отзывов
-  - Провести security audit всех API эндпоинтов отзывов
-  - Протестировать защиту от спама и фейковых отзывов
-  - Проверить защиту от несанкционированного редактирования чужих отзывов
-  - Протестировать валидацию контента отзывов и защиту от вредоносного содержимого
-  - Провести анализ уязвимостей в системе рейтингов и их манипуляций
-  - Проверить защиту от накрутки рейтингов и злоупотреблений системой отзывов
-  - _Requirements: Безопасность MVP_
-
-- [ ] 15. Подготовка системы отзывов к бета-тестированию
-  - Настроить мониторинг активности создания отзывов и качества контента
-  - Подготовить аналитику по распределению рейтингов и популярности игр
-  - Создать dashboard для отслеживания метрик отзывов в реальном времени
-  - Настроить алертинг для подозрительной активности в отзывах
-  - Подготовить систему модерации отзывов для контроля качества контента
-  - Создать механизм обратной связи для улучшения системы отзывов
-  - _Requirements: Готовность к бета-тестированию_
-
-- [ ] 16. Документация системы отзывов и финализация
-  - Создать пользовательское руководство по написанию и чтению отзывов
-  - Подготовить FAQ по вопросам отзывов, рейтингов и модерации
-  - Создать guidelines для написания качественных и полезных отзывов
-  - Обновить техническую документацию для интеграций с системой отзывов
-  - Подготовить руководство по модерации отзывов и управлению контентом
-  - Создать план развития системы отзывов после MVP (лайки, комментарии, расширенная модерация)
-  - _Requirements: Пользовательская документация MVP_
+- [ ] 15. Prepare review system for beta testing
+  - Configure monitoring for review creation activity and content quality
+  - Prepare analytics for rating distribution and game popularity
+  - Create dashboard for real-time review metrics tracking
+  - Configure alerting for suspicious review activity
+  - Prepare review moderation system for content quality control
+  - Create feedback mechanism for review system improvement
+  - _Requirements: 9_

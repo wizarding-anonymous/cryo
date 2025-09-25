@@ -1,122 +1,113 @@
-# Требования к Review Service (MVP) - Месяц 3
+# Requirements Document
 
-## Введение
+## Introduction
 
-Review Service - критически важный микросервис для MVP российской игровой платформы. Разрабатывается в **Месяце 3** для добавления пользовательских отзывов. Обеспечивает базовые отзывы и рейтинги: создание отзывов, простые рейтинги через REST API с поддержкой Docker и 100% покрытием тестами.
+Review Service is a critical microservice for the MVP of the Russian gaming platform. This service enables users to create and view game reviews with basic rating functionality. The service provides essential review and rating features through REST API with Docker support and comprehensive test coverage.
 
 ## Требования
 
-### Требование 1 (Создание отзывов)
+### Requirement 1
 
-**Пользовательская история:** Как пользователь, я хочу оставлять отзывы о купленных играх, чтобы поделиться мнением.
+**User Story:** As a user, I want to leave reviews for games I own, so that I can share my opinion with other players.
 
-#### Критерии приемки
+#### Acceptance Criteria
 
-1. КОГДА пользователь владеет игрой ТОГДА система ДОЛЖНА позволить ему оставить отзыв
-2. КОГДА пользователь пишет отзыв ТОГДА система ДОЛЖНА проверить владение игрой через Library Service
-3. КОГДА отзыв создан ТОГДА система ДОЛЖНА сохранить его с рейтингом от 1 до 5 звезд
-4. ЕСЛИ пользователь не владеет игрой ТОГДА система ДОЛЖНА показать ошибку доступа
+1. WHEN a user owns a game THEN the system SHALL allow them to create a review
+2. WHEN a user creates a review THEN the system SHALL verify game ownership through Library Service
+3. WHEN a review is created THEN the system SHALL save it with a rating from 1 to 5 stars
+4. IF a user does not own the game THEN the system SHALL return an access denied error
 
-### Требование 2 (Просмотр отзывов)
+### Requirement 2
 
-**Пользовательская история:** Как пользователь, я хочу читать отзывы других игроков, чтобы принимать решения о покупке.
+**User Story:** As a user, I want to read reviews from other players, so that I can make informed purchase decisions.
 
-#### Критерии приемки
+#### Acceptance Criteria
 
-1. КОГДА пользователь просматривает игру ТОГДА система ДОЛЖНА показать последние отзывы
-2. КОГДА пользователь просматривает отзывы ТОГДА система ДОЛЖНА показать средний рейтинг игры
-3. КОГДА отзывов много ТОГДА система ДОЛЖНА показывать их с пагинацией по 10 штук
-4. ЕСЛИ отзывов нет ТОГДА система ДОЛЖНА показать "Отзывов пока нет"
+1. WHEN a user views a game THEN the system SHALL display the latest reviews
+2. WHEN a user views reviews THEN the system SHALL display the game's average rating
+3. WHEN there are many reviews THEN the system SHALL display them with pagination of 10 per page
+4. IF there are no reviews THEN the system SHALL display "No reviews yet"
 
-### Требование 3 (Базовые рейтинги)
+### Requirement 3
 
-**Пользовательская история:** Как пользователь, я хочу видеть общий рейтинг игры, чтобы быстро оценить ее качество.
+**User Story:** As a user, I want to see the overall game rating, so that I can quickly assess its quality.
 
-#### Критерии приемки
+#### Acceptance Criteria
 
-1. КОГДА добавляется новый отзыв ТОГДА система ДОЛЖНА пересчитать средний рейтинг игры
-2. КОГДА пользователь просматривает каталог ТОГДА система ДОЛЖНА показать рейтинги игр
-3. КОГДА рейтинг обновляется ТОГДА система ДОЛЖНА уведомить Game Catalog Service
-4. ЕСЛИ у игры нет отзывов ТОГДА рейтинг ДОЛЖЕН быть "Нет рейтинга"
+1. WHEN a new review is added THEN the system SHALL recalculate the game's average rating
+2. WHEN a user browses the catalog THEN the system SHALL display game ratings
+3. WHEN a rating is updated THEN the system SHALL notify Game Catalog Service
+4. IF a game has no reviews THEN the rating SHALL display "No rating"
 
-### Требование 4 (API для интеграции с MVP сервисами)
+### Requirement 4
 
-**Пользовательская история:** Как другой микросервис, я хочу получать информацию о рейтингах игр для MVP функций.
+**User Story:** As another microservice, I want to access game rating information for MVP functionality.
 
-#### Критерии приемки
+#### Acceptance Criteria
 
-1. КОГДА Game Catalog Service запрашивает рейтинг для отображения в каталоге ТОГДА система ДОЛЖНА вернуть средний рейтинг и количество отзывов
-2. КОГДА frontend запрашивает отзывы для страницы игры ТОГДА система ДОЛЖНА вернуть список с пагинацией
-3. КОГДА Library Service проверяет владение игрой ТОГДА система ДОЛЖНА разрешить создание отзыва
-4. КОГДА Achievement Service проверяет создание отзыва для достижения "Первый отзыв" ТОГДА система ДОЛЖНА уведомить о новом отзыве
-5. КОГДА Notification Service нужно уведомить о новом отзыве ТОГДА система ДОЛЖНА предоставить данные отзыва
-6. ЕСЛИ игра не найдена ТОГДА система ДОЛЖНА вернуть ошибку 404
+1. WHEN Game Catalog Service requests rating for catalog display THEN the system SHALL return average rating and review count
+2. WHEN frontend requests reviews for game page THEN the system SHALL return paginated list
+3. WHEN Library Service verifies game ownership THEN the system SHALL allow review creation
+4. WHEN Achievement Service checks for "First Review" achievement THEN the system SHALL notify about new review
+5. WHEN Notification Service needs to notify about new review THEN the system SHALL provide review data
+6. IF game is not found THEN the system SHALL return 404 error
 
-### Требование 5 (Архитектурные требования MVP)
+### Requirement 5
 
-**Пользовательская история:** Как DevOps инженер, я хочу развернуть Review Service в Kubernetes.
+**User Story:** As a DevOps engineer, I want to deploy Review Service in Kubernetes.
 
-#### Критерии приемки
+#### Acceptance Criteria
 
-1. КОГДА сервис развертывается ТОГДА он ДОЛЖЕН работать в Docker контейнере
-2. КОГДА команда тестирует сервис ТОГДА покрытие тестами ДОЛЖНО быть 100%
-3. КОГДА происходит работа с отзывами ТОГДА время ответа ДОЛЖНО быть < 200ms
-4. ЕСЛИ нагрузка увеличивается ТОГДА сервис ДОЛЖЕН поддерживать 1000 одновременных пользователей
+1. WHEN the service is deployed THEN it SHALL run in a Docker container
+2. WHEN the team tests the service THEN test coverage SHALL be 100%
+3. WHEN processing reviews THEN response time SHALL be < 200ms
+4. IF load increases THEN the service SHALL support 1000 concurrent users
 
-## Ограничения MVP (Месяц 3)
+### Requirement 6
 
-### Что НЕ включено в Review Service MVP:
-- ❌ Модерация отзывов - **После MVP**
-- ❌ Фильтрация и сортировка - **После MVP**
-- ❌ Лайки/дизлайки отзывов - **После MVP**
-- ❌ Защита от фейковых отзывов - **После MVP**
-- ❌ Рекомендательная система - **После MVP**
-- ❌ Детальная аналитика - **После MVP**
-- ❌ Комментарии к отзывам - **После MVP**
-- ❌ Многоязычность - **После MVP**
-- ❌ Персонализация - **После MVP**
-- ❌ Социальные функции - **После MVP**
+**User Story:** As a QA engineer, I want to test Review Service as part of the complete MVP ecosystem.
 
-### Технические требования MVP:
-- ✅ REST API для отзывов и рейтингов
-- ✅ Docker контейнеризация
-- ✅ 100% покрытие тестами
-- ✅ Kubernetes готовность
-- ✅ Простые отзывы с рейтингом 1-5 звезд
-- ✅ Интеграция с Library Service для проверки владения
+#### Acceptance Criteria
 
-## Критерии готовности MVP (Месяц 3)
+1. WHEN conducting end-to-end testing THEN the complete review creation cycle SHALL work correctly
+2. WHEN testing integrations THEN ownership verification through Library Service SHALL work reliably
+3. WHEN checking rating synchronization THEN updates in Game Catalog Service SHALL happen automatically
+4. IF external services are unavailable THEN the system SHALL handle errors gracefully
 
-### Функциональные критерии:
-1. ✅ Пользователи могут оставлять отзывы о купленных играх
-2. ✅ Отображение отзывов и рейтингов в каталоге
-3. ✅ Расчет среднего рейтинга игр
-4. ✅ API для интеграции с Game Catalog и Library сервисами
-5. ✅ Базовая пагинация отзывов
+### Requirement 7
 
-### Технические критерии:
-1. ✅ Docker образ собирается и запускается
-2. ✅ Все тесты проходят (100% покрытие)
-3. ✅ API отвечает за время < 200ms
-4. ✅ Поддержка 1000 одновременных пользователей
-5. ✅ Готовность к развертыванию в Kubernetes
+**User Story:** As a DevOps engineer, I want to ensure Review Service can handle 1000+ concurrent users.
 
-### Интеграционные критерии MVP:
-1. ✅ Интеграция с Library Service для проверки владения играми
-2. ✅ Интеграция с Game Catalog Service для обновления рейтингов
-3. ✅ Интеграция с Achievement Service для отслеживания создания отзывов
-4. ✅ Интеграция с Notification Service для уведомлений о новых отзывах
-5. ✅ Готовность к интеграционному тестированию в Месяце 4
+#### Acceptance Criteria
 
-## Требования Месяца 4: Интеграционное тестирование и финализация
+1. WHEN 1000+ users simultaneously create reviews THEN the system SHALL process all requests
+2. WHEN mass review creation occurs THEN rating calculations SHALL remain fast
+3. WHEN testing performance THEN Redis rating caching SHALL work efficiently
+4. IF load is critical THEN API response time SHALL remain < 200ms
 
-### Требование 6 (Интеграционное тестирование системы отзывов - Месяц 4)
+### Requirement 8
 
-**Пользовательская история:** Как QA инженер, я хочу протестировать Review Service в составе всей MVP экосистемы.
+**User Story:** As a security engineer, I want to ensure the review system is secure.
 
-#### Критерии приемки
+#### Acceptance Criteria
 
-1. КОГДА проводится end-to-end тестирование ТОГДА полный цикл создания отзыва ДОЛЖЕН работать корректно
+1. WHEN conducting penetration testing THEN all review API endpoints SHALL be protected from attacks
+2. WHEN testing spam protection THEN the system SHALL prevent fake reviews
+3. WHEN checking content validation THEN the system SHALL protect against malicious content
+4. IF rating manipulation attempts are detected THEN the system SHALL block them
+
+### Requirement 9
+
+**User Story:** As a product manager, I want to prepare Review Service for beta testing with real users.
+
+#### Acceptance Criteria
+
+1. WHEN setting up monitoring THEN review creation activity SHALL be tracked
+2. WHEN preparing analytics THEN rating distribution SHALL be analyzed
+3. WHEN configuring moderation THEN the system SHALL support content quality control
+4. IF review issues occur THEN the system SHALL provide feedback mechanisms
+
+
 2. КОГДА тестируются интеграции ТОГДА проверка владения через Library Service ДОЛЖНА работать стабильно
 3. КОГДА проверяется синхронизация рейтингов ТОГДА обновления в Game Catalog Service ДОЛЖНЫ происходить автоматически
 4. ЕСЛИ внешние сервисы недоступны ТОГДА система ДОЛЖНА корректно обрабатывать ошибки
@@ -179,4 +170,3 @@ Review Service - критически важный микросервис для
 2. ✅ Аналитика по распределению рейтингов и популярности игр
 3. ✅ Система модерации отзывов для контроля качества
 4. ✅ Механизм обратной связи для улучшения системы отзывов
-

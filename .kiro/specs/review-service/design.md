@@ -2,9 +2,16 @@
 
 ## Overview
 
-Review Service - базовый сервис отзывов для MVP российской игровой платформы. Позволяет пользователям оставлять простые отзывы на игры и просматривать мнения других.
+Review Service is a critical microservice for the MVP Russian gaming platform that enables users to create and view game reviews with comprehensive rating functionality. The service provides essential review and rating features through REST API with Docker support, comprehensive test coverage, and production-ready security and monitoring capabilities.
 
-**Технологический стек:** NestJS + TypeScript + PostgreSQL + Redis (основной стек для бизнес-логики)
+**Technology Stack:** NestJS + TypeScript + PostgreSQL + Redis (primary stack for business logic)
+
+**Key Design Decisions:**
+- **NestJS Framework**: Chosen for its robust dependency injection, built-in validation, and microservice architecture support
+- **PostgreSQL**: Selected for ACID compliance and complex query support for review analytics
+- **Redis Caching**: Implemented for high-performance game rating retrieval (< 200ms response time requirement)
+- **JWT Authentication**: Used for secure user authentication and authorization
+- **Ownership Verification**: Integrated with Library Service to ensure only game owners can review
 
 ## Architecture
 
@@ -130,33 +137,33 @@ export class RatingController {
 ### REST API Endpoints
 
 #### Reviews
-- `POST /reviews` - Создать отзыв
-- `GET /reviews/game/:gameId` - Отзывы на игру с пагинацией
-- `PUT /reviews/:id` - Обновить отзыв
-- `DELETE /reviews/:id` - Удалить отзыв
-- `GET /reviews/user/:userId` - Отзывы пользователя
+- `POST /reviews` - Create review
+- `GET /reviews/game/:gameId` - Get game reviews with pagination
+- `PUT /reviews/:id` - Update review
+- `DELETE /reviews/:id` - Delete review
+- `GET /reviews/user/:userId` - Get user reviews
 
 #### Ratings
-- `GET /ratings/game/:gameId` - Рейтинг игры (кешируется)
+- `GET /ratings/game/:gameId` - Get game rating (cached)
 
 ### Services
 
 #### ReviewService
-- `createReview(userId, createDto)` - Создать отзыв с проверкой владения
-- `getGameReviews(gameId, pagination)` - Отзывы на игру с пагинацией
-- `updateReview(reviewId, userId, updateDto)` - Обновить отзыв с проверкой прав
-- `deleteReview(reviewId, userId)` - Удалить отзыв с проверкой прав
-- `getUserReviews(userId)` - Отзывы пользователя
-- `notifyFirstReviewAchievement(userId)` - Уведомить Achievement Service о первом отзыве
-- `notifyNewReview(review)` - Уведомить Notification Service о новом отзыве
+- `createReview(userId, createDto)` - Create review with ownership verification
+- `getGameReviews(gameId, pagination)` - Get game reviews with pagination
+- `updateReview(reviewId, userId, updateDto)` - Update review with permission check
+- `deleteReview(reviewId, userId)` - Delete review with permission check
+- `getUserReviews(userId)` - Get user reviews
+- `notifyFirstReviewAchievement(userId)` - Notify Achievement Service about first review
+- `notifyNewReview(review)` - Notify Notification Service about new review
 
 #### RatingService
-- `calculateGameRating(gameId)` - Рассчитать рейтинг игры
-- `updateGameRating(gameId)` - Обновить рейтинг игры
-- `getGameRating(gameId)` - Получить рейтинг игры (с кешированием)
+- `calculateGameRating(gameId)` - Calculate game rating
+- `updateGameRating(gameId)` - Update game rating
+- `getGameRating(gameId)` - Get game rating (with caching)
 
 #### OwnershipService
-- `checkGameOwnership(userId, gameId)` - Проверить владение игрой через Library Service
+- `checkGameOwnership(userId, gameId)` - Check game ownership through Library Service
 
 ## Data Models
 
@@ -259,12 +266,12 @@ export class PaginationDto {
 ## Error Handling
 
 ### Error Types
-- `ValidationError` - Ошибки валидации данных
-- `ReviewNotFoundError` - Отзыв не найден
-- `DuplicateReviewError` - Отзыв уже существует
-- `UnauthorizedError` - Нет прав на действие
-- `GameOwnershipError` - Пользователь не владеет игрой
-- `ExternalServiceError` - Ошибка внешнего сервиса
+- `ValidationError` - Data validation errors
+- `ReviewNotFoundError` - Review not found
+- `DuplicateReviewError` - Review already exists
+- `UnauthorizedError` - No permission for action
+- `GameOwnershipError` - User does not own the game
+- `ExternalServiceError` - External service error
 
 ### Error Response Format
 
@@ -280,37 +287,35 @@ export class PaginationDto {
 
 ## Testing Strategy
 
-### Unit Tests (Месяц 1-3)
-- ReviewService методы
-- RatingService методы
-- OwnershipService методы
-- Валидация DTO классов
+### Unit Tests
+- ReviewService methods
+- RatingService methods  
+- OwnershipService methods
+- DTO class validation
 
-### Integration Tests (Месяц 1-3)
+### Integration Tests
 - REST API endpoints
-- Database операции TypeORM
-- Расчет рейтингов
-- Интеграция с Library Service
+- TypeORM database operations
+- Rating calculations
+- Library Service integration
 
-### Integration Testing Strategy (Месяц 4)
+### End-to-End Testing Strategy
+- Complete cycle: game purchase → review creation → rating update
+- Integration testing with Library Service, Game Catalog Service, Achievement Service, Notification Service
+- Rating synchronization verification between Review Service and Game Catalog Service
+- Fault tolerance testing when external services are unavailable
 
-#### End-to-End Testing
-- Полный цикл: покупка игры → создание отзыва → обновление рейтинга
-- Тестирование интеграций с Library Service, Game Catalog Service, Achievement Service, Notification Service
-- Проверка синхронизации рейтингов между Review Service и Game Catalog Service
-- Тестирование отказоустойчивости при недоступности внешних сервисов
+### Load Testing Strategy
+- Load testing for 1000+ concurrent users creating reviews
+- Stress testing for rating calculation operations under high load
+- Redis rating caching performance testing
+- Auto-scaling verification during mass review creation
 
-#### Load Testing Strategy (Месяц 4)
-- Нагрузочное тестирование на 1000+ одновременных пользователей создающих отзывы
-- Stress testing для операций расчета рейтингов под высокой нагрузкой
-- Тестирование производительности кеширования рейтингов в Redis
-- Проверка автомасштабирования при массовом создании отзывов
-
-#### Security Testing Strategy (Месяц 4)
-- Пентестинг API эндпоинтов отзывов
-- Тестирование защиты от спама и фейковых отзывов
-- Проверка валидации контента отзывов и защиты от вредоносного содержимого
-- Тестирование защиты от накрутки рейтингов и злоупотреблений системой отзывов
+### Security Testing Strategy
+- Penetration testing of review API endpoints
+- Spam and fake review protection testing
+- Review content validation and malicious content protection verification
+- Rating manipulation and review system abuse protection testing
 
 ### Production Readiness Strategy (Месяц 4)
 
@@ -342,8 +347,8 @@ export class ReviewMetricsService {
 @Injectable()
 export class ContentModerationService {
   async moderateReview(review: CreateReviewDto): Promise<ModerationResult> {
-    // Базовая модерация контента для бета-тестирования
-    const suspiciousWords = ['спам', 'фейк', 'накрутка'];
+    // Basic content moderation for beta testing
+    const suspiciousWords = ['spam', 'fake', 'bot'];
     const containsSuspiciousContent = suspiciousWords.some(word => 
       review.text.toLowerCase().includes(word)
     );
@@ -356,7 +361,7 @@ export class ContentModerationService {
   }
 
   async flagReview(reviewId: string, reason: string) {
-    // Пометка отзыва для ручной модерации
+    // Flag review for manual moderation
     await this.reviewRepository.update(reviewId, {
       flagged: true,
       flagReason: reason,
@@ -409,7 +414,7 @@ export class ReviewAdminController {
 @Injectable()
 export class ReviewFeedbackService {
   async collectUserFeedback(userId: string, feedback: ReviewFeedbackDto) {
-    // Сбор обратной связи для улучшения системы отзывов
+    // Collect user feedback for review system improvement
     await this.feedbackRepository.save({
       userId,
       type: feedback.type,
@@ -418,7 +423,7 @@ export class ReviewFeedbackService {
       createdAt: new Date()
     });
 
-    // Отправка уведомления команде разработки
+    // Send notification to development team
     if (feedback.rating <= 2) {
       await this.notificationService.sendDeveloperAlert({
         type: 'negative_feedback',
@@ -429,7 +434,7 @@ export class ReviewFeedbackService {
   }
 
   async getImprovementSuggestions(): Promise<ImprovementSuggestion[]> {
-    // Анализ обратной связи для предложений по улучшению
+    // Analyze feedback for improvement suggestions
     const commonIssues = await this.feedbackRepository
       .createQueryBuilder('feedback')
       .select('feedback.message')
@@ -449,8 +454,8 @@ export class ReviewFeedbackService {
 ```
 
 ### Test Coverage Requirements
-- **Месяц 1-3**: Минимум 80% покрытие кода
-- **Месяц 4**: 100% покрытие критических путей отзывов и рейтингов
-- Все интеграции покрыты тестами
-- Система модерации покрыта тестами
-- Аналитика и мониторинг покрыты тестами
+- **Core Development**: Minimum 80% code coverage
+- **Production Ready**: 100% coverage of critical review and rating paths
+- All integrations covered by tests
+- Moderation system covered by tests
+- Analytics and monitoring covered by tests
