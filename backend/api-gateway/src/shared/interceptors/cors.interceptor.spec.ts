@@ -11,26 +11,31 @@ describe('CorsInterceptor', () => {
       send: jest.fn().mockReturnThis(),
     };
     const req = { method } as any;
-    const ctx = ({ switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }) } as any) as ExecutionContext;
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
+    } as any as ExecutionContext;
     return { ctx, res };
   };
 
   it('sets CORS headers and passes through', (done) => {
     const interceptor = new CorsInterceptor({ get: () => true } as any);
     const { ctx, res } = makeCtx('GET');
-    interceptor.intercept(ctx, { handle: () => of('ok') } as any).subscribe(() => {
-      expect((res as any).setHeader).toBeDefined();
-      done();
-    });
+    interceptor
+      .intercept(ctx, { handle: () => of('ok') } as any)
+      .subscribe(() => {
+        expect((res as any).setHeader).toBeDefined();
+        done();
+      });
   });
 
   it('short-circuits OPTIONS', (done) => {
     const interceptor = new CorsInterceptor({ get: () => true } as any);
     const { ctx, res } = makeCtx('OPTIONS');
-    interceptor.intercept(ctx, { handle: () => of('ok') } as any).subscribe(() => {
-      expect((res as any).status).toHaveBeenCalledWith(204);
-      done();
-    });
+    interceptor
+      .intercept(ctx, { handle: () => of('ok') } as any)
+      .subscribe(() => {
+        expect((res as any).status).toHaveBeenCalledWith(204);
+        done();
+      });
   });
 });
-

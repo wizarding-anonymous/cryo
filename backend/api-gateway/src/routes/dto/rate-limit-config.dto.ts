@@ -16,4 +16,3 @@ export class RateLimitConfigDto {
   @IsBoolean()
   skipFailedRequests?: boolean;
 }
-

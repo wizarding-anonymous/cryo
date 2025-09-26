@@ -11,4 +11,3 @@ export class MetricsController {
     return this.metricsService.metrics();
   }
 }
-

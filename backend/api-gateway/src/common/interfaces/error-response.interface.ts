@@ -8,4 +8,3 @@ export interface ErrorResponse {
   requestId?: string;
   details?: any;
 }
-

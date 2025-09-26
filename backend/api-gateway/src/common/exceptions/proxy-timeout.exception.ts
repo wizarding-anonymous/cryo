@@ -13,4 +13,3 @@ export class ProxyTimeoutException extends HttpException {
     );
   }
 }
-

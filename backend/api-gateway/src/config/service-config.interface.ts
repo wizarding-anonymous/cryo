@@ -12,4 +12,3 @@ export interface ServiceConfig {
   healthCheckPath: string;
   circuitBreaker?: CircuitBreakerConfig;
 }
-

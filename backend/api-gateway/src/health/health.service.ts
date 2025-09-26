@@ -14,8 +14,11 @@ export type ServiceHealthStatus = {
 export class HealthService {
   constructor(private readonly registry: ServiceRegistryService) {}
 
-  async checkGateway(): Promise<{ status: 'ok' | 'error'; timestamp: string; uptime: number }>
-  {
+  async checkGateway(): Promise<{
+    status: 'ok' | 'error';
+    timestamp: string;
+    uptime: number;
+  }> {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -30,7 +33,10 @@ export class HealthService {
       const start = Date.now();
       try {
         const url = `${svc.baseUrl.replace(/\/$/, '')}${svc.healthCheckPath}`;
-        const resp = await axios.get(url, { timeout: svc.timeout, validateStatus: () => true });
+        const resp = await axios.get(url, {
+          timeout: svc.timeout,
+          validateStatus: () => true,
+        });
         const rt = Date.now() - start;
         const ok = resp.status >= 200 && resp.status < 300;
         results.push({
@@ -54,4 +60,3 @@ export class HealthService {
     return results;
   }
 }
-

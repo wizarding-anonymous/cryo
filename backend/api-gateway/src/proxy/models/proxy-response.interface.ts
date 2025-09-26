@@ -4,4 +4,3 @@ export interface ProxyResponse {
   body: any;
   executionTime: number;
 }
-

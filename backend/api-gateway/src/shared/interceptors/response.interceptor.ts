@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { randomUUID } from 'crypto';
 import { Observable } from 'rxjs';
@@ -15,7 +20,10 @@ export class ResponseInterceptor implements NestInterceptor {
       requestId = (req as any).id || randomUUID();
       (req as any).id = requestId as string;
     }
-    res.setHeader('X-Request-Id', Array.isArray(requestId) ? requestId[0] : (requestId as string));
+    res.setHeader(
+      'X-Request-Id',
+      Array.isArray(requestId) ? requestId[0] : (requestId as string),
+    );
     return next.handle();
   }
 }

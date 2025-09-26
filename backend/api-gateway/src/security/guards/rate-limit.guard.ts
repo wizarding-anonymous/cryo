@@ -31,8 +31,12 @@ export class RateLimitGuard implements CanActivate {
   }
 
   private extractIp(req: Request & { ip: string }): string {
-    const xf = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim();
-    return xf || req.ip || (req.socket && req.socket.remoteAddress) || 'unknown';
+    const xf = (req.headers['x-forwarded-for'] as string | undefined)
+      ?.split(',')[0]
+      ?.trim();
+    return (
+      xf || req.ip || (req.socket && req.socket.remoteAddress) || 'unknown'
+    );
   }
 
   private extractPath(req: Request): string {

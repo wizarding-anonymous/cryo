@@ -1,4 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type { ErrorResponse } from '../interfaces/error-response.interface';
 import { randomUUID } from 'crypto';
@@ -21,7 +27,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const res = exception.getResponse() as any;
       body = {
         error: String(res?.error ?? res?.status ?? exception.name ?? 'ERROR'),
-        message: String(res?.message ?? exception.message ?? 'Unexpected error'),
+        message: String(
+          res?.message ?? exception.message ?? 'Unexpected error',
+        ),
         statusCode: status,
         timestamp: new Date().toISOString(),
         path,

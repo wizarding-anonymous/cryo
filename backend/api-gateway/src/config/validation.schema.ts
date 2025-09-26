@@ -1,7 +1,9 @@
 import * as Joi from 'joi';
 
 export const validationSchema = Joi.object({
-  NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
+  NODE_ENV: Joi.string()
+    .valid('development', 'test', 'production')
+    .default('development'),
   PORT: Joi.number().port().default(3001),
 
   REDIS_HOST: Joi.string().hostname().default('localhost'),
@@ -14,15 +16,25 @@ export const validationSchema = Joi.object({
   SERVICE_DEFAULT_RETRIES: Joi.number().integer().min(0).default(1),
 
   SERVICE_USER_BASE_URL: Joi.string().uri().default('http://localhost:3000'),
-  SERVICE_GAME_CATALOG_BASE_URL: Joi.string().uri().default('http://localhost:3002'),
+  SERVICE_GAME_CATALOG_BASE_URL: Joi.string()
+    .uri()
+    .default('http://localhost:3002'),
   SERVICE_PAYMENT_BASE_URL: Joi.string().uri().default('http://localhost:3003'),
   SERVICE_LIBRARY_BASE_URL: Joi.string().uri().default('http://localhost:3004'),
-  SERVICE_NOTIFICATION_BASE_URL: Joi.string().uri().default('http://localhost:3005'),
+  SERVICE_NOTIFICATION_BASE_URL: Joi.string()
+    .uri()
+    .default('http://localhost:3005'),
   SERVICE_REVIEW_BASE_URL: Joi.string().uri().default('http://localhost:3006'),
-  SERVICE_ACHIEVEMENT_BASE_URL: Joi.string().uri().default('http://localhost:3007'),
-  SERVICE_SECURITY_BASE_URL: Joi.string().uri().default('http://localhost:3008'),
+  SERVICE_ACHIEVEMENT_BASE_URL: Joi.string()
+    .uri()
+    .default('http://localhost:3007'),
+  SERVICE_SECURITY_BASE_URL: Joi.string()
+    .uri()
+    .default('http://localhost:3008'),
   SERVICE_SOCIAL_BASE_URL: Joi.string().uri().default('http://localhost:3009'),
-  SERVICE_DOWNLOAD_BASE_URL: Joi.string().uri().default('http://localhost:3010'),
+  SERVICE_DOWNLOAD_BASE_URL: Joi.string()
+    .uri()
+    .default('http://localhost:3010'),
 
   // Rate limiting
   RATE_LIMIT_ENABLED: Joi.boolean().default(true),

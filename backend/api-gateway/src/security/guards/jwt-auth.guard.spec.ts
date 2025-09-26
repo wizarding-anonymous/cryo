@@ -6,14 +6,19 @@ describe('JwtAuthGuard', () => {
   const makeCtx = (headers: Record<string, string> = {}): ExecutionContext =>
     ({
       switchToHttp: () => ({
-        getRequest: () => ({ headers } as any),
-        getResponse: () => ({} as any),
+        getRequest: () => ({ headers }) as any,
+        getResponse: () => ({}) as any,
       }),
-    } as any);
+    }) as any;
 
   it('allows valid token and attaches user', async () => {
     const mockAuth = {
-      validateBearerToken: jest.fn().mockResolvedValue({ id: 'u1', email: 'e', roles: [], permissions: [] }),
+      validateBearerToken: jest.fn().mockResolvedValue({
+        id: 'u1',
+        email: 'e',
+        roles: [],
+        permissions: [],
+      }),
     } as any;
     const guard = new JwtAuthGuard(mockAuth);
     const ctx = makeCtx({ authorization: 'Bearer token' });
@@ -23,15 +28,20 @@ describe('JwtAuthGuard', () => {
 
   it('throws when header missing', async () => {
     const guard = new JwtAuthGuard({ validateBearerToken: jest.fn() } as any);
-    await expect(guard.canActivate(makeCtx())).rejects.toBeInstanceOf(UnauthorizedException);
-  });
-
-  it('throws when token invalid', async () => {
-    const mockAuth = { validateBearerToken: jest.fn().mockRejectedValue(new UnauthorizedException()) } as any;
-    const guard = new JwtAuthGuard(mockAuth);
-    await expect(guard.canActivate(makeCtx({ authorization: 'Bearer x' }))).rejects.toBeInstanceOf(
+    await expect(guard.canActivate(makeCtx())).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
   });
-});
 
+  it('throws when token invalid', async () => {
+    const mockAuth = {
+      validateBearerToken: jest
+        .fn()
+        .mockRejectedValue(new UnauthorizedException()),
+    } as any;
+    const guard = new JwtAuthGuard(mockAuth);
+    await expect(
+      guard.canActivate(makeCtx({ authorization: 'Bearer x' })),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+});

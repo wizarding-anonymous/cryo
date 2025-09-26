@@ -20,7 +20,9 @@ const makeHost = (url = '/api/x') => {
       return this;
     },
   } as any;
-  const host = ({ switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }) } as any) as ArgumentsHost;
+  const host = {
+    switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
+  } as any as ArgumentsHost;
   return { host, res };
 };
 
@@ -42,4 +44,3 @@ describe('GlobalExceptionFilter', () => {
     expect(res.body.message).toBe('oops');
   });
 });
-

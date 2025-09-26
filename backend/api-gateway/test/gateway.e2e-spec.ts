@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as request from 'supertest';
+import request from 'supertest';
 import axios from 'axios';
 import { AppModule } from '../src/app.module';
 import { RateLimitService } from '../src/security/rate-limit.service';
@@ -19,7 +19,14 @@ describe('API Gateway Integration (e2e)', () => {
       .overrideProvider(RateLimitService)
       .useValue({ isEnabled: () => false })
       .overrideProvider(AuthValidationService)
-      .useValue({ validateBearerToken: jest.fn().mockResolvedValue({ id: 'u1', email: 'e', roles: [], permissions: [] }) })
+      .useValue({
+        validateBearerToken: jest.fn().mockResolvedValue({
+          id: 'u1',
+          email: 'e',
+          roles: [],
+          permissions: [],
+        }),
+      })
       .overrideProvider(MetricsService)
       .useValue({ metrics: jest.fn().mockResolvedValue('') })
       .compile();
@@ -39,7 +46,11 @@ describe('API Gateway Integration (e2e)', () => {
   it('GET /api/games should proxy to game-catalog-service and return list', async () => {
     mockedAxios.mockImplementation(async (cfg: any) => {
       if (cfg.method === 'GET' && String(cfg.url).includes('/games')) {
-        return { status: 200, data: { items: [{ id: 1 }] }, headers: { 'content-type': 'application/json' } };
+        return {
+          status: 200,
+          data: { items: [{ id: 1 }] },
+          headers: { 'content-type': 'application/json' },
+        };
       }
       throw new Error('unexpected request: ' + cfg.url);
     });
@@ -48,7 +59,7 @@ describe('API Gateway Integration (e2e)', () => {
       .get('/api/games?limit=1')
       .expect(200)
       .expect('Content-Type', /json/)
-      .expect(({ body }) => {
+      .expect(({ body }: { body: any }) => {
         expect(body.items).toBeDefined();
       });
   });
@@ -61,7 +72,10 @@ describe('API Gateway Integration (e2e)', () => {
   });
 
   it('POST /api/users/profile requires authentication', async () => {
-    await request(app.getHttpServer()).post('/api/users/profile').send({ name: 'x' }).expect(401);
+    await request(app.getHttpServer())
+      .post('/api/users/profile')
+      .send({ name: 'x' })
+      .expect(401);
   });
 
   it('POST /api/users/profile proxies authenticated requests', async () => {
@@ -80,7 +94,7 @@ describe('API Gateway Integration (e2e)', () => {
       .set('Authorization', 'Bearer token')
       .send({ name: 'New Name' })
       .expect(200)
-      .expect(({ body }) => expect(body).toEqual({ ok: true }));
+      .expect(({ body }: { body: any }) => expect(body).toEqual({ ok: true }));
   });
 });
 
@@ -107,7 +121,14 @@ describe('API Gateway Rate Limiting (e2e)', () => {
         }),
       })
       .overrideProvider(AuthValidationService)
-      .useValue({ validateBearerToken: jest.fn().mockResolvedValue({ id: 'u1', email: 'e', roles: [], permissions: [] }) })
+      .useValue({
+        validateBearerToken: jest.fn().mockResolvedValue({
+          id: 'u1',
+          email: 'e',
+          roles: [],
+          permissions: [],
+        }),
+      })
       .overrideProvider(MetricsService)
       .useValue({ metrics: jest.fn().mockResolvedValue('') })
       .compile();
@@ -123,7 +144,11 @@ describe('API Gateway Rate Limiting (e2e)', () => {
   beforeEach(() => {
     counter = 0;
     mockedAxios.mockReset();
-    mockedAxios.mockImplementation(async (cfg: any) => ({ status: 200, data: { ok: true }, headers: {} }));
+    mockedAxios.mockImplementation(async (cfg: any) => ({
+      status: 200,
+      data: { ok: true },
+      headers: {},
+    }));
   });
 
   it('enforces limits per IP and returns 429 with rate limit headers', async () => {
@@ -131,9 +156,10 @@ describe('API Gateway Rate Limiting (e2e)', () => {
     await agent.get('/api/games').expect(200);
     await agent.get('/api/games').expect(200);
     await agent.get('/api/games').expect(200);
-    await agent.get('/api/games')
+    await agent
+      .get('/api/games')
       .expect(429)
-      .expect((res) => {
+      .expect((res: any) => {
         expect(res.headers['x-ratelimit-limit']).toBeDefined();
         expect(res.headers['x-ratelimit-remaining']).toBeDefined();
         expect(res.headers['x-ratelimit-reset']).toBeDefined();

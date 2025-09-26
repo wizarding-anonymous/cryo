@@ -21,32 +21,51 @@ export class ProxyService {
 
   constructor(private readonly registry: ServiceRegistryService) {}
 
-  async forwardPlaceholder(req: Request): Promise<{ statusCode: number; headers: Record<string, string>; body: any }> {
+  async forwardPlaceholder(req: Request): Promise<{
+    statusCode: number;
+    headers: Record<string, string>;
+    body: any;
+  }> {
     // Backward compatibility; not used after full forward implementation
     return this.forward(req);
   }
 
-  async forward(req: Request): Promise<{ statusCode: number; headers: Record<string, string>; body: any }> {
+  async forward(req: Request): Promise<{
+    statusCode: number;
+    headers: Record<string, string>;
+    body: any;
+  }> {
     const { targetService, remainderPath } = this.resolveService(req.path);
     if (!targetService) {
       return {
         statusCode: 404,
         headers: { 'content-type': 'application/json' },
-        body: { error: 'NOT_FOUND', message: `No route for ${req.method} ${req.path}` },
+        body: {
+          error: 'NOT_FOUND',
+          message: `No route for ${req.method} ${req.path}`,
+        },
       };
     }
 
     const config = this.registry.getServiceConfig(targetService);
     if (!config) {
-      throw new ServiceUnavailableException(targetService, 'Service not configured');
+      throw new ServiceUnavailableException(
+        targetService,
+        'Service not configured',
+      );
     }
 
     if (!this.allowRequest(targetService, config)) {
-      throw new ServiceUnavailableException(targetService, 'Circuit breaker is open');
+      throw new ServiceUnavailableException(
+        targetService,
+        'Circuit breaker is open',
+      );
     }
 
     const url = this.composeUrl(config.baseUrl, remainderPath, req.url);
-    const headers = this.buildForwardHeaders(req.headers as Record<string, string | string[] | undefined>);
+    const headers = this.buildForwardHeaders(
+      req.headers as Record<string, string | string[] | undefined>,
+    );
 
     const requestConfig: AxiosRequestConfig = {
       url,
@@ -101,10 +120,16 @@ export class ProxyService {
             return {
               statusCode: status ?? 502,
               headers: hdrs,
-              body: err.response.data ?? { error: 'BAD_GATEWAY', message: 'Upstream error' },
+              body: err.response.data ?? {
+                error: 'BAD_GATEWAY',
+                message: 'Upstream error',
+              },
             } as any;
           }
-          throw new ServiceUnavailableException(targetService, 'Upstream unavailable');
+          throw new ServiceUnavailableException(
+            targetService,
+            'Upstream unavailable',
+          );
         }
         // exponential backoff: 100ms * 2^(attempt-1)
         const delay = 100 * Math.pow(2, attempt - 1);
@@ -116,7 +141,10 @@ export class ProxyService {
     throw lastErr ?? new ServiceUnavailableException(targetService);
   }
 
-  private resolveService(fullPath: string): { targetService?: string; remainderPath: string } {
+  private resolveService(fullPath: string): {
+    targetService?: string;
+    remainderPath: string;
+  } {
     // Expecting paths like /api/<resource>/...
     const parts = fullPath.split('?')[0].split('/').filter(Boolean); // remove empty
     const idx = parts[0] === 'api' ? 1 : 0;
@@ -139,14 +167,20 @@ export class ProxyService {
     return { targetService: service, remainderPath: remainder };
   }
 
-  private composeUrl(baseUrl: string, remainderPath: string, originalUrl: string): string {
+  private composeUrl(
+    baseUrl: string,
+    remainderPath: string,
+    originalUrl: string,
+  ): string {
     const qIndex = originalUrl.indexOf('?');
     const qs = qIndex >= 0 ? originalUrl.substring(qIndex) : '';
     const base = baseUrl.replace(/\/$/, '');
     return `${base}${remainderPath}${qs}`;
   }
 
-  private buildForwardHeaders(headers: Record<string, string | string[] | undefined>): Record<string, string> {
+  private buildForwardHeaders(
+    headers: Record<string, string | string[] | undefined>,
+  ): Record<string, string> {
     const hopByHop = new Set([
       'connection',
       'keep-alive',
@@ -168,7 +202,10 @@ export class ProxyService {
     }
     out['x-forwarded-proto'] = 'http';
     out['x-forwarded-host'] = headers['host'] as string;
-    out['x-forwarded-for'] = [headers['x-forwarded-for'] as string, headers['x-real-ip'] as string]
+    out['x-forwarded-for'] = [
+      headers['x-forwarded-for'] as string,
+      headers['x-real-ip'] as string,
+    ]
       .filter(Boolean)
       .join(', ');
     return out;
@@ -208,12 +245,14 @@ export class ProxyService {
     const failureThreshold = circuitBreaker?.failureThreshold ?? 5;
     const monitoringPeriod = circuitBreaker?.monitoringPeriod ?? 60000;
 
-    const prev = this.circuitStates.get(serviceName) ?? {
-      state: 'closed',
-      failures: 0,
-      firstFailureAt: null,
-      openedAt: null,
-    } as CircuitState;
+    const prev =
+      this.circuitStates.get(serviceName) ??
+      ({
+        state: 'closed',
+        failures: 0,
+        firstFailureAt: null,
+        openedAt: null,
+      } as CircuitState);
 
     // Reset window if expired
     if (prev.firstFailureAt && now - prev.firstFailureAt > monitoringPeriod) {

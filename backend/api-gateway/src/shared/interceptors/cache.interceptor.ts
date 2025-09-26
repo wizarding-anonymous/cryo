@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
@@ -11,8 +16,11 @@ export class CacheInterceptor implements NestInterceptor {
   private readonly enabled: boolean;
   private readonly ttlMs: number;
 
-  constructor(private readonly config: ConfigService, private readonly redis: RedisService) {
-    this.enabled = this.config.get<boolean>('CACHE_ENABLED', true) as boolean;
+  constructor(
+    private readonly config: ConfigService,
+    private readonly redis: RedisService,
+  ) {
+    this.enabled = this.config.get<boolean>('CACHE_ENABLED', true);
     this.ttlMs = Number(this.config.get<number>('CACHE_TTL_MS', 30000));
   }
 
@@ -46,7 +54,9 @@ export class CacheInterceptor implements NestInterceptor {
               body: any;
             };
             // Set headers and respond immediately
-            Object.entries(payload.headers || {}).forEach(([k, v]) => res.setHeader(k, v));
+            Object.entries(payload.headers || {}).forEach(([k, v]) =>
+              res.setHeader(k, v),
+            );
             res.status(payload.statusCode).send(payload.body);
             subscriber.complete();
             return;
@@ -73,22 +83,18 @@ export class CacheInterceptor implements NestInterceptor {
           };
 
           // Continue to handler
-          next
-            .handle()
-            .subscribe({
-              next: (v) => subscriber.next(v),
-              error: (err) => subscriber.error(err),
-              complete: () => subscriber.complete(),
-            });
+          next.handle().subscribe({
+            next: (v) => subscriber.next(v),
+            error: (err) => subscriber.error(err),
+            complete: () => subscriber.complete(),
+          });
         } catch (err) {
           // On cache error, proceed without caching
-          next
-            .handle()
-            .subscribe({
-              next: (v) => subscriber.next(v),
-              error: (e) => subscriber.error(e),
-              complete: () => subscriber.complete(),
-            });
+          next.handle().subscribe({
+            next: (v) => subscriber.next(v),
+            error: (e) => subscriber.error(e),
+            complete: () => subscriber.complete(),
+          });
         }
       })();
     });

@@ -1,4 +1,16 @@
-import { Controller, Delete, Get, Post, Put, Req, Res, UseGuards, UseInterceptors, UsePipes, Body } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Post,
+  Put,
+  Req,
+  Res,
+  UseGuards,
+  UseInterceptors,
+  UsePipes,
+  Body,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ProxyService } from './proxy.service';
 import { OptionalAuthGuard } from '../security/guards/optional-auth.guard';
@@ -13,7 +25,12 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @Controller('api')
 @UseGuards(RateLimitGuard)
-@UseInterceptors(CorsInterceptor, ResponseInterceptor, LoggingInterceptor, CacheInterceptor)
+@UseInterceptors(
+  CorsInterceptor,
+  ResponseInterceptor,
+  LoggingInterceptor,
+  CacheInterceptor,
+)
 @ApiTags('Proxy')
 export class ProxyController {
   constructor(private readonly proxyService: ProxyService) {}
@@ -35,7 +52,10 @@ export class ProxyController {
   @Get('v1/library/*')
   @UseGuards(OptionalAuthGuard)
   @ApiOperation({ summary: 'Proxy GET requests to library service' })
-  async handleLibraryGet(@Req() req: Request, @Res() res: Response): Promise<any> {
+  async handleLibraryGet(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<any> {
     return this.handle('v1/library/*', req, res);
   }
 
@@ -44,7 +64,11 @@ export class ProxyController {
   @UsePipes(new JsonBodyValidationPipe())
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Proxy POST requests (auth required)' })
-  async handlePost(@Req() req: Request, @Res() res: Response, @Body() _body: any): Promise<any> {
+  async handlePost(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() _body: any,
+  ): Promise<any> {
     return this.handle('v1/*', req, res);
   }
 
@@ -53,7 +77,11 @@ export class ProxyController {
   @UsePipes(new JsonBodyValidationPipe())
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Proxy PUT requests (auth required)' })
-  async handlePut(@Req() req: Request, @Res() res: Response, @Body() _body: any): Promise<any> {
+  async handlePut(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() _body: any,
+  ): Promise<any> {
     return this.handle('v1/*', req, res);
   }
 
@@ -65,7 +93,11 @@ export class ProxyController {
     return this.handle('v1/*', req, res);
   }
 
-  private async handle(_path: string, req: Request, res: Response): Promise<any> {
+  private async handle(
+    _path: string,
+    req: Request,
+    res: Response,
+  ): Promise<any> {
     const result = await this.proxyService.forward(req);
     res.status(result.statusCode);
     Object.entries(result.headers).forEach(([k, v]) => res.header(k, v));

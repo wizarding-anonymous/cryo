@@ -20,4 +20,3 @@ export class JsonBodyValidationPipe implements PipeTransform {
     });
   }
 }
-

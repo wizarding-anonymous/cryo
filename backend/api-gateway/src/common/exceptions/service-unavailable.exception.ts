@@ -13,4 +13,3 @@ export class ServiceUnavailableException extends HttpException {
     );
   }
 }
-

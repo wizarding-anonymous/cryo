@@ -27,4 +27,3 @@ export class ServiceHealthStatusDto {
   @ApiProperty({ required: false })
   error?: string;
 }
-

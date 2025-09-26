@@ -29,7 +29,7 @@ export class AuthValidationService {
         throw new UnauthorizedException('Invalid token');
       }
 
-      const data = resp.data as any;
+      const data = resp.data;
       const user: User = {
         id: String(data.id ?? data.userId ?? ''),
         email: String(data.email ?? ''),
@@ -52,8 +52,8 @@ export class AuthValidationService {
   extractTokenFromHeader(authHeader?: string): string | undefined {
     if (!authHeader) return undefined;
     const [scheme, token] = authHeader.split(' ');
-    if (!scheme || scheme.toLowerCase() !== 'bearer' || !token) return undefined;
+    if (!scheme || scheme.toLowerCase() !== 'bearer' || !token)
+      return undefined;
     return token;
   }
 }
-

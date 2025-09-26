@@ -11,14 +11,26 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "node"
-  }
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "typeRoots": ["./node_modules/@types"],
+    "lib": ["es2021"],
+    "moduleDetection": "auto"
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "eslint.config.mjs",
+    "**/*.config.js",
+    "**/*.config.mjs",
+    "**/*.mjs"
+  ]
 }
-

@@ -19,7 +19,9 @@ describe('RateLimitGuard', () => {
       },
       getHeaders: () => resHeaders,
     } as any;
-    return ({ switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }) } as any) as ExecutionContext;
+    return {
+      switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
+    } as any as ExecutionContext;
   };
 
   it('bypasses when disabled', async () => {
@@ -31,7 +33,13 @@ describe('RateLimitGuard', () => {
   it('allows when within limit and sets headers', async () => {
     const svc = {
       isEnabled: () => true,
-      check: jest.fn().mockResolvedValue({ allowed: true, limit: 10, remaining: 9, reset: Date.now() + 1000, windowMs: 1000 }),
+      check: jest.fn().mockResolvedValue({
+        allowed: true,
+        limit: 10,
+        remaining: 9,
+        reset: Date.now() + 1000,
+        windowMs: 1000,
+      }),
     } as any;
     const guard = new RateLimitGuard(svc);
     await expect(guard.canActivate(makeCtx())).resolves.toBe(true);
@@ -41,10 +49,17 @@ describe('RateLimitGuard', () => {
   it('throws when limit exceeded', async () => {
     const svc = {
       isEnabled: () => true,
-      check: jest.fn().mockResolvedValue({ allowed: false, limit: 1, remaining: 0, reset: Date.now() + 1000, windowMs: 1000 }),
+      check: jest.fn().mockResolvedValue({
+        allowed: false,
+        limit: 1,
+        remaining: 0,
+        reset: Date.now() + 1000,
+        windowMs: 1000,
+      }),
     } as any;
     const guard = new RateLimitGuard(svc);
-    await expect(guard.canActivate(makeCtx())).rejects.toBeInstanceOf(RateLimitExceededException);
+    await expect(guard.canActivate(makeCtx())).rejects.toBeInstanceOf(
+      RateLimitExceededException,
+    );
   });
 });
-

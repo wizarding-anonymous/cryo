@@ -5,7 +5,6 @@ import type { RedisConfig } from '../config/redis.config';
 import { RedisService } from './redis.service';
 import { REDIS_CLIENT } from './redis.constants';
 
-
 @Global()
 @Module({
   providers: [RedisService],

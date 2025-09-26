@@ -9,4 +9,3 @@ export interface ProxyRequest {
   query?: Record<string, string>;
   user?: User;
 }
-

@@ -10,4 +10,3 @@ export interface RouteConfig {
   rateLimit?: RateLimitConfig;
   timeout?: number;
 }
-

@@ -5,4 +5,3 @@ export enum HttpMethod {
   DELETE = 'DELETE',
   PATCH = 'PATCH',
 }
-

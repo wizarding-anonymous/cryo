@@ -21,8 +21,10 @@ export class RateLimitService {
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
   ) {
-    this.enabled = this.configService.get<boolean>('RATE_LIMIT_ENABLED', true) as boolean;
-    this.windowMs = Number(this.configService.get<number>('RATE_LIMIT_WINDOW_MS', 60000));
+    this.enabled = this.configService.get<boolean>('RATE_LIMIT_ENABLED', true);
+    this.windowMs = Number(
+      this.configService.get<number>('RATE_LIMIT_WINDOW_MS', 60000),
+    );
     this.maxRequests = Number(
       this.configService.get<number>('RATE_LIMIT_MAX_REQUESTS', 60),
     );
@@ -32,7 +34,11 @@ export class RateLimitService {
     return this.enabled;
   }
 
-  async check(ip: string, route: string, method: string): Promise<RateLimitResult> {
+  async check(
+    ip: string,
+    route: string,
+    method: string,
+  ): Promise<RateLimitResult> {
     const client: RedisClient = this.redisService.getClient();
     const now = Date.now();
     const windowStart = now - this.windowMs;
@@ -46,7 +52,7 @@ export class RateLimitService {
 
     let current = 0;
     if (exec1 && exec1[1] && typeof exec1[1][1] === 'number') {
-      current = exec1[1][1] as number;
+      current = exec1[1][1];
     }
 
     if (current >= this.maxRequests) {

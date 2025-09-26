@@ -8,12 +8,17 @@ describe('ResponseInterceptor', () => {
     const headers: Record<string, any> = {};
     const req = { headers } as any;
     const resHeaders: Record<string, any> = {};
-    const res = { setHeader: (k: string, v: string) => (resHeaders[k] = v) } as any;
-    const ctx = ({ switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }) } as any) as ExecutionContext;
-    interceptor.intercept(ctx, { handle: () => of('ok') } as any).subscribe(() => {
-      expect(resHeaders['X-Request-Id']).toBeDefined();
-      done();
-    });
+    const res = {
+      setHeader: (k: string, v: string) => (resHeaders[k] = v),
+    } as any;
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
+    } as any as ExecutionContext;
+    interceptor
+      .intercept(ctx, { handle: () => of('ok') } as any)
+      .subscribe(() => {
+        expect(resHeaders['X-Request-Id']).toBeDefined();
+        done();
+      });
   });
 });
-

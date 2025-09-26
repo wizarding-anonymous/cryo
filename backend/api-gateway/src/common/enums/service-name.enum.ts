@@ -11,4 +11,3 @@ export enum ServiceName {
   DOWNLOAD = 'download-service',
   API_GATEWAY = 'api-gateway',
 }
-

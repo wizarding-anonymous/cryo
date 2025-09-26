@@ -8,4 +8,3 @@ import { ServiceRegistryService } from './service-registry.service';
   exports: [ServiceRegistryService],
 })
 export class ServiceRegistryModule {}
-
