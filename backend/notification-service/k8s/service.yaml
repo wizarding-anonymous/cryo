@@ -2,11 +2,37 @@ apiVersion: v1
 kind: Service
 metadata:
   name: notification-service
+  labels:
+    app: notification-service
+    component: backend
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
 spec:
   selector:
     app: notification-service
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 3000
-      targetPort: 3000
-  type: ClusterIP # Or LoadBalancer/NodePort if external access is needed
+      targetPort: http
+  type: ClusterIP
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service-headless
+  labels:
+    app: notification-service
+    component: backend
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: http
+  type: ClusterIP
+  clusterIP: None  # Headless service for service discovery

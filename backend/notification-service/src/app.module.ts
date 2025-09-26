@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { NotificationModule } from './notification/notification.module';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { HealthModule } from './health/health.module';
       envFilePath: '.env',
     }),
     DatabaseModule,
+    AuthModule,
     NotificationModule,
     HealthModule,
   ],

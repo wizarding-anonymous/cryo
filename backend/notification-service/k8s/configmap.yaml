@@ -2,21 +2,67 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: notification-service-config
+  labels:
+    app: notification-service
+    component: backend
 data:
+  # Application Configuration
+  NODE_ENV: "production"
   PORT: "3000"
-  CORS_ORIGIN: "*" # Should be more specific in a real production environment
-  # Database connection
-  DB_HOST: "postgresql"
+  
+  # CORS Configuration - Production domains
+  CORS_ORIGIN: "https://myplatform.ru,https://api.myplatform.ru,https://admin.myplatform.ru"
+  
+  # Database Configuration
+  DB_HOST: "postgresql-service"
   DB_PORT: "5432"
-  DB_USERNAME: "user"
-  DB_PASSWORD: "password"
   DB_DATABASE: "notification_db"
-  # Redis connection
-  REDIS_HOST: "redis"
+  DB_SSL: "true"
+  DB_SYNCHRONIZE: "false"
+  DB_LOGGING: "false"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
   REDIS_PORT: "6379"
-  # Service URLs
+  USE_REDIS_CACHE: "true"
+  REDIS_TTL: "3600"
+  
+  # Service URLs for MVP Integration
   USER_SERVICE_URL: "http://user-service:3000"
-  # Mailer settings
-  MAILER_URL: "https://api.examplemailer.com/send" # Placeholder
-  MAILER_API_KEY: "your-api-key" # Should be a secret
-  MAILER_FROM_EMAIL: "noreply@myplatform.com"
+  PAYMENT_SERVICE_URL: "http://payment-service:3000"
+  SOCIAL_SERVICE_URL: "http://social-service:3000"
+  ACHIEVEMENT_SERVICE_URL: "http://achievement-service:3000"
+  REVIEW_SERVICE_URL: "http://review-service:3000"
+  GAME_CATALOG_SERVICE_URL: "http://game-catalog-service:3000"
+  LIBRARY_SERVICE_URL: "http://library-service:3000"
+  
+  # Email Configuration
+  EMAIL_PROVIDER: "mailru"
+  EMAIL_URL: "https://api.mail.ru/v1/email/send"
+  EMAIL_FROM: "noreply@myplatform.ru"
+  EMAIL_MAX_RETRIES: "5"
+  EMAIL_RETRY_DELAY: "2000"
+  EMAIL_TIMEOUT: "10000"
+  
+  # Logging Configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  LOG_TIMESTAMP: "true"
+  
+  # Performance Configuration
+  MAX_PAYLOAD_SIZE: "1mb"
+  REQUEST_TIMEOUT: "30000"
+  KEEP_ALIVE_TIMEOUT: "5000"
+  
+  # Security Configuration
+  HELMET_ENABLED: "true"
+  RATE_LIMIT_TTL: "60"
+  RATE_LIMIT_LIMIT: "100"
+  
+  # Health Check Configuration
+  HEALTH_CHECK_TIMEOUT: "5000"
+  HEALTH_CHECK_MEMORY_HEAP_THRESHOLD: "300"
+  HEALTH_CHECK_MEMORY_RSS_THRESHOLD: "300"
+  
+  # Graceful Shutdown Configuration
+  SHUTDOWN_TIMEOUT: "10000"

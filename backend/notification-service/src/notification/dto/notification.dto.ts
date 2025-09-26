@@ -12,7 +12,10 @@ export class NotificationDto {
   @ApiProperty({ description: 'The ID of the user who owns the notification' })
   userId!: string;
 
-  @ApiProperty({ enum: NotificationType, description: 'The type of the notification' })
+  @ApiProperty({
+    enum: NotificationType,
+    description: 'The type of the notification',
+  })
   type!: NotificationType;
 
   @ApiProperty({ description: 'The title of the notification' })
@@ -24,13 +27,21 @@ export class NotificationDto {
   @ApiProperty({ description: 'Indicates if the notification has been read' })
   isRead!: boolean;
 
-  @ApiProperty({ enum: NotificationPriority, description: 'The priority of the notification' })
+  @ApiProperty({
+    enum: NotificationPriority,
+    description: 'The priority of the notification',
+  })
   priority!: NotificationPriority;
 
   @ApiProperty({ required: false, description: 'Optional metadata' })
   metadata?: Record<string, any>;
 
-  @ApiProperty({ type: [String], enum: NotificationChannel, required: false, description: 'Delivery channels' })
+  @ApiProperty({
+    type: [String],
+    enum: NotificationChannel,
+    required: false,
+    description: 'Delivery channels',
+  })
   channels?: NotificationChannel[];
 
   @ApiProperty({ description: 'The date the notification was created' })

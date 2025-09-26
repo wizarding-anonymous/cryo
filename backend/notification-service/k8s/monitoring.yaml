@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: notification-service-monitor
+  labels:
+    app: notification-service
+    component: backend
+spec:
+  selector:
+    matchLabels:
+      app: notification-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: notification-service-alerts
+  labels:
+    app: notification-service
+    component: backend
+spec:
+  groups:
+  - name: notification-service.rules
+    rules:
+    - alert: NotificationServiceDown
+      expr: up{job="notification-service"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Notification Service is down"
+        description: "Notification Service has been down for more than 1 minute."
+    
+    - alert: NotificationServiceHighMemoryUsage
+      expr: (container_memory_usage_bytes{pod=~"notification-service-.*"} / container_spec_memory_limit_bytes) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High memory usage in Notification Service"
+        description: "Memory usage is above 80% for more than 5 minutes."
+    
+    - alert: NotificationServiceHighCPUUsage
+      expr: (rate(container_cpu_usage_seconds_total{pod=~"notification-service-.*"}[5m]) / container_spec_cpu_quota * 100) > 80
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage in Notification Service"
+        description: "CPU usage is above 80% for more than 5 minutes."
+    
+    - alert: NotificationServiceHighErrorRate
+      expr: (rate(http_requests_total{job="notification-service",status=~"5.."}[5m]) / rate(http_requests_total{job="notification-service"}[5m])) > 0.1
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High error rate in Notification Service"
+        description: "Error rate is above 10% for more than 2 minutes."
+    
+    - alert: NotificationServiceSlowResponse
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="notification-service"}[5m])) > 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Slow response times in Notification Service"
+        description: "95th percentile response time is above 1 second for more than 5 minutes."
+    
+    - alert: NotificationServiceDatabaseConnectionFailed
+      expr: up{job="notification-service-db"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Database connection failed for Notification Service"
+        description: "Cannot connect to the database for more than 1 minute."
+    
+    - alert: NotificationServiceRedisConnectionFailed
+      expr: up{job="notification-service-redis"} == 0
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Redis connection failed for Notification Service"
+        description: "Cannot connect to Redis for more than 1 minute."

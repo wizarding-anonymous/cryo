@@ -1,5 +1,9 @@
 import { Notification } from './notification.entity';
-import { NotificationType, NotificationPriority, NotificationChannel } from '../common/enums';
+import {
+  NotificationType,
+  NotificationPriority,
+  NotificationChannel,
+} from '../common/enums';
 
 describe('Notification Entity', () => {
   it('should be defined', () => {
@@ -26,11 +30,17 @@ describe('Notification Entity', () => {
   it('should support optional properties', () => {
     const notification = new Notification();
     notification.metadata = { gameId: '123', action: 'invite' };
-    notification.channels = [NotificationChannel.IN_APP, NotificationChannel.EMAIL];
+    notification.channels = [
+      NotificationChannel.IN_APP,
+      NotificationChannel.EMAIL,
+    ];
     notification.expiresAt = new Date('2024-12-31');
 
     expect(notification.metadata).toEqual({ gameId: '123', action: 'invite' });
-    expect(notification.channels).toEqual([NotificationChannel.IN_APP, NotificationChannel.EMAIL]);
+    expect(notification.channels).toEqual([
+      NotificationChannel.IN_APP,
+      NotificationChannel.EMAIL,
+    ]);
     expect(notification.expiresAt).toBeInstanceOf(Date);
   });
 });

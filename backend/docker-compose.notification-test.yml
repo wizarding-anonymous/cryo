@@ -1,0 +1,80 @@
+version: '3.8'
+
+# Docker Compose file for testing notification-service only
+services:
+  # Notification Service
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+      target: development
+    container_name: notification-service-test
+    ports:
+      - "3006:3006"
+    depends_on:
+      - postgres-notification
+      - redis
+    env_file:
+      - ./notification-service/.env
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres-notification
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=redis_password
+    volumes:
+      - ./notification-service/src:/usr/src/app/src
+      - ./notification-service/test:/usr/src/app/test
+    networks:
+      - notification-test-network
+    restart: unless-stopped
+    command: npm run start:dev
+
+  # PostgreSQL for Notification Service
+  postgres-notification:
+    image: postgres:15-alpine
+    container_name: postgres-notification-test
+    environment:
+      POSTGRES_USER: notification_user
+      POSTGRES_PASSWORD: notification_password
+      POSTGRES_DB: notification_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_notification_test_data:/var/lib/postgresql/data
+    networks:
+      - notification-test-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: redis-notification-test
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - notification-test-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_password
+
+  # PgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin-notification-test
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - notification-test-network
+    restart: unless-stopped
+
+volumes:
+  postgres_notification_test_data:
+  redis_test_data:
+
+networks:
+  notification-test-network:
+    driver: bridge

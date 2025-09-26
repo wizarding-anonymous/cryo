@@ -1,15 +1,11 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { Notification } from '../entities/notification.entity';
 import { NotificationSettings } from '../entities/notification-settings.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { RedisCacheService } from '../cache/redis-cache.service';
 import {
   CreateNotificationDto,
   GetNotificationsDto,
@@ -38,6 +34,7 @@ export class NotificationService {
     private readonly emailService: EmailService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly redisCacheService: RedisCacheService,
   ) {}
 
   async createNotification(
@@ -102,7 +99,8 @@ export class NotificationService {
       ...dto,
       channels: targetChannels,
     });
-    const savedNotification = await this.notificationRepository.save(notification);
+    const savedNotification =
+      await this.notificationRepository.save(notification);
 
     if (targetChannels.includes(NotificationChannel.EMAIL)) {
       await this.trySendEmail(savedNotification);
@@ -159,19 +157,47 @@ export class NotificationService {
 
   async getSettings(userId: string): Promise<NotificationSettingsDto> {
     const cacheKey = this.settingsCacheKey(userId);
-    const cachedSettings = await this.cacheManager.get<NotificationSettingsDto>(
-      cacheKey,
-    );
 
+    // Try NestJS cache manager first (memory cache for MVP)
+    const cachedSettings =
+      await this.cacheManager.get<NotificationSettingsDto>(cacheKey);
     if (cachedSettings) {
-      this.logger.log(`Cache HIT for user ${userId} settings.`);
+      this.logger.log(`Memory cache HIT for user ${userId} settings.`);
       return cachedSettings;
     }
 
-    this.logger.log(`Cache MISS for user ${userId} settings.`);
+    // Try Redis cache as fallback (if connected)
+    if (this.redisCacheService.isRedisConnected()) {
+      const redisSettings =
+        await this.redisCacheService.get<NotificationSettingsDto>(cacheKey);
+      if (redisSettings) {
+        this.logger.log(`Redis cache HIT for user ${userId} settings.`);
+        // Store in memory cache for faster access
+        await this.cacheManager.set(
+          cacheKey,
+          redisSettings,
+          this.settingsCacheTtlSeconds,
+        );
+        return redisSettings;
+      }
+    }
+
+    this.logger.log(
+      `Cache MISS for user ${userId} settings. Loading from database.`,
+    );
     const settingsEntity = await this.loadOrCreateSettingsEntity(userId);
     const dto = this.toSettingsDto(settingsEntity);
+
+    // Store in both caches
     await this.cacheManager.set(cacheKey, dto, this.settingsCacheTtlSeconds);
+    if (this.redisCacheService.isRedisConnected()) {
+      await this.redisCacheService.set(
+        cacheKey,
+        dto,
+        this.settingsCacheTtlSeconds,
+      );
+    }
+
     return dto;
   }
 
@@ -187,11 +213,21 @@ export class NotificationService {
 
     this.logger.log(`Updated settings for user ${userId}.`);
 
+    const cacheKey = this.settingsCacheKey(userId);
+
+    // Update both caches
     await this.cacheManager.set(
-      this.settingsCacheKey(userId),
+      cacheKey,
       settingsDto,
       this.settingsCacheTtlSeconds,
     );
+    if (this.redisCacheService.isRedisConnected()) {
+      await this.redisCacheService.set(
+        cacheKey,
+        settingsDto,
+        this.settingsCacheTtlSeconds,
+      );
+    }
 
     return settingsDto;
   }
@@ -245,6 +281,125 @@ export class NotificationService {
 
   private settingsCacheKey(userId: string): string {
     return `settings:${userId}`;
+  }
+
+  /**
+   * Clear cache for user settings (useful for testing or manual cache invalidation)
+   */
+  async clearSettingsCache(userId: string): Promise<void> {
+    const cacheKey = this.settingsCacheKey(userId);
+
+    // Clear from memory cache
+    await this.cacheManager.del(cacheKey);
+
+    // Clear from Redis cache if connected
+    if (this.redisCacheService.isRedisConnected()) {
+      await this.redisCacheService.del(cacheKey);
+    }
+
+    this.logger.log(`Cleared cache for user ${userId} settings.`);
+  }
+
+  /**
+   * Get cache statistics for monitoring
+   */
+  async getCacheStats(): Promise<{
+    redisConnected: boolean;
+    cacheKeys?: string[];
+  }> {
+    const stats = {
+      redisConnected: this.redisCacheService.isRedisConnected(),
+    };
+
+    if (stats.redisConnected) {
+      try {
+        const keys = await this.redisCacheService.keys('settings:*');
+        return { ...stats, cacheKeys: keys };
+      } catch (error) {
+        this.logger.error('Error getting cache keys:', error);
+      }
+    }
+
+    return stats;
+  }
+
+  /**
+   * Create notifications for multiple users (bulk operation)
+   * Useful for game updates that affect many users
+   */
+  async createBulkNotifications(
+    userIds: string[],
+    notificationTemplate: Omit<CreateNotificationDto, 'userId'>,
+  ): Promise<{ created: number; skipped: number }> {
+    let created = 0;
+    let skipped = 0;
+
+    this.logger.log(`Creating bulk notifications for ${userIds.length} users`);
+
+    // Process in batches to avoid overwhelming the database
+    const batchSize = 50;
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+
+      const promises = batch.map(async (userId) => {
+        try {
+          const dto: CreateNotificationDto = {
+            ...notificationTemplate,
+            userId,
+          };
+
+          const result = await this.createNotification(dto);
+          return result ? 'created' : 'skipped';
+        } catch (error) {
+          this.logger.error(
+            `Failed to create notification for user ${userId}:`,
+            error,
+          );
+          return 'skipped';
+        }
+      });
+
+      const results = await Promise.all(promises);
+      created += results.filter((r) => r === 'created').length;
+      skipped += results.filter((r) => r === 'skipped').length;
+    }
+
+    this.logger.log(
+      `Bulk notification completed: ${created} created, ${skipped} skipped`,
+    );
+    return { created, skipped };
+  }
+
+  /**
+   * Get notification statistics for a user
+   */
+  async getUserNotificationStats(userId: string): Promise<{
+    total: number;
+    unread: number;
+    byType: Record<NotificationType, number>;
+  }> {
+    const [total, unread, byTypeResults] = await Promise.all([
+      this.notificationRepository.count({ where: { userId } }),
+      this.notificationRepository.count({ where: { userId, isRead: false } }),
+      this.notificationRepository
+        .createQueryBuilder('notification')
+        .select('notification.type', 'type')
+        .addSelect('COUNT(*)', 'count')
+        .where('notification.userId = :userId', { userId })
+        .groupBy('notification.type')
+        .getRawMany(),
+    ]);
+
+    const byType = {} as Record<NotificationType, number>;
+    Object.values(NotificationType).forEach((type) => {
+      byType[type] = 0;
+    });
+
+    byTypeResults.forEach((result: { type: string; count: string }) => {
+      byType[result.type as NotificationType] = parseInt(result.count, 10);
+    });
+
+    return { total, unread, byType };
   }
 
   private toNotificationDto(notification: Notification): NotificationDto {
