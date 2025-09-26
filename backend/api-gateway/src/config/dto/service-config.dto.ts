@@ -1,17 +1,10 @@
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUrl,
-  Min,
-  ValidateNested,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUrl, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CircuitBreakerConfigDto {
   @ApiProperty({ 
-    description: 'Number of failures before circuit breaker opens',
+    description: 'Number of failures before circuit opens',
     example: 5,
     minimum: 1
   })
@@ -20,7 +13,7 @@ export class CircuitBreakerConfigDto {
   failureThreshold!: number;
 
   @ApiProperty({ 
-    description: 'Time in milliseconds before attempting to close circuit breaker',
+    description: 'Time in milliseconds before attempting to close circuit',
     example: 30000,
     minimum: 1000
   })
@@ -29,7 +22,7 @@ export class CircuitBreakerConfigDto {
   resetTimeout!: number;
 
   @ApiProperty({ 
-    description: 'Time window in milliseconds for monitoring failures',
+    description: 'Monitoring period in milliseconds',
     example: 60000,
     minimum: 1000
   })
@@ -40,18 +33,17 @@ export class CircuitBreakerConfigDto {
 
 export class ServiceConfigDto {
   @ApiProperty({ 
-    description: 'Service name identifier',
+    description: 'Service name',
     example: 'user-service'
   })
   @IsString()
   name!: string;
 
   @ApiProperty({ 
-    description: 'Base URL for the service',
+    description: 'Base URL of the service',
     example: 'http://user-service:3001'
   })
   @IsString()
-  @IsUrl()
   baseUrl!: string;
 
   @ApiProperty({ 
@@ -79,7 +71,10 @@ export class ServiceConfigDto {
   @IsString()
   healthCheckPath!: string;
 
-  @ApiPropertyOptional({ description: 'Circuit breaker configuration' })
+  @ApiPropertyOptional({ 
+    description: 'Circuit breaker configuration',
+    type: CircuitBreakerConfigDto
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => CircuitBreakerConfigDto)

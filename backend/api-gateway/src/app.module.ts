@@ -8,6 +8,8 @@ import { HealthModule } from './health/health.module';
 import { RedisModule } from './redis/redis.module';
 import { RedisService } from './redis/redis.service';
 import { ServiceRegistryModule } from './registry/service-registry.module';
+import { InterceptorsModule } from './shared/interceptors/interceptors.module';
+import { ValidationModule } from './common/pipes/validation.module';
 
 @Module({
   imports: [
@@ -18,8 +20,10 @@ import { ServiceRegistryModule } from './registry/service-registry.module';
     }),
     RedisModule.forRootAsync(),
     ServiceRegistryModule,
-    ProxyModule,
+    InterceptorsModule,
+    ValidationModule,
     HealthModule,
+    ProxyModule,
   ],
   providers: [RedisService],
 })

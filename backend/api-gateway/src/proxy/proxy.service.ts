@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Request } from 'express';
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import * as http from 'http';
@@ -17,7 +17,18 @@ type CircuitState = {
 
 @Injectable()
 export class ProxyService {
+  private readonly logger = new Logger(ProxyService.name);
   private readonly circuitStates = new Map<string, CircuitState>();
+  private readonly httpAgent = new http.Agent({ 
+    keepAlive: true, 
+    maxSockets: 200,
+    timeout: 60000,
+  });
+  private readonly httpsAgent = new https.Agent({ 
+    keepAlive: true, 
+    maxSockets: 200,
+    timeout: 60000,
+  });
 
   constructor(private readonly registry: ServiceRegistryService) {}
 
@@ -73,8 +84,8 @@ export class ProxyService {
       headers,
       data: req.body,
       timeout: config.timeout,
-      httpAgent: new http.Agent({ keepAlive: true, maxSockets: 200 }),
-      httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 200 }),
+      httpAgent: this.httpAgent,
+      httpsAgent: this.httpsAgent,
       decompress: true,
       validateStatus: () => true,
     };
@@ -82,16 +93,26 @@ export class ProxyService {
     const maxAttempts = Math.max(1, config.retries + 1);
     const start = Date.now();
     let lastErr: unknown;
+    
+    this.logger.debug(`Forwarding ${req.method} ${req.path} to ${targetService} (${url})`);
+    
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const resp = await axios(requestConfig);
+        const duration = Date.now() - start;
+        
         // Success path: close breaker on success
         this.recordSuccess(targetService);
+        this.logger.debug(
+          `Request to ${targetService} succeeded in ${duration}ms (attempt ${attempt}/${maxAttempts})`
+        );
+        
         const hdrs: Record<string, string> = {};
         Object.entries(resp.headers || {}).forEach(([k, v]) => {
           if (Array.isArray(v)) hdrs[k] = v.join(', ');
           else if (v !== undefined) hdrs[k] = String(v);
         });
+        
         return {
           statusCode: resp.status,
           headers: hdrs,
@@ -100,14 +121,26 @@ export class ProxyService {
       } catch (e) {
         lastErr = e;
         const err = e as AxiosError;
+        const duration = Date.now() - start;
+        
         // Timeout
         if (err.code === 'ECONNABORTED') {
           this.recordFailure(targetService, config);
+          this.logger.warn(
+            `Request to ${targetService} timed out after ${duration}ms (attempt ${attempt}/${maxAttempts})`
+          );
           throw new ProxyTimeoutException(targetService, config.timeout);
         }
+        
         // Network or 5xx are retriable
         const status = err.response?.status;
         const retriable = !status || (status >= 500 && status < 600);
+        
+        this.logger.warn(
+          `Request to ${targetService} failed with status ${status || 'network error'} ` +
+          `in ${duration}ms (attempt ${attempt}/${maxAttempts}, retriable: ${retriable})`
+        );
+        
         if (!retriable || attempt === maxAttempts) {
           this.recordFailure(targetService, config);
           // If response exists, forward it
@@ -131,8 +164,10 @@ export class ProxyService {
             'Upstream unavailable',
           );
         }
+        
         // exponential backoff: 100ms * 2^(attempt-1)
         const delay = 100 * Math.pow(2, attempt - 1);
+        this.logger.debug(`Retrying request to ${targetService} after ${delay}ms delay`);
         await this.sleep(delay);
       }
     }
@@ -216,12 +251,15 @@ export class ProxyService {
     const now = Date.now();
     const { circuitBreaker } = config;
     const resetTimeout = circuitBreaker?.resetTimeout ?? 30000;
+    
     if (state?.state === 'open') {
       if (state.openedAt && now - state.openedAt >= resetTimeout) {
         // Move to half-open, allow a trial
         state.state = 'half-open';
+        this.logger.debug(`Circuit breaker for ${serviceName} moved to half-open state`);
         return true;
       }
+      this.logger.debug(`Circuit breaker for ${serviceName} is open, blocking request`);
       return false;
     }
     return true;
@@ -230,6 +268,9 @@ export class ProxyService {
   private recordSuccess(serviceName: string): void {
     const state = this.circuitStates.get(serviceName);
     if (!state) return;
+    
+    const wasOpen = state.state === 'open' || state.state === 'half-open';
+    
     // On success, close breaker and reset counters
     this.circuitStates.set(serviceName, {
       state: 'closed',
@@ -237,6 +278,10 @@ export class ProxyService {
       firstFailureAt: null,
       openedAt: null,
     });
+    
+    if (wasOpen) {
+      this.logger.log(`Circuit breaker for ${serviceName} closed after successful request`);
+    }
   }
 
   private recordFailure(serviceName: string, config: ServiceConfig): void {
@@ -263,6 +308,10 @@ export class ProxyService {
     if (!prev.firstFailureAt) prev.firstFailureAt = now;
 
     if (prev.failures >= failureThreshold) {
+      this.logger.warn(
+        `Circuit breaker for ${serviceName} opened after ${prev.failures} failures ` +
+        `(threshold: ${failureThreshold})`
+      );
       this.circuitStates.set(serviceName, {
         state: 'open',
         failures: prev.failures,
@@ -270,11 +319,47 @@ export class ProxyService {
         openedAt: now,
       });
     } else {
+      this.logger.debug(
+        `Recorded failure for ${serviceName}: ${prev.failures}/${failureThreshold}`
+      );
       this.circuitStates.set(serviceName, prev);
     }
   }
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Get circuit breaker statistics for monitoring
+   */
+  getCircuitBreakerStats(): Record<string, CircuitState & { serviceName: string }> {
+    const stats: Record<string, CircuitState & { serviceName: string }> = {};
+    
+    for (const [serviceName, state] of this.circuitStates.entries()) {
+      stats[serviceName] = {
+        ...state,
+        serviceName,
+      };
+    }
+    
+    return stats;
+  }
+
+  /**
+   * Reset circuit breaker for a specific service (for admin operations)
+   */
+  resetCircuitBreaker(serviceName: string): void {
+    this.circuitStates.delete(serviceName);
+    this.logger.log(`Circuit breaker for ${serviceName} manually reset`);
+  }
+
+  /**
+   * Reset all circuit breakers (for admin operations)
+   */
+  resetAllCircuitBreakers(): void {
+    const count = this.circuitStates.size;
+    this.circuitStates.clear();
+    this.logger.log(`All ${count} circuit breakers manually reset`);
   }
 }
