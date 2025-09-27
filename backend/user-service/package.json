@@ -21,7 +21,18 @@
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource ./data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate src/database/migrations/$npm_config_name",
     "migration:run": "npm run typeorm -- migration:run",
-    "migration:revert": "npm run typeorm -- migration:revert"
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "docker:up": "cd ../ && docker-compose up -d user-service",
+    "docker:down": "cd ../ && docker-compose down",
+    "docker:logs": "cd ../ && docker-compose logs -f user-service",
+    "docker:build": "cd ../ && docker-compose build user-service",
+    "docker:restart": "cd ../ && docker-compose restart user-service",
+    "docker:up-all": "cd ../ && docker-compose up -d",
+    "docker:local:up": "docker-compose up -d",
+    "docker:local:down": "docker-compose down",
+    "docker:local:logs": "docker-compose logs -f user-service",
+    "docker:local:build": "docker-compose build",
+    "docker:local:restart": "docker-compose restart user-service"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

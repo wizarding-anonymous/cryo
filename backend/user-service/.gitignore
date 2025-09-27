@@ -46,7 +46,7 @@ junit.xml
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# Environment variables
+# Environment variables (keep .env.example for documentation)
 .env
 .env.local
 .env.development
@@ -55,6 +55,9 @@ junit.xml
 .env.test.local
 .env.production
 .env.production.local
+
+# Keep example file for documentation
+!.env.example
 
 # Temporary files
 *.tmp
@@ -113,8 +116,8 @@ public
 .out
 .storybook-out
 
-# Docker
-.dockerignore
+# Docker (keep .dockerignore in repo)
+# .dockerignore should be committed
 
 # Database
 *.sqlite
@@ -123,3 +126,15 @@ public
 # Backup files
 *.bak
 *.backup
+
+# Load testing results
+load-test/results/
+artillery-report.html
+
+# Kubernetes
+k8s/secrets/
+k8s/local/
+
+# Performance monitoring
+*.perf
+*.prof

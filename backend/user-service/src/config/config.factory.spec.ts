@@ -21,7 +21,8 @@ describe('ConfigFactory', () => {
       ],
     }).compile();
 
-    configService = module.get<ConfigService<EnvironmentVariables>>(ConfigService);
+    configService =
+      module.get<ConfigService<EnvironmentVariables>>(ConfigService);
     configFactory = new ConfigFactory(configService);
   });
 
@@ -100,11 +101,13 @@ describe('ConfigFactory', () => {
       const throttlerConfig = configFactory.createThrottlerConfig();
 
       expect(throttlerConfig).toEqual({
-        throttlers: [{
-          name: 'default',
-          ttl: 60000,
-          limit: 100,
-        }],
+        throttlers: [
+          {
+            name: 'default',
+            ttl: 60000,
+            limit: 100,
+          },
+        ],
       });
     });
 
@@ -121,11 +124,13 @@ describe('ConfigFactory', () => {
       const throttlerConfig = configFactory.createThrottlerConfig();
 
       expect(throttlerConfig).toEqual({
-        throttlers: [{
-          name: 'default',
-          ttl: 60000,
-          limit: 10000,
-        }],
+        throttlers: [
+          {
+            name: 'default',
+            ttl: 60000,
+            limit: 10000,
+          },
+        ],
       });
     });
   });
@@ -312,7 +317,7 @@ describe('ConfigFactory', () => {
       });
 
       expect(() => configFactory.validateConfiguration()).toThrow(
-        'Missing required environment variables'
+        'Missing required environment variables',
       );
     });
 
@@ -331,7 +336,7 @@ describe('ConfigFactory', () => {
       });
 
       expect(() => configFactory.validateConfiguration()).toThrow(
-        'JWT_SECRET must be at least 32 characters long'
+        'JWT_SECRET must be at least 32 characters long',
       );
     });
 
@@ -343,14 +348,15 @@ describe('ConfigFactory', () => {
           POSTGRES_PASSWORD: 'CHANGE_ME_IN_PRODUCTION', // Default value
           POSTGRES_DB: 'db',
           REDIS_HOST: 'localhost',
-          JWT_SECRET: 'CHANGE_ME_IN_PRODUCTION_MUST_BE_AT_LEAST_32_CHARACTERS_LONG', // Default value
+          JWT_SECRET:
+            'CHANGE_ME_IN_PRODUCTION_MUST_BE_AT_LEAST_32_CHARACTERS_LONG', // Default value
           NODE_ENV: 'production',
         };
         return config[key];
       });
 
       expect(() => configFactory.validateConfiguration()).toThrow(
-        'JWT_SECRET must be changed from default value in production'
+        'JWT_SECRET must be changed from default value in production',
       );
     });
   });

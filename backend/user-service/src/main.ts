@@ -11,8 +11,11 @@ import { createWinstonConfig } from './common/logging/winston.config';
 async function bootstrap() {
   // Create Winston configuration based on environment
   const nodeEnv = process.env.NODE_ENV || 'development';
-  const logLevel = process.env.LOG_LEVEL || (nodeEnv === 'production' ? 'info' : 'debug');
-  const logFormat = process.env.LOG_FORMAT as 'json' | 'simple' || (nodeEnv === 'production' ? 'json' : 'simple');
+  const logLevel =
+    process.env.LOG_LEVEL || (nodeEnv === 'production' ? 'info' : 'debug');
+  const logFormat =
+    (process.env.LOG_FORMAT as 'json' | 'simple') ||
+    (nodeEnv === 'production' ? 'json' : 'simple');
   const serviceName = process.env.SERVICE_NAME || 'user-service';
   const serviceVersion = process.env.SERVICE_VERSION || '1.0.0';
 

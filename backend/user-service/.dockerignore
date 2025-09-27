@@ -1,0 +1,74 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist
+build
+coverage
+*.tsbuildinfo
+
+# Environment files (except example)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Testing
+test
+coverage
+jest.config.js
+*.spec.ts
+*.test.ts
+jest-e2e.json
+
+# Documentation
+README.md
+docs
+*.md
+
+# Load testing
+load-test
+
+# Kubernetes
+k8s
+
+# Development tools
+.eslintrc*
+.prettierrc*
+eslint.config.mjs
+
+# TypeScript config (not needed in runtime)
+tsconfig*.json
+
+# Data source configs (not needed in production container)
+data-source.local.ts
+data-source.test.ts

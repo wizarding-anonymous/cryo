@@ -111,7 +111,7 @@ describe('AuthController', () => {
 
     it('should handle logout with malformed authorization header', async () => {
       const authHeader = 'InvalidHeader';
-      
+
       await controller.logout(authHeader);
 
       expect(authService.logout).toHaveBeenCalledWith(undefined);

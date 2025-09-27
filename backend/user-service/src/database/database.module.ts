@@ -13,10 +13,10 @@ import { EnvironmentVariables } from '../config/env.validation';
       inject: [ConfigService],
       useFactory: (configService: ConfigService<EnvironmentVariables>) => {
         const configFactory = new ConfigFactory(configService);
-        
+
         // Validate configuration before creating TypeORM config
         configFactory.validateConfiguration();
-        
+
         return configFactory.createTypeOrmConfig();
       },
     }),

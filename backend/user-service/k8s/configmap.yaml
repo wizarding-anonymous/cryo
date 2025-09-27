@@ -6,9 +6,9 @@ metadata:
 data:
   NODE_ENV: "production"
   PORT: "3001"
-  POSTGRES_HOST: "postgres-service"
+  POSTGRES_HOST: "user-service-postgres"
   POSTGRES_PORT: "5432"
   POSTGRES_DB: "user_service_db"
-  REDIS_HOST: "redis-service"
+  REDIS_HOST: "user-service-redis"
   REDIS_PORT: "6379"
   JWT_EXPIRES_IN: "1h"

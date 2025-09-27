@@ -9,6 +9,8 @@ resources:
 - secret.yaml
 - deployment.yaml
 - service.yaml
+- postgres-deployment.yaml
+- redis-deployment.yaml
 - hpa.yaml
 - ingress.yaml
 - servicemonitor.yaml

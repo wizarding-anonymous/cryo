@@ -86,7 +86,7 @@ describe('Common Components', () => {
       const httpAdapterHost = {
         httpAdapter: mockHttpAdapter,
       } as HttpAdapterHost;
-      
+
       filter = new GlobalExceptionFilter(httpAdapterHost);
     });
 
@@ -134,7 +134,10 @@ describe('Common Components', () => {
         error: 'Bad Request',
         statusCode: 400,
       };
-      const exception = new HttpException(validationResponse, HttpStatus.BAD_REQUEST);
+      const exception = new HttpException(
+        validationResponse,
+        HttpStatus.BAD_REQUEST,
+      );
       const host = createMockHost({ url: '/test' }, mockResponse);
 
       filter.catch(exception, host);
@@ -155,7 +158,10 @@ describe('Common Components', () => {
     });
 
     it('should handle different HTTP status codes correctly', () => {
-      const exception = new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      const exception = new HttpException(
+        'Unauthorized',
+        HttpStatus.UNAUTHORIZED,
+      );
       const host = createMockHost({ url: '/test' }, mockResponse);
 
       filter.catch(exception, host);
@@ -174,7 +180,10 @@ describe('Common Components', () => {
     });
 
     it('should handle CONFLICT status code', () => {
-      const exception = new HttpException('Resource already exists', HttpStatus.CONFLICT);
+      const exception = new HttpException(
+        'Resource already exists',
+        HttpStatus.CONFLICT,
+      );
       const host = createMockHost({ url: '/test' }, mockResponse);
 
       filter.catch(exception, host);

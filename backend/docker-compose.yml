@@ -40,7 +40,7 @@ services:
       - postgres-user
       - redis
     env_file:
-      - ./user-service/.env
+      - ./user-service/.env.docker
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:

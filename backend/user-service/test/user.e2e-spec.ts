@@ -70,9 +70,7 @@ describe('User Endpoints (e2e)', () => {
 
     beforeAll(async () => {
       // Register and login to get a token
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send(testUser);
+      await request(app.getHttpServer()).post('/auth/register').send(testUser);
 
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')

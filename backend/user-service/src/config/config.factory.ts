@@ -10,7 +10,9 @@ import { User } from '../user/entities/user.entity';
  * based on environment variables and application settings
  */
 export class ConfigFactory {
-  constructor(private readonly configService: ConfigService<EnvironmentVariables>) {}
+  constructor(
+    private readonly configService: ConfigService<EnvironmentVariables>,
+  ) {}
 
   /**
    * Create TypeORM configuration
@@ -23,8 +25,12 @@ export class ConfigFactory {
       username: this.configService.get('POSTGRES_USER', { infer: true }),
       password: this.configService.get('POSTGRES_PASSWORD', { infer: true }),
       database: this.configService.get('POSTGRES_DB', { infer: true }),
-      maxConnections: this.configService.get('POSTGRES_MAX_CONNECTIONS', { infer: true }),
-      connectionTimeout: this.configService.get('POSTGRES_CONNECTION_TIMEOUT', { infer: true }),
+      maxConnections: this.configService.get('POSTGRES_MAX_CONNECTIONS', {
+        infer: true,
+      }),
+      connectionTimeout: this.configService.get('POSTGRES_CONNECTION_TIMEOUT', {
+        infer: true,
+      }),
     };
 
     return {
@@ -66,20 +72,24 @@ export class ConfigFactory {
     if (!throttleConfig.enabled) {
       // Return very high limits when rate limiting is disabled
       return {
-        throttlers: [{
-          name: 'default',
-          ttl: throttleConfig.ttl,
-          limit: 10000,
-        }],
+        throttlers: [
+          {
+            name: 'default',
+            ttl: throttleConfig.ttl,
+            limit: 10000,
+          },
+        ],
       };
     }
 
     return {
-      throttlers: [{
-        name: 'default',
-        ttl: throttleConfig.ttl,
-        limit: throttleConfig.limit,
-      }],
+      throttlers: [
+        {
+          name: 'default',
+          ttl: throttleConfig.ttl,
+          limit: throttleConfig.limit,
+        },
+      ],
     };
   }
 
@@ -88,7 +98,7 @@ export class ConfigFactory {
    */
   createCacheConfig(): CacheModuleOptions {
     const nodeEnv = this.configService.get('NODE_ENV', { infer: true });
-    
+
     return {
       isGlobal: true,
       ttl: nodeEnv === 'production' ? 300 : 60, // 5 minutes in prod, 1 minute in dev
@@ -105,8 +115,12 @@ export class ConfigFactory {
       port: this.configService.get('REDIS_PORT', { infer: true }),
       password: this.configService.get('REDIS_PASSWORD', { infer: true }),
       db: this.configService.get('REDIS_DB', { infer: true }),
-      maxRetriesPerRequest: this.configService.get('REDIS_MAX_RETRIES', { infer: true }),
-      retryDelayOnFailover: this.configService.get('REDIS_RETRY_DELAY', { infer: true }),
+      maxRetriesPerRequest: this.configService.get('REDIS_MAX_RETRIES', {
+        infer: true,
+      }),
+      retryDelayOnFailover: this.configService.get('REDIS_RETRY_DELAY', {
+        infer: true,
+      }),
       lazyConnect: true,
       keepAlive: 30000,
       connectTimeout: 10000,
@@ -132,7 +146,9 @@ export class ConfigFactory {
   createCorsConfig() {
     const origin = this.configService.get('CORS_ORIGIN', { infer: true });
     const methods = this.configService.get('CORS_METHODS', { infer: true });
-    const credentials = this.configService.get('CORS_CREDENTIALS', { infer: true });
+    const credentials = this.configService.get('CORS_CREDENTIALS', {
+      infer: true,
+    });
 
     return {
       origin: origin === '*' ? true : origin.split(','),
@@ -147,7 +163,9 @@ export class ConfigFactory {
    */
   createSwaggerConfig() {
     const serviceName = this.configService.get('SERVICE_NAME', { infer: true });
-    const serviceVersion = this.configService.get('SERVICE_VERSION', { infer: true });
+    const serviceVersion = this.configService.get('SERVICE_VERSION', {
+      infer: true,
+    });
     const nodeEnv = this.configService.get('NODE_ENV', { infer: true });
 
     return {
@@ -162,7 +180,11 @@ export class ConfigFactory {
   /**
    * Get TypeORM logging configuration based on environment
    */
-  private getTypeOrmLogging(nodeEnv: string): boolean | ('query' | 'error' | 'schema' | 'warn' | 'info' | 'log' | 'migration')[] {
+  private getTypeOrmLogging(
+    nodeEnv: string,
+  ):
+    | boolean
+    | ('query' | 'error' | 'schema' | 'warn' | 'info' | 'log' | 'migration')[] {
     switch (nodeEnv) {
       case 'development':
         return ['query', 'error', 'warn', 'migration'];
@@ -189,12 +211,13 @@ export class ConfigFactory {
     ];
 
     const missingVars = requiredVars.filter(
-      (varName) => !this.configService.get(varName as keyof EnvironmentVariables)
+      (varName) =>
+        !this.configService.get(varName as keyof EnvironmentVariables),
     );
 
     if (missingVars.length > 0) {
       throw new Error(
-        `Missing required environment variables: ${missingVars.join(', ')}`
+        `Missing required environment variables: ${missingVars.join(', ')}`,
       );
     }
 
@@ -218,23 +241,29 @@ export class ConfigFactory {
     const productionChecks = [
       {
         key: 'JWT_SECRET',
-        check: (value: string) => value !== 'CHANGE_ME_IN_PRODUCTION_MUST_BE_AT_LEAST_32_CHARACTERS_LONG',
-        message: 'JWT_SECRET must be changed from default value in production'
+        check: (value: string) =>
+          value !==
+          'CHANGE_ME_IN_PRODUCTION_MUST_BE_AT_LEAST_32_CHARACTERS_LONG',
+        message: 'JWT_SECRET must be changed from default value in production',
       },
       {
         key: 'POSTGRES_PASSWORD',
         check: (value: string) => value !== 'CHANGE_ME_IN_PRODUCTION',
-        message: 'POSTGRES_PASSWORD must be changed from default value in production'
+        message:
+          'POSTGRES_PASSWORD must be changed from default value in production',
       },
       {
         key: 'REDIS_PASSWORD',
         check: (value: string) => !value || value !== 'CHANGE_ME_IN_PRODUCTION',
-        message: 'REDIS_PASSWORD should be set and changed from default value in production'
+        message:
+          'REDIS_PASSWORD should be set and changed from default value in production',
       },
     ];
 
     for (const check of productionChecks) {
-      const value = this.configService.get(check.key as keyof EnvironmentVariables);
+      const value = this.configService.get(
+        check.key as keyof EnvironmentVariables,
+      );
       if (value && !check.check(value as string)) {
         throw new Error(check.message);
       }

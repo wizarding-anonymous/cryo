@@ -17,7 +17,9 @@ export const environmentConfigs: EnvironmentConfig = {
  * Get environment-specific configuration defaults
  * These can be overridden by actual environment variables
  */
-export function getEnvironmentDefaults(nodeEnv: string): Partial<EnvironmentVariables> {
+export function getEnvironmentDefaults(
+  nodeEnv: string,
+): Partial<EnvironmentVariables> {
   const config = environmentConfigs[nodeEnv];
   if (!config) {
     throw new Error(`No configuration found for environment: ${nodeEnv}`);
@@ -31,21 +33,21 @@ export function getEnvironmentDefaults(nodeEnv: string): Partial<EnvironmentVari
  */
 export function mergeEnvironmentConfig(
   nodeEnv: string,
-  envVars: Record<string, any>
+  envVars: Record<string, any>,
 ): Record<string, any> {
   const defaults = getEnvironmentDefaults(nodeEnv);
-  
+
   // Merge defaults with environment variables
   // Environment variables override defaults
   const merged = { ...defaults, ...envVars };
-  
+
   // Remove undefined values
-  Object.keys(merged).forEach(key => {
+  Object.keys(merged).forEach((key) => {
     if (merged[key] === undefined) {
       delete merged[key];
     }
   });
-  
+
   return merged;
 }
 

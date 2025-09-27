@@ -19,13 +19,13 @@ import { mergeEnvironmentConfig } from './environments';
       load: [
         () => {
           const nodeEnv = process.env.NODE_ENV || 'development';
-          
+
           // Get current environment variables
           const envVars = { ...process.env };
-          
+
           // Merge with environment-specific defaults
           const config = mergeEnvironmentConfig(nodeEnv, envVars);
-          
+
           return config;
         },
       ],
@@ -41,20 +41,20 @@ export class AppConfigModule {}
  */
 function getEnvFilePaths(): string[] {
   const nodeEnv = process.env.NODE_ENV || 'development';
-  
+
   const paths: string[] = [];
-  
+
   // Environment-specific files first (highest priority)
   paths.push(`.env.${nodeEnv}.local`);
   paths.push(`.env.${nodeEnv}`);
-  
+
   // Local override file
   if (nodeEnv !== 'production') {
     paths.push('.env.local');
   }
-  
+
   // Default env file (lowest priority)
   paths.push('.env');
-  
+
   return paths;
 }

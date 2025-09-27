@@ -1,17 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../user/entities/user.entity';
 import { UpdateProfileDto } from '../user/dto/update-profile.dto';
 import { UserService } from '../user/user.service';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class ProfileService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    private readonly userService: UserService,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   /**
    * Gets a user's profile.
@@ -40,18 +34,12 @@ export class ProfileService {
     id: string,
     updateProfileDto: UpdateProfileDto,
   ): Promise<Omit<User, 'password'>> {
-    const userToUpdate = await this.userRepository.preload({
-      id: id,
-      ...updateProfileDto,
-    });
-
-    if (!userToUpdate) {
-      throw new NotFoundException(`Пользователь с ID ${id} не найден`);
-    }
-
-    const savedUser = await this.userRepository.save(userToUpdate);
+    const updatedUser = await this.userService.updateProfile(
+      id,
+      updateProfileDto,
+    );
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...result } = savedUser;
+    const { password, ...result } = updatedUser;
     return result;
   }
 

@@ -1,61 +1,62 @@
 version: '3.8'
 
-# This docker-compose file is for development and testing purposes.
-# It sets up the user-service application along with its dependencies:
-# a PostgreSQL database and a Redis cache.
+# Local docker-compose file for user-service development
+# This file sets up only the user-service with its dedicated dependencies
+# Use this for isolated development of user-service
 
 services:
   # User Service Application
-  # Builds the service from the local Dockerfile.
   user-service:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: user-service
+    container_name: user-service-local
     ports:
       - "3001:3001"
     depends_on:
       - postgres
       - redis
     env_file:
-      - .env
+      - .env.local
     networks:
-      - my-network
+      - user-service-network
+    restart: unless-stopped
 
-  # PostgreSQL Database
-  # Uses the official PostgreSQL 15 image.
+  # PostgreSQL Database (dedicated for user-service)
   postgres:
     image: postgres:15-alpine
-    container_name: postgres_user_db
+    container_name: user-service-postgres-local
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-user_service_db}
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Different external port to avoid conflicts
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - user-service-postgres-data:/var/lib/postgresql/data
     networks:
-      - my-network
+      - user-service-network
+    restart: unless-stopped
 
-  # Redis Cache
-  # Uses the official Redis 7 image.
+  # Redis Cache (dedicated for user-service)
   redis:
     image: redis:7-alpine
-    container_name: redis_cache
+    container_name: user-service-redis-local
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Different external port to avoid conflicts
     volumes:
-      - redis_data:/data
+      - user-service-redis-data:/data
     networks:
-      - my-network
+      - user-service-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
 
 # Volumes for data persistence
 volumes:
-  postgres_data:
-  redis_data:
+  user-service-postgres-data:
+  user-service-redis-data:
 
 # Network for inter-service communication
 networks:
-  my-network:
+  user-service-network:
     driver: bridge

@@ -48,7 +48,7 @@ describe('Swagger Documentation (e2e)', () => {
         expect(res.body).toHaveProperty('info');
         expect(res.body.info.title).toBe('User Service API');
         expect(res.body).toHaveProperty('paths');
-        
+
         // Verify that our main endpoints are documented
         expect(res.body.paths).toHaveProperty('/auth/register');
         expect(res.body.paths).toHaveProperty('/auth/login');

@@ -23,7 +23,7 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+User Service for Gaming Platform - handles user authentication, profile management, and user-related operations.
 
 ## Project setup
 
@@ -31,8 +31,21 @@
 $ npm install
 ```
 
-## Compile and run the project
+## Environment Configuration
 
+### Local Development
+Copy `.env.example` to `.env` and configure your local environment:
+```bash
+cp .env.example .env
+```
+
+### Docker Development
+- **Local Docker Compose**: Uses `.env.local` (already configured)
+- **Full Cryo Project**: Uses `.env.docker` (already configured)
+
+## Running the Application
+
+### Local Development
 ```bash
 # development
 $ npm run start
@@ -43,6 +56,67 @@ $ npm run start:dev
 # production mode
 $ npm run start:prod
 ```
+
+### Docker Development
+
+#### Option 1: Local Development (Isolated)
+For isolated user-service development with dedicated database and cache:
+
+```bash
+# Start user-service with dedicated PostgreSQL and Redis
+$ npm run docker:local:up
+
+# View logs
+$ npm run docker:local:logs
+
+# Stop services
+$ npm run docker:local:down
+
+# Rebuild
+$ npm run docker:local:build
+```
+
+#### Option 2: Full Cryo Project
+For development with all microservices:
+
+```bash
+# From backend directory - Start all microservices
+$ cd ../
+$ docker-compose up -d
+
+# Start only user-service and its dependencies
+$ docker-compose up -d user-service
+
+# View user-service logs
+$ docker-compose logs -f user-service
+
+# Stop all services
+$ docker-compose down
+```
+
+### Port Configuration
+
+#### Local Docker Compose
+- **Application**: 3001
+- **PostgreSQL**: 5433 (external) → 5432 (internal)
+- **Redis**: 6380 (external) → 6379 (internal)
+
+#### Full Cryo Project
+- **Application**: 3001
+- **PostgreSQL**: 5432 (external) - shared with other services
+- **Redis**: 6379 (external) - shared with other services
+
+### Container Names
+
+#### Local Docker Compose
+- `user-service-local` - Main application
+- `user-service-postgres-local` - Dedicated PostgreSQL
+- `user-service-redis-local` - Dedicated Redis
+
+#### Full Cryo Project
+- `user-service` - Main application
+- `postgres-user-db` - PostgreSQL database (shared naming convention)
+- `redis-cache` - Redis cache (shared with other services)
 
 ## Run tests
 

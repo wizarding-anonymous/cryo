@@ -8,8 +8,16 @@ export interface WinstonConfigOptions {
   serviceVersion: string;
 }
 
-export function createWinstonConfig(options: WinstonConfigOptions): LoggerOptions {
-  const { level, format: logFormat, nodeEnv, serviceName, serviceVersion } = options;
+export function createWinstonConfig(
+  options: WinstonConfigOptions,
+): LoggerOptions {
+  const {
+    level,
+    format: logFormat,
+    nodeEnv,
+    serviceName,
+    serviceVersion,
+  } = options;
 
   // Base format with metadata
   const baseFormat = format.combine(
@@ -27,9 +35,10 @@ export function createWinstonConfig(options: WinstonConfigOptions): LoggerOption
     format.printf((info) => {
       const { timestamp, level, message, metadata } = info;
       const metaObj = metadata && typeof metadata === 'object' ? metadata : {};
-      const metaStr = Object.keys(metaObj).length > 0
-        ? `\n${JSON.stringify(metaObj, null, 2)}`
-        : '';
+      const metaStr =
+        Object.keys(metaObj).length > 0
+          ? `\n${JSON.stringify(metaObj, null, 2)}`
+          : '';
       return `[${timestamp}] [${serviceName}] ${level}: ${message}${metaStr}`;
     }),
   );
@@ -39,7 +48,8 @@ export function createWinstonConfig(options: WinstonConfigOptions): LoggerOption
     baseFormat,
     format.json(),
     format.printf((info) => {
-      const metadata = info.metadata && typeof info.metadata === 'object' ? info.metadata : {};
+      const metadata =
+        info.metadata && typeof info.metadata === 'object' ? info.metadata : {};
       return JSON.stringify({
         timestamp: info.timestamp,
         level: info.level,
@@ -55,7 +65,9 @@ export function createWinstonConfig(options: WinstonConfigOptions): LoggerOption
   // Test format (minimal)
   const testFormat = format.combine(
     format.timestamp({ format: 'HH:mm:ss' }),
-    format.printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`),
+    format.printf(
+      (info) => `[${info.timestamp}] ${info.level}: ${info.message}`,
+    ),
   );
 
   // Choose format based on environment and configuration

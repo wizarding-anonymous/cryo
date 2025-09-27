@@ -22,7 +22,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
     // Generate a correlation ID for request tracing
     const correlationId = this.generateCorrelationId();
-    
+
     // Add correlation ID to request for use in other parts of the application
     (request as any).correlationId = correlationId;
 
@@ -51,7 +51,9 @@ export class LoggingInterceptor implements NestInterceptor {
   }
 
   private generateCorrelationId(): string {
-    return Math.random().toString(36).substring(2, 15) + 
-           Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   }
 }

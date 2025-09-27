@@ -94,7 +94,10 @@ describe('JwtStrategy', () => {
       } as Request;
 
       // Act
-      const result = await strategy.validate(requestWithoutAuth, mockJwtPayload);
+      const result = await strategy.validate(
+        requestWithoutAuth,
+        mockJwtPayload,
+      );
 
       // Assert
       expect(result).toEqual({

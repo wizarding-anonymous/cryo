@@ -49,9 +49,15 @@ describe('HealthController', () => {
       controllers: [HealthController],
       providers: [
         { provide: HealthCheckService, useValue: mockHealthCheckService },
-        { provide: TypeOrmHealthIndicator, useValue: mockTypeOrmHealthIndicator },
+        {
+          provide: TypeOrmHealthIndicator,
+          useValue: mockTypeOrmHealthIndicator,
+        },
         { provide: MemoryHealthIndicator, useValue: mockMemoryHealthIndicator },
-        { provide: StartupValidationService, useValue: mockStartupValidationService },
+        {
+          provide: StartupValidationService,
+          useValue: mockStartupValidationService,
+        },
         { provide: AppConfigService, useValue: mockAppConfigService },
         { provide: RedisService, useValue: mockRedisService },
       ],
@@ -59,7 +65,9 @@ describe('HealthController', () => {
 
     controller = module.get<HealthController>(HealthController);
     healthCheckService = module.get<HealthCheckService>(HealthCheckService);
-    startupValidationService = module.get<StartupValidationService>(StartupValidationService);
+    startupValidationService = module.get<StartupValidationService>(
+      StartupValidationService,
+    );
     redisService = module.get<RedisService>(RedisService);
   });
 
@@ -136,7 +144,9 @@ describe('HealthController', () => {
         },
       };
 
-      mockStartupValidationService.performHealthCheck.mockResolvedValue(mockValidationResult);
+      mockStartupValidationService.performHealthCheck.mockResolvedValue(
+        mockValidationResult,
+      );
 
       const result = await controller.detailedCheck();
 
@@ -207,7 +217,9 @@ describe('HealthController', () => {
         },
       };
 
-      mockStartupValidationService.performHealthCheck.mockResolvedValue(mockValidationResult);
+      mockStartupValidationService.performHealthCheck.mockResolvedValue(
+        mockValidationResult,
+      );
 
       const result = await (controller as any).performCustomHealthCheck();
 
@@ -229,10 +241,14 @@ describe('HealthController', () => {
         },
       };
 
-      mockStartupValidationService.performHealthCheck.mockResolvedValue(mockValidationResult);
+      mockStartupValidationService.performHealthCheck.mockResolvedValue(
+        mockValidationResult,
+      );
 
-      await expect((controller as any).performCustomHealthCheck()).rejects.toThrow(
-        'Critical health check failed: database: Database connection failed'
+      await expect(
+        (controller as any).performCustomHealthCheck(),
+      ).rejects.toThrow(
+        'Critical health check failed: database: Database connection failed',
       );
     });
 
@@ -247,7 +263,9 @@ describe('HealthController', () => {
         },
       };
 
-      mockStartupValidationService.performHealthCheck.mockResolvedValue(mockValidationResult);
+      mockStartupValidationService.performHealthCheck.mockResolvedValue(
+        mockValidationResult,
+      );
 
       const result = await (controller as any).performCustomHealthCheck();
 

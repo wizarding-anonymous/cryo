@@ -161,9 +161,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     beforeAll(async () => {
       // Register a user for login tests
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send(testUser);
+      await request(app.getHttpServer()).post('/auth/register').send(testUser);
     });
 
     it('should login successfully with correct credentials', () => {
@@ -244,9 +242,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     beforeAll(async () => {
       // Register and login to get a token
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send(testUser);
+      await request(app.getHttpServer()).post('/auth/register').send(testUser);
 
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')

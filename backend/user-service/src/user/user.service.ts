@@ -79,7 +79,10 @@ export class UserService {
    * @returns The updated user.
    * @throws NotFoundException if the user does not exist.
    */
-  async update(id: string, updateData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User> {
+  async update(
+    id: string,
+    updateData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>,
+  ): Promise<User> {
     // If password is being updated, hash it first
     if (updateData.password) {
       updateData.password = await this.hashPassword(updateData.password);
@@ -125,7 +128,10 @@ export class UserService {
    * @param updateData - The profile data to update.
    * @returns The updated user.
    */
-  async updateProfile(id: string, updateData: { name?: string }): Promise<User> {
+  async updateProfile(
+    id: string,
+    updateData: { name?: string },
+  ): Promise<User> {
     return this.update(id, updateData);
   }
 }
