@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -38,17 +37,7 @@ import { EnvironmentVariables } from './config/env.validation';
       },
     }),
 
-    // --- Cache Module (Memory Store) ---
-    // Use memory store for cache-manager to avoid Redis compatibility issues
-    // Redis is still used directly for JWT blacklist and other operations
-    CacheModule.registerAsync({
-      imports: [AppConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<EnvironmentVariables>) => {
-        const configFactory = new ConfigFactory(configService);
-        return configFactory.createCacheConfig();
-      },
-    }),
+    // --- Cache Module is now imported via AppConfigModule ---
 
     // --- Custom Modules ---
     IntegrationsModule,

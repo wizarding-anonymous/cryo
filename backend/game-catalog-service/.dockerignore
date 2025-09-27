@@ -103,9 +103,11 @@ docker-compose*
 .git
 .gitignore
 
-# Documentation
+# Documentation (keep essential deployment docs)
 README.md
-*.md
+API_DOCUMENTATION.md
+PAYMENT_SERVICE_INTEGRATION.md
+PRODUCTION_CHECKLIST.md
 
 # Test files
 test/

@@ -1,9 +1,12 @@
 import { Global, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AppConfigService } from './config.service';
 import { StartupValidationService } from './startup-validation.service';
 import { envValidationSchema } from './env.validation';
 import { mergeEnvironmentConfig } from './environments';
+import { ConfigFactory } from './config.factory';
+import { EnvironmentVariables } from './env.validation';
 
 @Global()
 @Module({
@@ -30,9 +33,17 @@ import { mergeEnvironmentConfig } from './environments';
         },
       ],
     }),
+    // Add CacheModule here to make CACHE_MANAGER available for StartupValidationService
+    CacheModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => {
+        const configFactory = new ConfigFactory(configService);
+        return configFactory.createCacheConfig();
+      },
+    }),
   ],
   providers: [AppConfigService, StartupValidationService],
-  exports: [AppConfigService, StartupValidationService],
+  exports: [AppConfigService, StartupValidationService, CacheModule],
 })
 export class AppConfigModule {}
 

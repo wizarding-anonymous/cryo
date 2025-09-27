@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: gaming-platform
+  name: microservices
   labels:
-    name: gaming-platform
+    name: microservices
     environment: production

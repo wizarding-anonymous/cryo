@@ -22,9 +22,10 @@ This document summarizes the Docker configuration created for the Game Catalog S
 - `.env.production.example` - Production environment template
 
 ### Documentation & Utilities
-- `DOCKER.md` - Comprehensive Docker deployment guide
+- `DEPLOYMENT_GUIDE.md` - Comprehensive Docker deployment guide
 - `Makefile` - Docker operation shortcuts
-- `src/health-check.js` - Docker health check script
+- `src/health-check.js` - Simple Docker health check script
+- `scripts/test-health.js` - Advanced health endpoint testing script
 
 ## Key Features Implemented
 

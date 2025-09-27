@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: user-service-monitor
+  namespace: microservices
+  labels:
+    app: user-service
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: user-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service-metrics
+  namespace: microservices
+  labels:
+    app: user-service
+    metrics: "true"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: user-service

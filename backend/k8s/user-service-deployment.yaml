@@ -27,13 +27,10 @@ spec:
         - name: NODE_ENV
           valueFrom:
             configMapKeyRef:
-              name: user-service-config
+              name: microservices-config
               key: NODE_ENV
         - name: PORT
-          valueFrom:
-            configMapKeyRef:
-              name: user-service-config
-              key: PORT
+          value: "3001"
         - name: POSTGRES_HOST
           valueFrom:
             configMapKeyRef:
@@ -78,15 +75,10 @@ spec:
             secretKeyRef:
               name: microservices-secrets
               key: JWT_REFRESH_SECRET
-        - name: JWT_EXPIRES_IN
-          valueFrom:
-            configMapKeyRef:
-              name: user-service-config
-              key: JWT_EXPIRES_IN
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "256Mi"
+            cpu: "200m"
           limits:
             memory: "512Mi"
             cpu: "500m"
@@ -116,3 +108,48 @@ spec:
           failureThreshold: 30
       restartPolicy: Always
       imagePullPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: microservices
+  labels:
+    app: user-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3001
+    targetPort: 3001
+    protocol: TCP
+    name: http
+  selector:
+    app: user-service
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: user-service-hpa
+  namespace: microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: user-service-deployment
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

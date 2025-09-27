@@ -201,3 +201,39 @@ update:
 	docker-compose pull
 	docker-compose build --no-cache
 	docker-compose up -d
+
+# Kubernetes operations
+k8s-deploy:
+	@echo "Deploying to Kubernetes..."
+	kubectl apply -f k8s/namespace.yaml
+	kubectl apply -f k8s/configmap.yaml
+	kubectl apply -f k8s/secrets.yaml
+	kubectl apply -f k8s/
+	kubectl rollout status deployment -n microservices
+
+k8s-status:
+	@echo "Kubernetes deployment status:"
+	kubectl get pods -n microservices
+	kubectl get svc -n microservices
+	kubectl get ingress -n microservices
+
+k8s-logs:
+	@echo "Showing logs for all services..."
+	kubectl logs -n microservices -l app=user-service --tail=100
+	kubectl logs -n microservices -l app=game-catalog-service --tail=100
+
+k8s-clean:
+	@echo "Cleaning up Kubernetes resources..."
+	kubectl delete namespace microservices
+
+# Integration checks
+check-integration:
+	@echo "Checking user-service integration..."
+	@echo "1. Docker Compose integration:"
+	@grep -q "user-service:" docker-compose.yml && echo "  ✅ Found in docker-compose.yml" || echo "  ❌ Missing from docker-compose.yml"
+	@echo "2. Kubernetes integration:"
+	@test -f k8s/user-service-deployment.yaml && echo "  ✅ K8s deployment file exists" || echo "  ❌ K8s deployment file missing"
+	@echo "3. CI/CD integration:"
+	@test -f ../.github/workflows/microservices-ci-cd.yml && echo "  ✅ CI/CD pipeline exists" || echo "  ❌ CI/CD pipeline missing"
+	@echo "4. Makefile integration:"
+	@grep -q "user-service" Makefile && echo "  ✅ Included in Makefile" || echo "  ❌ Missing from Makefile"
