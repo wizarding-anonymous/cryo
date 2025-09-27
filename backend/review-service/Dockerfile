@@ -21,7 +21,7 @@ RUN npm ci
 COPY . .
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3004
 
 # Start development server
 CMD ["npm", "run", "start:dev"]
@@ -59,11 +59,11 @@ COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
 USER nestjs
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3004
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:3004/health || exit 1
 
 # Start production server
 CMD ["node", "dist/main"]

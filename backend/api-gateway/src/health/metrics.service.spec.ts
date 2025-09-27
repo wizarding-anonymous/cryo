@@ -7,7 +7,7 @@ jest.mock('prom-client', () => {
   const mockRegistry = {
     metrics: jest.fn(),
   };
-  
+
   return {
     Registry: jest.fn(() => mockRegistry),
     collectDefaultMetrics: jest.fn(),
@@ -24,7 +24,7 @@ describe('MetricsService', () => {
     }).compile();
 
     service = module.get<MetricsService>(MetricsService);
-    
+
     // Get the mocked registry instance
     mockRegistry = (service as any).registry;
   });
@@ -36,7 +36,7 @@ describe('MetricsService', () => {
   describe('constructor', () => {
     it('should initialize registry and collect default metrics', () => {
       const { Registry, collectDefaultMetrics } = require('prom-client');
-      
+
       expect(Registry).toHaveBeenCalled();
       expect(collectDefaultMetrics).toHaveBeenCalledWith({
         register: expect.any(Object),

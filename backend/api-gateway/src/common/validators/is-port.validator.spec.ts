@@ -62,84 +62,108 @@ describe('IsPort Validator', () => {
       testInstance.port = 0;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for port above maximum (65536)', async () => {
       testInstance.port = 65536;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for negative port', async () => {
       testInstance.port = -1;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for floating point number', async () => {
       testInstance.port = 80.5;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for invalid string', async () => {
       testInstance.port = 'not-a-port';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for string with decimal', async () => {
       testInstance.port = '80.5';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for null', async () => {
       testInstance.port = null;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for undefined', async () => {
       testInstance.port = undefined;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for boolean values', async () => {
       testInstance.port = true;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for object values', async () => {
       testInstance.port = { port: 80 };
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for array values', async () => {
       testInstance.port = [80];
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
 
     it('should fail for empty string', async () => {
       testInstance.port = '';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('port must be a valid port number (1-65535)');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'port must be a valid port number (1-65535)',
+      );
     });
   });
 
@@ -152,10 +176,12 @@ describe('IsPort Validator', () => {
 
       const testInstance = new TestClassWithCustomMessage();
       testInstance.port = 'invalid-port';
-      
+
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsPort).toBe('Please provide a valid port number');
+      expect(errors[0].constraints?.IsPort).toBe(
+        'Please provide a valid port number',
+      );
     });
   });
 });

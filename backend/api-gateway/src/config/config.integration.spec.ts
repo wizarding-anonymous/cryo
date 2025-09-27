@@ -29,7 +29,9 @@ describe('Configuration Integration', () => {
 
     configService = module.get<ConfigService>(ConfigService);
     redisService = module.get<RedisService>(RedisService);
-    serviceRegistry = module.get<ServiceRegistryService>(ServiceRegistryService);
+    serviceRegistry = module.get<ServiceRegistryService>(
+      ServiceRegistryService,
+    );
   });
 
   afterAll(async () => {
@@ -74,7 +76,7 @@ describe('Configuration Integration', () => {
     it('should provide all configured services', () => {
       const allServices = serviceRegistry.getAll();
       expect(allServices).toHaveLength(11);
-      
+
       const serviceNames = serviceRegistry.getAllServiceNames();
       expect(serviceNames).toContain('user-service');
       expect(serviceNames).toContain('game-catalog-service');
@@ -110,7 +112,7 @@ describe('Configuration Integration', () => {
       };
 
       await serviceRegistry.registerService(newService);
-      
+
       const retrievedService = serviceRegistry.getServiceConfig('test-service');
       expect(retrievedService).toEqual(newService);
     });
@@ -121,11 +123,11 @@ describe('Configuration Integration', () => {
       expect(configService).toBeDefined();
       expect(redisService).toBeDefined();
       expect(serviceRegistry).toBeDefined();
-      
+
       // Verify that ServiceRegistry uses ConfigService
       const userService = serviceRegistry.getServiceConfig('user-service');
       expect(userService).toBeDefined();
-      
+
       // Verify that RedisService has a working client
       const redisClient = redisService.getClient();
       expect(redisClient).toBeDefined();

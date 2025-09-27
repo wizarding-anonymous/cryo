@@ -61,7 +61,7 @@ describe('HealthService', () => {
     it('should return valid ISO timestamp', async () => {
       const result = await service.checkGateway();
       const timestamp = new Date(result.timestamp);
-      
+
       expect(timestamp.toISOString()).toBe(result.timestamp);
       expect(Date.now() - timestamp.getTime()).toBeLessThan(1000); // within 1 second
     });
@@ -69,7 +69,7 @@ describe('HealthService', () => {
     it('should return process uptime', async () => {
       const result = await service.checkGateway();
       const actualUptime = Math.floor(process.uptime());
-      
+
       expect(result.uptime).toBeCloseTo(actualUptime, 0);
     });
   });
@@ -228,7 +228,10 @@ describe('HealthService', () => {
       ];
 
       mockRegistry.getAll.mockReturnValue(mockServices as any);
-      mockedAxios.get.mockRejectedValue({ code: 'ECONNABORTED', message: 'timeout of 1000ms exceeded' });
+      mockedAxios.get.mockRejectedValue({
+        code: 'ECONNABORTED',
+        message: 'timeout of 1000ms exceeded',
+      });
 
       const result = await service.checkServices();
 
@@ -278,12 +281,13 @@ describe('HealthService', () => {
       ];
 
       mockRegistry.getAll.mockReturnValue(mockServices as any);
-      
+
       // Mock a delay in the axios response
-      mockedAxios.get.mockImplementation(() => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({ status: 200 }), 100)
-        )
+      mockedAxios.get.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ status: 200 }), 100),
+          ),
       );
 
       const result = await service.checkServices();
@@ -338,7 +342,7 @@ describe('HealthService', () => {
       ];
 
       mockRegistry.getAll.mockReturnValue(mockServices as any);
-      
+
       mockedAxios.get
         .mockResolvedValueOnce({ status: 200 })
         .mockResolvedValueOnce({ status: 503 })

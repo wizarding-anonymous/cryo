@@ -59,7 +59,7 @@ describe('IsHttpMethod Validator', () => {
 
     it('should pass for all enum values', async () => {
       const allMethods = Object.values(HttpMethod);
-      
+
       for (const method of allMethods) {
         testInstance.method = method;
         const errors = await validate(testInstance);
@@ -73,10 +73,10 @@ describe('IsHttpMethod Validator', () => {
       testInstance.method = 'INVALID';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       const validMethods = Object.values(HttpMethod).join(', ');
       expect(errors[0].constraints?.IsHttpMethod).toBe(
-        `method must be one of: ${validMethods}`
+        `method must be one of: ${validMethods}`,
       );
     });
 
@@ -132,10 +132,12 @@ describe('IsHttpMethod Validator', () => {
 
       const testInstance = new TestClassWithCustomMessage();
       testInstance.method = 'INVALID';
-      
+
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsHttpMethod).toBe('Please provide a valid HTTP method');
+      expect(errors[0].constraints?.IsHttpMethod).toBe(
+        'Please provide a valid HTTP method',
+      );
     });
   });
 });

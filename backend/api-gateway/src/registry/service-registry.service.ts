@@ -40,11 +40,16 @@ export class ServiceRegistryService {
         timeout: Math.min(config.timeout, 3000), // Use shorter timeout for health checks
         validateStatus: (status) => status >= 200 && status < 300,
       });
-      
-      this.logger.debug(`Health check passed for ${serviceName}: ${response.status}`);
+
+      this.logger.debug(
+        `Health check passed for ${serviceName}: ${response.status}`,
+      );
       return true;
     } catch (error) {
-      this.logger.warn(`Health check failed for ${serviceName}:`, error instanceof Error ? error.message : 'Unknown error');
+      this.logger.warn(
+        `Health check failed for ${serviceName}:`,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       return false;
     }
   }

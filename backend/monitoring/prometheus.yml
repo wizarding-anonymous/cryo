@@ -29,7 +29,7 @@ scrape_configs:
   # Download Service (has metrics according to specification)
   - job_name: 'download-service'
     static_configs:
-      - targets: ['download-service:3010']
+      - targets: ['download-service:8080']
     metrics_path: '/metrics'
     scrape_interval: 30s
 

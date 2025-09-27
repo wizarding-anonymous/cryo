@@ -9,8 +9,12 @@ describe('LoggingInterceptor', () => {
 
   beforeEach(() => {
     interceptor = new LoggingInterceptor();
-    logSpy = jest.spyOn((interceptor as any).logger, 'log').mockImplementation();
-    errorSpy = jest.spyOn((interceptor as any).logger, 'error').mockImplementation();
+    logSpy = jest
+      .spyOn((interceptor as any).logger, 'log')
+      .mockImplementation();
+    errorSpy = jest
+      .spyOn((interceptor as any).logger, 'error')
+      .mockImplementation();
   });
 
   afterEach(() => {
@@ -19,12 +23,12 @@ describe('LoggingInterceptor', () => {
   });
 
   it('logs successful requests with timing', (done) => {
-    const req = { 
-      method: 'GET', 
+    const req = {
+      method: 'GET',
       originalUrl: '/api/games',
       headers: { 'user-agent': 'test-agent' },
       ip: '127.0.0.1',
-      socket: { remoteAddress: '127.0.0.1' }
+      socket: { remoteAddress: '127.0.0.1' },
     } as any;
     const res = { statusCode: 200 } as any;
     const ctx = {
@@ -36,10 +40,10 @@ describe('LoggingInterceptor', () => {
       .subscribe(() => {
         expect(logSpy).toHaveBeenCalledTimes(2); // Request and response logs
         expect(logSpy).toHaveBeenCalledWith(
-          expect.stringContaining('GET /api/games - 127.0.0.1 - test-agent')
+          expect.stringContaining('GET /api/games - 127.0.0.1 - test-agent'),
         );
         expect(logSpy).toHaveBeenCalledWith(
-          expect.stringContaining('GET /api/games - 200 -')
+          expect.stringContaining('GET /api/games - 200 -'),
         );
         done();
       });
@@ -48,13 +52,13 @@ describe('LoggingInterceptor', () => {
   it('logs errors with timing and stack trace', (done) => {
     const error = new Error('Test error');
     (error as any).status = 500;
-    
-    const req = { 
-      method: 'POST', 
+
+    const req = {
+      method: 'POST',
       originalUrl: '/api/users',
       headers: { 'user-agent': 'test-agent' },
       ip: '127.0.0.1',
-      socket: { remoteAddress: '127.0.0.1' }
+      socket: { remoteAddress: '127.0.0.1' },
     } as any;
     const res = { statusCode: 500 } as any;
     const ctx = {
@@ -66,14 +70,14 @@ describe('LoggingInterceptor', () => {
       .subscribe({
         error: () => {
           expect(logSpy).toHaveBeenCalledWith(
-            expect.stringContaining('POST /api/users - 127.0.0.1 - test-agent')
+            expect.stringContaining('POST /api/users - 127.0.0.1 - test-agent'),
           );
           expect(errorSpy).toHaveBeenCalledWith(
             expect.stringContaining('POST /api/users - 500 -'),
-            expect.any(String)
+            expect.any(String),
           );
           done();
-        }
+        },
       });
   });
 });

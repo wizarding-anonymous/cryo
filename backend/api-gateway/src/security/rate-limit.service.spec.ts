@@ -54,10 +54,12 @@ describe('RateLimitService', () => {
     });
 
     it('should return false when rate limiting is disabled', async () => {
-      configService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'RATE_LIMIT_ENABLED') return false;
-        return defaultValue;
-      });
+      configService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'RATE_LIMIT_ENABLED') return false;
+          return defaultValue;
+        },
+      );
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -104,7 +106,11 @@ describe('RateLimitService', () => {
         [null, 5], // zcard result - current count
       ]);
 
-      const result = await service.check('192.168.1.1', '/api/auth/login', 'POST');
+      const result = await service.check(
+        '192.168.1.1',
+        '/api/auth/login',
+        'POST',
+      );
 
       expect(result).toEqual({
         allowed: true,
@@ -121,7 +127,11 @@ describe('RateLimitService', () => {
         [null, 15], // zcard result - current count
       ]);
 
-      const result = await service.check('192.168.1.1', '/api/payments/create', 'POST');
+      const result = await service.check(
+        '192.168.1.1',
+        '/api/payments/create',
+        'POST',
+      );
 
       expect(result).toEqual({
         allowed: true,
@@ -155,9 +165,16 @@ describe('RateLimitService', () => {
         [null, 10], // zcard result - current count equals limit for auth
       ]);
 
-      mockRedisClient.zrange.mockResolvedValueOnce(['1234567890', '1234567890']);
+      mockRedisClient.zrange.mockResolvedValueOnce([
+        '1234567890',
+        '1234567890',
+      ]);
 
-      const result = await service.check('192.168.1.1', '/api/auth/login', 'POST');
+      const result = await service.check(
+        '192.168.1.1',
+        '/api/auth/login',
+        'POST',
+      );
 
       expect(result).toEqual({
         allowed: false,
@@ -230,7 +247,11 @@ describe('RateLimitService', () => {
       ]);
 
       // Test wildcard match for auth subroutes
-      const result = await service.check('192.168.1.1', '/api/auth/register', 'POST');
+      const result = await service.check(
+        '192.168.1.1',
+        '/api/auth/register',
+        'POST',
+      );
       expect(result.limit).toBe(10); // Auth specific limit
     });
 

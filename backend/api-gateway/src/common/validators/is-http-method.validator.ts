@@ -16,7 +16,9 @@ export function IsHttpMethod(validationOptions?: ValidationOptions) {
       validator: {
         validate(value: any) {
           if (typeof value !== 'string') return false;
-          return Object.values(HttpMethod).includes(value.toUpperCase() as HttpMethod);
+          return Object.values(HttpMethod).includes(
+            value.toUpperCase() as HttpMethod,
+          );
         },
         defaultMessage(args: ValidationArguments) {
           const validMethods = Object.values(HttpMethod).join(', ');

@@ -62,91 +62,117 @@ describe('IsSafePath Validator', () => {
       testInstance.path = 'api/users';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for path with directory traversal', async () => {
       testInstance.path = '/api/../admin';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for path with double dots', async () => {
       testInstance.path = '/api/users/../admin';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for path with spaces', async () => {
       testInstance.path = '/api/users with spaces';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for path with tabs', async () => {
       testInstance.path = '/api/users\twith\ttabs';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for path with newlines', async () => {
       testInstance.path = '/api/users\nwith\nnewlines';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for null', async () => {
       testInstance.path = null;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for undefined', async () => {
       testInstance.path = undefined;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for number values', async () => {
       testInstance.path = 123;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for boolean values', async () => {
       testInstance.path = true;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for object values', async () => {
       testInstance.path = { path: '/api/users' };
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for array values', async () => {
       testInstance.path = ['/api/users'];
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
 
     it('should fail for empty string', async () => {
       testInstance.path = '';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('path must be an absolute, safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'path must be an absolute, safe path',
+      );
     });
   });
 
@@ -159,10 +185,12 @@ describe('IsSafePath Validator', () => {
 
       const testInstance = new TestClassWithCustomMessage();
       testInstance.path = 'invalid-path';
-      
+
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsSafePath).toBe('Please provide a valid and safe path');
+      expect(errors[0].constraints?.IsSafePath).toBe(
+        'Please provide a valid and safe path',
+      );
     });
   });
 });

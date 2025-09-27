@@ -41,8 +41,10 @@ describe('IsTimeout Validator', () => {
       });
 
       it('should pass for various valid integer values', async () => {
-        const validTimeouts = [1000, 1500, 3000, 5000, 10000, 30000, 60000, 120000, 300000];
-        
+        const validTimeouts = [
+          1000, 1500, 3000, 5000, 10000, 30000, 60000, 120000, 300000,
+        ];
+
         for (const timeout of validTimeouts) {
           testInstance.timeout = timeout;
           const errors = await validate(testInstance);
@@ -81,7 +83,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -90,7 +92,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -99,7 +101,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -108,7 +110,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -117,7 +119,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -126,7 +128,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -135,7 +137,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -144,7 +146,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -153,7 +155,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -162,7 +164,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -171,7 +173,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -180,7 +182,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -189,7 +191,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
 
         testInstance.timeout = false;
@@ -202,7 +204,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -211,7 +213,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 1000ms and 300000ms'
+          'timeout must be a timeout value between 1000ms and 300000ms',
         );
       });
 
@@ -268,7 +270,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstanceCustom);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 500ms and 10000ms'
+          'timeout must be a timeout value between 500ms and 10000ms',
         );
       });
 
@@ -277,7 +279,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstanceCustom);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 500ms and 10000ms'
+          'timeout must be a timeout value between 500ms and 10000ms',
         );
       });
 
@@ -287,7 +289,7 @@ describe('IsTimeout Validator', () => {
         const errors = await validate(testInstanceCustom);
         expect(errors).toHaveLength(1);
         expect(errors[0].constraints?.IsTimeout).toBe(
-          'timeout must be a timeout value between 500ms and 10000ms'
+          'timeout must be a timeout value between 500ms and 10000ms',
         );
       });
     });
@@ -334,16 +336,20 @@ describe('IsTimeout Validator', () => {
   describe('custom validation message', () => {
     it('should use custom validation message when provided', async () => {
       class TestClassWithCustomMessage {
-        @IsTimeout(1000, 60000, { message: 'Please provide a valid timeout between 1-60 seconds' })
+        @IsTimeout(1000, 60000, {
+          message: 'Please provide a valid timeout between 1-60 seconds',
+        })
         timeout: any;
       }
 
       const testInstance = new TestClassWithCustomMessage();
       testInstance.timeout = 500;
-      
+
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsTimeout).toBe('Please provide a valid timeout between 1-60 seconds');
+      expect(errors[0].constraints?.IsTimeout).toBe(
+        'Please provide a valid timeout between 1-60 seconds',
+      );
     });
   });
 });

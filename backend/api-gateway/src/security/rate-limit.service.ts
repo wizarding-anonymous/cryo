@@ -35,7 +35,7 @@ export class RateLimitService {
     this.defaultMaxRequests = Number(
       this.configService.get<number>('RATE_LIMIT_MAX_REQUESTS', 100),
     );
-    
+
     // Configure different limits for different routes
     this.routeConfigs = this.loadRouteConfigs();
   }
@@ -148,7 +148,7 @@ export class RateLimitService {
         return routeConfig.config;
       }
     }
-    
+
     // Return default configuration if no specific route matches
     return {
       requests: this.defaultMaxRequests,
@@ -162,7 +162,7 @@ export class RateLimitService {
       .replace(/\*/g, '.*')
       .replace(/\?/g, '.')
       .replace(/\//g, '\\/');
-    
+
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.test(route);
   }

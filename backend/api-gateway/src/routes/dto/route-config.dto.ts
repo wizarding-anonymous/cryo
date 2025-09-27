@@ -1,39 +1,47 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { HttpMethod } from '../../common/enums/http-method.enum';
 import { ServiceName } from '../../common/enums/service-name.enum';
 
 export class RateLimitConfigDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Number of requests allowed',
     example: 100,
-    minimum: 1
+    minimum: 1,
   })
   @IsInt()
   @Min(1)
   requests!: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Time window in milliseconds',
     example: 60000,
-    minimum: 1000
+    minimum: 1000,
   })
   @IsInt()
   @Min(1000)
   windowMs!: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Skip successful requests in rate limiting',
-    example: false
+    example: false,
   })
   @IsOptional()
   @IsBoolean()
   skipSuccessfulRequests?: boolean;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Skip failed requests in rate limiting',
-    example: false
+    example: false,
   })
   @IsOptional()
   @IsBoolean()
@@ -41,47 +49,47 @@ export class RateLimitConfigDto {
 }
 
 export class RouteConfigDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Route path pattern',
-    example: '/api/users/profile'
+    example: '/api/users/profile',
   })
   @IsString()
   path!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     enum: HttpMethod,
-    description: 'HTTP method'
+    description: 'HTTP method',
   })
   @IsEnum(HttpMethod)
   method!: HttpMethod;
 
-  @ApiProperty({ 
+  @ApiProperty({
     enum: ServiceName,
-    description: 'Target service name'
+    description: 'Target service name',
   })
   @IsEnum(ServiceName)
   service!: ServiceName;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Whether authentication is required',
-    example: true
+    example: true,
   })
   @IsBoolean()
   requiresAuth!: boolean;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Rate limiting configuration',
-    type: RateLimitConfigDto
+    type: RateLimitConfigDto,
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => RateLimitConfigDto)
   rateLimit?: RateLimitConfigDto;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Request timeout in milliseconds',
     example: 5000,
-    minimum: 1000
+    minimum: 1000,
   })
   @IsOptional()
   @IsInt()

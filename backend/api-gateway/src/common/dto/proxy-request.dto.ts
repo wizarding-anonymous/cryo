@@ -1,36 +1,41 @@
-import { IsOptional, IsString, IsObject, ValidateNested } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsObject,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsHttpMethod, IsSafePath, IsJsonObject } from '../validators';
 
 export class ProxyHeadersDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Content-Type header',
-    example: 'application/json'
+    example: 'application/json',
   })
   @IsOptional()
   @IsString()
   'content-type'?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Authorization header',
-    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   @IsOptional()
   @IsString()
   authorization?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'User-Agent header',
-    example: 'API-Gateway/1.0'
+    example: 'API-Gateway/1.0',
   })
   @IsOptional()
   @IsString()
   'user-agent'?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Accept header',
-    example: 'application/json'
+    example: 'application/json',
   })
   @IsOptional()
   @IsString()
@@ -41,24 +46,24 @@ export class ProxyHeadersDto {
 }
 
 export class ProxyRequestDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'HTTP method for the request',
     example: 'GET',
-    enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+    enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   })
   @IsHttpMethod()
   method!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Request path (must be safe and absolute)',
-    example: '/api/users/123'
+    example: '/api/users/123',
   })
   @IsSafePath()
   path!: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Request headers',
-    type: ProxyHeadersDto
+    type: ProxyHeadersDto,
   })
   @IsOptional()
   @IsObject()
@@ -66,17 +71,17 @@ export class ProxyRequestDto {
   @Type(() => ProxyHeadersDto)
   headers?: ProxyHeadersDto;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Request body (for POST/PUT requests)',
-    example: { name: 'John Doe', email: 'john@example.com' }
+    example: { name: 'John Doe', email: 'john@example.com' },
   })
   @IsOptional()
   @IsJsonObject()
   body?: any;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Query parameters',
-    example: { page: '1', limit: '10' }
+    example: { page: '1', limit: '10' },
   })
   @IsOptional()
   @IsObject()

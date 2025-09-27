@@ -1,0 +1,115 @@
+config:
+  target: "{{ $processEnvironment.BASE_URL || 'http://localhost:3001' }}"
+  phases:
+    # Stability test: sustained load for extended period
+    - duration: 120
+      arrivalRate: 50
+      rampTo: 800
+      name: gradual-ramp
+    - duration: 1800  # 30 minutes sustained load
+      arrivalRate: 800
+      name: stability-test-800-users
+    - duration: 300   # 5 minutes at peak
+      arrivalRate: 800
+      rampTo: 1000
+      name: peak-load
+    - duration: 600   # 10 minutes at peak
+      arrivalRate: 1000
+      name: peak-stability
+    - duration: 180
+      arrivalRate: 1000
+      rampTo: 100
+      name: gradual-cooldown
+  defaults:
+    headers:
+      Accept: application/json
+      User-Agent: "Stability-Test/1.0"
+  # Stability requirements
+  ensure:
+    # Response time should remain stable
+    p95: 200
+    p99: 400
+    # Error rate should stay low during extended test
+    maxErrorRate: 2
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+
+scenarios:
+  # Realistic user behavior patterns
+  - name: Typical user session
+    weight: 60
+    flow:
+      # User browses games
+      - get:
+          url: "/api/games?limit=20"
+          name: "browse-games"
+      - think: 2
+      # Views specific game
+      - get:
+          url: "/api/games/{{ $randomInt(1, 1000) }}"
+          name: "view-game"
+      - think: 5
+      # Searches for games
+      - get:
+          url: "/api/games?search=action&limit=10"
+          name: "search-games"
+      - think: 3
+      # Views another game
+      - get:
+          url: "/api/games/{{ $randomInt(1, 1000) }}"
+          name: "view-another-game"
+      - think: 10
+
+  # Health check monitoring
+  - name: System monitoring
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+          name: "health-check"
+      - think: 30
+      - get:
+          url: "/health/services"
+          name: "services-status"
+      - think: 60
+
+  # Authentication patterns
+  - name: User authentication
+    weight: 20
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          name: "login"
+          json:
+            email: "stability{{ $randomInt(1, 500) }}@test.com"
+            password: "testpass"
+      - think: 2
+      # Access protected resource
+      - get:
+          url: "/api/users/profile"
+          name: "profile-access"
+          headers:
+            Authorization: "Bearer mock-token"
+      - think: 15
+      # Another protected action
+      - get:
+          url: "/api/library"
+          name: "library-access"
+          headers:
+            Authorization: "Bearer mock-token"
+      - think: 20
+
+  # Background/automated requests
+  - name: Background requests
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+          name: "background-health"
+      - think: 45
+      - get:
+          url: "/api/games?limit=1"
+          name: "background-check"
+      - think: 30

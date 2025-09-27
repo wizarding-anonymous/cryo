@@ -4,7 +4,11 @@ import { JsonBodyValidationPipe } from './json-body-validation.pipe';
 import { ProxyValidationPipe } from './proxy-validation.pipe';
 
 @Module({
-  providers: [GlobalValidationPipe, JsonBodyValidationPipe, ProxyValidationPipe],
+  providers: [
+    GlobalValidationPipe,
+    JsonBodyValidationPipe,
+    ProxyValidationPipe,
+  ],
   exports: [GlobalValidationPipe, JsonBodyValidationPipe, ProxyValidationPipe],
 })
 export class ValidationModule {}

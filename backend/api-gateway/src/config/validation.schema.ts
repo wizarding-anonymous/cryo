@@ -58,4 +58,19 @@ export const validationSchema = Joi.object({
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'log', 'debug', 'verbose')
     .default('log'),
+
+  // Health Check Configuration
+  HEALTH_CHECK_TIMEOUT_MS: Joi.number().integer().min(1000).default(5000),
+  HEALTH_CHECK_RETRIES: Joi.number().integer().min(1).default(3),
+
+  // Circuit Breaker Configuration
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: Joi.number().integer().min(1).default(5),
+  CIRCUIT_BREAKER_RESET_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(1000)
+    .default(60000),
+  CIRCUIT_BREAKER_MONITORING_PERIOD_MS: Joi.number()
+    .integer()
+    .min(1000)
+    .default(10000),
 });

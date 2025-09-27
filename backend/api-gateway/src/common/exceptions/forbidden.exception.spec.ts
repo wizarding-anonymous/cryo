@@ -5,7 +5,7 @@ describe('ForbiddenException', () => {
     const exception = new ForbiddenException('Access denied for this resource');
 
     expect(exception.getStatus()).toBe(403);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('FORBIDDEN');
     expect(response.message).toBe('Access denied for this resource');
@@ -16,7 +16,7 @@ describe('ForbiddenException', () => {
     const exception = new ForbiddenException();
 
     expect(exception.getStatus()).toBe(403);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('FORBIDDEN');
     expect(response.message).toBe('Insufficient permissions');

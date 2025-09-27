@@ -1,16 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
+import { ProductionReadinessService } from './production-readiness.service';
 import { HealthCheckResultDto, ServiceHealthStatusDto } from './dto/health.dto';
 
 describe('HealthController', () => {
   let controller: HealthController;
   let mockHealthService: jest.Mocked<HealthService>;
+  let mockProductionReadinessService: jest.Mocked<ProductionReadinessService>;
 
   beforeEach(async () => {
     mockHealthService = {
       checkGateway: jest.fn(),
       checkServices: jest.fn(),
+    } as any;
+
+    mockProductionReadinessService = {
+      performReadinessChecks: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -19,6 +25,10 @@ describe('HealthController', () => {
         {
           provide: HealthService,
           useValue: mockHealthService,
+        },
+        {
+          provide: ProductionReadinessService,
+          useValue: mockProductionReadinessService,
         },
       ],
     }).compile();
@@ -50,7 +60,9 @@ describe('HealthController', () => {
       const error = new Error('Service unavailable');
       mockHealthService.checkGateway.mockRejectedValue(error);
 
-      await expect(controller.checkHealth()).rejects.toThrow('Service unavailable');
+      await expect(controller.checkHealth()).rejects.toThrow(
+        'Service unavailable',
+      );
       expect(mockHealthService.checkGateway).toHaveBeenCalledTimes(1);
     });
 
@@ -134,17 +146,19 @@ describe('HealthController', () => {
 
       expect(result).toEqual(mockServicesHealth);
       expect(result).toHaveLength(3);
-      
-      const healthyService = result.find(s => s.name === 'healthy-service');
-      const unhealthyService = result.find(s => s.name === 'unhealthy-service');
-      const unknownService = result.find(s => s.name === 'unknown-service');
+
+      const healthyService = result.find((s) => s.name === 'healthy-service');
+      const unhealthyService = result.find(
+        (s) => s.name === 'unhealthy-service',
+      );
+      const unknownService = result.find((s) => s.name === 'unknown-service');
 
       expect(healthyService?.status).toBe('healthy');
       expect(healthyService?.error).toBeUndefined();
-      
+
       expect(unhealthyService?.status).toBe('unhealthy');
       expect(unhealthyService?.error).toBe('Connection timeout');
-      
+
       expect(unknownService?.status).toBe('unknown');
       expect(unknownService?.error).toBe('Service not responding');
     });
@@ -153,7 +167,9 @@ describe('HealthController', () => {
       const error = new Error('Failed to check services');
       mockHealthService.checkServices.mockRejectedValue(error);
 
-      await expect(controller.checkServicesHealth()).rejects.toThrow('Failed to check services');
+      await expect(controller.checkServicesHealth()).rejects.toThrow(
+        'Failed to check services',
+      );
       expect(mockHealthService.checkServices).toHaveBeenCalledTimes(1);
     });
 

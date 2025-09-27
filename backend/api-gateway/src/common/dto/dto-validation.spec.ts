@@ -18,7 +18,7 @@ describe('DTO Validation Tests', () => {
         method: HttpMethod.GET,
         url: 'http://example.com/api/test',
         headers: { 'Content-Type': 'application/json' },
-        query: { page: '1' }
+        query: { page: '1' },
       };
 
       const dto = plainToClass(ProxyRequestDto, validRequest);
@@ -30,7 +30,7 @@ describe('DTO Validation Tests', () => {
       const invalidRequest = {
         method: HttpMethod.GET,
         url: 'invalid-url',
-        headers: {}
+        headers: {},
       };
 
       const dto = plainToClass(ProxyRequestDto, invalidRequest);
@@ -46,7 +46,7 @@ describe('DTO Validation Tests', () => {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },
         body: { message: 'success' },
-        executionTime: 150
+        executionTime: 150,
       };
 
       const dto = plainToClass(ProxyResponseDto, validResponse);
@@ -59,7 +59,7 @@ describe('DTO Validation Tests', () => {
         statusCode: 200,
         headers: {},
         body: {},
-        executionTime: -1
+        executionTime: -1,
       };
 
       const dto = plainToClass(ProxyResponseDto, invalidResponse);
@@ -76,7 +76,7 @@ describe('DTO Validation Tests', () => {
         baseUrl: 'http://user-service:3001',
         timeout: 5000,
         retries: 3,
-        healthCheckPath: '/health'
+        healthCheckPath: '/health',
       };
 
       const dto = plainToClass(ServiceConfigDto, validConfig);
@@ -90,7 +90,7 @@ describe('DTO Validation Tests', () => {
         baseUrl: 'http://user-service:3001',
         timeout: 500, // Less than minimum 1000
         retries: 3,
-        healthCheckPath: '/health'
+        healthCheckPath: '/health',
       };
 
       const dto = plainToClass(ServiceConfigDto, invalidConfig);
@@ -107,7 +107,7 @@ describe('DTO Validation Tests', () => {
         method: HttpMethod.GET,
         service: ServiceName.USER,
         requiresAuth: true,
-        timeout: 5000
+        timeout: 5000,
       };
 
       const dto = plainToClass(RouteConfigDto, validRoute);
@@ -120,7 +120,7 @@ describe('DTO Validation Tests', () => {
         path: '/api/users/profile',
         method: 'INVALID_METHOD',
         service: ServiceName.USER,
-        requiresAuth: true
+        requiresAuth: true,
       };
 
       const dto = plainToClass(RouteConfigDto, invalidRoute);
@@ -136,7 +136,7 @@ describe('DTO Validation Tests', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         email: 'user@example.com',
         roles: ['user', 'admin'],
-        permissions: ['read:games', 'write:profile']
+        permissions: ['read:games', 'write:profile'],
       };
 
       const dto = plainToClass(UserDto, validUser);
@@ -149,7 +149,7 @@ describe('DTO Validation Tests', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         email: 'invalid-email',
         roles: ['user'],
-        permissions: ['read:games']
+        permissions: ['read:games'],
       };
 
       const dto = plainToClass(UserDto, invalidUser);
@@ -168,7 +168,7 @@ describe('DTO Validation Tests', () => {
         timestamp: '2024-01-15T10:30:00.000Z',
         path: '/api/users/profile',
         service: 'user-service',
-        requestId: 'req-123e4567-e89b-12d3-a456-426614174000'
+        requestId: 'req-123e4567-e89b-12d3-a456-426614174000',
       };
 
       const dto = plainToClass(ErrorResponseDto, validError);
@@ -182,7 +182,7 @@ describe('DTO Validation Tests', () => {
         message: 'Invalid request parameters',
         statusCode: 50, // Less than minimum 100
         timestamp: '2024-01-15T10:30:00.000Z',
-        path: '/api/users/profile'
+        path: '/api/users/profile',
       };
 
       const dto = plainToClass(ErrorResponseDto, invalidError);
@@ -203,9 +203,9 @@ describe('DTO Validation Tests', () => {
             name: 'user-service',
             status: ServiceHealthStatus.HEALTHY,
             responseTime: 150,
-            lastCheck: '2024-01-15T10:30:00.000Z'
-          }
-        ]
+            lastCheck: '2024-01-15T10:30:00.000Z',
+          },
+        ],
       };
 
       const dto = plainToClass(HealthCheckResultDto, validHealthCheck);
@@ -218,7 +218,7 @@ describe('DTO Validation Tests', () => {
         status: HealthStatus.OK,
         timestamp: '2024-01-15T10:30:00.000Z',
         uptime: -1, // Negative uptime
-        services: []
+        services: [],
       };
 
       const dto = plainToClass(HealthCheckResultDto, invalidHealthCheck);

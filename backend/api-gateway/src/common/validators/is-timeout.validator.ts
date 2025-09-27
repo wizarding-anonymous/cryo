@@ -19,7 +19,7 @@ export function IsTimeout(
       validator: {
         validate(value: any, args: ValidationArguments) {
           const [minTimeout, maxTimeout] = args.constraints;
-          
+
           if (typeof value === 'string') {
             // Allow numeric strings with optional leading + or - sign and whitespace
             const trimmed = value.trim();
@@ -27,14 +27,19 @@ export function IsTimeout(
               return false;
             }
             // Reject specific octal strings that are mentioned in tests
-            if (trimmed === '011750') { // This is the specific octal case from the test
+            if (trimmed === '011750') {
+              // This is the specific octal case from the test
               return false;
             }
             const num = parseInt(trimmed, 10);
             return !isNaN(num) && num >= minTimeout && num <= maxTimeout;
           }
           if (typeof value === 'number') {
-            return Number.isInteger(value) && value >= minTimeout && value <= maxTimeout;
+            return (
+              Number.isInteger(value) &&
+              value >= minTimeout &&
+              value <= maxTimeout
+            );
           }
           return false;
         },

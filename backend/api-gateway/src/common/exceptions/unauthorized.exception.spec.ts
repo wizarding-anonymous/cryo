@@ -5,7 +5,7 @@ describe('UnauthorizedException', () => {
     const exception = new UnauthorizedException('Invalid JWT token');
 
     expect(exception.getStatus()).toBe(401);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('UNAUTHORIZED');
     expect(response.message).toBe('Invalid JWT token');
@@ -16,7 +16,7 @@ describe('UnauthorizedException', () => {
     const exception = new UnauthorizedException();
 
     expect(exception.getStatus()).toBe(401);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('UNAUTHORIZED');
     expect(response.message).toBe('Authentication required');

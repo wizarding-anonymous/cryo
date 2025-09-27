@@ -74,77 +74,99 @@ describe('IsValidUrl Validator', () => {
       testInstance.url = 'example.com';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for invalid protocol', async () => {
       testInstance.url = 'ftp://example.com';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for malformed URL', async () => {
       testInstance.url = 'http://';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for URL with spaces', async () => {
       testInstance.url = 'http://example .com';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for null', async () => {
       testInstance.url = null;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for undefined', async () => {
       testInstance.url = undefined;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for number values', async () => {
       testInstance.url = 123;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for boolean values', async () => {
       testInstance.url = true;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for object values', async () => {
       testInstance.url = { url: 'http://example.com' };
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for array values', async () => {
       testInstance.url = ['http://example.com'];
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
 
     it('should fail for empty string', async () => {
       testInstance.url = '';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('url must be a valid HTTP or HTTPS URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'url must be a valid HTTP or HTTPS URL',
+      );
     });
   });
 
@@ -157,10 +179,12 @@ describe('IsValidUrl Validator', () => {
 
       const testInstance = new TestClassWithCustomMessage();
       testInstance.url = 'invalid-url';
-      
+
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsValidUrl).toBe('Please provide a valid URL');
+      expect(errors[0].constraints?.IsValidUrl).toBe(
+        'Please provide a valid URL',
+      );
     });
   });
 });

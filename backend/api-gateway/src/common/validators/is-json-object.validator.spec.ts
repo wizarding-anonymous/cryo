@@ -32,9 +32,9 @@ describe('IsJsonObject Validator', () => {
           name: 'John',
           profile: {
             age: 30,
-            preferences: ['music', 'sports']
-          }
-        }
+            preferences: ['music', 'sports'],
+          },
+        },
       };
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(0);
@@ -47,7 +47,7 @@ describe('IsJsonObject Validator', () => {
         boolean: true,
         nullValue: null,
         array: [1, 2, 3],
-        nestedObject: { key: 'value' }
+        nestedObject: { key: 'value' },
       };
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(0);
@@ -89,7 +89,8 @@ describe('IsJsonObject Validator', () => {
     });
 
     it('should pass for complex JSON object string', async () => {
-      testInstance.jsonObject = '{"user": {"name": "John", "profile": {"age": 30}}}';
+      testInstance.jsonObject =
+        '{"user": {"name": "John", "profile": {"age": 30}}}';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(0);
     });
@@ -106,68 +107,88 @@ describe('IsJsonObject Validator', () => {
       testInstance.jsonObject = null;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for undefined', async () => {
       testInstance.jsonObject = undefined;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for arrays', async () => {
       testInstance.jsonObject = [1, 2, 3];
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for empty array', async () => {
       testInstance.jsonObject = [];
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for string values', async () => {
       testInstance.jsonObject = 'not a json object';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for number values', async () => {
       testInstance.jsonObject = 123;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for boolean values', async () => {
       testInstance.jsonObject = true;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
 
       testInstance.jsonObject = false;
       const errors2 = await validate(testInstance);
       expect(errors2).toHaveLength(1);
-      expect(errors2[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors2[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for function values', async () => {
       testInstance.jsonObject = () => 'test';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for symbol values', async () => {
       testInstance.jsonObject = Symbol('test');
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
   });
 
@@ -176,36 +197,48 @@ describe('IsJsonObject Validator', () => {
       testInstance.jsonObject = '{"invalid": json}';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for JSON array string', async () => {
       testInstance.jsonObject = '[1, 2, 3]';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for JSON string with primitive values', async () => {
       testInstance.jsonObject = '"just a string"';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
 
       testInstance.jsonObject = '123';
       const errors2 = await validate(testInstance);
       expect(errors2).toHaveLength(1);
-      expect(errors2[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors2[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
 
       testInstance.jsonObject = 'true';
       const errors3 = await validate(testInstance);
       expect(errors3).toHaveLength(1);
-      expect(errors3[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors3[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
 
       testInstance.jsonObject = 'null';
       const errors4 = await validate(testInstance);
       expect(errors4).toHaveLength(1);
-      expect(errors4[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+      expect(errors4[0].constraints?.IsJsonObject).toBe(
+        'jsonObject must be a valid JSON object',
+      );
     });
 
     it('should fail for malformed JSON strings', async () => {
@@ -222,7 +255,9 @@ describe('IsJsonObject Validator', () => {
         testInstance.jsonObject = malformedJson;
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
-        expect(errors[0].constraints?.IsJsonObject).toBe('jsonObject must be a valid JSON object');
+        expect(errors[0].constraints?.IsJsonObject).toBe(
+          'jsonObject must be a valid JSON object',
+        );
       }
     });
   });
@@ -236,10 +271,12 @@ describe('IsJsonObject Validator', () => {
 
       const testInstance = new TestClassWithCustomMessage();
       testInstance.jsonObject = 'invalid';
-      
+
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsJsonObject).toBe('Custom error message for JSON object');
+      expect(errors[0].constraints?.IsJsonObject).toBe(
+        'Custom error message for JSON object',
+      );
     });
   });
 });

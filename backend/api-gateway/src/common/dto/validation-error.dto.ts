@@ -3,29 +3,29 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ValidationErrorDetailDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Field that failed validation',
-    example: 'email'
+    example: 'email',
   })
   @IsString()
   field!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Validation error message',
-    example: 'must be a valid email address'
+    example: 'must be a valid email address',
   })
   @IsString()
   message!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Value that failed validation',
-    example: 'invalid-email'
+    example: 'invalid-email',
   })
   value?: any;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Validation constraint that was violated',
-    example: 'isEmail'
+    example: 'isEmail',
   })
   @IsOptional()
   @IsString()
@@ -33,29 +33,29 @@ export class ValidationErrorDetailDto {
 }
 
 export class ValidationErrorDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Error type',
-    example: 'VALIDATION_ERROR'
+    example: 'VALIDATION_ERROR',
   })
   @IsString()
   error!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'General validation error message',
-    example: 'Request validation failed'
+    example: 'Request validation failed',
   })
   @IsString()
   message!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'HTTP status code',
-    example: 400
+    example: 400,
   })
   statusCode!: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Detailed validation errors',
-    type: [ValidationErrorDetailDto]
+    type: [ValidationErrorDetailDto],
   })
   @IsArray()
   @ValidateNested({ each: true })

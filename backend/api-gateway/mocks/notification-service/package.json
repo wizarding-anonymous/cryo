@@ -1,0 +1,8 @@
+{
+  "name": "notification-service-mock",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

@@ -61,7 +61,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const res = exception.getResponse() as any;
 
     return {
-      error: String(res?.error ?? res?.status ?? exception.name ?? 'HTTP_ERROR'),
+      error: String(
+        res?.error ?? res?.status ?? exception.name ?? 'HTTP_ERROR',
+      ),
       message: String(
         res?.message ?? exception.message ?? 'HTTP error occurred',
       ),
@@ -84,7 +86,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     return {
       error: String(res?.error ?? 'SERVICE_ERROR'),
-      message: String(res?.message ?? exception.message ?? 'Service error occurred'),
+      message: String(
+        res?.message ?? exception.message ?? 'Service error occurred',
+      ),
       statusCode: status,
       timestamp: new Date().toISOString(),
       path,
@@ -132,10 +136,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           errorContext,
         );
       } else {
-        this.logger.warn(
-          `HTTP Exception: ${exception.message}`,
-          errorContext,
-        );
+        this.logger.warn(`HTTP Exception: ${exception.message}`, errorContext);
       }
     } else if (exception instanceof Error) {
       this.logger.error(

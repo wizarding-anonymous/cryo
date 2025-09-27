@@ -59,7 +59,9 @@ gateway_process_resident_memory_bytes 25165824`;
       const error = new Error('Metrics collection failed');
       mockMetricsService.metrics.mockRejectedValue(error);
 
-      await expect(controller.getMetrics()).rejects.toThrow('Metrics collection failed');
+      await expect(controller.getMetrics()).rejects.toThrow(
+        'Metrics collection failed',
+      );
       expect(mockMetricsService.metrics).toHaveBeenCalledTimes(1);
     });
 
@@ -108,7 +110,10 @@ gateway_http_requests_total{method="POST",status="201"} 13`;
     });
 
     it('should have GET method configured', () => {
-      const methodMetadata = Reflect.getMetadata('method', controller.getMetrics);
+      const methodMetadata = Reflect.getMetadata(
+        'method',
+        controller.getMetrics,
+      );
       // Note: This test verifies the decorator is applied, actual HTTP method testing would be in e2e tests
       expect(controller.getMetrics).toBeDefined();
     });

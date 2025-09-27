@@ -2,10 +2,13 @@ import { ServiceUnavailableException } from './service-unavailable.exception';
 
 describe('ServiceUnavailableException', () => {
   it('should create exception with service name and custom message', () => {
-    const exception = new ServiceUnavailableException('game-service', 'Service is under maintenance');
+    const exception = new ServiceUnavailableException(
+      'game-service',
+      'Service is under maintenance',
+    );
 
     expect(exception.getStatus()).toBe(503);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('SERVICE_UNAVAILABLE');
     expect(response.message).toBe('Service is under maintenance');
@@ -17,7 +20,7 @@ describe('ServiceUnavailableException', () => {
     const exception = new ServiceUnavailableException('payment-service');
 
     expect(exception.getStatus()).toBe(503);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('SERVICE_UNAVAILABLE');
     expect(response.message).toBe('payment-service is temporarily unavailable');

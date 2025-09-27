@@ -41,7 +41,7 @@ export class HealthService {
   constructor(
     private readonly registry: ServiceRegistryService,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   async checkGateway(): Promise<{
     status: 'ok' | 'error';
@@ -75,8 +75,11 @@ export class HealthService {
       this.checkSystemHealth(),
     ]);
 
-    const overallStatus = gatewayHealth.status === 'ok' &&
-      servicesHealth.every(s => s.status === 'healthy') ? 'ok' : 'error';
+    const overallStatus =
+      gatewayHealth.status === 'ok' &&
+      servicesHealth.every((s) => s.status === 'healthy')
+        ? 'ok'
+        : 'error';
 
     return {
       status: overallStatus,
@@ -93,7 +96,7 @@ export class HealthService {
       this.logger.warn('No services found in registry');
       return [];
     }
-    
+
     const results: ServiceHealthStatus[] = [];
 
     // Check services in parallel for better performance
@@ -102,7 +105,10 @@ export class HealthService {
       const cached = this.healthCache.get(cacheKey);
 
       // Return cached result if still valid
-      if (cached && Date.now() - new Date(cached.lastCheck).getTime() < this.CACHE_TTL) {
+      if (
+        cached &&
+        Date.now() - new Date(cached.lastCheck).getTime() < this.CACHE_TTL
+      ) {
         return cached;
       }
 
@@ -168,7 +174,9 @@ export class HealthService {
     const cpuUsage = process.cpuUsage();
 
     // Check Redis connectivity
-    let redisHealth: { connected: boolean; responseTime?: number } = { connected: false };
+    let redisHealth: { connected: boolean; responseTime?: number } = {
+      connected: false,
+    };
     try {
       const start = Date.now();
       await this.redisService.getClient().ping();
@@ -184,7 +192,9 @@ export class HealthService {
       memory: {
         used: memoryUsage.heapUsed,
         total: memoryUsage.heapTotal,
-        percentage: Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100),
+        percentage: Math.round(
+          (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100,
+        ),
       },
       cpu: {
         usage: Math.round((cpuUsage.user + cpuUsage.system) / 1000000), // Convert to milliseconds
@@ -193,7 +203,9 @@ export class HealthService {
     };
   }
 
-  async getServiceHealth(serviceName: string): Promise<ServiceHealthStatus | null> {
+  async getServiceHealth(
+    serviceName: string,
+  ): Promise<ServiceHealthStatus | null> {
     const service = this.registry.getServiceConfig(serviceName);
     if (!service) {
       return null;

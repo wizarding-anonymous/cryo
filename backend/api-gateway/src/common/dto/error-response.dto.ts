@@ -2,55 +2,55 @@ import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ErrorResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Error type or code',
-    example: 'VALIDATION_ERROR'
+    example: 'VALIDATION_ERROR',
   })
   @IsString()
   error!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Human-readable error message',
-    example: 'Invalid request parameters'
+    example: 'Invalid request parameters',
   })
   @IsString()
   message!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'HTTP status code',
     example: 400,
     minimum: 100,
-    maximum: 599
+    maximum: 599,
   })
   @IsInt()
   @Min(100)
   statusCode!: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Timestamp when the error occurred',
-    example: '2024-01-15T10:30:00.000Z'
+    example: '2024-01-15T10:30:00.000Z',
   })
   @IsString()
   timestamp!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Request path that caused the error',
-    example: '/api/users/profile'
+    example: '/api/users/profile',
   })
   @IsString()
   path!: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Service that generated the error',
-    example: 'user-service'
+    example: 'user-service',
   })
   @IsOptional()
   @IsString()
   service?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Unique request identifier for tracing',
-    example: 'req-123e4567-e89b-12d3-a456-426614174000'
+    example: 'req-123e4567-e89b-12d3-a456-426614174000',
   })
   @IsOptional()
   @IsString()

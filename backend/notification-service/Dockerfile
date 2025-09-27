@@ -15,7 +15,7 @@ RUN npm ci
 COPY . .
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3006
 
 # Start in development mode
 CMD ["npm", "run", "start:dev"]
@@ -75,7 +75,7 @@ RUN chown -R nestjs:nodejs /usr/src/app
 USER nestjs
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3006
 
 # Health check with improved reliability
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

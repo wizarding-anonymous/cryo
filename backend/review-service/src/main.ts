@@ -47,9 +47,9 @@ async function bootstrap() {
   const recalculationInterval = parseInt(process.env.RATING_RECALCULATION_INTERVAL_HOURS || '24', 10);
   await backgroundTasksService.schedulePeriodicRecalculation(recalculationInterval);
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(`Review Service is running on: http://localhost:${process.env.PORT ?? 3000}`);
-  console.log(`Swagger documentation available at: http://localhost:${process.env.PORT ?? 3000}/api/docs`);
+  await app.listen(process.env.PORT ?? 3004);
+  console.log(`Review Service is running on: http://localhost:${process.env.PORT ?? 3004}`);
+  console.log(`Swagger documentation available at: http://localhost:${process.env.PORT ?? 3004}/api/docs`);
   console.log(`Periodic rating recalculation scheduled every ${recalculationInterval} hours`);
 }
 bootstrap();

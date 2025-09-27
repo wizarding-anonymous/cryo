@@ -23,7 +23,7 @@ export class ProxyValidationPipe implements PipeTransform {
 
     // Transform plain object to class instance
     const object = plainToClass(ProxyRequestDto, value);
-    
+
     // Validate the object
     const errors = await validate(object, {
       whitelist: true,
@@ -31,10 +31,10 @@ export class ProxyValidationPipe implements PipeTransform {
     });
 
     if (errors.length > 0) {
-      const errorMessages = errors.map(error => {
+      const errorMessages = errors.map((error) => {
         const constraints = error.constraints;
-        return constraints && Object.keys(constraints).length > 0 
-          ? Object.values(constraints).join(', ') 
+        return constraints && Object.keys(constraints).length > 0
+          ? Object.values(constraints).join(', ')
           : 'Validation failed';
       });
 

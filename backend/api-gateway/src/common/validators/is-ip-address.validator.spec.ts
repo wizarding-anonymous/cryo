@@ -62,63 +62,81 @@ describe('IsIpAddress Validator', () => {
       testInstance.ip = '192.168.1';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
 
     it('should fail for IPv4 with invalid octets', async () => {
       testInstance.ip = '256.256.256.256';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
 
     it('should fail for invalid IPv6 format', async () => {
       testInstance.ip = '2001:0db8:85a3::8a2e:370g:7334';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
 
     it('should fail for null', async () => {
       testInstance.ip = null;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
 
     it('should fail for undefined', async () => {
       testInstance.ip = undefined;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
 
     it('should fail for number values', async () => {
       testInstance.ip = 123;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
 
     it('should fail for boolean values', async () => {
       testInstance.ip = true;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
 
     it('should fail for empty string', async () => {
       testInstance.ip = '';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
 
     it('should fail for hostname', async () => {
       testInstance.ip = 'localhost';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('ip must be a valid IP address (IPv4 or IPv6)');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'ip must be a valid IP address (IPv4 or IPv6)',
+      );
     });
   });
 
@@ -131,10 +149,12 @@ describe('IsIpAddress Validator', () => {
 
       const testInstance = new TestClassWithCustomMessage();
       testInstance.ip = 'invalid-ip';
-      
+
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsIpAddress).toBe('Please provide a valid IP address');
+      expect(errors[0].constraints?.IsIpAddress).toBe(
+        'Please provide a valid IP address',
+      );
     });
   });
 });

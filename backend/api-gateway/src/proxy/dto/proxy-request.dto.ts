@@ -21,20 +21,25 @@ export class ProxyRequestDto {
   @IsUrl()
   url!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'HTTP headers as key-value pairs',
-    example: { 'Content-Type': 'application/json', 'Authorization': 'Bearer token' }
+    example: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer token',
+    },
   })
   @IsObject()
   headers!: Record<string, string>;
 
-  @ApiPropertyOptional({ description: 'Request body (for POST, PUT, PATCH requests)' })
+  @ApiPropertyOptional({
+    description: 'Request body (for POST, PUT, PATCH requests)',
+  })
   @IsOptional()
   body?: any;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Query parameters as key-value pairs',
-    example: { page: '1', limit: '10' }
+    example: { page: '1', limit: '10' },
   })
   @IsOptional()
   @IsObject()

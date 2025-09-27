@@ -112,7 +112,9 @@ describe('RedisService', () => {
     });
 
     it('should handle quit errors gracefully', async () => {
-      mockRedisClient.quit.mockRejectedValue(new Error('Connection already closed'));
+      mockRedisClient.quit.mockRejectedValue(
+        new Error('Connection already closed'),
+      );
 
       // Should not throw
       await expect(service.onModuleDestroy()).resolves.toBeUndefined();
@@ -144,27 +146,37 @@ describe('RedisService', () => {
       mockRedisClient.set.mockResolvedValue('OK' as any);
 
       const client = service.getClient();
-      
+
       await client.set('test-key', 'test-value');
       const value = await client.get('test-key');
 
-      expect(mockRedisClient.set).toHaveBeenCalledWith('test-key', 'test-value');
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'test-key',
+        'test-value',
+      );
       expect(mockRedisClient.get).toHaveBeenCalledWith('test-key');
       expect(value).toBe('test-value');
     });
 
     it('should handle Redis client errors', async () => {
-      mockRedisClient.get.mockRejectedValue(new Error('Redis connection error'));
+      mockRedisClient.get.mockRejectedValue(
+        new Error('Redis connection error'),
+      );
 
       const client = service.getClient();
 
-      await expect(client.get('test-key')).rejects.toThrow('Redis connection error');
+      await expect(client.get('test-key')).rejects.toThrow(
+        'Redis connection error',
+      );
     });
 
     it('should support Redis hash operations', async () => {
       mockRedisClient.hset.mockResolvedValue(1 as any);
       mockRedisClient.hget.mockResolvedValue('hash-value');
-      mockRedisClient.hgetall.mockResolvedValue({ field1: 'value1', field2: 'value2' } as any);
+      mockRedisClient.hgetall.mockResolvedValue({
+        field1: 'value1',
+        field2: 'value2',
+      } as any);
 
       const client = service.getClient();
 
@@ -172,7 +184,11 @@ describe('RedisService', () => {
       const value = await client.hget('hash-key', 'field1');
       const allValues = await client.hgetall('hash-key');
 
-      expect(mockRedisClient.hset).toHaveBeenCalledWith('hash-key', 'field1', 'value1');
+      expect(mockRedisClient.hset).toHaveBeenCalledWith(
+        'hash-key',
+        'field1',
+        'value1',
+      );
       expect(mockRedisClient.hget).toHaveBeenCalledWith('hash-key', 'field1');
       expect(mockRedisClient.hgetall).toHaveBeenCalledWith('hash-key');
       expect(value).toBe('hash-value');
@@ -209,7 +225,10 @@ describe('RedisService', () => {
       const members = await client.smembers('set-key');
 
       expect(mockRedisClient.sadd).toHaveBeenCalledWith('set-key', 'member1');
-      expect(mockRedisClient.sismember).toHaveBeenCalledWith('set-key', 'member1');
+      expect(mockRedisClient.sismember).toHaveBeenCalledWith(
+        'set-key',
+        'member1',
+      );
       expect(mockRedisClient.smembers).toHaveBeenCalledWith('set-key');
       expect(isMember).toBe(1);
       expect(members).toEqual(['member1', 'member2']);
@@ -226,8 +245,15 @@ describe('RedisService', () => {
       const score = await client.zscore('zset-key', 'member1');
       const range = await client.zrange('zset-key', 0, -1);
 
-      expect(mockRedisClient.zadd).toHaveBeenCalledWith('zset-key', 10, 'member1');
-      expect(mockRedisClient.zscore).toHaveBeenCalledWith('zset-key', 'member1');
+      expect(mockRedisClient.zadd).toHaveBeenCalledWith(
+        'zset-key',
+        10,
+        'member1',
+      );
+      expect(mockRedisClient.zscore).toHaveBeenCalledWith(
+        'zset-key',
+        'member1',
+      );
       expect(mockRedisClient.zrange).toHaveBeenCalledWith('zset-key', 0, -1);
       expect(score).toBe('10');
       expect(range).toEqual(['member1', 'member2']);

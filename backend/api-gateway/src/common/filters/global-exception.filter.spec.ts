@@ -46,8 +46,14 @@ describe('GlobalExceptionFilter', () => {
   describe('HttpException handling', () => {
     it('should format HttpException correctly', () => {
       const { host, res } = makeHost();
-      filter.catch(new HttpException({ error: 'TEST_ERROR', message: 'Test message' }, 400), host);
-      
+      filter.catch(
+        new HttpException(
+          { error: 'TEST_ERROR', message: 'Test message' },
+          400,
+        ),
+        host,
+      );
+
       expect(res.statusCode).toBe(400);
       expect(res.headers['X-Request-Id']).toBeDefined();
       expect(res.body.error).toBe('TEST_ERROR');
@@ -62,7 +68,7 @@ describe('GlobalExceptionFilter', () => {
     it('should handle HttpException with 4xx status (warning log)', () => {
       const { host, res } = makeHost();
       filter.catch(new HttpException('Client error', 404), host);
-      
+
       expect(res.statusCode).toBe(404);
       expect(loggerSpy).not.toHaveBeenCalled();
     });
@@ -70,7 +76,7 @@ describe('GlobalExceptionFilter', () => {
     it('should handle HttpException with 5xx status (error log)', () => {
       const { host, res } = makeHost();
       filter.catch(new HttpException('Server error', 500), host);
-      
+
       expect(res.statusCode).toBe(500);
       expect(loggerSpy).toHaveBeenCalled();
     });
@@ -79,9 +85,13 @@ describe('GlobalExceptionFilter', () => {
   describe('ServiceException handling', () => {
     it('should handle ServiceException correctly', () => {
       const { host, res } = makeHost();
-      const serviceException = new ServiceException('Service error', 503, 'user-service');
+      const serviceException = new ServiceException(
+        'Service error',
+        503,
+        'user-service',
+      );
       filter.catch(serviceException, host);
-      
+
       expect(res.statusCode).toBe(503);
       expect(res.body.error).toBe('SERVICE_ERROR');
       expect(res.body.message).toBe('Service error');
@@ -93,7 +103,7 @@ describe('GlobalExceptionFilter', () => {
     it('should handle ServiceUnavailableException', () => {
       const { host, res } = makeHost();
       filter.catch(new ServiceUnavailableException('user-service'), host);
-      
+
       expect(res.statusCode).toBe(503);
       expect(res.body.error).toBe('SERVICE_UNAVAILABLE');
       expect(res.body.message).toBe('user-service is temporarily unavailable');
@@ -102,19 +112,23 @@ describe('GlobalExceptionFilter', () => {
     it('should handle RateLimitExceededException', () => {
       const { host, res } = makeHost();
       filter.catch(new RateLimitExceededException(100, 60000), host);
-      
+
       expect(res.statusCode).toBe(429);
       expect(res.body.error).toBe('RATE_LIMIT_EXCEEDED');
-      expect(res.body.message).toBe('Rate limit exceeded: 100 requests per 60000ms');
+      expect(res.body.message).toBe(
+        'Rate limit exceeded: 100 requests per 60000ms',
+      );
     });
 
     it('should handle ProxyTimeoutException', () => {
       const { host, res } = makeHost();
       filter.catch(new ProxyTimeoutException('game-service', 5000), host);
-      
+
       expect(res.statusCode).toBe(504);
       expect(res.body.error).toBe('PROXY_TIMEOUT');
-      expect(res.body.message).toBe('Request to game-service timed out after 5000ms');
+      expect(res.body.message).toBe(
+        'Request to game-service timed out after 5000ms',
+      );
     });
   });
 
@@ -122,7 +136,7 @@ describe('GlobalExceptionFilter', () => {
     it('should handle generic Error', () => {
       const { host, res } = makeHost();
       filter.catch(new Error('Something went wrong'), host);
-      
+
       expect(res.statusCode).toBe(500);
       expect(res.body.error).toBe('Error');
       expect(res.body.message).toBe('Something went wrong');
@@ -133,7 +147,7 @@ describe('GlobalExceptionFilter', () => {
     it('should handle unknown exception type', () => {
       const { host, res } = makeHost();
       filter.catch('unknown error', host);
-      
+
       expect(res.statusCode).toBe(500);
       expect(res.body.error).toBe('Error');
       expect(res.body.message).toBe('An unknown error occurred');
@@ -143,9 +157,11 @@ describe('GlobalExceptionFilter', () => {
 
   describe('Request ID handling', () => {
     it('should use existing request ID from header', () => {
-      const { host, res } = makeHost('/api/test', { 'x-request-id': 'existing-id' });
+      const { host, res } = makeHost('/api/test', {
+        'x-request-id': 'existing-id',
+      });
       filter.catch(new Error('test'), host);
-      
+
       expect(res.headers['X-Request-Id']).toBe('existing-id');
       expect(res.body.requestId).toBe('existing-id');
     });
@@ -153,16 +169,18 @@ describe('GlobalExceptionFilter', () => {
     it('should generate new request ID if none exists', () => {
       const { host, res } = makeHost();
       filter.catch(new Error('test'), host);
-      
+
       expect(res.headers['X-Request-Id']).toBeDefined();
       expect(res.body.requestId).toBeDefined();
       expect(res.headers['X-Request-Id']).toBe(res.body.requestId);
     });
 
     it('should handle array of request IDs in header', () => {
-      const { host, res } = makeHost('/api/test', { 'x-request-id': ['first-id', 'second-id'] });
+      const { host, res } = makeHost('/api/test', {
+        'x-request-id': ['first-id', 'second-id'],
+      });
       filter.catch(new Error('test'), host);
-      
+
       expect(res.headers['X-Request-Id']).toBe('first-id');
       expect(res.body.requestId).toBe('first-id');
     });
@@ -173,7 +191,7 @@ describe('GlobalExceptionFilter', () => {
       const { host } = makeHost('/api/test');
       const error = new Error('Test error');
       filter.catch(error, host);
-      
+
       expect(loggerSpy).toHaveBeenCalledWith(
         'Unhandled Exception: Test error',
         error.stack,
@@ -182,21 +200,21 @@ describe('GlobalExceptionFilter', () => {
           path: '/api/test',
           statusCode: 500,
           timestamp: expect.any(String),
-        })
+        }),
       );
     });
 
     it('should log HTTP 5xx errors', () => {
       const { host } = makeHost();
       filter.catch(new HttpException('Server error', 500), host);
-      
+
       expect(loggerSpy).toHaveBeenCalledWith(
         'HTTP Exception: Server error',
         expect.any(String),
         expect.objectContaining({
           requestId: expect.any(String),
           statusCode: 500,
-        })
+        }),
       );
     });
   });

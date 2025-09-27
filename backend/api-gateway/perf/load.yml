@@ -1,27 +1,100 @@
 config:
   target: "{{ $processEnvironment.BASE_URL || 'http://localhost:3001' }}"
   phases:
+    # Warm-up phase: gradually increase load
     - duration: 60
-      arrivalRate: 100
+      arrivalRate: 50
+      rampTo: 200
       name: warm-up
+    # Ramp phase: scale to 1000 concurrent users
     - duration: 120
-      arrivalRate: 500
+      arrivalRate: 200
       rampTo: 1000
-      name: ramp
+      name: ramp-to-target
+    # Sustain phase: maintain 1000 concurrent users for MVP testing
     - duration: 300
       arrivalRate: 1000
-      name: sustain
+      name: sustain-mvp-load
+    # Cool-down phase: gradual decrease
+    - duration: 60
+      arrivalRate: 1000
+      rampTo: 100
+      name: cool-down
   defaults:
     headers:
       Accept: application/json
+      User-Agent: "API-Gateway-LoadTest/1.0"
+  # Performance thresholds for MVP requirements
+  ensure:
+    # Response time < 200ms for 95th percentile (MVP requirement)
+    p95: 200
+    # Response time < 100ms for 50th percentile (good performance)
+    p50: 100
+    # Maximum response time should not exceed 500ms
+    max: 500
   plugins:
-    statsd: { } # placeholder if needed
+    # Metrics collection
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
 scenarios:
-  - name: Browse and read games
+  # Scenario 1: Public game browsing (no auth required)
+  - name: Browse games (public)
+    weight: 40
     flow:
       - get:
           url: "/api/games?limit=20"
+          name: "GET /api/games (list)"
       - think: 1
       - get:
-          url: "/api/games?limit=20&cursor=next"
+          url: "/api/games/{{ $randomInt(1, 1000) }}"
+          name: "GET /api/games/:id (details)"
+      - think: 2
+      - get:
+          url: "/api/games?limit=20&page=2"
+          name: "GET /api/games (pagination)"
+  
+  # Scenario 2: Health check endpoint
+  - name: Health checks
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+          name: "GET /health"
+      - think: 5
+      - get:
+          url: "/health/services"
+          name: "GET /health/services"
+  
+  # Scenario 3: Authentication flow (simulated)
+  - name: Authentication simulation
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/login"
+          name: "POST /api/auth/login"
+          json:
+            email: "test{{ $randomInt(1, 1000) }}@example.com"
+            password: "testpassword"
+      - think: 1
+      - get:
+          url: "/api/users/profile"
+          name: "GET /api/users/profile"
+          headers:
+            Authorization: "Bearer mock-jwt-token"
+  
+  # Scenario 4: Mixed API usage
+  - name: Mixed API operations
+    weight: 30
+    flow:
+      - get:
+          url: "/api/games?limit=10"
+          name: "GET /api/games (small list)"
+      - think: 0.5
+      - get:
+          url: "/api/games/{{ $randomInt(1, 100) }}"
+          name: "GET /api/games/:id"
+      - think: 1
+      - get:
+          url: "/health"
+          name: "GET /health (mixed)"
 

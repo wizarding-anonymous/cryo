@@ -29,7 +29,9 @@ describe('ServiceRegistryService', () => {
 
   beforeEach(() => {
     mockConfigService = {
-      get: jest.fn((key: string) => (key === 'services' ? mockServices : undefined)),
+      get: jest.fn((key: string) =>
+        key === 'services' ? mockServices : undefined,
+      ),
     };
     service = new ServiceRegistryService(mockConfigService);
     jest.clearAllMocks();
@@ -75,7 +77,7 @@ describe('ServiceRegistryService', () => {
       };
 
       await service.registerService(newService);
-      
+
       const config = service.getServiceConfig('new-service');
       expect(config).toEqual(newService);
       expect(service.getAll()).toHaveLength(3);
@@ -84,17 +86,20 @@ describe('ServiceRegistryService', () => {
 
   describe('checkServiceHealth', () => {
     it('should return true for healthy service', async () => {
-      mockedAxios.get.mockResolvedValueOnce({ status: 200, data: { status: 'ok' } });
+      mockedAxios.get.mockResolvedValueOnce({
+        status: 200,
+        data: { status: 'ok' },
+      });
 
       const isHealthy = await service.checkServiceHealth('user-service');
-      
+
       expect(isHealthy).toBe(true);
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'http://localhost:3000/health',
         expect.objectContaining({
           timeout: 3000,
           validateStatus: expect.any(Function),
-        })
+        }),
       );
     });
 
@@ -102,13 +107,15 @@ describe('ServiceRegistryService', () => {
       mockedAxios.get.mockRejectedValueOnce(new Error('Service unavailable'));
 
       const isHealthy = await service.checkServiceHealth('user-service');
-      
+
       expect(isHealthy).toBe(false);
     });
 
     it('should return false for non-existing service', async () => {
-      const isHealthy = await service.checkServiceHealth('non-existing-service');
-      
+      const isHealthy = await service.checkServiceHealth(
+        'non-existing-service',
+      );
+
       expect(isHealthy).toBe(false);
       expect(mockedAxios.get).not.toHaveBeenCalled();
     });
@@ -117,12 +124,12 @@ describe('ServiceRegistryService', () => {
       mockedAxios.get.mockResolvedValueOnce({ status: 200 });
 
       await service.checkServiceHealth('user-service');
-      
+
       expect(mockedAxios.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           timeout: 3000, // Should be min(5000, 3000) = 3000
-        })
+        }),
       );
     });
   });

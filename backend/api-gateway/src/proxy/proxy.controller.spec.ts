@@ -15,7 +15,7 @@ describe('ProxyController', () => {
     method: 'GET',
     path: '/api/users',
     url: '/api/users',
-    headers: { 'authorization': 'Bearer token123' },
+    headers: { authorization: 'Bearer token123' },
     body: undefined,
   } as Request;
 
@@ -94,7 +94,10 @@ describe('ProxyController', () => {
 
       expect(mockProxyService.forward).toHaveBeenCalledWith(mockRequest);
       expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.header).toHaveBeenCalledWith('content-type', 'application/json');
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'content-type',
+        'application/json',
+      );
       expect(mockResponse.send).toHaveBeenCalledWith({ id: 1, name: 'John' });
     });
 
@@ -111,9 +114,18 @@ describe('ProxyController', () => {
 
       await controller.handleGetRequest(mockRequest, mockResponse);
 
-      expect(mockResponse.header).toHaveBeenCalledWith('content-type', 'application/json');
-      expect(mockResponse.header).toHaveBeenCalledWith('x-custom-header', 'custom-value');
-      expect(mockResponse.header).toHaveBeenCalledWith('cache-control', 'no-cache');
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'content-type',
+        'application/json',
+      );
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'x-custom-header',
+        'custom-value',
+      );
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'cache-control',
+        'no-cache',
+      );
       expect(mockResponse.header).toHaveBeenCalledTimes(3);
     });
 
@@ -267,10 +279,12 @@ describe('ProxyController', () => {
 
   describe('error handling', () => {
     it('should handle proxy service errors in GET request', async () => {
-      mockProxyService.forward.mockRejectedValue(new Error('Service unavailable'));
+      mockProxyService.forward.mockRejectedValue(
+        new Error('Service unavailable'),
+      );
 
       await expect(
-        controller.handleGetRequest(mockRequest, mockResponse)
+        controller.handleGetRequest(mockRequest, mockResponse),
       ).rejects.toThrow('Service unavailable');
 
       expect(mockProxyService.forward).toHaveBeenCalledWith(mockRequest);
@@ -280,7 +294,7 @@ describe('ProxyController', () => {
       mockProxyService.forward.mockRejectedValue(new Error('Network error'));
 
       await expect(
-        controller.handlePostRequest(mockRequest, mockResponse)
+        controller.handlePostRequest(mockRequest, mockResponse),
       ).rejects.toThrow('Network error');
     });
 
@@ -288,15 +302,17 @@ describe('ProxyController', () => {
       mockProxyService.forward.mockRejectedValue(new Error('Timeout'));
 
       await expect(
-        controller.handlePutRequest(mockRequest, mockResponse)
+        controller.handlePutRequest(mockRequest, mockResponse),
       ).rejects.toThrow('Timeout');
     });
 
     it('should handle proxy service errors in DELETE request', async () => {
-      mockProxyService.forward.mockRejectedValue(new Error('Connection refused'));
+      mockProxyService.forward.mockRejectedValue(
+        new Error('Connection refused'),
+      );
 
       await expect(
-        controller.handleDeleteRequest(mockRequest, mockResponse)
+        controller.handleDeleteRequest(mockRequest, mockResponse),
       ).rejects.toThrow('Connection refused');
     });
   });
@@ -327,8 +343,14 @@ describe('ProxyController', () => {
 
       await controller.handleGetRequest(mockRequest, mockResponse);
 
-      expect(mockResponse.header).toHaveBeenCalledWith('content-type', 'application/json');
-      expect(mockResponse.header).toHaveBeenCalledWith('x-undefined', undefined);
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'content-type',
+        'application/json',
+      );
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'x-undefined',
+        undefined,
+      );
     });
 
     it('should handle headers with null values', async () => {
@@ -343,7 +365,10 @@ describe('ProxyController', () => {
 
       await controller.handleGetRequest(mockRequest, mockResponse);
 
-      expect(mockResponse.header).toHaveBeenCalledWith('content-type', 'application/json');
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'content-type',
+        'application/json',
+      );
       expect(mockResponse.header).toHaveBeenCalledWith('x-null', null);
     });
   });

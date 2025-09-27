@@ -83,7 +83,7 @@ describe('IsServiceName Validator', () => {
 
     it('should pass for all enum values', async () => {
       const allServiceNames = Object.values(ServiceName);
-      
+
       for (const serviceName of allServiceNames) {
         testInstance.serviceName = serviceName;
         const errors = await validate(testInstance);
@@ -97,10 +97,10 @@ describe('IsServiceName Validator', () => {
       testInstance.serviceName = 'invalid-service';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       const validServices = Object.values(ServiceName).join(', ');
       expect(errors[0].constraints?.IsServiceName).toBe(
-        `serviceName must be one of: ${validServices}`
+        `serviceName must be one of: ${validServices}`,
       );
     });
 
@@ -108,10 +108,10 @@ describe('IsServiceName Validator', () => {
       testInstance.serviceName = '';
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       const validServices = Object.values(ServiceName).join(', ');
       expect(errors[0].constraints?.IsServiceName).toBe(
-        `serviceName must be one of: ${validServices}`
+        `serviceName must be one of: ${validServices}`,
       );
     });
 
@@ -119,10 +119,10 @@ describe('IsServiceName Validator', () => {
       testInstance.serviceName = null;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       const validServices = Object.values(ServiceName).join(', ');
       expect(errors[0].constraints?.IsServiceName).toBe(
-        `serviceName must be one of: ${validServices}`
+        `serviceName must be one of: ${validServices}`,
       );
     });
 
@@ -130,10 +130,10 @@ describe('IsServiceName Validator', () => {
       testInstance.serviceName = undefined;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       const validServices = Object.values(ServiceName).join(', ');
       expect(errors[0].constraints?.IsServiceName).toBe(
-        `serviceName must be one of: ${validServices}`
+        `serviceName must be one of: ${validServices}`,
       );
     });
 
@@ -141,10 +141,10 @@ describe('IsServiceName Validator', () => {
       testInstance.serviceName = 123;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       const validServices = Object.values(ServiceName).join(', ');
       expect(errors[0].constraints?.IsServiceName).toBe(
-        `serviceName must be one of: ${validServices}`
+        `serviceName must be one of: ${validServices}`,
       );
     });
 
@@ -152,7 +152,7 @@ describe('IsServiceName Validator', () => {
       testInstance.serviceName = true;
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       testInstance.serviceName = false;
       const errors2 = await validate(testInstance);
       expect(errors2).toHaveLength(1);
@@ -162,10 +162,10 @@ describe('IsServiceName Validator', () => {
       testInstance.serviceName = { service: 'user-service' };
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       const validServices = Object.values(ServiceName).join(', ');
       expect(errors[0].constraints?.IsServiceName).toBe(
-        `serviceName must be one of: ${validServices}`
+        `serviceName must be one of: ${validServices}`,
       );
     });
 
@@ -173,10 +173,10 @@ describe('IsServiceName Validator', () => {
       testInstance.serviceName = ['user-service'];
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      
+
       const validServices = Object.values(ServiceName).join(', ');
       expect(errors[0].constraints?.IsServiceName).toBe(
-        `serviceName must be one of: ${validServices}`
+        `serviceName must be one of: ${validServices}`,
       );
     });
 
@@ -200,10 +200,10 @@ describe('IsServiceName Validator', () => {
         testInstance.serviceName = variation;
         const errors = await validate(testInstance);
         expect(errors).toHaveLength(1);
-        
+
         const validServices = Object.values(ServiceName).join(', ');
         expect(errors[0].constraints?.IsServiceName).toBe(
-          `serviceName must be one of: ${validServices}`
+          `serviceName must be one of: ${validServices}`,
         );
       }
     });
@@ -253,10 +253,12 @@ describe('IsServiceName Validator', () => {
 
       const testInstance = new TestClassWithCustomMessage();
       testInstance.serviceName = 'invalid-service';
-      
+
       const errors = await validate(testInstance);
       expect(errors).toHaveLength(1);
-      expect(errors[0].constraints?.IsServiceName).toBe('Please provide a valid service name');
+      expect(errors[0].constraints?.IsServiceName).toBe(
+        'Please provide a valid service name',
+      );
     });
   });
 
@@ -264,10 +266,10 @@ describe('IsServiceName Validator', () => {
     it('should include all valid service names in error message', async () => {
       testInstance.serviceName = 'invalid-service';
       const errors = await validate(testInstance);
-      
+
       const errorMessage = errors[0].constraints?.IsServiceName;
       const allServiceNames = Object.values(ServiceName);
-      
+
       // Check that all service names are mentioned in the error message
       for (const serviceName of allServiceNames) {
         expect(errorMessage).toContain(serviceName);

@@ -39,9 +39,9 @@ describe('JsonBodyValidationPipe', () => {
           name: 'John',
           profile: {
             age: 30,
-            preferences: ['music', 'sports']
-          }
-        }
+            preferences: ['music', 'sports'],
+          },
+        },
       };
       const result = pipe.transform(nestedObject);
       expect(result).toEqual(nestedObject);
@@ -49,7 +49,7 @@ describe('JsonBodyValidationPipe', () => {
 
     it('should throw BadRequestException for undefined value', () => {
       expect(() => pipe.transform(undefined)).toThrow(BadRequestException);
-      
+
       try {
         pipe.transform(undefined);
       } catch (error) {
@@ -64,7 +64,7 @@ describe('JsonBodyValidationPipe', () => {
 
     it('should throw BadRequestException for null value', () => {
       expect(() => pipe.transform(null)).toThrow(BadRequestException);
-      
+
       try {
         pipe.transform(null);
       } catch (error) {
@@ -78,8 +78,10 @@ describe('JsonBodyValidationPipe', () => {
     });
 
     it('should throw BadRequestException for string values', () => {
-      expect(() => pipe.transform('invalid string')).toThrow(BadRequestException);
-      
+      expect(() => pipe.transform('invalid string')).toThrow(
+        BadRequestException,
+      );
+
       try {
         pipe.transform('invalid string');
       } catch (error) {
@@ -94,7 +96,7 @@ describe('JsonBodyValidationPipe', () => {
 
     it('should throw BadRequestException for number values', () => {
       expect(() => pipe.transform(123)).toThrow(BadRequestException);
-      
+
       try {
         pipe.transform(123);
       } catch (error) {
@@ -110,7 +112,7 @@ describe('JsonBodyValidationPipe', () => {
     it('should throw BadRequestException for boolean values', () => {
       expect(() => pipe.transform(true)).toThrow(BadRequestException);
       expect(() => pipe.transform(false)).toThrow(BadRequestException);
-      
+
       try {
         pipe.transform(true);
       } catch (error) {

@@ -39,3 +39,14 @@ data:
   CORS_ENABLED: "true"
   CORS_ORIGIN: "*"
 
+  # Performance settings for 1000+ concurrent users
+  UV_THREADPOOL_SIZE: "16"
+  NODE_OPTIONS: "--max-old-space-size=768"
+  
+  # Logging
+  LOG_LEVEL: "warn"
+  
+  # Health check settings
+  HEALTH_CHECK_TIMEOUT_MS: "3000"
+  HEALTH_CHECK_CACHE_TTL_MS: "10000"
+

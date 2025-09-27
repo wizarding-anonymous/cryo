@@ -1,12 +1,12 @@
 import { validate } from 'class-validator';
-import { 
-  IsSafePath, 
-  IsValidUrl, 
-  IsHttpMethod, 
-  IsJsonObject, 
-  IsPort, 
-  IsTimeout, 
-  IsIpAddress 
+import {
+  IsSafePath,
+  IsValidUrl,
+  IsHttpMethod,
+  IsJsonObject,
+  IsPort,
+  IsTimeout,
+  IsIpAddress,
 } from './index';
 
 class TestValidationDto {
@@ -45,7 +45,7 @@ describe('Custom Validators', () => {
       dto.ipAddress = '192.168.1.1';
 
       const errors = await validate(dto);
-      const pathErrors = errors.filter(e => e.property === 'path');
+      const pathErrors = errors.filter((e) => e.property === 'path');
       expect(pathErrors).toHaveLength(0);
     });
 
@@ -68,7 +68,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = '192.168.1.1';
 
         const errors = await validate(dto);
-        const pathErrors = errors.filter(e => e.property === 'path');
+        const pathErrors = errors.filter((e) => e.property === 'path');
         expect(pathErrors.length).toBeGreaterThan(0);
       }
     });
@@ -93,7 +93,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = '192.168.1.1';
 
         const errors = await validate(dto);
-        const urlErrors = errors.filter(e => e.property === 'url');
+        const urlErrors = errors.filter((e) => e.property === 'url');
         expect(urlErrors).toHaveLength(0);
       }
     });
@@ -117,7 +117,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = '192.168.1.1';
 
         const errors = await validate(dto);
-        const urlErrors = errors.filter(e => e.property === 'url');
+        const urlErrors = errors.filter((e) => e.property === 'url');
         expect(urlErrors.length).toBeGreaterThan(0);
       }
     });
@@ -125,7 +125,15 @@ describe('Custom Validators', () => {
 
   describe('IsHttpMethod', () => {
     it('should validate HTTP methods', async () => {
-      const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'get', 'post'];
+      const validMethods = [
+        'GET',
+        'POST',
+        'PUT',
+        'DELETE',
+        'PATCH',
+        'get',
+        'post',
+      ];
 
       for (const method of validMethods) {
         const dto = new TestValidationDto();
@@ -138,7 +146,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = '192.168.1.1';
 
         const errors = await validate(dto);
-        const methodErrors = errors.filter(e => e.property === 'method');
+        const methodErrors = errors.filter((e) => e.property === 'method');
         expect(methodErrors).toHaveLength(0);
       }
     });
@@ -157,7 +165,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = '192.168.1.1';
 
         const errors = await validate(dto);
-        const methodErrors = errors.filter(e => e.property === 'method');
+        const methodErrors = errors.filter((e) => e.property === 'method');
         expect(methodErrors.length).toBeGreaterThan(0);
       }
     });
@@ -178,7 +186,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = '192.168.1.1';
 
         const errors = await validate(dto);
-        const portErrors = errors.filter(e => e.property === 'port');
+        const portErrors = errors.filter((e) => e.property === 'port');
         expect(portErrors).toHaveLength(0);
       }
     });
@@ -197,7 +205,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = '192.168.1.1';
 
         const errors = await validate(dto);
-        const portErrors = errors.filter(e => e.property === 'port');
+        const portErrors = errors.filter((e) => e.property === 'port');
         expect(portErrors.length).toBeGreaterThan(0);
       }
     });
@@ -224,7 +232,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = ip;
 
         const errors = await validate(dto);
-        const ipErrors = errors.filter(e => e.property === 'ipAddress');
+        const ipErrors = errors.filter((e) => e.property === 'ipAddress');
         expect(ipErrors).toHaveLength(0);
       }
     });
@@ -249,7 +257,7 @@ describe('Custom Validators', () => {
         dto.ipAddress = ip as string;
 
         const errors = await validate(dto);
-        const ipErrors = errors.filter(e => e.property === 'ipAddress');
+        const ipErrors = errors.filter((e) => e.property === 'ipAddress');
         expect(ipErrors.length).toBeGreaterThan(0);
       }
     });

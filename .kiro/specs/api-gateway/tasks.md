@@ -228,15 +228,41 @@
   - Достичь 100% code coverage
   - _Requirements: Все требования_
 
-- [ ] 13. Создание integration тестов с Supertest
-  - В проекте могут быть старые файлы дублирующие этот функционал, проверить
-  - Написать integration тесты для всех API endpoints
-  - Протестировать аутентификацию и авторизацию flows
-  - Добавить тесты для rate limiting и error handling
-  - Создать тесты для health checks и service discovery
+- [x] 13. Создание integration тестов с Supertest
+  - [x] В проекте могут быть старые файлы дублирующие этот функционал, проверить
+  - [x] Написать integration тесты для всех API endpoints
+    - [x] Core gateway functionality tests (`gateway.e2e-spec.ts`)
+    - [x] Caching functionality tests (`caching.e2e-spec.ts`)
+    - [x] Security integration tests (`security.e2e-spec.ts`)
+    - [x] Performance and load tests (`performance.e2e-spec.ts`)
+    - [x] Error handling tests (`error-handling.e2e-spec.ts`)
+    - [x] Monitoring and observability tests (`monitoring.e2e-spec.ts`)
+  - [x] Протестировать аутентификацию и авторизацию flows
+    - [x] JWT validation and user extraction
+    - [x] Authentication error scenarios
+    - [x] Token expiration handling
+  - [x] Добавить тесты для rate limiting и error handling
+    - [x] Rate limit enforcement and recovery
+    - [x] Upstream service error handling
+    - [x] Circuit breaker functionality
+    - [x] Error response consistency
+  - [x] Создать тесты для health checks и service discovery
+    - [x] Health check endpoints
+    - [x] Service availability monitoring
+    - [x] Metrics collection and reporting
+  - [x] Создать comprehensive test documentation
   - _Requirements: Все требования_
 
-- [ ] 14. Настройка Docker контейнеризации
+- [x] 14. Настройка Docker контейнеризации
+
+
+
+
+
+
+
+
+
   - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать оптимизированный Dockerfile с multi-stage build
   - Настроить docker-compose для development окружения
@@ -244,7 +270,11 @@
   - Создать production-ready Docker образ
   - _Requirements: 5_
 
-- [ ] 15. Подготовка к Kubernetes deployment
+- [x] 15. Подготовка к Kubernetes deployment
+
+
+
+
   - В проекте могут быть старые файлы дублирующие этот функционал, проверитьм
   - Создать Kubernetes manifests (Deployment, Service, ConfigMap)
   - Настроить health checks и readiness probes
@@ -252,7 +282,12 @@
   - Создать Ingress конфигурацию для внешнего доступа
   - _Requirements: 5_
 
-- [ ] 16. Настройка Swagger/OpenAPI документации
+- [x] 16. Настройка Swagger/OpenAPI документации
+
+
+
+
+
   - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Добавить @nestjs/swagger для автогенерации документации
   - Создать API decorators для всех endpoints
@@ -260,14 +295,30 @@
   - Добавить примеры запросов и ответов
   - _Requirements: 4_
 
-- [ ] 17. Performance тестирование для MVP
+- [x] 17. Performance тестирование для MVP
+
+
+
+
+
   - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Создать базовые load тесты для 1000 concurrent users
   - Протестировать response time < 200ms
   - Проверить стабильность под MVP нагрузкой
   - _Requirements: 5_
 
-- [ ] 18. Production готовность MVP
+- [x] 18. Production готовность MVP
+
+
+
+
+
+
+
+
+
+
+
   - В проекте могут быть старые файлы дублирующие этот функционал, проверить
   - Настроить базовое логирование
   - Создать production конфигурацию

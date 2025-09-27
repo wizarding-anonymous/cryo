@@ -1,0 +1,27 @@
+config:
+  target: "https://httpbin.org"
+  phases:
+    - duration: 10
+      arrivalRate: 5
+      name: basic-test
+  defaults:
+    headers:
+      Accept: application/json
+      User-Agent: "API-Gateway-Setup-Test/1.0"
+
+scenarios:
+  - name: Basic connectivity test
+    flow:
+      - get:
+          url: "/get"
+          name: "basic-get"
+          expect:
+            - statusCode: 200
+      - think: 1
+      - post:
+          url: "/post"
+          name: "basic-post"
+          json:
+            test: "performance-setup"
+          expect:
+            - statusCode: 200

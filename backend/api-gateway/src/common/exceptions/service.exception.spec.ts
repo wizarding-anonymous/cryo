@@ -6,11 +6,11 @@ describe('ServiceException', () => {
       'Service error occurred',
       503,
       'user-service',
-      { code: 'CONNECTION_FAILED' }
+      { code: 'CONNECTION_FAILED' },
     );
 
     expect(exception.getStatus()).toBe(503);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('SERVICE_ERROR');
     expect(response.message).toBe('Service error occurred');
@@ -23,7 +23,7 @@ describe('ServiceException', () => {
     const exception = new ServiceException('Basic service error', 500);
 
     expect(exception.getStatus()).toBe(500);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('SERVICE_ERROR');
     expect(response.message).toBe('Basic service error');

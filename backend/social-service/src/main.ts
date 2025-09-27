@@ -50,7 +50,7 @@ async function bootstrap() {
     // Enable graceful shutdown hooks
     app.enableShutdownHooks();
 
-    const port = process.env.PORT || 3003;
+    const port = process.env.PORT || 3007;
     await app.listen(port);
 
     logger.log(`Social Service is running on: http://localhost:${port}`);

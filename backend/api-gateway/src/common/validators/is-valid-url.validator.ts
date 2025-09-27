@@ -15,7 +15,7 @@ export function IsValidUrl(validationOptions?: ValidationOptions) {
       validator: {
         validate(value: any) {
           if (typeof value !== 'string') return false;
-          
+
           try {
             const url = new URL(value);
             return ['http:', 'https:'].includes(url.protocol);

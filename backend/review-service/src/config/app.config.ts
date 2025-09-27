@@ -9,7 +9,7 @@ export interface AppConfig {
 }
 
 export const appConfig = (): AppConfig => ({
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || '3004', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   jwtSecret: process.env.JWT_SECRET || 'your-jwt-secret-key',
   libraryServiceUrl: process.env.LIBRARY_SERVICE_URL || 'http://library-service:3000',

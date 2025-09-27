@@ -2,10 +2,13 @@ import { BadGatewayException } from './bad-gateway.exception';
 
 describe('BadGatewayException', () => {
   it('should create exception with service name and custom message', () => {
-    const exception = new BadGatewayException('payment-service', 'Invalid response format');
+    const exception = new BadGatewayException(
+      'payment-service',
+      'Invalid response format',
+    );
 
     expect(exception.getStatus()).toBe(502);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('BAD_GATEWAY');
     expect(response.message).toBe('Invalid response format');
@@ -17,7 +20,7 @@ describe('BadGatewayException', () => {
     const exception = new BadGatewayException('game-service');
 
     expect(exception.getStatus()).toBe(502);
-    
+
     const response = exception.getResponse() as any;
     expect(response.error).toBe('BAD_GATEWAY');
     expect(response.message).toBe('Bad response from game-service');

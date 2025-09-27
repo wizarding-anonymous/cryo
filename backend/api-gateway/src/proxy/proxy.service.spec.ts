@@ -41,7 +41,7 @@ describe('ProxyService', () => {
         data: { id: 1, name: 'John' },
         headers: {
           'content-type': 'application/json',
-          'x-custom-header': 'test-value'
+          'x-custom-header': 'test-value',
         },
       });
 
@@ -50,8 +50,8 @@ describe('ProxyService', () => {
         path: '/api/users/1',
         url: '/api/users/1?include=profile',
         headers: {
-          'authorization': 'Bearer token123',
-          'user-agent': 'test-client'
+          authorization: 'Bearer token123',
+          'user-agent': 'test-client',
         },
         body: undefined,
       } as any;
@@ -67,7 +67,7 @@ describe('ProxyService', () => {
           url: 'http://user-service:3001/users/1?include=profile',
           method: 'GET',
           timeout: 5000,
-        })
+        }),
       );
     });
 
@@ -94,7 +94,7 @@ describe('ProxyService', () => {
         expect.objectContaining({
           method: 'POST',
           data: { name: 'Jane', email: 'jane@example.com' },
-        })
+        }),
       );
     });
 
@@ -127,14 +127,20 @@ describe('ProxyService', () => {
         body: undefined,
       } as any;
 
-      await expect(proxyService.forward(req)).rejects.toThrow(ServiceUnavailableException);
+      await expect(proxyService.forward(req)).rejects.toThrow(
+        ServiceUnavailableException,
+      );
     });
 
     it('should retry on 5xx errors and succeed', async () => {
       mockRegistry.getServiceConfig.mockReturnValue(mockServiceConfig);
       mockedAxios
         .mockRejectedValueOnce({
-          response: { status: 500, headers: {}, data: { error: 'Internal Error' } },
+          response: {
+            status: 500,
+            headers: {},
+            data: { error: 'Internal Error' },
+          },
         })
         .mockResolvedValueOnce({
           status: 200,
@@ -163,7 +169,7 @@ describe('ProxyService', () => {
         response: {
           status: 400,
           headers: { 'content-type': 'application/json' },
-          data: { error: 'Bad Request' }
+          data: { error: 'Bad Request' },
         },
       });
 
@@ -197,7 +203,9 @@ describe('ProxyService', () => {
         body: undefined,
       } as any;
 
-      await expect(proxyService.forward(req)).rejects.toThrow(ProxyTimeoutException);
+      await expect(proxyService.forward(req)).rejects.toThrow(
+        ProxyTimeoutException,
+      );
     });
 
     it('should handle array headers correctly', async () => {
@@ -207,7 +215,7 @@ describe('ProxyService', () => {
         data: { ok: true },
         headers: {
           'set-cookie': ['session=abc123', 'csrf=xyz789'],
-          'cache-control': 'no-cache'
+          'cache-control': 'no-cache',
         },
       });
 
@@ -238,10 +246,10 @@ describe('ProxyService', () => {
         path: '/api/users',
         url: '/api/users',
         headers: {
-          'authorization': 'Bearer token123',
+          authorization: 'Bearer token123',
           'user-agent': 'test-client',
-          'host': 'api.example.com',
-          'connection': 'keep-alive', // should be filtered out
+          host: 'api.example.com',
+          connection: 'keep-alive', // should be filtered out
           'content-length': '100', // should be filtered out
           'x-forwarded-for': '192.168.1.1',
         },
@@ -253,13 +261,13 @@ describe('ProxyService', () => {
       expect(mockedAxios).toHaveBeenCalledWith(
         expect.objectContaining({
           headers: expect.objectContaining({
-            'authorization': 'Bearer token123',
+            authorization: 'Bearer token123',
             'user-agent': 'test-client',
             'x-forwarded-proto': 'http',
             'x-forwarded-host': 'api.example.com',
             'x-forwarded-for': '192.168.1.1',
-          })
-        })
+          }),
+        }),
       );
 
       const callArgs = mockedAxios.mock.calls[0][0];
@@ -290,12 +298,17 @@ describe('ProxyService', () => {
         } as any;
 
         await proxyService.forward(req);
-        expect(mockRegistry.getServiceConfig).toHaveBeenCalledWith(testCase.expectedService);
+        expect(mockRegistry.getServiceConfig).toHaveBeenCalledWith(
+          testCase.expectedService,
+        );
       }
     });
 
     it('should resolve game service routes correctly', async () => {
-      const gameServiceConfig = { ...mockServiceConfig, name: 'game-catalog-service' };
+      const gameServiceConfig = {
+        ...mockServiceConfig,
+        name: 'game-catalog-service',
+      };
       mockRegistry.getServiceConfig.mockReturnValue(gameServiceConfig);
       mockedAxios.mockResolvedValue({ status: 200, data: {}, headers: {} });
 
@@ -308,11 +321,16 @@ describe('ProxyService', () => {
       } as any;
 
       await proxyService.forward(req);
-      expect(mockRegistry.getServiceConfig).toHaveBeenCalledWith('game-catalog-service');
+      expect(mockRegistry.getServiceConfig).toHaveBeenCalledWith(
+        'game-catalog-service',
+      );
     });
 
     it('should resolve payment service routes correctly', async () => {
-      const paymentServiceConfig = { ...mockServiceConfig, name: 'payment-service' };
+      const paymentServiceConfig = {
+        ...mockServiceConfig,
+        name: 'payment-service',
+      };
       mockRegistry.getServiceConfig.mockReturnValue(paymentServiceConfig);
       mockedAxios.mockResolvedValue({ status: 200, data: {}, headers: {} });
 
@@ -325,7 +343,9 @@ describe('ProxyService', () => {
       } as any;
 
       await proxyService.forward(req);
-      expect(mockRegistry.getServiceConfig).toHaveBeenCalledWith('payment-service');
+      expect(mockRegistry.getServiceConfig).toHaveBeenCalledWith(
+        'payment-service',
+      );
     });
   });
 
@@ -348,7 +368,9 @@ describe('ProxyService', () => {
       }
 
       // 4th request should be blocked by circuit breaker
-      await expect(proxyService.forward(req)).rejects.toThrow(ServiceUnavailableException);
+      await expect(proxyService.forward(req)).rejects.toThrow(
+        ServiceUnavailableException,
+      );
     });
 
     it('should reset circuit breaker after timeout', async () => {
@@ -377,10 +399,12 @@ describe('ProxyService', () => {
       await expect(proxyService.forward(req)).rejects.toThrow();
 
       // Should be blocked
-      await expect(proxyService.forward(req)).rejects.toThrow(ServiceUnavailableException);
+      await expect(proxyService.forward(req)).rejects.toThrow(
+        ServiceUnavailableException,
+      );
 
       // Wait for reset timeout
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Should allow one request (half-open state)
       mockedAxios.mockResolvedValueOnce({
