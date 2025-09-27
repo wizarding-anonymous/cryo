@@ -31,7 +31,7 @@ export class LibraryService {
   constructor(private readonly configService: ConfigService) {
     this.libraryServiceUrl = this.configService.get<string>(
       'LIBRARY_SERVICE_URL',
-      'http://library-service:3000'
+      'http://library-service:3000',
     );
   }
 
@@ -56,10 +56,9 @@ export class LibraryService {
 
       const result = await response.json();
       const gameCount = result.count || 0;
-      
+
       this.logger.log(`User ${userId} has ${gameCount} games in library`);
       return gameCount;
-
     } catch (error) {
       this.logger.error(`Failed to get game count for user ${userId}:`, error);
       // Возвращаем 0 в случае ошибки, чтобы не нарушить логику достижений
@@ -88,7 +87,6 @@ export class LibraryService {
 
       const result = await response.json();
       return result.stats || null;
-
     } catch (error) {
       this.logger.error(`Failed to get library stats for user ${userId}:`, error);
       return null;
@@ -102,13 +100,16 @@ export class LibraryService {
     this.logger.log(`Checking if user ${userId} has game ${gameId} in library`);
 
     try {
-      const response = await fetch(`${this.libraryServiceUrl}/api/library/${userId}/games/${gameId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Service-Name': 'achievement-service',
+      const response = await fetch(
+        `${this.libraryServiceUrl}/api/library/${userId}/games/${gameId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Service-Name': 'achievement-service',
+          },
         },
-      });
+      );
 
       if (response.status === 404) {
         return false;
@@ -119,7 +120,6 @@ export class LibraryService {
       }
 
       return true;
-
     } catch (error) {
       this.logger.error(`Failed to check game ${gameId} for user ${userId}:`, error);
       return false;
@@ -141,7 +141,7 @@ export class LibraryService {
             'Content-Type': 'application/json',
             'X-Service-Name': 'achievement-service',
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -150,7 +150,6 @@ export class LibraryService {
 
       const result = await response.json();
       return result.games || [];
-
     } catch (error) {
       this.logger.error(`Failed to get games for user ${userId}:`, error);
       return [];
@@ -179,7 +178,9 @@ export class LibraryService {
   /**
    * Получение информации о первой покупке пользователя
    */
-  async getFirstPurchaseInfo(userId: string): Promise<{ gameId: string; purchaseDate: string } | null> {
+  async getFirstPurchaseInfo(
+    userId: string,
+  ): Promise<{ gameId: string; purchaseDate: string } | null> {
     this.logger.log(`Getting first purchase info for user ${userId}`);
 
     try {
@@ -196,9 +197,8 @@ export class LibraryService {
 
       return {
         gameId: games[0].gameId,
-        purchaseDate: stats.firstPurchaseDate
+        purchaseDate: stats.firstPurchaseDate,
       };
-
     } catch (error) {
       this.logger.error(`Failed to get first purchase info for user ${userId}:`, error);
       return null;

@@ -7,9 +7,7 @@ import { IS_PUBLIC_KEY } from '../decorators';
 export class JwtAuthGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -19,7 +17,7 @@ export class JwtAuthGuard implements CanActivate {
     }
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
-    
+
     if (!token) {
       throw new UnauthorizedException('JWT token is required');
     }
@@ -32,7 +30,7 @@ export class JwtAuthGuard implements CanActivate {
 
     // Add user info to request for use in controllers
     request.user = { id: this.extractUserIdFromToken(token) };
-    
+
     return true;
   }
 

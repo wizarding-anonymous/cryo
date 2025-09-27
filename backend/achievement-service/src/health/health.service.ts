@@ -8,7 +8,7 @@ export class HealthService {
   constructor(
     @InjectDataSource()
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   async getHealth(): Promise<HealthResponseDto> {
     const checks = await this.performHealthChecks();

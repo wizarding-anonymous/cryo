@@ -65,7 +65,7 @@ describe('NotificationService', () => {
             'X-Service-Version': '1.0.0',
           },
           body: JSON.stringify(mockNotification),
-        }
+        },
       );
     });
 
@@ -81,7 +81,8 @@ describe('NotificationService', () => {
 
       expect(result).toEqual({
         success: false,
-        message: 'Failed to send notification: Notification Service responded with 500: Internal Server Error',
+        message:
+          'Failed to send notification: Notification Service responded with 500: Internal Server Error',
       });
     });
 
@@ -125,7 +126,7 @@ describe('NotificationService', () => {
 
       expect(fetch).toHaveBeenCalledWith(
         `${customUrl}/api/notifications/achievement`,
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -138,15 +139,12 @@ describe('NotificationService', () => {
       const result = await service.checkNotificationServiceHealth();
 
       expect(result).toBe(true);
-      expect(fetch).toHaveBeenCalledWith(
-        'http://notification-service:3000/health',
-        {
-          method: 'GET',
-          headers: {
-            'X-Service-Name': 'achievement-service',
-          },
-        }
-      );
+      expect(fetch).toHaveBeenCalledWith('http://notification-service:3000/health', {
+        method: 'GET',
+        headers: {
+          'X-Service-Name': 'achievement-service',
+        },
+      });
     });
 
     it('should return false when service is unhealthy', async () => {
@@ -176,7 +174,8 @@ describe('NotificationService', () => {
 
       const mockResponse = {
         ok: true,
-        json: jest.fn()
+        json: jest
+          .fn()
           .mockResolvedValueOnce({ notificationId: 'notif-1' })
           .mockResolvedValueOnce({ notificationId: 'notif-2' }),
       };

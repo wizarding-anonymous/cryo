@@ -9,7 +9,7 @@ describe('AllExceptionsFilter', () => {
 
   beforeEach(() => {
     filter = new AllExceptionsFilter();
-    
+
     mockResponse = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
@@ -34,7 +34,7 @@ describe('AllExceptionsFilter', () => {
 
   it('should handle HttpException', () => {
     const exception = new HttpException('Test error', HttpStatus.BAD_REQUEST);
-    
+
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
 
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -53,7 +53,7 @@ describe('AllExceptionsFilter', () => {
       details: ['field is required'],
     };
     const exception = new HttpException(exceptionResponse, HttpStatus.BAD_REQUEST);
-    
+
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
 
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -69,7 +69,7 @@ describe('AllExceptionsFilter', () => {
 
   it('should handle generic Error', () => {
     const exception = new Error('Generic error');
-    
+
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
 
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -84,7 +84,7 @@ describe('AllExceptionsFilter', () => {
 
   it('should handle unknown exception', () => {
     const exception = 'Unknown error';
-    
+
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
 
     expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);

@@ -1,4 +1,5 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 describe('JwtAuthGuard', () => {
@@ -7,7 +8,8 @@ describe('JwtAuthGuard', () => {
   let mockRequest: any;
 
   beforeEach(() => {
-    guard = new JwtAuthGuard();
+    const reflector = new Reflector();
+    guard = new JwtAuthGuard(reflector);
     mockRequest = {
       headers: {},
     };
@@ -38,7 +40,8 @@ describe('JwtAuthGuard', () => {
   });
 
   it('should return true and set user when valid token is provided', () => {
-    const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    const validToken =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
     mockRequest.headers.authorization = `Bearer ${validToken}`;
 
     const result = guard.canActivate(mockExecutionContext as ExecutionContext);
@@ -61,7 +64,7 @@ describe('JwtAuthGuard', () => {
     const payload = { sub: 'user-456' };
     const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64');
     const mockToken = `header.${encodedPayload}.signature`;
-    
+
     mockRequest.headers.authorization = `Bearer ${mockToken}`;
 
     const result = guard.canActivate(mockExecutionContext as ExecutionContext);

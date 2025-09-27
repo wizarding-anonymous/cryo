@@ -22,7 +22,9 @@ describe('Achievement Exceptions', () => {
       const userId = 'test-user-id';
       const exception = new AchievementAlreadyUnlockedException(achievementId, userId);
 
-      expect(exception.message).toBe(`Achievement ${achievementId} already unlocked for user ${userId}`);
+      expect(exception.message).toBe(
+        `Achievement ${achievementId} already unlocked for user ${userId}`,
+      );
       expect(exception.name).toBe('AchievementAlreadyUnlockedException');
       expect(exception.getStatus()).toBe(409);
     });

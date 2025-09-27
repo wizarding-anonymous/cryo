@@ -48,28 +48,32 @@ export class IntegrationController {
    */
   @Post('payment/purchase')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Webhook для событий покупки от Payment Service',
-    description: 'Получает уведомления о покупках игр пользователями'
+    description: 'Получает уведомления о покупках игр пользователями',
   })
   @ApiBody({ type: PaymentEventDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Событие успешно обработано' 
+  @ApiResponse({
+    status: 200,
+    description: 'Событие успешно обработано',
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Некорректные данные события' 
+  @ApiResponse({
+    status: 400,
+    description: 'Некорректные данные события',
   })
-  async handlePaymentPurchase(@Body() eventData: PaymentEventDto): Promise<{ success: boolean; message: string }> {
-    this.logger.log(`Received payment purchase event for user ${eventData.userId}, game ${eventData.gameId}`);
+  async handlePaymentPurchase(
+    @Body() eventData: PaymentEventDto,
+  ): Promise<{ success: boolean; message: string }> {
+    this.logger.log(
+      `Received payment purchase event for user ${eventData.userId}, game ${eventData.gameId}`,
+    );
 
     try {
       await this.eventService.handleGamePurchase(eventData.userId, eventData.gameId);
-      
+
       return {
         success: true,
-        message: 'Payment purchase event processed successfully'
+        message: 'Payment purchase event processed successfully',
       };
     } catch (error) {
       this.logger.error(`Failed to process payment purchase event:`, error);
@@ -82,24 +86,28 @@ export class IntegrationController {
    */
   @Post('review/created')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Webhook для событий создания отзывов от Review Service',
-    description: 'Получает уведомления о создании отзывов пользователями'
+    description: 'Получает уведомления о создании отзывов пользователями',
   })
   @ApiBody({ type: ReviewEventDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Событие успешно обработано' 
+  @ApiResponse({
+    status: 200,
+    description: 'Событие успешно обработано',
   })
-  async handleReviewCreated(@Body() eventData: ReviewEventDto): Promise<{ success: boolean; message: string }> {
-    this.logger.log(`Received review created event for user ${eventData.userId}, review ${eventData.reviewId}`);
+  async handleReviewCreated(
+    @Body() eventData: ReviewEventDto,
+  ): Promise<{ success: boolean; message: string }> {
+    this.logger.log(
+      `Received review created event for user ${eventData.userId}, review ${eventData.reviewId}`,
+    );
 
     try {
       await this.eventService.handleReviewCreated(eventData.userId, eventData.reviewId);
-      
+
       return {
         success: true,
-        message: 'Review created event processed successfully'
+        message: 'Review created event processed successfully',
       };
     } catch (error) {
       this.logger.error(`Failed to process review created event:`, error);
@@ -112,27 +120,31 @@ export class IntegrationController {
    */
   @Post('social/friend')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Webhook для социальных событий от Social Service',
-    description: 'Получает уведомления о добавлении/удалении друзей'
+    description: 'Получает уведомления о добавлении/удалении друзей',
   })
   @ApiBody({ type: SocialEventDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Событие успешно обработано' 
+  @ApiResponse({
+    status: 200,
+    description: 'Событие успешно обработано',
   })
-  async handleSocialEvent(@Body() eventData: SocialEventDto): Promise<{ success: boolean; message: string }> {
-    this.logger.log(`Received social event ${eventData.eventType} for user ${eventData.userId}, friend ${eventData.friendId}`);
+  async handleSocialEvent(
+    @Body() eventData: SocialEventDto,
+  ): Promise<{ success: boolean; message: string }> {
+    this.logger.log(
+      `Received social event ${eventData.eventType} for user ${eventData.userId}, friend ${eventData.friendId}`,
+    );
 
     try {
       if (eventData.eventType === 'friend_added') {
         await this.eventService.handleFriendAdded(eventData.userId, eventData.friendId);
       }
       // Note: friend_removed events don't trigger achievements in MVP
-      
+
       return {
         success: true,
-        message: 'Social event processed successfully'
+        message: 'Social event processed successfully',
       };
     } catch (error) {
       this.logger.error(`Failed to process social event:`, error);
@@ -145,17 +157,21 @@ export class IntegrationController {
    */
   @Post('library/update')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Webhook для событий библиотеки от Library Service',
-    description: 'Получает уведомления об изменениях в библиотеке пользователя'
+    description: 'Получает уведомления об изменениях в библиотеке пользователя',
   })
   @ApiBody({ type: LibraryEventDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Событие успешно обработано' 
+  @ApiResponse({
+    status: 200,
+    description: 'Событие успешно обработано',
   })
-  async handleLibraryUpdate(@Body() eventData: LibraryEventDto): Promise<{ success: boolean; message: string }> {
-    this.logger.log(`Received library update event for user ${eventData.userId}, game ${eventData.gameId}, action ${eventData.action}`);
+  async handleLibraryUpdate(
+    @Body() eventData: LibraryEventDto,
+  ): Promise<{ success: boolean; message: string }> {
+    this.logger.log(
+      `Received library update event for user ${eventData.userId}, game ${eventData.gameId}, action ${eventData.action}`,
+    );
 
     try {
       if (eventData.action === 'added') {
@@ -163,10 +179,10 @@ export class IntegrationController {
         await this.eventService.handleGamePurchase(eventData.userId, eventData.gameId);
       }
       // Note: removed games don't affect achievements in MVP
-      
+
       return {
         success: true,
-        message: 'Library update event processed successfully'
+        message: 'Library update event processed successfully',
       };
     } catch (error) {
       this.logger.error(`Failed to process library update event:`, error);
@@ -179,18 +195,18 @@ export class IntegrationController {
    */
   @Post('health')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Health check для integration endpoints',
-    description: 'Проверка доступности webhook endpoints'
+    description: 'Проверка доступности webhook endpoints',
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Integration endpoints работают корректно' 
+  @ApiResponse({
+    status: 200,
+    description: 'Integration endpoints работают корректно',
   })
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
     return {
       status: 'healthy',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }

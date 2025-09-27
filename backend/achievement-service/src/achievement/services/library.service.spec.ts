@@ -51,7 +51,7 @@ describe('LibraryService', () => {
             'Content-Type': 'application/json',
             'X-Service-Name': 'achievement-service',
           },
-        }
+        },
       );
     });
 
@@ -112,7 +112,7 @@ describe('LibraryService', () => {
             'Content-Type': 'application/json',
             'X-Service-Name': 'achievement-service',
           },
-        }
+        },
       );
     });
 
@@ -150,7 +150,7 @@ describe('LibraryService', () => {
             'Content-Type': 'application/json',
             'X-Service-Name': 'achievement-service',
           },
-        }
+        },
       );
     });
 
@@ -217,7 +217,7 @@ describe('LibraryService', () => {
             'Content-Type': 'application/json',
             'X-Service-Name': 'achievement-service',
           },
-        }
+        },
       );
     });
 
@@ -232,7 +232,7 @@ describe('LibraryService', () => {
 
       expect(fetch).toHaveBeenCalledWith(
         `http://library-service:3000/api/library/${testUserId}/games?limit=100&offset=0`,
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -262,15 +262,12 @@ describe('LibraryService', () => {
       const result = await service.checkLibraryServiceHealth();
 
       expect(result).toBe(true);
-      expect(fetch).toHaveBeenCalledWith(
-        'http://library-service:3000/health',
-        {
-          method: 'GET',
-          headers: {
-            'X-Service-Name': 'achievement-service',
-          },
-        }
-      );
+      expect(fetch).toHaveBeenCalledWith('http://library-service:3000/health', {
+        method: 'GET',
+        headers: {
+          'X-Service-Name': 'achievement-service',
+        },
+      });
     });
 
     it('should return false when service is unhealthy', async () => {
@@ -404,7 +401,7 @@ describe('LibraryService', () => {
 
       expect(fetch).toHaveBeenCalledWith(
         `${customUrl}/api/library/${testUserId}/count`,
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });

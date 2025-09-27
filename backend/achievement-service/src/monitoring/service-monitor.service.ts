@@ -26,14 +26,8 @@ export class ServiceMonitorService {
   private readonly logger = new Logger(ServiceMonitorService.name);
   private readonly circuitBreakers = new Map<string, CircuitBreakerState>();
   private readonly serviceHealthStatus = new Map<string, ServiceHealthStatus>();
-  
-  private readonly services = [
-    'notification',
-    'library', 
-    'payment',
-    'review',
-    'social'
-  ];
+
+  private readonly services = ['notification', 'library', 'payment', 'review', 'social'];
 
   constructor(
     private readonly configService: ConfigService,
@@ -56,7 +50,7 @@ export class ServiceMonitorService {
 
   private startHealthChecks() {
     const interval = this.configService.get<number>('health.interval', 30000);
-    
+
     setInterval(async () => {
       await this.checkAllServicesHealth();
     }, interval);
@@ -66,8 +60,8 @@ export class ServiceMonitorService {
   }
 
   async checkAllServicesHealth(): Promise<void> {
-    const healthCheckPromises = this.services.map(serviceName => 
-      this.checkServiceHealth(serviceName)
+    const healthCheckPromises = this.services.map(serviceName =>
+      this.checkServiceHealth(serviceName),
     );
 
     await Promise.allSettled(healthCheckPromises);
@@ -86,14 +80,14 @@ export class ServiceMonitorService {
       } else {
         healthUrl = `${serviceUrl}/health`;
       }
-      
+
       await firstValueFrom(
         this.httpService.get(healthUrl).pipe(
           timeout(serviceTimeout),
           catchError(error => {
             throw error;
-          })
-        )
+          }),
+        ),
       );
 
       const responseTime = Date.now() - startTime;
@@ -106,13 +100,16 @@ export class ServiceMonitorService {
 
       this.serviceHealthStatus.set(serviceName, status);
       this.handleSuccessfulCall(serviceName);
-      
+
       this.metricsService.incrementServiceCall(serviceName, 'health_check', 'success');
-      this.metricsService.observeServiceCallDuration(serviceName, 'health_check', responseTime / 1000);
+      this.metricsService.observeServiceCallDuration(
+        serviceName,
+        'health_check',
+        responseTime / 1000,
+      );
 
       this.logger.debug(`Service ${serviceName} health check passed (${responseTime}ms)`);
       return status;
-
     } catch (error) {
       const responseTime = Date.now() - startTime;
       const status: ServiceHealthStatus = {
@@ -125,24 +122,23 @@ export class ServiceMonitorService {
 
       this.serviceHealthStatus.set(serviceName, status);
       this.handleFailedCall(serviceName, error);
-      
+
       this.metricsService.incrementServiceCall(serviceName, 'health_check', 'error');
       this.metricsService.incrementServiceError(serviceName, (error as any).code || 'unknown');
-      this.metricsService.observeServiceCallDuration(serviceName, 'health_check', responseTime / 1000);
+      this.metricsService.observeServiceCallDuration(
+        serviceName,
+        'health_check',
+        responseTime / 1000,
+      );
 
       this.logger.warn(`Service ${serviceName} health check failed: ${(error as Error).message}`);
       return status;
     }
   }
 
-  async callService<T>(
-    serviceName: string, 
-    method: string, 
-    url: string, 
-    data?: any
-  ): Promise<T> {
+  async callService<T>(serviceName: string, method: string, url: string, data?: any): Promise<T> {
     const circuitBreaker = this.circuitBreakers.get(serviceName);
-    
+
     if (circuitBreaker?.state === 'OPEN') {
       const now = new Date();
       if (circuitBreaker.nextRetryTime && now < circuitBreaker.nextRetryTime) {
@@ -159,30 +155,31 @@ export class ServiceMonitorService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.request({
-          method: method.toUpperCase() as any,
-          url,
-          data,
-          timeout: serviceTimeout,
-        }).pipe(
-          timeout(serviceTimeout),
-          catchError(error => {
-            throw error;
+        this.httpService
+          .request({
+            method: method.toUpperCase() as any,
+            url,
+            data,
+            timeout: serviceTimeout,
           })
-        )
+          .pipe(
+            timeout(serviceTimeout),
+            catchError(error => {
+              throw error;
+            }),
+          ),
       );
 
       const responseTime = Date.now() - startTime;
-      
+
       this.handleSuccessfulCall(serviceName);
       this.metricsService.incrementServiceCall(serviceName, method, 'success');
       this.metricsService.observeServiceCallDuration(serviceName, method, responseTime / 1000);
 
       return (response as any).data;
-
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       this.handleFailedCall(serviceName, error);
       this.metricsService.incrementServiceCall(serviceName, method, 'error');
       this.metricsService.incrementServiceError(serviceName, (error as any).code || 'unknown');
@@ -215,9 +212,9 @@ export class ServiceMonitorService {
     if (circuitBreaker.failureCount >= threshold) {
       circuitBreaker.state = 'OPEN';
       circuitBreaker.nextRetryTime = new Date(Date.now() + timeoutMs);
-      
+
       this.logger.error(
-        `Circuit breaker OPENED for service ${serviceName} after ${circuitBreaker.failureCount} failures`
+        `Circuit breaker OPENED for service ${serviceName} after ${circuitBreaker.failureCount} failures`,
       );
     }
   }
@@ -241,7 +238,7 @@ export class ServiceMonitorService {
   isServiceHealthy(serviceName: string): boolean {
     const status = this.serviceHealthStatus.get(serviceName);
     const circuitBreaker = this.circuitBreakers.get(serviceName);
-    
+
     return status?.isHealthy === true && circuitBreaker?.state !== 'OPEN';
   }
 }

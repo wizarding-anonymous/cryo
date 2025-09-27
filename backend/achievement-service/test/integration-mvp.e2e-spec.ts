@@ -26,26 +26,34 @@ describe('MVP Integration (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-    .overrideProvider(NotificationService)
-    .useValue({
-      sendAchievementUnlockedNotification: jest.fn().mockResolvedValue({ success: true, message: 'Sent' }),
-      checkNotificationServiceHealth: jest.fn().mockResolvedValue(true),
-    })
-    .overrideProvider(LibraryService)
-    .useValue({
-      getUserGameCount: jest.fn().mockResolvedValue(1),
-      getUserLibraryStats: jest.fn().mockResolvedValue({ totalGames: 1, totalSpent: 1999 }),
-      hasGameInLibrary: jest.fn().mockResolvedValue(true),
-      checkLibraryServiceHealth: jest.fn().mockResolvedValue(true),
-    })
-    .compile();
+      .overrideProvider(NotificationService)
+      .useValue({
+        sendAchievementUnlockedNotification: jest
+          .fn()
+          .mockResolvedValue({ success: true, message: 'Sent' }),
+        checkNotificationServiceHealth: jest.fn().mockResolvedValue(true),
+      })
+      .overrideProvider(LibraryService)
+      .useValue({
+        getUserGameCount: jest.fn().mockResolvedValue(1),
+        getUserLibraryStats: jest.fn().mockResolvedValue({ totalGames: 1, totalSpent: 1999 }),
+        hasGameInLibrary: jest.fn().mockResolvedValue(true),
+        checkLibraryServiceHealth: jest.fn().mockResolvedValue(true),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    achievementRepository = moduleFixture.get<Repository<Achievement>>(getRepositoryToken(Achievement));
-    userAchievementRepository = moduleFixture.get<Repository<UserAchievement>>(getRepositoryToken(UserAchievement));
-    userProgressRepository = moduleFixture.get<Repository<UserProgress>>(getRepositoryToken(UserProgress));
+    achievementRepository = moduleFixture.get<Repository<Achievement>>(
+      getRepositoryToken(Achievement),
+    );
+    userAchievementRepository = moduleFixture.get<Repository<UserAchievement>>(
+      getRepositoryToken(UserAchievement),
+    );
+    userProgressRepository = moduleFixture.get<Repository<UserProgress>>(
+      getRepositoryToken(UserProgress),
+    );
     notificationService = moduleFixture.get<NotificationService>(NotificationService);
     libraryService = moduleFixture.get<LibraryService>(LibraryService);
 
@@ -157,7 +165,7 @@ describe('MVP Integration (e2e)', () => {
       });
 
       const firstPurchaseAchievement = unlockedAchievements.find(
-        ua => ua.achievement.type === AchievementType.FIRST_PURCHASE
+        ua => ua.achievement.type === AchievementType.FIRST_PURCHASE,
       );
 
       expect(firstPurchaseAchievement).toBeDefined();
@@ -192,7 +200,7 @@ describe('MVP Integration (e2e)', () => {
       });
 
       const reviewProgress = progress.find(
-        p => p.achievement.type === AchievementType.FIRST_REVIEW
+        p => p.achievement.type === AchievementType.FIRST_REVIEW,
       );
 
       expect(reviewProgress).toBeDefined();
@@ -220,7 +228,7 @@ describe('MVP Integration (e2e)', () => {
       });
 
       const firstReviewAchievement = unlockedAchievements.find(
-        ua => ua.achievement.type === AchievementType.FIRST_REVIEW
+        ua => ua.achievement.type === AchievementType.FIRST_REVIEW,
       );
 
       expect(firstReviewAchievement).toBeDefined();
@@ -253,7 +261,7 @@ describe('MVP Integration (e2e)', () => {
       });
 
       const friendProgress = progress.find(
-        p => p.achievement.type === AchievementType.FIRST_FRIEND
+        p => p.achievement.type === AchievementType.FIRST_FRIEND,
       );
 
       expect(friendProgress).toBeDefined();
@@ -280,7 +288,7 @@ describe('MVP Integration (e2e)', () => {
       });
 
       const firstFriendAchievement = unlockedAchievements.find(
-        ua => ua.achievement.type === AchievementType.FIRST_FRIEND
+        ua => ua.achievement.type === AchievementType.FIRST_FRIEND,
       );
 
       expect(firstFriendAchievement).toBeDefined();
@@ -360,9 +368,7 @@ describe('MVP Integration (e2e)', () => {
 
   describe('Integration Health Check', () => {
     it('should return health status', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/integration/health')
-        .expect(200);
+      const response = await request(app.getHttpServer()).post('/integration/health').expect(200);
 
       expect(response.body).toHaveProperty('status', 'healthy');
       expect(response.body).toHaveProperty('timestamp');
@@ -454,9 +460,7 @@ describe('MVP Integration (e2e)', () => {
         relations: ['achievement'],
       });
 
-      const fiveGamesAchievement = unlockedAchievements.find(
-        ua => ua.achievement.name === '5 игр'
-      );
+      const fiveGamesAchievement = unlockedAchievements.find(ua => ua.achievement.name === '5 игр');
 
       expect(fiveGamesAchievement).toBeDefined();
     });
@@ -477,8 +481,9 @@ describe('MVP Integration (e2e)', () => {
 
     it('should continue processing even if notification fails', async () => {
       // Mock notification service to fail
-      (notificationService.sendAchievementUnlockedNotification as jest.Mock)
-        .mockRejectedValueOnce(new Error('Notification service down'));
+      (notificationService.sendAchievementUnlockedNotification as jest.Mock).mockRejectedValueOnce(
+        new Error('Notification service down'),
+      );
 
       const paymentEvent = {
         userId: testUserId,
@@ -506,8 +511,9 @@ describe('MVP Integration (e2e)', () => {
 
     it('should handle library service failures gracefully', async () => {
       // Mock library service to fail
-      (libraryService.getUserGameCount as jest.Mock)
-        .mockRejectedValueOnce(new Error('Library service down'));
+      (libraryService.getUserGameCount as jest.Mock).mockRejectedValueOnce(
+        new Error('Library service down'),
+      );
 
       const paymentEvent = {
         userId: testUserId,

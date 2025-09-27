@@ -53,14 +53,14 @@ describe('CacheInterceptor', () => {
     } as CallHandler;
 
     const result = await interceptor.intercept(mockContext, mockCallHandler);
-    
-    result.subscribe((data) => {
+
+    result.subscribe(data => {
       expect(data).toEqual(cachedData);
       expect(cacheManager.get).toHaveBeenCalledWith('GET:/achievements:user-123');
     });
   });
 
-  it('should cache response if not in cache', (done) => {
+  it('should cache response if not in cache', done => {
     cacheManager.get.mockResolvedValue(null);
     cacheManager.set.mockResolvedValue(undefined);
 
@@ -81,8 +81,8 @@ describe('CacheInterceptor', () => {
       handle: () => of(freshData),
     } as CallHandler;
 
-    interceptor.intercept(mockContext, mockCallHandler).then((result) => {
-      result.subscribe((data) => {
+    interceptor.intercept(mockContext, mockCallHandler).then(result => {
+      result.subscribe(data => {
         expect(data).toEqual(freshData);
         expect(cacheManager.get).toHaveBeenCalledWith('GET:/achievements:user-123');
         // Cache should be set with 30 minutes TTL for all achievements
@@ -116,15 +116,15 @@ describe('CacheInterceptor', () => {
     } as CallHandler;
 
     const result = await interceptor.intercept(mockContext, mockCallHandler);
-    
+
     // Compare the observable results, not the observables themselves
-    result.subscribe((data) => {
+    result.subscribe(data => {
       expect(data).toEqual({ data: 'response' });
     });
     expect(cacheManager.get).not.toHaveBeenCalled();
   });
 
-  it('should use different TTL for user-specific endpoints', (done) => {
+  it('should use different TTL for user-specific endpoints', done => {
     cacheManager.get.mockResolvedValue(null);
     cacheManager.set.mockResolvedValue(undefined);
 
@@ -145,8 +145,8 @@ describe('CacheInterceptor', () => {
       handle: () => of(freshData),
     } as CallHandler;
 
-    interceptor.intercept(mockContext, mockCallHandler).then((result) => {
-      result.subscribe((data) => {
+    interceptor.intercept(mockContext, mockCallHandler).then(result => {
+      result.subscribe(data => {
         expect(data).toEqual(freshData);
         // Cache should be set with 2 minutes TTL for user-specific data
         setTimeout(() => {
@@ -161,7 +161,7 @@ describe('CacheInterceptor', () => {
     });
   });
 
-  it('should handle anonymous users', (done) => {
+  it('should handle anonymous users', done => {
     cacheManager.get.mockResolvedValue(null);
 
     const mockRequest = {
@@ -180,7 +180,7 @@ describe('CacheInterceptor', () => {
       handle: () => of({ data: 'public' }),
     } as CallHandler;
 
-    interceptor.intercept(mockContext, mockCallHandler).then((result) => {
+    interceptor.intercept(mockContext, mockCallHandler).then(result => {
       result.subscribe(() => {
         expect(cacheManager.get).toHaveBeenCalledWith('GET:/achievements:anonymous');
         done();

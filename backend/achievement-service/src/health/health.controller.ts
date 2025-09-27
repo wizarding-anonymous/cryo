@@ -11,18 +11,18 @@ export class HealthController {
 
   @Get()
   @Public()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Общий health check',
-    description: 'Проверяет общее состояние сервиса для Kubernetes liveness probe'
+    description: 'Проверяет общее состояние сервиса для Kubernetes liveness probe',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Сервис работает корректно',
-    type: HealthResponseDto
+    type: HealthResponseDto,
   })
-  @ApiResponse({ 
-    status: 503, 
-    description: 'Сервис недоступен'
+  @ApiResponse({
+    status: 503,
+    description: 'Сервис недоступен',
   })
   async getHealth(): Promise<HealthResponseDto> {
     return this.healthService.getHealth();
@@ -30,18 +30,18 @@ export class HealthController {
 
   @Get('ready')
   @Public()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Readiness probe',
-    description: 'Проверяет готовность сервиса к обработке запросов для Kubernetes readiness probe'
+    description: 'Проверяет готовность сервиса к обработке запросов для Kubernetes readiness probe',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Сервис готов к обработке запросов',
-    type: HealthResponseDto
+    type: HealthResponseDto,
   })
-  @ApiResponse({ 
-    status: 503, 
-    description: 'Сервис не готов к обработке запросов'
+  @ApiResponse({
+    status: 503,
+    description: 'Сервис не готов к обработке запросов',
   })
   async getReadiness(): Promise<HealthResponseDto> {
     return this.healthService.getReadiness();
@@ -49,18 +49,18 @@ export class HealthController {
 
   @Get('live')
   @Public()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Liveness probe',
-    description: 'Проверяет жизнеспособность сервиса для Kubernetes liveness probe'
+    description: 'Проверяет жизнеспособность сервиса для Kubernetes liveness probe',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Сервис жив',
-    type: HealthResponseDto
+    type: HealthResponseDto,
   })
-  @ApiResponse({ 
-    status: 503, 
-    description: 'Сервис мертв'
+  @ApiResponse({
+    status: 503,
+    description: 'Сервис мертв',
   })
   async getLiveness(): Promise<HealthResponseDto> {
     return this.healthService.getLiveness();

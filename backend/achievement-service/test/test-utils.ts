@@ -24,7 +24,8 @@ export class TestDataFactory {
     const userAchievement = new UserAchievement();
     userAchievement.id = overrides.id || '123e4567-e89b-12d3-a456-426614174002';
     userAchievement.userId = overrides.userId || '123e4567-e89b-12d3-a456-426614174000';
-    userAchievement.achievementId = overrides.achievementId || '123e4567-e89b-12d3-a456-426614174001';
+    userAchievement.achievementId =
+      overrides.achievementId || '123e4567-e89b-12d3-a456-426614174001';
     userAchievement.unlockedAt = overrides.unlockedAt || new Date();
     return userAchievement;
   }

@@ -18,7 +18,7 @@ export class GracefulShutdownService implements OnApplicationShutdown {
     this.logger.log(`Received shutdown signal: ${signal}`);
 
     const shutdownTimeout = this.configService.get<number>('shutdown.timeout', 10000);
-    
+
     try {
       // Set a timeout for graceful shutdown
       const shutdownPromise = this.performGracefulShutdown();

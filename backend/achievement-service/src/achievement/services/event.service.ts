@@ -37,24 +37,28 @@ export class EventService {
       const updatedProgress = await this.progressService.updateProgress(
         userId,
         EventType.GAME_PURCHASE,
-        eventData
+        eventData,
       );
 
-      this.logger.log(`Updated ${updatedProgress?.length || 0} progress records for game purchase (total games: ${gameCount})`);
+      this.logger.log(
+        `Updated ${updatedProgress?.length || 0} progress records for game purchase (total games: ${gameCount})`,
+      );
 
       // Проверяем разблокированные достижения
       const unlockedAchievements = await this.progressService.checkAchievements(userId);
-      
+
       // Отправляем уведомления о разблокированных достижениях
       for (const achievement of unlockedAchievements) {
         try {
           await this.notifyAchievementUnlocked(userId, achievement.achievement.id);
         } catch (error) {
-          this.logger.error(`Failed to notify achievement unlock for user ${userId}, achievement ${achievement.achievement.id}:`, error);
+          this.logger.error(
+            `Failed to notify achievement unlock for user ${userId}, achievement ${achievement.achievement.id}:`,
+            error,
+          );
           // Продолжаем обработку других уведомлений
         }
       }
-
     } catch (error) {
       this.logger.error(`Failed to handle game purchase for user ${userId}:`, error);
       throw error;
@@ -77,24 +81,28 @@ export class EventService {
       const updatedProgress = await this.progressService.updateProgress(
         userId,
         EventType.REVIEW_CREATED,
-        eventData
+        eventData,
       );
 
-      this.logger.log(`Updated ${updatedProgress?.length || 0} progress records for review creation`);
+      this.logger.log(
+        `Updated ${updatedProgress?.length || 0} progress records for review creation`,
+      );
 
       // Проверяем разблокированные достижения
       const unlockedAchievements = await this.progressService.checkAchievements(userId);
-      
+
       // Отправляем уведомления о разблокированных достижениях
       for (const achievement of unlockedAchievements) {
         try {
           await this.notifyAchievementUnlocked(userId, achievement.achievement.id);
         } catch (error) {
-          this.logger.error(`Failed to notify achievement unlock for user ${userId}, achievement ${achievement.achievement.id}:`, error);
+          this.logger.error(
+            `Failed to notify achievement unlock for user ${userId}, achievement ${achievement.achievement.id}:`,
+            error,
+          );
           // Продолжаем обработку других уведомлений
         }
       }
-
     } catch (error) {
       this.logger.error(`Failed to handle review creation for user ${userId}:`, error);
       throw error;
@@ -117,24 +125,28 @@ export class EventService {
       const updatedProgress = await this.progressService.updateProgress(
         userId,
         EventType.FRIEND_ADDED,
-        eventData
+        eventData,
       );
 
-      this.logger.log(`Updated ${updatedProgress?.length || 0} progress records for friend addition`);
+      this.logger.log(
+        `Updated ${updatedProgress?.length || 0} progress records for friend addition`,
+      );
 
       // Проверяем разблокированные достижения
       const unlockedAchievements = await this.progressService.checkAchievements(userId);
-      
+
       // Отправляем уведомления о разблокированных достижениях
       for (const achievement of unlockedAchievements) {
         try {
           await this.notifyAchievementUnlocked(userId, achievement.achievement.id);
         } catch (error) {
-          this.logger.error(`Failed to notify achievement unlock for user ${userId}, achievement ${achievement.achievement.id}:`, error);
+          this.logger.error(
+            `Failed to notify achievement unlock for user ${userId}, achievement ${achievement.achievement.id}:`,
+            error,
+          );
           // Продолжаем обработку других уведомлений
         }
       }
-
     } catch (error) {
       this.logger.error(`Failed to handle friend addition for user ${userId}:`, error);
       throw error;
@@ -167,17 +179,19 @@ export class EventService {
       };
 
       // Отправляем уведомление в Notification Service
-      const result = await this.notificationService.sendAchievementUnlockedNotification(notification);
-      
+      const result =
+        await this.notificationService.sendAchievementUnlockedNotification(notification);
+
       if (result.success) {
-        this.logger.log(`Notification sent successfully for achievement ${achievementId} to user ${userId}`);
+        this.logger.log(
+          `Notification sent successfully for achievement ${achievementId} to user ${userId}`,
+        );
       } else {
         this.logger.warn(`Failed to send notification: ${result.message}`);
       }
 
       // Записываем событие для метрик
       await this.recordAchievementUnlockEvent(userId, achievementId);
-
     } catch (error) {
       this.logger.error(`Failed to notify achievement unlock for user ${userId}:`, error);
       // Не пробрасываем ошибку, чтобы не нарушить основной flow
@@ -189,6 +203,8 @@ export class EventService {
    */
   private async recordAchievementUnlockEvent(userId: string, achievementId: string): Promise<void> {
     // В будущем здесь может быть отправка метрик в систему мониторинга
-    this.logger.debug(`Recording achievement unlock event: user=${userId}, achievement=${achievementId}`);
+    this.logger.debug(
+      `Recording achievement unlock event: user=${userId}, achievement=${achievementId}`,
+    );
   }
 }

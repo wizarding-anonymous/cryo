@@ -7,32 +7,32 @@ export interface HealthStatus {
 }
 
 export class HealthResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Статус здоровья сервиса',
     enum: ['healthy', 'unhealthy', 'ready', 'not_ready', 'alive'],
-    example: 'healthy'
+    example: 'healthy',
   })
   status: string = 'healthy';
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Временная метка проверки',
-    example: '2024-01-15T10:30:00.000Z'
+    example: '2024-01-15T10:30:00.000Z',
   })
   timestamp: string = new Date().toISOString();
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Название сервиса',
-    example: 'achievement-service'
+    example: 'achievement-service',
   })
   service: string = 'achievement-service';
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Версия сервиса',
-    example: '1.0.0'
+    example: '1.0.0',
   })
   version: string = '1.0.0';
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Детальные проверки компонентов',
     type: 'array',
     items: {

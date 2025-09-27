@@ -24,21 +24,23 @@ describe('Error Handling and Edge Cases (e2e)', () => {
         AchievementModule,
       ],
     })
-    .overrideProvider('APP_GUARD')
-    .useValue({
-      canActivate: () => true, // Mock JWT guard for testing
-    })
-    .compile();
+      .overrideProvider('APP_GUARD')
+      .useValue({
+        canActivate: () => true, // Mock JWT guard for testing
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }));
-    
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+
     await app.init();
-    
+
     dataSource = moduleFixture.get<DataSource>(DataSource);
     await seedTestData(dataSource);
   });
@@ -122,10 +124,7 @@ describe('Error Handling and Edge Cases (e2e)', () => {
       });
 
       it('should return 400 for empty request body', async () => {
-        await request(app.getHttpServer())
-          .post('/achievements/unlock')
-          .send({})
-          .expect(400);
+        await request(app.getHttpServer()).post('/achievements/unlock').send({}).expect(400);
       });
 
       it('should return 400 for null values', async () => {
@@ -184,15 +183,11 @@ describe('Error Handling and Edge Cases (e2e)', () => {
 
     describe('URL Parameter Validation', () => {
       it('should return 400 for invalid userId in URL path', async () => {
-        await request(app.getHttpServer())
-          .get('/achievements/user/invalid-uuid')
-          .expect(400);
+        await request(app.getHttpServer()).get('/achievements/user/invalid-uuid').expect(400);
       });
 
       it('should return 400 for invalid userId in progress endpoint', async () => {
-        await request(app.getHttpServer())
-          .get('/progress/user/invalid-uuid')
-          .expect(400);
+        await request(app.getHttpServer()).get('/progress/user/invalid-uuid').expect(400);
       });
     });
 
@@ -371,17 +366,14 @@ describe('Error Handling and Edge Cases (e2e)', () => {
 
     it('should handle concurrent requests to same endpoint', async () => {
       const promises = [];
-      
+
       // Send 10 concurrent requests
       for (let i = 0; i < 10; i++) {
-        promises.push(
-          request(app.getHttpServer())
-            .get('/achievements')
-        );
+        promises.push(request(app.getHttpServer()).get('/achievements'));
       }
 
       const responses = await Promise.all(promises);
-      
+
       // All requests should succeed
       responses.forEach(response => {
         expect(response.status).toBe(200);
@@ -391,7 +383,7 @@ describe('Error Handling and Edge Cases (e2e)', () => {
 
     it('should handle rapid sequential progress updates', async () => {
       const promises = [];
-      
+
       // Send 5 rapid sequential requests
       for (let i = 1; i <= 5; i++) {
         promises.push(
@@ -401,12 +393,12 @@ describe('Error Handling and Edge Cases (e2e)', () => {
               userId: testUserId,
               eventType: EventType.GAME_PURCHASE,
               eventData: { gameId: `game-${i}`, price: 1999 },
-            })
+            }),
         );
       }
 
       const responses = await Promise.all(promises);
-      
+
       // All requests should succeed
       responses.forEach(response => {
         expect(response.status).toBe(200);
@@ -419,7 +411,7 @@ describe('Error Handling and Edge Cases (e2e)', () => {
         .expect(200);
 
       const gamesPurchasedProgress = progressResponse.body.find(
-        p => p.achievement.type === 'games_purchased'
+        p => p.achievement.type === 'games_purchased',
       );
       expect(gamesPurchasedProgress).toBeDefined();
       expect(gamesPurchasedProgress.currentValue).toBe(5);
@@ -440,7 +432,9 @@ describe('Error Handling and Edge Cases (e2e)', () => {
     it('should handle missing Content-Type header', async () => {
       const response = await request(app.getHttpServer())
         .post('/achievements/unlock')
-        .send('userId=123e4567-e89b-12d3-a456-426614174000&achievementId=123e4567-e89b-12d3-a456-426614174001')
+        .send(
+          'userId=123e4567-e89b-12d3-a456-426614174000&achievementId=123e4567-e89b-12d3-a456-426614174001',
+        )
         .expect(400);
 
       expect(response.body).toHaveProperty('message');
@@ -448,43 +442,32 @@ describe('Error Handling and Edge Cases (e2e)', () => {
 
     it('should handle extremely long request URLs', async () => {
       const longUserId = '123e4567-e89b-12d3-a456-426614174000' + 'a'.repeat(1000);
-      
-      await request(app.getHttpServer())
-        .get(`/achievements/user/${longUserId}`)
-        .expect(400);
+
+      await request(app.getHttpServer()).get(`/achievements/user/${longUserId}`).expect(400);
     });
   });
 
   describe('HTTP Method Errors', () => {
     it('should return 405 for unsupported HTTP methods', async () => {
-      await request(app.getHttpServer())
-        .put('/achievements')
-        .expect(404); // NestJS returns 404 for unsupported routes
+      await request(app.getHttpServer()).put('/achievements').expect(404); // NestJS returns 404 for unsupported routes
 
-      await request(app.getHttpServer())
-        .delete('/achievements')
-        .expect(404);
+      await request(app.getHttpServer()).delete('/achievements').expect(404);
 
-      await request(app.getHttpServer())
-        .patch('/achievements')
-        .expect(404);
+      await request(app.getHttpServer()).patch('/achievements').expect(404);
     });
   });
 
   describe('Rate Limiting Simulation', () => {
     it('should handle burst of requests gracefully', async () => {
       const promises = [];
-      
+
       // Send 50 concurrent requests
       for (let i = 0; i < 50; i++) {
-        promises.push(
-          request(app.getHttpServer())
-            .get('/achievements')
-        );
+        promises.push(request(app.getHttpServer()).get('/achievements'));
       }
 
       const responses = await Promise.all(promises);
-      
+
       // Most requests should succeed (some might fail due to resource limits)
       const successfulResponses = responses.filter(r => r.status === 200);
       expect(successfulResponses.length).toBeGreaterThan(40); // At least 80% should succeed

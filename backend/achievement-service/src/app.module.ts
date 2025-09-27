@@ -21,11 +21,7 @@ import { createLoggerConfig } from './config/logger.config';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
-      envFilePath: [
-        `.env.${process.env.NODE_ENV || 'development'}`,
-        '.env.local',
-        '.env',
-      ],
+      envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env.local', '.env'],
     }),
     WinstonModule.forRootAsync({
       useFactory: () => {

@@ -116,7 +116,7 @@ describe('EventService', () => {
         expect.objectContaining({
           gameId,
           timestamp: expect.any(String),
-        })
+        }),
       );
       expect(progressService.checkAchievements).toHaveBeenCalledWith(userId);
     });
@@ -162,7 +162,7 @@ describe('EventService', () => {
         expect.objectContaining({
           reviewId,
           timestamp: expect.any(String),
-        })
+        }),
       );
       expect(progressService.checkAchievements).toHaveBeenCalledWith(userId);
     });
@@ -194,7 +194,7 @@ describe('EventService', () => {
         expect.objectContaining({
           friendId,
           timestamp: expect.any(String),
-        })
+        }),
       );
       expect(progressService.checkAchievements).toHaveBeenCalledWith(userId);
     });
@@ -224,7 +224,8 @@ describe('EventService', () => {
       const achievementId = 'achievement-1';
 
       // Mock private method to throw error
-      const recordEventSpy = jest.spyOn(service as any, 'recordAchievementUnlockEvent')
+      const recordEventSpy = jest
+        .spyOn(service as any, 'recordAchievementUnlockEvent')
         .mockRejectedValue(new Error('Notification service down'));
 
       await expect(service.notifyAchievementUnlocked(userId, achievementId)).resolves.not.toThrow();
@@ -283,7 +284,8 @@ describe('EventService', () => {
       progressService.checkAchievements.mockResolvedValue(multipleAchievements);
 
       // Mock the actual implementation to handle errors properly
-      const notifySpy = jest.spyOn(service, 'notifyAchievementUnlocked')
+      const notifySpy = jest
+        .spyOn(service, 'notifyAchievementUnlocked')
         .mockImplementationOnce(async () => {
           // First call succeeds
           return Promise.resolve();
@@ -312,7 +314,8 @@ describe('EventService', () => {
       const achievementId = 'achievement-1';
 
       // Mock the private method to throw an error
-      const recordEventSpy = jest.spyOn(service as any, 'recordAchievementUnlockEvent')
+      const recordEventSpy = jest
+        .spyOn(service as any, 'recordAchievementUnlockEvent')
         .mockRejectedValue(new Error('Notification service unavailable'));
 
       await expect(service.notifyAchievementUnlocked(userId, achievementId)).resolves.not.toThrow();
@@ -329,7 +332,9 @@ describe('EventService', () => {
       progressService.updateProgress.mockResolvedValue([mockUserProgress]);
       progressService.checkAchievements.mockRejectedValue(new Error('Achievement check failed'));
 
-      await expect(service.handleGamePurchase(userId, gameId)).rejects.toThrow('Achievement check failed');
+      await expect(service.handleGamePurchase(userId, gameId)).rejects.toThrow(
+        'Achievement check failed',
+      );
     });
 
     it('should handle empty achievements array', async () => {
@@ -349,7 +354,8 @@ describe('EventService', () => {
       progressService.updateProgress.mockResolvedValue([mockUserProgress]);
       progressService.checkAchievements.mockResolvedValue([mockUserAchievement]);
 
-      const notifySpy = jest.spyOn(service, 'notifyAchievementUnlocked')
+      const notifySpy = jest
+        .spyOn(service, 'notifyAchievementUnlocked')
         .mockImplementation(async () => {
           await new Promise(resolve => setTimeout(resolve, 100));
           throw new Error('Network timeout');

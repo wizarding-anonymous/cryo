@@ -22,7 +22,7 @@ export class AchievementService {
     private readonly userAchievementRepository: Repository<UserAchievement>,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-  ) { }
+  ) {}
 
   /**
    * Получить все достижения с кешированием через Redis
@@ -122,7 +122,9 @@ export class AchievementService {
         const allAchievements = await this.achievementRepository
           .createQueryBuilder('achievement')
           .where('achievement.isActive = :isActive', { isActive: true })
-          .andWhere(unlockedIds.length > 0 ? 'achievement.id NOT IN (:...unlockedIds)' : '1=1', { unlockedIds })
+          .andWhere(unlockedIds.length > 0 ? 'achievement.id NOT IN (:...unlockedIds)' : '1=1', {
+            unlockedIds,
+          })
           .skip(skip)
           .take(normalizedLimit)
           .getMany();
@@ -130,7 +132,9 @@ export class AchievementService {
         const total = await this.achievementRepository
           .createQueryBuilder('achievement')
           .where('achievement.isActive = :isActive', { isActive: true })
-          .andWhere(unlockedIds.length > 0 ? 'achievement.id NOT IN (:...unlockedIds)' : '1=1', { unlockedIds })
+          .andWhere(unlockedIds.length > 0 ? 'achievement.id NOT IN (:...unlockedIds)' : '1=1', {
+            unlockedIds,
+          })
           .getCount();
 
         const result = {
@@ -190,7 +194,10 @@ export class AchievementService {
   /**
    * Разблокировать достижение с проверкой дублирования
    */
-  async unlockAchievement(userId: string, achievementId: string): Promise<UserAchievementResponseDto> {
+  async unlockAchievement(
+    userId: string,
+    achievementId: string,
+  ): Promise<UserAchievementResponseDto> {
     // Проверяем, существует ли достижение
     const achievement = await this.achievementRepository.findOne({
       where: { id: achievementId, isActive: true },
@@ -207,7 +214,9 @@ export class AchievementService {
     });
 
     if (existingUserAchievement) {
-      throw new ConflictException(`Achievement ${achievementId} already unlocked for user ${userId}`);
+      throw new ConflictException(
+        `Achievement ${achievementId} already unlocked for user ${userId}`,
+      );
     }
 
     // Создаем новую запись о разблокированном достижении
@@ -266,8 +275,12 @@ export class AchievementService {
     // Здесь упрощенная версия - очищаем основные ключи
     try {
       await this.cacheManager.del(`user:${userId}:achievements:{"page":1,"limit":20}`);
-      await this.cacheManager.del(`user:${userId}:achievements:{"page":1,"limit":20,"unlocked":true}`);
-      await this.cacheManager.del(`user:${userId}:achievements:{"page":1,"limit":20,"unlocked":false}`);
+      await this.cacheManager.del(
+        `user:${userId}:achievements:{"page":1,"limit":20,"unlocked":true}`,
+      );
+      await this.cacheManager.del(
+        `user:${userId}:achievements:{"page":1,"limit":20,"unlocked":false}`,
+      );
     } catch (error) {
       // Игнорируем ошибки очистки кеша
       console.warn('Failed to clear user cache:', error);
@@ -290,12 +303,14 @@ export class AchievementService {
       createdAt: achievement.createdAt,
       updatedAt: achievement.updatedAt,
     };
-  }
+  };
 
   /**
    * Маппинг UserAchievement в UserAchievementResponseDto
    */
-  private mapToUserAchievementResponseDto = (userAchievement: UserAchievement): UserAchievementResponseDto => {
+  private mapToUserAchievementResponseDto = (
+    userAchievement: UserAchievement,
+  ): UserAchievementResponseDto => {
     return {
       id: userAchievement.id,
       userId: userAchievement.userId,
@@ -303,5 +318,5 @@ export class AchievementService {
       achievement: this.mapToAchievementResponseDto(userAchievement.achievement),
       unlockedAt: userAchievement.unlockedAt,
     };
-  }
+  };
 }

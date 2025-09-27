@@ -1,9 +1,7 @@
 import '../crypto-polyfill';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { redisStore } from 'cache-manager-redis-store';
 
 @Module({
   imports: [
@@ -27,21 +25,8 @@ import { redisStore } from 'cache-manager-redis-store';
       inject: [ConfigService],
     }),
 
-    // Redis Cache Configuration
-    CacheModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        store: redisStore,
-        host: configService.get('redis.host'),
-        port: configService.get('redis.port'),
-        password: configService.get('redis.password'),
-        db: configService.get('redis.db'),
-        ttl: configService.get('cache.ttl'),
-        max: configService.get('cache.max'),
-      }),
-      inject: [ConfigService],
-      isGlobal: true,
-    }),
+    // Note: Redis caching will be configured in services that need it
+    // using @Inject(CACHE_MANAGER) and CacheModule.register() in individual modules
   ],
 })
-export class DatabaseModule {}
+export class DatabaseModule { }

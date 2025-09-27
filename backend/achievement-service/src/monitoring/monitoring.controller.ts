@@ -1,6 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ServiceMonitorService, ServiceHealthStatus, CircuitBreakerState } from './service-monitor.service';
+import {
+  ServiceMonitorService,
+  ServiceHealthStatus,
+  CircuitBreakerState,
+} from './service-monitor.service';
 
 @Controller('monitoring')
 @ApiTags('monitoring')
@@ -27,13 +31,14 @@ export class MonitoringController {
   getOverallHealth() {
     const services = this.serviceMonitorService.getAllServiceHealthStatus();
     const circuitBreakers = this.serviceMonitorService.getAllCircuitBreakerStates();
-    
+
     const healthyServices = services.filter(s => s.isHealthy).length;
     const totalServices = services.length;
     const openCircuitBreakers = circuitBreakers.filter(cb => cb.state === 'OPEN').length;
-    
+
     return {
-      status: healthyServices === totalServices && openCircuitBreakers === 0 ? 'healthy' : 'degraded',
+      status:
+        healthyServices === totalServices && openCircuitBreakers === 0 ? 'healthy' : 'degraded',
       services: {
         total: totalServices,
         healthy: healthyServices,

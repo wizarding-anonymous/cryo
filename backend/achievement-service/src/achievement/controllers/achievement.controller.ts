@@ -1,24 +1,19 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Param, 
-  Query,
-  HttpCode,
-  HttpStatus
-} from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
+import { Controller, Get, Post, Body, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery 
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AchievementService, GetUserAchievementsOptions } from '../services/achievement.service';
 import { UnlockAchievementDto } from '../dto/unlock-achievement.dto';
-import { AchievementResponseDto, UserAchievementResponseDto, PaginatedUserAchievementsResponseDto } from '../dto';
+import {
+  AchievementResponseDto,
+  UserAchievementResponseDto,
+  PaginatedUserAchievementsResponseDto,
+} from '../dto';
 
 @Controller('achievements')
 @ApiTags('achievements')
@@ -28,10 +23,10 @@ export class AchievementController {
 
   @Get()
   @ApiOperation({ summary: 'Получить все достижения' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Список всех достижений',
-    type: [AchievementResponseDto]
+    type: [AchievementResponseDto],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getAllAchievements(): Promise<AchievementResponseDto[]> {
@@ -42,13 +37,23 @@ export class AchievementController {
   @ApiOperation({ summary: 'Получить достижения пользователя' })
   @ApiParam({ name: 'userId', description: 'ID пользователя' })
   @ApiQuery({ name: 'page', required: false, description: 'Номер страницы', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: 'Количество элементов на странице', example: 20 })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Количество элементов на странице',
+    example: 20,
+  })
   @ApiQuery({ name: 'type', required: false, description: 'Тип достижения для фильтрации' })
-  @ApiQuery({ name: 'unlocked', required: false, description: 'Фильтр по статусу разблокировки', type: Boolean })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiQuery({
+    name: 'unlocked',
+    required: false,
+    description: 'Фильтр по статусу разблокировки',
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 200,
     description: 'Список достижений пользователя с пагинацией',
-    type: PaginatedUserAchievementsResponseDto
+    type: PaginatedUserAchievementsResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -65,17 +70,17 @@ export class AchievementController {
       type,
       unlocked,
     };
-    
+
     return this.achievementService.getUserAchievements(userId, options);
   }
 
   @Post('unlock')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Разблокировать достижение' })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Достижение успешно разблокировано',
-    type: UserAchievementResponseDto
+    type: UserAchievementResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

@@ -26,12 +26,16 @@ export class ProgressService {
     @InjectRepository(Achievement)
     private readonly achievementRepository: Repository<Achievement>,
     private readonly achievementService: AchievementService,
-  ) { }
+  ) {}
 
   /**
    * Обновить прогресс пользователя с обработкой различных типов событий
    */
-  async updateProgress(userId: string, eventType: string, data: any): Promise<UserProgressResponseDto[]> {
+  async updateProgress(
+    userId: string,
+    eventType: string,
+    data: any,
+  ): Promise<UserProgressResponseDto[]> {
     this.logger.log(`Updating progress for user ${userId}, event: ${eventType}`);
 
     try {
@@ -60,26 +64,32 @@ export class ProgressService {
       await this.checkAchievements(userId);
 
       // Возвращаем только обновленный прогресс
-      return updatedProgress.map(progress => new UserProgressResponseDto({
-        id: progress.id,
-        userId: progress.userId,
-        achievementId: progress.achievementId,
-        achievement: {
-          id: progress.achievement?.id || progress.achievementId,
-          name: progress.achievement?.name || '',
-          description: progress.achievement?.description || '',
-          type: progress.achievement?.type || AchievementType.FIRST_PURCHASE,
-          iconUrl: progress.achievement?.iconUrl || '',
-          points: progress.achievement?.points || 0,
-          condition: progress.achievement?.condition || { type: 'first_time', field: 'gamesPurchased' },
-          isActive: progress.achievement?.isActive || true,
-          createdAt: progress.achievement?.createdAt || new Date(),
-          updatedAt: progress.achievement?.updatedAt || new Date(),
-        },
-        currentValue: progress.currentValue,
-        targetValue: progress.targetValue,
-        updatedAt: progress.updatedAt,
-      }));
+      return updatedProgress.map(
+        progress =>
+          new UserProgressResponseDto({
+            id: progress.id,
+            userId: progress.userId,
+            achievementId: progress.achievementId,
+            achievement: {
+              id: progress.achievement?.id || progress.achievementId,
+              name: progress.achievement?.name || '',
+              description: progress.achievement?.description || '',
+              type: progress.achievement?.type || AchievementType.FIRST_PURCHASE,
+              iconUrl: progress.achievement?.iconUrl || '',
+              points: progress.achievement?.points || 0,
+              condition: progress.achievement?.condition || {
+                type: 'first_time',
+                field: 'gamesPurchased',
+              },
+              isActive: progress.achievement?.isActive || true,
+              createdAt: progress.achievement?.createdAt || new Date(),
+              updatedAt: progress.achievement?.updatedAt || new Date(),
+            },
+            currentValue: progress.currentValue,
+            targetValue: progress.targetValue,
+            updatedAt: progress.updatedAt,
+          }),
+      );
     } catch (error) {
       this.logger.error(`Failed to update progress for user ${userId}:`, error);
       throw error;
@@ -98,26 +108,29 @@ export class ProgressService {
       order: { updatedAt: 'DESC' },
     });
 
-    return progressRecords.map(progress => new UserProgressResponseDto({
-      id: progress.id,
-      userId: progress.userId,
-      achievementId: progress.achievementId,
-      achievement: {
-        id: progress.achievement.id,
-        name: progress.achievement.name,
-        description: progress.achievement.description,
-        type: progress.achievement.type,
-        iconUrl: progress.achievement.iconUrl,
-        points: progress.achievement.points,
-        condition: progress.achievement.condition,
-        isActive: progress.achievement.isActive,
-        createdAt: progress.achievement.createdAt,
-        updatedAt: progress.achievement.updatedAt,
-      },
-      currentValue: progress.currentValue,
-      targetValue: progress.targetValue,
-      updatedAt: progress.updatedAt,
-    }));
+    return progressRecords.map(
+      progress =>
+        new UserProgressResponseDto({
+          id: progress.id,
+          userId: progress.userId,
+          achievementId: progress.achievementId,
+          achievement: {
+            id: progress.achievement.id,
+            name: progress.achievement.name,
+            description: progress.achievement.description,
+            type: progress.achievement.type,
+            iconUrl: progress.achievement.iconUrl,
+            points: progress.achievement.points,
+            condition: progress.achievement.condition,
+            isActive: progress.achievement.isActive,
+            createdAt: progress.achievement.createdAt,
+            updatedAt: progress.achievement.updatedAt,
+          },
+          currentValue: progress.currentValue,
+          targetValue: progress.targetValue,
+          updatedAt: progress.updatedAt,
+        }),
+    );
   }
 
   /**
@@ -140,22 +153,34 @@ export class ProgressService {
 
       for (const progress of progressRecords) {
         // Проверяем, не разблокировано ли уже достижение
-        const isUnlocked = await this.achievementService.isAchievementUnlocked(userId, progress.achievementId);
+        const isUnlocked = await this.achievementService.isAchievementUnlocked(
+          userId,
+          progress.achievementId,
+        );
         if (isUnlocked) {
           continue;
         }
 
         // Проверяем условие достижения
-        const conditionMet = await this.evaluateCondition(progress.achievement.condition, userStats);
+        const conditionMet = await this.evaluateCondition(
+          progress.achievement.condition,
+          userStats,
+        );
 
         if (conditionMet) {
           try {
-            const unlockedAchievement = await this.achievementService.unlockAchievement(userId, progress.achievementId);
+            const unlockedAchievement = await this.achievementService.unlockAchievement(
+              userId,
+              progress.achievementId,
+            );
             unlockedAchievements.push(unlockedAchievement);
             this.logger.log(`Achievement ${progress.achievement.name} unlocked for user ${userId}`);
           } catch (error) {
             // Игнорируем ошибки разблокировки (например, если уже разблокировано)
-            this.logger.warn(`Failed to unlock achievement ${progress.achievementId} for user ${userId}:`, error);
+            this.logger.warn(
+              `Failed to unlock achievement ${progress.achievementId} for user ${userId}:`,
+              error,
+            );
           }
         }
       }
@@ -170,7 +195,10 @@ export class ProgressService {
   /**
    * Обработка различных типов условий достижений
    */
-  private async evaluateCondition(condition: AchievementCondition, userStats: UserStats): Promise<boolean> {
+  private async evaluateCondition(
+    condition: AchievementCondition,
+    userStats: UserStats,
+  ): Promise<boolean> {
     switch (condition.type) {
       case 'first_time':
         return this.evaluateFirstTimeCondition(condition, userStats);
@@ -190,7 +218,10 @@ export class ProgressService {
   /**
    * Проверка условия "первый раз"
    */
-  private evaluateFirstTimeCondition(condition: AchievementCondition, userStats: UserStats): boolean {
+  private evaluateFirstTimeCondition(
+    condition: AchievementCondition,
+    userStats: UserStats,
+  ): boolean {
     switch (condition.field) {
       case 'gamesPurchased':
         return userStats.gamesPurchased >= 1;
@@ -218,7 +249,10 @@ export class ProgressService {
   /**
    * Проверка условия "порог"
    */
-  private evaluateThresholdCondition(condition: AchievementCondition, userStats: UserStats): boolean {
+  private evaluateThresholdCondition(
+    condition: AchievementCondition,
+    userStats: UserStats,
+  ): boolean {
     if (!condition.target || !condition.field) {
       return false;
     }
@@ -230,7 +264,11 @@ export class ProgressService {
   /**
    * Получение статистики пользователя
    */
-  private async getUserStats(userId: string, eventType?: string, eventData?: any): Promise<UserStats> {
+  private async getUserStats(
+    userId: string,
+    eventType?: string,
+    eventData?: any,
+  ): Promise<UserStats> {
     // В реальном приложении здесь бы были запросы к другим сервисам
     // Для MVP используем упрощенную логику на основе прогресса
 
@@ -295,7 +333,7 @@ export class ProgressService {
   private async updateAchievementProgress(
     userId: string,
     achievement: Achievement,
-    userStats: UserStats
+    userStats: UserStats,
   ): Promise<UserProgress | null> {
     try {
       // Получаем или создаем запись о прогрессе
@@ -371,14 +409,21 @@ export class ProgressService {
   /**
    * Проверка, подходит ли событие для достижения
    */
-  private isEventRelevantForAchievement(eventType: EventType, achievementType: AchievementType): boolean {
+  private isEventRelevantForAchievement(
+    eventType: EventType,
+    achievementType: AchievementType,
+  ): boolean {
     switch (eventType) {
       case EventType.GAME_PURCHASE:
-        return achievementType === AchievementType.FIRST_PURCHASE ||
-          achievementType === AchievementType.GAMES_PURCHASED;
+        return (
+          achievementType === AchievementType.FIRST_PURCHASE ||
+          achievementType === AchievementType.GAMES_PURCHASED
+        );
       case EventType.REVIEW_CREATED:
-        return achievementType === AchievementType.FIRST_REVIEW ||
-          achievementType === AchievementType.REVIEWS_WRITTEN;
+        return (
+          achievementType === AchievementType.FIRST_REVIEW ||
+          achievementType === AchievementType.REVIEWS_WRITTEN
+        );
       case EventType.FRIEND_ADDED:
         return achievementType === AchievementType.FIRST_FRIEND;
       default:

@@ -10,7 +10,10 @@ import { ConfigService } from '@nestjs/config';
         {
           ttl: configService.get<number>('rateLimit.ttl', 60) * 1000,
           limit: configService.get<number>('rateLimit.limit', 100),
-          skipSuccessfulRequests: configService.get<boolean>('rateLimit.skipSuccessfulRequests', false),
+          skipSuccessfulRequests: configService.get<boolean>(
+            'rateLimit.skipSuccessfulRequests',
+            false,
+          ),
         },
       ],
     }),

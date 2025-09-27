@@ -25,7 +25,7 @@ export class NotificationService {
   constructor(private readonly configService: ConfigService) {
     this.notificationServiceUrl = this.configService.get<string>(
       'NOTIFICATION_SERVICE_URL',
-      'http://notification-service:3000'
+      'http://notification-service:3000',
     );
   }
 
@@ -33,9 +33,11 @@ export class NotificationService {
    * Отправка уведомления о разблокировке достижения в Notification Service
    */
   async sendAchievementUnlockedNotification(
-    notification: AchievementUnlockedNotification
+    notification: AchievementUnlockedNotification,
   ): Promise<NotificationServiceResponse> {
-    this.logger.log(`Sending achievement unlocked notification for user ${notification.userId}, achievement ${notification.achievementId}`);
+    this.logger.log(
+      `Sending achievement unlocked notification for user ${notification.userId}, achievement ${notification.achievementId}`,
+    );
 
     try {
       // В MVP версии используем fetch для HTTP запросов
@@ -55,22 +57,23 @@ export class NotificationService {
       }
 
       const result = await response.json();
-      
-      this.logger.log(`Achievement notification sent successfully: ${result.notificationId || 'no-id'}`);
-      
+
+      this.logger.log(
+        `Achievement notification sent successfully: ${result.notificationId || 'no-id'}`,
+      );
+
       return {
         success: true,
         notificationId: result.notificationId,
-        message: 'Notification sent successfully'
+        message: 'Notification sent successfully',
       };
-
     } catch (error) {
       this.logger.error(`Failed to send achievement notification:`, error);
-      
+
       // В MVP не пробрасываем ошибку, чтобы не нарушить основной flow
       return {
         success: false,
-        message: `Failed to send notification: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Failed to send notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   }
@@ -98,7 +101,7 @@ export class NotificationService {
    * Отправка batch уведомлений (для будущих версий)
    */
   async sendBatchNotifications(
-    notifications: AchievementUnlockedNotification[]
+    notifications: AchievementUnlockedNotification[],
   ): Promise<NotificationServiceResponse[]> {
     this.logger.log(`Sending batch of ${notifications.length} achievement notifications`);
 

@@ -32,7 +32,7 @@ describe('Entity Classes', () => {
 
     it('should have default values', () => {
       const achievement = new Achievement();
-      
+
       expect(achievement.points).toBeUndefined();
       expect(achievement.isActive).toBeUndefined();
       expect(achievement.userAchievements).toBeUndefined();
@@ -46,7 +46,7 @@ describe('Entity Classes', () => {
       userAchievement.userId = 'user-id';
       userAchievement.achievementId = 'achievement-id';
       userAchievement.unlockedAt = new Date();
-      
+
       const achievement = new Achievement();
       achievement.id = 'achievement-id';
       userAchievement.achievement = achievement;
@@ -62,9 +62,9 @@ describe('Entity Classes', () => {
       const userAchievement = new UserAchievement();
       const achievement = new Achievement();
       achievement.name = 'Test Achievement';
-      
+
       userAchievement.achievement = achievement;
-      
+
       expect(userAchievement.achievement.name).toBe('Test Achievement');
     });
   });
@@ -78,7 +78,7 @@ describe('Entity Classes', () => {
       userProgress.currentValue = 5;
       userProgress.targetValue = 10;
       userProgress.updatedAt = new Date();
-      
+
       const achievement = new Achievement();
       achievement.id = 'achievement-id';
       userProgress.achievement = achievement;
@@ -94,7 +94,7 @@ describe('Entity Classes', () => {
 
     it('should handle default values', () => {
       const userProgress = new UserProgress();
-      
+
       expect(userProgress.currentValue).toBeUndefined();
       expect(userProgress.targetValue).toBeUndefined();
     });
@@ -103,7 +103,7 @@ describe('Entity Classes', () => {
       const userProgress = new UserProgress();
       userProgress.currentValue = 7;
       userProgress.targetValue = 10;
-      
+
       const percentage = (userProgress.currentValue / userProgress.targetValue) * 100;
       expect(percentage).toBe(70);
     });
@@ -121,7 +121,7 @@ describe('Entity Classes', () => {
     it('should be used in achievement entity', () => {
       const achievement = new Achievement();
       achievement.type = AchievementType.FIRST_PURCHASE;
-      
+
       expect(achievement.type).toBe('first_purchase');
     });
   });

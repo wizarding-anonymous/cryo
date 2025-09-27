@@ -21,27 +21,29 @@ async function bootstrap() {
 
   // Use Winston logger
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  
+
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
   // Security headers
   if (configService.get<boolean>('security.helmetEnabled', true)) {
-    app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+          },
         },
-      },
-      hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true,
-      },
-    }));
+        hsts: {
+          maxAge: 31536000,
+          includeSubDomains: true,
+          preload: true,
+        },
+      }),
+    );
   }
 
   // Compression
@@ -109,14 +111,14 @@ async function bootstrap() {
 
   const port = configService.get<number>('port', 3008);
   await app.listen(port, '0.0.0.0');
-  
+
   logger.log(`Achievement Service is running on: http://localhost:${port}`);
   logger.log(`Environment: ${configService.get<string>('nodeEnv')}`);
-  
+
   if (configService.get<string>('nodeEnv') !== 'production') {
     logger.log(`Swagger documentation: http://localhost:${port}/api/docs`);
   }
-  
+
   if (configService.get<boolean>('metrics.enabled', true)) {
     logger.log(`Metrics endpoint: http://localhost:${port}/api/v1/metrics`);
   }

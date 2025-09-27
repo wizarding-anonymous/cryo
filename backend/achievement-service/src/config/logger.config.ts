@@ -2,9 +2,13 @@ import { WinstonModuleOptions } from 'nest-winston';
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 
-export const createLoggerConfig = (nodeEnv: string, logLevel: string, logFormat: string): WinstonModuleOptions => {
+export const createLoggerConfig = (
+  nodeEnv: string,
+  logLevel: string,
+  logFormat: string,
+): WinstonModuleOptions => {
   const isProduction = nodeEnv === 'production';
-  
+
   const formats = [
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
@@ -19,7 +23,7 @@ export const createLoggerConfig = (nodeEnv: string, logLevel: string, logFormat:
         const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
         const stackStr = stack ? `\n${stack}` : '';
         return `${timestamp} [${level.toUpperCase()}] ${contextStr}${message}${metaStr}${stackStr}`;
-      })
+      }),
     );
   }
 
@@ -29,11 +33,8 @@ export const createLoggerConfig = (nodeEnv: string, logLevel: string, logFormat:
   if (!isProduction) {
     transports.push(
       new winston.transports.Console({
-        format: winston.format.combine(
-          winston.format.colorize(),
-          ...formats
-        ),
-      })
+        format: winston.format.combine(winston.format.colorize(), ...formats),
+      }),
     );
   }
 
@@ -48,7 +49,7 @@ export const createLoggerConfig = (nodeEnv: string, logLevel: string, logFormat:
         maxFiles: '30d',
         maxSize: '20m',
         format: winston.format.combine(...formats),
-      })
+      }),
     );
 
     // Combined logs
@@ -59,14 +60,14 @@ export const createLoggerConfig = (nodeEnv: string, logLevel: string, logFormat:
         maxFiles: '30d',
         maxSize: '20m',
         format: winston.format.combine(...formats),
-      })
+      }),
     );
 
     // Console for production (structured)
     transports.push(
       new winston.transports.Console({
         format: winston.format.combine(...formats),
-      })
+      }),
     );
   }
 

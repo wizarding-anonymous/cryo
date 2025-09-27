@@ -89,7 +89,7 @@ describe('ProgressService', () => {
   describe('updateProgress', () => {
     it('should update progress for game purchase event', async () => {
       const eventData = { gameId: 'game-123', price: 1999 };
-      
+
       achievementRepository.find.mockResolvedValue([mockAchievement]);
       progressRepository.find.mockResolvedValue([]);
       progressRepository.create.mockReturnValue(mockProgress);
@@ -112,7 +112,7 @@ describe('ProgressService', () => {
       };
 
       const eventData = { reviewId: 'review-123', gameId: 'game-123' };
-      
+
       achievementRepository.find.mockResolvedValue([reviewAchievement]);
       progressRepository.find.mockResolvedValue([]);
       progressRepository.create.mockReturnValue({
@@ -141,7 +141,7 @@ describe('ProgressService', () => {
       };
 
       const eventData = { friendId: 'friend-123' };
-      
+
       achievementRepository.find.mockResolvedValue([friendAchievement]);
       progressRepository.find.mockResolvedValue([]);
       progressRepository.create.mockReturnValue({
@@ -201,7 +201,7 @@ describe('ProgressService', () => {
         relations: ['achievement'],
         order: { updatedAt: 'DESC' },
       });
-      
+
       // Проверяем, что возвращается UserProgressResponseDto с вычисленным progressPercentage
       expect(result[0]).toHaveProperty('progressPercentage');
       expect(result[0].progressPercentage).toBe(100); // 1/1 * 100 = 100%
@@ -233,7 +233,10 @@ describe('ProgressService', () => {
       const result = await service.checkAchievements(mockUserId);
 
       expect(result).toHaveLength(1);
-      expect(achievementService.unlockAchievement).toHaveBeenCalledWith(mockUserId, mockAchievementId);
+      expect(achievementService.unlockAchievement).toHaveBeenCalledWith(
+        mockUserId,
+        mockAchievementId,
+      );
     });
 
     it('should skip already unlocked achievements', async () => {
@@ -399,16 +402,17 @@ describe('ProgressService', () => {
   describe('error handling', () => {
     it('should handle database errors in updateProgress', async () => {
       const eventData = { gameId: 'game-123', price: 1999 };
-      
+
       achievementRepository.find.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.updateProgress(mockUserId, EventType.GAME_PURCHASE, eventData))
-        .rejects.toThrow('Database error');
+      await expect(
+        service.updateProgress(mockUserId, EventType.GAME_PURCHASE, eventData),
+      ).rejects.toThrow('Database error');
     });
 
     it('should handle save errors gracefully', async () => {
       const eventData = { gameId: 'game-123', price: 1999 };
-      
+
       achievementRepository.find.mockResolvedValue([mockAchievement]);
       progressRepository.find.mockResolvedValue([]); // Для getUserStats
       progressRepository.findOne.mockResolvedValue(null);
@@ -453,7 +457,7 @@ describe('ProgressService', () => {
         ...mockProgress,
         currentValue: 0,
       };
-      
+
       achievementRepository.find.mockResolvedValue([mockAchievement]);
       progressRepository.find.mockResolvedValue([]); // Для getUserStats
       progressRepository.findOne.mockResolvedValue(existingProgress); // Для updateAchievementProgress

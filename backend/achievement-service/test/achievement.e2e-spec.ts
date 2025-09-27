@@ -24,21 +24,23 @@ describe('Achievement API (e2e)', () => {
         AchievementModule,
       ],
     })
-    .overrideProvider('APP_GUARD')
-    .useValue({
-      canActivate: () => true, // Mock JWT guard for testing
-    })
-    .compile();
+      .overrideProvider('APP_GUARD')
+      .useValue({
+        canActivate: () => true, // Mock JWT guard for testing
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }));
-    
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+
     await app.init();
-    
+
     dataSource = moduleFixture.get<DataSource>(DataSource);
     await seedTestData(dataSource);
   });
@@ -58,9 +60,7 @@ describe('Achievement API (e2e)', () => {
 
   describe('/achievements (GET)', () => {
     it('should return all achievements', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/achievements')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/achievements').expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
       expect(response.body).toHaveLength(3);
@@ -74,14 +74,10 @@ describe('Achievement API (e2e)', () => {
 
     it('should return cached results on subsequent requests', async () => {
       // First request
-      const response1 = await request(app.getHttpServer())
-        .get('/achievements')
-        .expect(200);
+      const response1 = await request(app.getHttpServer()).get('/achievements').expect(200);
 
       // Second request should be faster (cached)
-      const response2 = await request(app.getHttpServer())
-        .get('/achievements')
-        .expect(200);
+      const response2 = await request(app.getHttpServer()).get('/achievements').expect(200);
 
       expect(response1.body).toEqual(response2.body);
     });
@@ -155,9 +151,7 @@ describe('Achievement API (e2e)', () => {
     });
 
     it('should return 400 for invalid userId format', async () => {
-      await request(app.getHttpServer())
-        .get('/achievements/user/invalid-uuid')
-        .expect(400);
+      await request(app.getHttpServer()).get('/achievements/user/invalid-uuid').expect(400);
     });
   });
 
@@ -281,7 +275,7 @@ describe('Achievement API (e2e)', () => {
 
       expect(response.body).toBeInstanceOf(Array);
       expect(response.body.length).toBeGreaterThan(0);
-      
+
       // Check if progress was updated
       const progressItem = response.body.find(p => p.achievement.type === 'first_purchase');
       expect(progressItem).toBeDefined();
@@ -299,7 +293,7 @@ describe('Achievement API (e2e)', () => {
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
-      
+
       // Check if progress was updated
       const progressItem = response.body.find(p => p.achievement.type === 'first_review');
       expect(progressItem).toBeDefined();
@@ -317,7 +311,7 @@ describe('Achievement API (e2e)', () => {
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
-      
+
       // Check if progress was updated
       const progressItem = response.body.find(p => p.achievement.type === 'first_friend');
       expect(progressItem).toBeDefined();
@@ -372,7 +366,7 @@ describe('Achievement API (e2e)', () => {
 
       // Verify progress was updated
       const firstPurchaseProgress = progressResponse.body.find(
-        p => p.achievement.type === 'first_purchase'
+        p => p.achievement.type === 'first_purchase',
       );
       expect(firstPurchaseProgress).toBeDefined();
       expect(firstPurchaseProgress.currentValue).toBe(1);
@@ -405,14 +399,14 @@ describe('Achievement API (e2e)', () => {
 
       expect(finalAchievementsResponse.body.total).toBe(2); // first_purchase + games_purchased
       const fiveGamesAchievement = finalAchievementsResponse.body.data.find(
-        a => a.achievement.type === 'games_purchased'
+        a => a.achievement.type === 'games_purchased',
       );
       expect(fiveGamesAchievement).toBeDefined();
     });
 
     it('should handle multiple concurrent progress updates correctly', async () => {
       const promises = [];
-      
+
       // Send multiple concurrent requests
       for (let i = 1; i <= 3; i++) {
         promises.push(
@@ -422,12 +416,12 @@ describe('Achievement API (e2e)', () => {
               userId: testUserId,
               eventType: EventType.GAME_PURCHASE,
               eventData: { gameId: `game-${i}`, price: 1999 },
-            })
+            }),
         );
       }
 
       const responses = await Promise.all(promises);
-      
+
       // All requests should succeed
       responses.forEach(response => {
         expect(response.status).toBe(200);
@@ -439,7 +433,7 @@ describe('Achievement API (e2e)', () => {
         .expect(200);
 
       const gamesPurchasedProgress = progressResponse.body.find(
-        p => p.achievement.type === 'games_purchased'
+        p => p.achievement.type === 'games_purchased',
       );
       expect(gamesPurchasedProgress).toBeDefined();
       expect(gamesPurchasedProgress.currentValue).toBe(3);

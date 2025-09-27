@@ -18,7 +18,7 @@ describe('LoggingInterceptor', () => {
     expect(interceptor).toBeDefined();
   });
 
-  it('should log incoming request and outgoing response', (done) => {
+  it('should log incoming request and outgoing response', done => {
     const mockRequest = {
       method: 'GET',
       url: '/achievements',
@@ -45,7 +45,7 @@ describe('LoggingInterceptor', () => {
     const logSpy = jest.spyOn(interceptor['logger'], 'log');
 
     interceptor.intercept(mockContext, mockCallHandler).subscribe({
-      next: (data) => {
+      next: data => {
         expect(data).toEqual({ data: 'test' });
         expect(logSpy).toHaveBeenCalledTimes(2);
         expect(logSpy).toHaveBeenCalledWith(
@@ -59,7 +59,7 @@ describe('LoggingInterceptor', () => {
     });
   });
 
-  it('should log error when request fails', (done) => {
+  it('should log error when request fails', done => {
     const mockRequest = {
       method: 'POST',
       url: '/achievements/unlock',
@@ -89,7 +89,7 @@ describe('LoggingInterceptor', () => {
 
     try {
       interceptor.intercept(mockContext, mockCallHandler).subscribe({
-        error: (err) => {
+        error: err => {
           expect(err).toBe(error);
           expect(logSpy).toHaveBeenCalledWith(
             expect.stringContaining('Incoming Request: POST /achievements/unlock'),
