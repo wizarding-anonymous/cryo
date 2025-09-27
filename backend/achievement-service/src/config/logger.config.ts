@@ -40,7 +40,7 @@ export const createLoggerConfig = (
 
   // File transports for production
   if (isProduction) {
-    // Error logs
+    // Error logs with enhanced metadata
     transports.push(
       new winston.transports.DailyRotateFile({
         filename: 'logs/error-%DATE%.log',
@@ -48,25 +48,91 @@ export const createLoggerConfig = (
         level: 'error',
         maxFiles: '30d',
         maxSize: '20m',
-        format: winston.format.combine(...formats),
+        format: winston.format.combine(
+          winston.format.metadata({ fillExcept: ['message', 'level', 'timestamp'] }),
+          ...formats,
+        ),
+        auditFile: 'logs/.audit/error-audit.json',
       }),
     );
 
-    // Combined logs
+    // Warning logs
     transports.push(
       new winston.transports.DailyRotateFile({
-        filename: 'logs/combined-%DATE%.log',
+        filename: 'logs/warn-%DATE%.log',
         datePattern: 'YYYY-MM-DD',
+        level: 'warn',
         maxFiles: '30d',
         maxSize: '20m',
         format: winston.format.combine(...formats),
+        auditFile: 'logs/.audit/warn-audit.json',
       }),
     );
 
-    // Console for production (structured)
+    // Info logs (application events)
+    transports.push(
+      new winston.transports.DailyRotateFile({
+        filename: 'logs/app-%DATE%.log',
+        datePattern: 'YYYY-MM-DD',
+        level: 'info',
+        maxFiles: '30d',
+        maxSize: '20m',
+        format: winston.format.combine(...formats),
+        auditFile: 'logs/.audit/app-audit.json',
+      }),
+    );
+
+    // Achievement-specific logs
+    transports.push(
+      new winston.transports.DailyRotateFile({
+        filename: 'logs/achievements-%DATE%.log',
+        datePattern: 'YYYY-MM-DD',
+        level: 'info',
+        maxFiles: '30d',
+        maxSize: '20m',
+        format: winston.format.combine(
+          winston.format.label({ label: 'ACHIEVEMENT' }),
+          ...formats,
+        ),
+        auditFile: 'logs/.audit/achievements-audit.json',
+      }),
+    );
+
+    // Performance logs
+    transports.push(
+      new winston.transports.DailyRotateFile({
+        filename: 'logs/performance-%DATE%.log',
+        datePattern: 'YYYY-MM-DD',
+        level: 'debug',
+        maxFiles: '7d', // Shorter retention for performance logs
+        maxSize: '50m',
+        format: winston.format.combine(
+          winston.format.label({ label: 'PERFORMANCE' }),
+          ...formats,
+        ),
+        auditFile: 'logs/.audit/performance-audit.json',
+      }),
+    );
+
+    // Console for production (structured JSON)
     transports.push(
       new winston.transports.Console({
-        format: winston.format.combine(...formats),
+        level: 'info',
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.json(),
+          winston.format.printf(({ timestamp, level, message, ...meta }) => {
+            return JSON.stringify({
+              '@timestamp': timestamp,
+              level,
+              message,
+              service: 'achievement-service',
+              environment: process.env.NODE_ENV,
+              pid: process.pid,
+              ...meta,
+            });
+          }),
+        ),
       }),
     );
   }

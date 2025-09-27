@@ -56,11 +56,13 @@ export class GracefulShutdownService implements OnApplicationShutdown {
   }
 
   private async waitForOngoingRequests(): Promise<void> {
-    // In a real implementation, you would track ongoing requests
-    // For now, we'll just wait a short time
     this.logger.log('Waiting for ongoing requests to complete...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    this.logger.log('Ongoing requests completed');
+    
+    // Wait for a reasonable time for requests to complete
+    const waitTime = Math.min(this.configService.get<number>('shutdown.timeout', 10000) / 2, 5000);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+    
+    this.logger.log('Ongoing requests wait period completed');
   }
 
   private async closeDatabaseConnections(): Promise<void> {

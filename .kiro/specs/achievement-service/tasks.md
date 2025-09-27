@@ -240,6 +240,7 @@
 
 
 
+
   - Создать оптимизированный Dockerfile с multi-stage build
   - Настроить docker-compose.yml с PostgreSQL и Redis сервисами
   - Добавить health check endpoints для Kubernetes readiness/liveness probes
@@ -247,7 +248,12 @@
   - Создать .dockerignore для оптимизации размера образа
   - _Requirements: Все требования_
 
-- [ ] 14. Интеграция с MVP сервисами
+- [x] 14. Интеграция с MVP сервисами
+
+
+
+
+
 
 
 
@@ -261,7 +267,16 @@
   - Протестировать все интеграции в рамках MVP
   - _Requirements: 4_
 
-- [ ] 15. Подготовка production конфигурации и мониторинга
+- [x] 15. Подготовка production конфигурации и мониторинга
+
+
+
+
+
+
+
+
+
 
 
 

@@ -69,7 +69,7 @@ export class IntegrationController {
     );
 
     try {
-      await this.eventService.handleGamePurchase(eventData.userId, eventData.gameId);
+      await this.eventService.handleGamePurchase(eventData.userId, eventData.gameId, eventData.transactionId);
 
       return {
         success: true,

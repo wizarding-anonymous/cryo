@@ -4,6 +4,9 @@ import { ProgressService } from './progress.service';
 import { AchievementService } from './achievement.service';
 import { NotificationService } from './notification.service';
 import { LibraryService } from './library.service';
+import { PaymentService } from './payment.service';
+import { ReviewService } from './review.service';
+import { SocialService } from './social.service';
 import { EventType } from '../dto/update-progress.dto';
 import { UserProgressResponseDto, UserAchievementResponseDto } from '../dto';
 import { AchievementType, Achievement } from '../entities/achievement.entity';
@@ -14,6 +17,9 @@ describe('EventService', () => {
   let achievementService: jest.Mocked<AchievementService>;
   let notificationService: jest.Mocked<NotificationService>;
   let libraryService: jest.Mocked<LibraryService>;
+  let paymentService: jest.Mocked<PaymentService>;
+  let reviewService: jest.Mocked<ReviewService>;
+  let socialService: jest.Mocked<SocialService>;
 
   const mockUserProgress: UserProgressResponseDto = {
     id: 'progress-1',
@@ -96,6 +102,26 @@ describe('EventService', () => {
       getUserGames: jest.fn(),
     };
 
+    const mockPaymentService = {
+      getUserPaymentStats: jest.fn(),
+      isTransactionCompleted: jest.fn(),
+      checkPaymentServiceHealth: jest.fn(),
+    };
+
+    const mockReviewService = {
+      reviewExists: jest.fn(),
+      getUserReviewStats: jest.fn(),
+      getUserReviewCount: jest.fn(),
+      checkReviewServiceHealth: jest.fn(),
+    };
+
+    const mockSocialService = {
+      validateFriendAddedEvent: jest.fn(),
+      getUserSocialStats: jest.fn(),
+      getUserFriendCount: jest.fn(),
+      checkSocialServiceHealth: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventService,
@@ -115,6 +141,18 @@ describe('EventService', () => {
           provide: LibraryService,
           useValue: mockLibraryService,
         },
+        {
+          provide: PaymentService,
+          useValue: mockPaymentService,
+        },
+        {
+          provide: ReviewService,
+          useValue: mockReviewService,
+        },
+        {
+          provide: SocialService,
+          useValue: mockSocialService,
+        },
       ],
     }).compile();
 
@@ -123,6 +161,9 @@ describe('EventService', () => {
     achievementService = module.get(AchievementService);
     notificationService = module.get(NotificationService);
     libraryService = module.get(LibraryService);
+    paymentService = module.get(PaymentService);
+    reviewService = module.get(ReviewService);
+    socialService = module.get(SocialService);
   });
 
   it('should be defined', () => {
@@ -135,6 +176,11 @@ describe('EventService', () => {
       const gameId = 'game-1';
 
       libraryService.getUserGameCount.mockResolvedValue(1);
+      paymentService.getUserPaymentStats.mockResolvedValue({
+        totalTransactions: 1,
+        totalSpent: 1999,
+        averageTransactionAmount: 1999,
+      });
       progressService.updateProgress.mockResolvedValue([mockUserProgress]);
       progressService.checkAchievements.mockResolvedValue([mockUserAchievement]);
 

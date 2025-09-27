@@ -3,6 +3,9 @@ import { ProgressService } from './progress.service';
 import { AchievementService } from './achievement.service';
 import { NotificationService, AchievementUnlockedNotification } from './notification.service';
 import { LibraryService } from './library.service';
+import { PaymentService } from './payment.service';
+import { ReviewService } from './review.service';
+import { SocialService } from './social.service';
 import { EventType } from '../dto/update-progress.dto';
 import { UserAchievementResponseDto } from '../dto';
 
@@ -14,25 +17,44 @@ export class EventService {
     private readonly progressService: ProgressService,
     private readonly notificationService: NotificationService,
     private readonly libraryService: LibraryService,
+    private readonly paymentService: PaymentService,
+    private readonly reviewService: ReviewService,
+    private readonly socialService: SocialService,
     private readonly achievementService: AchievementService,
   ) {}
 
   /**
    * Обработка покупки игры пользователем
    */
-  async handleGamePurchase(userId: string, gameId: string): Promise<void> {
-    this.logger.log(`Handling game purchase for user ${userId}, game ${gameId}`);
+  async handleGamePurchase(userId: string, gameId: string, transactionId?: string): Promise<void> {
+    this.logger.log(`Handling game purchase for user ${userId}, game ${gameId}, transaction ${transactionId}`);
 
     try {
       // Получаем дополнительную информацию из Library Service
       const gameCount = await this.libraryService.getUserGameCount(userId);
       const isFirstPurchase = gameCount === 1;
 
+      // Получаем статистику платежей для дополнительной валидации
+      const paymentStats = await this.paymentService.getUserPaymentStats(userId);
+      
+      // Валидируем транзакцию если ID предоставлен
+      let transactionValid = true;
+      if (transactionId) {
+        transactionValid = await this.paymentService.isTransactionCompleted(transactionId);
+        if (!transactionValid) {
+          this.logger.warn(`Transaction ${transactionId} is not completed, skipping achievement processing`);
+          return;
+        }
+      }
+
       const eventData = {
         gameId,
+        transactionId,
         timestamp: new Date().toISOString(),
         gameCount,
         isFirstPurchase,
+        totalSpent: paymentStats?.totalSpent || 0,
+        totalTransactions: paymentStats?.totalTransactions || 0,
       };
 
       // Обновляем прогресс пользователя
@@ -74,9 +96,25 @@ export class EventService {
     this.logger.log(`Handling review creation for user ${userId}, review ${reviewId}`);
 
     try {
+      // Валидируем существование отзыва
+      const reviewExists = await this.reviewService.reviewExists(reviewId);
+      if (!reviewExists) {
+        this.logger.warn(`Review ${reviewId} does not exist, skipping achievement processing`);
+        return;
+      }
+
+      // Получаем статистику отзывов пользователя
+      const reviewStats = await this.reviewService.getUserReviewStats(userId);
+      const reviewCount = await this.reviewService.getUserReviewCount(userId);
+      const isFirstReview = reviewCount === 1;
+
       const eventData = {
         reviewId,
         timestamp: new Date().toISOString(),
+        reviewCount,
+        isFirstReview,
+        totalReviews: reviewStats?.totalReviews || 0,
+        averageRating: reviewStats?.averageRating || 0,
       };
 
       // Обновляем прогресс пользователя
@@ -87,7 +125,7 @@ export class EventService {
       );
 
       this.logger.log(
-        `Updated ${updatedProgress?.length || 0} progress records for review creation`,
+        `Updated ${updatedProgress?.length || 0} progress records for review creation (total reviews: ${reviewCount})`,
       );
 
       // Проверяем разблокированные достижения
@@ -118,9 +156,25 @@ export class EventService {
     this.logger.log(`Handling friend addition for user ${userId}, friend ${friendId}`);
 
     try {
+      // Валидируем событие добавления друга
+      const friendshipValid = await this.socialService.validateFriendAddedEvent(userId, friendId);
+      if (!friendshipValid) {
+        this.logger.warn(`Friendship between ${userId} and ${friendId} is not valid, skipping achievement processing`);
+        return;
+      }
+
+      // Получаем социальную статистику пользователя
+      const socialStats = await this.socialService.getUserSocialStats(userId);
+      const friendCount = await this.socialService.getUserFriendCount(userId);
+      const isFirstFriend = friendCount === 1;
+
       const eventData = {
         friendId,
         timestamp: new Date().toISOString(),
+        friendCount,
+        isFirstFriend,
+        totalFriends: socialStats?.totalFriends || 0,
+        pendingRequests: socialStats?.pendingRequests || 0,
       };
 
       // Обновляем прогресс пользователя
@@ -131,7 +185,7 @@ export class EventService {
       );
 
       this.logger.log(
-        `Updated ${updatedProgress?.length || 0} progress records for friend addition`,
+        `Updated ${updatedProgress?.length || 0} progress records for friend addition (total friends: ${friendCount})`,
       );
 
       // Проверяем разблокированные достижения

@@ -1,0 +1,113 @@
+# Production Alert Rules for Achievement Service
+groups:
+  - name: achievement-service-production
+    rules:
+      # High Error Rate
+      - alert: AchievementServiceHighErrorRate
+        expr: rate(http_requests_total{status_code=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          service: achievement-service
+        annotations:
+          summary: "Achievement Service has high error rate"
+          description: "Error rate is {{ $value }} errors per second"
+
+      # High Response Time
+      - alert: AchievementServiceHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: achievement-service
+        annotations:
+          summary: "Achievement Service has high response time"
+          description: "95th percentile response time is {{ $value }}s"
+
+      # Database Connection Issues
+      - alert: AchievementServiceDatabaseDown
+        expr: up{job="achievement-service"} == 0 or database_connections_active == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: achievement-service
+        annotations:
+          summary: "Achievement Service database connection issues"
+          description: "Database connections are not available"
+
+      # High Memory Usage
+      - alert: AchievementServiceHighMemoryUsage
+        expr: (nodejs_heap_used_bytes / nodejs_heap_total_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: achievement-service
+        annotations:
+          summary: "Achievement Service high memory usage"
+          description: "Memory usage is {{ $value }}%"
+
+      # Critical Memory Usage
+      - alert: AchievementServiceCriticalMemoryUsage
+        expr: (nodejs_heap_used_bytes / nodejs_heap_total_bytes) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: achievement-service
+        annotations:
+          summary: "Achievement Service critical memory usage"
+          description: "Memory usage is {{ $value }}%"
+
+      # Event Loop Lag
+      - alert: AchievementServiceHighEventLoopLag
+        expr: nodejs_eventloop_lag_milliseconds > 100
+        for: 3m
+        labels:
+          severity: warning
+          service: achievement-service
+        annotations:
+          summary: "Achievement Service high event loop lag"
+          description: "Event loop lag is {{ $value }}ms"
+
+      # Service Integration Failures
+      - alert: AchievementServiceIntegrationFailures
+        expr: rate(service_errors_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: achievement-service
+        annotations:
+          summary: "Achievement Service integration failures"
+          description: "Service integration error rate is {{ $value }} per second"
+
+      # Achievement Processing Delays
+      - alert: AchievementProcessingDelays
+        expr: histogram_quantile(0.95, rate(achievement_check_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: achievement-service
+        annotations:
+          summary: "Achievement processing delays"
+          description: "95th percentile achievement processing time is {{ $value }}s"
+
+      # Low Achievement Unlock Rate (Business Metric)
+      - alert: LowAchievementUnlockRate
+        expr: rate(achievements_unlocked_total[1h]) < 0.01
+        for: 30m
+        labels:
+          severity: info
+          service: achievement-service
+        annotations:
+          summary: "Low achievement unlock rate"
+          description: "Achievement unlock rate is {{ $value }} per second over the last hour"
+
+      # Service Restart Detection
+      - alert: AchievementServiceRestarted
+        expr: increase(service_startup_timestamp[5m]) > 0
+        for: 0m
+        labels:
+          severity: info
+          service: achievement-service
+        annotations:
+          summary: "Achievement Service restarted"
+          description: "Service has been restarted"

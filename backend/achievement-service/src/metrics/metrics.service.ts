@@ -128,7 +128,69 @@ export class MetricsService implements OnModuleInit {
   }
 
   onModuleInit() {
-    // Initialize any startup metrics
+    // Initialize startup metrics
+    this.initializeStartupMetrics();
+    
+    // Start collecting system metrics
+    this.startSystemMetricsCollection();
+  }
+
+  private initializeStartupMetrics() {
+    // Record service startup time
+    const startupTime = new client.Gauge({
+      name: 'service_startup_timestamp',
+      help: 'Timestamp when the service started',
+      registers: [this.register],
+    });
+    startupTime.set(Date.now() / 1000);
+
+    // Record Node.js version
+    const nodeVersion = new client.Gauge({
+      name: 'nodejs_version_info',
+      help: 'Node.js version information',
+      labelNames: ['version'],
+      registers: [this.register],
+    });
+    nodeVersion.set({ version: process.version }, 1);
+  }
+
+  private startSystemMetricsCollection() {
+    // Collect system metrics every 30 seconds
+    setInterval(() => {
+      this.collectSystemMetrics();
+    }, 30000);
+  }
+
+  private collectSystemMetrics() {
+    // Memory usage
+    const memoryUsage = process.memoryUsage();
+    
+    const heapUsed = new client.Gauge({
+      name: 'nodejs_heap_used_bytes',
+      help: 'Process heap space used in bytes',
+      registers: [this.register],
+    });
+    heapUsed.set(memoryUsage.heapUsed);
+
+    const heapTotal = new client.Gauge({
+      name: 'nodejs_heap_total_bytes',
+      help: 'Process heap space total in bytes',
+      registers: [this.register],
+    });
+    heapTotal.set(memoryUsage.heapTotal);
+
+    // Event loop lag
+    const start = process.hrtime.bigint();
+    setImmediate(() => {
+      const lag = Number(process.hrtime.bigint() - start) / 1e6; // Convert to milliseconds
+      
+      const eventLoopLag = new client.Gauge({
+        name: 'nodejs_eventloop_lag_milliseconds',
+        help: 'Event loop lag in milliseconds',
+        registers: [this.register],
+      });
+      eventLoopLag.set(lag);
+    });
   }
 
   getMetrics(): Promise<string> {

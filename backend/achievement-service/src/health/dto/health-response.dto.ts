@@ -2,14 +2,14 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export interface HealthStatus {
   name: string;
-  status: 'healthy' | 'unhealthy';
+  status: 'healthy' | 'unhealthy' | 'degraded';
   message: string;
 }
 
 export class HealthResponseDto {
   @ApiProperty({
     description: 'Статус здоровья сервиса',
-    enum: ['healthy', 'unhealthy', 'ready', 'not_ready', 'alive'],
+    enum: ['healthy', 'unhealthy', 'degraded', 'ready', 'not_ready', 'alive'],
     example: 'healthy',
   })
   status: string = 'healthy';
@@ -39,7 +39,7 @@ export class HealthResponseDto {
       type: 'object',
       properties: {
         name: { type: 'string', example: 'database' },
-        status: { type: 'string', enum: ['healthy', 'unhealthy'], example: 'healthy' },
+        status: { type: 'string', enum: ['healthy', 'unhealthy', 'degraded'], example: 'healthy' },
         message: { type: 'string', example: 'Database connection is healthy' },
       },
     },

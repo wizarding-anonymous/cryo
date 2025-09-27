@@ -42,7 +42,12 @@
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d ormconfig.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d ormconfig.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts",
-    "migration:show": "typeorm-ts-node-commonjs migration:show -d ormconfig.ts"
+    "migration:show": "typeorm-ts-node-commonjs migration:show -d ormconfig.ts",
+    "validate:prod": "node scripts/validate-production-config.js",
+    "deploy:validate": "npm run validate:prod && npm run test:all && npm run build",
+    "deploy:prod": "bash scripts/deploy-production.sh",
+    "deploy:monitoring": "docker-compose -f docker-compose.monitoring.yml up -d",
+    "deploy:stop": "docker-compose -f docker-compose.prod.yml down && docker-compose -f docker-compose.monitoring.yml down"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

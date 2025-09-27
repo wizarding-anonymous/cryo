@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import helmet from 'helmet';
 import compression from 'compression';
+import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { GracefulShutdownService } from './graceful-shutdown.service';
 
@@ -25,7 +26,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
-  // Security headers
+  // Enhanced security headers for production
   if (configService.get<boolean>('security.helmetEnabled', true)) {
     app.use(
       helmet({
@@ -35,6 +36,11 @@ async function bootstrap() {
             styleSrc: ["'self'", "'unsafe-inline'"],
             scriptSrc: ["'self'"],
             imgSrc: ["'self'", 'data:', 'https:'],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
           },
         },
         hsts: {
@@ -42,8 +48,24 @@ async function bootstrap() {
           includeSubDomains: true,
           preload: true,
         },
+        noSniff: true,
+        xssFilter: true,
+        referrerPolicy: { policy: 'same-origin' },
+        permittedCrossDomainPolicies: false,
+        crossOriginEmbedderPolicy: false, // Disable for API compatibility
       }),
     );
+
+    // Additional security headers
+    app.use((_req: Request, res: Response, next: NextFunction) => {
+      res.setHeader('X-API-Version', '1.0');
+      res.setHeader('X-Service-Name', 'achievement-service');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+      next();
+    });
   }
 
   // Compression
