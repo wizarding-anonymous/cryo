@@ -265,6 +265,12 @@ GET /api/games/123e4567-e89b-12d3-a456-426614174000/purchase-info
 - `404 Not Found`: Game not found or not available for purchase
 - `500 Internal Server Error`: Server error
 
+**Integration Notes**:
+- This endpoint is specifically designed for Payment Service integration
+- Returns only essential fields required for payment processing
+- Implements strict availability validation for purchase operations
+- See [Payment Service Integration Documentation](./PAYMENT_SERVICE_INTEGRATION.md) for detailed integration guide
+
 ## Health Check Endpoints
 
 ### 1. Comprehensive Health Check

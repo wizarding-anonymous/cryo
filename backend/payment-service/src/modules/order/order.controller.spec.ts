@@ -59,16 +59,13 @@ describe('OrderController', () => {
     it('should create a new order', async () => {
       const createOrderDto: CreateOrderDto = {
         gameId: 'test-game-id',
-        gameName: 'Test Game',
-        amount: 1999.99,
-        currency: 'RUB',
       };
 
       const mockOrder: Partial<Order> = {
         id: 'test-order-id',
         gameId: createOrderDto.gameId,
-        gameName: createOrderDto.gameName,
-        amount: createOrderDto.amount,
+        gameName: 'Test Game', // This will be fetched from Game Catalog Service
+        amount: 1999.99, // This will be fetched from Game Catalog Service
         currency: 'RUB',
         status: OrderStatus.PENDING,
       };

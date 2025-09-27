@@ -34,8 +34,6 @@ describe('OrderController (e2e)', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .send({
         gameId: 'game-123',
-        gameName: 'Test E2E Game',
-        amount: 500,
       })
       .expect(201)
       .then((response) => {

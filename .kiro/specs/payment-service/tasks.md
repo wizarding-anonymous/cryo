@@ -203,7 +203,16 @@
   - Настроить мониторинг критических метрик (время обработки платежей, успешность)
   - _Requirements: Все требования_
 
-- [ ] 12. Интеграция с Library Service для MVP
+- [x] 12. Интеграция с Library Service для MVP
+
+
+
+
+
+
+
+
+
   - Создать LibraryIntegrationService для взаимодействия с Library Service
   - Реализовать метод addGameToLibrary(userId, gameId, orderId) с HTTP клиентом
   - Добавить retry механизм для надежности интеграции
@@ -212,7 +221,12 @@
   - Добавить логирование и мониторинг интеграционных вызовов
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 13. Интеграция с Game Catalog Service для MVP
+
+
+- [x] 13. Интеграция с Game Catalog Service для MVP
+
+
+
   - Создать GameCatalogIntegrationService для проверки игр
   - Реализовать метод validateGame(gameId) для проверки существования и доступности
   - Интегрировать проверку игры в OrderService.createOrder()

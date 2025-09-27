@@ -255,7 +255,12 @@
   - Perform final testing and code review
   - _Requirements: All requirements_
 
-- [ ] 11. Интеграция с Payment Service для MVP
+- [x] 11. Интеграция с Payment Service для MVP
+
+
+
+
+
   - Создать специальный эндпоинт GET /games/:id/purchase-info для Payment Service
   - Реализовать проверку доступности игры для покупки
   - Добавить валидацию цены и валюты для платежных операций

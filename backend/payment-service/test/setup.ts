@@ -2,7 +2,7 @@
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test-jwt-secret-key';
+process.env.JWT_SECRET = 'test-jwt-secret-key-that-is-long-enough-for-validation';
 process.env.LIBRARY_SERVICE_URL = 'http://library-service:3000';
 process.env.GAME_CATALOG_SERVICE_URL = 'http://game-catalog-service:3000';
 process.env.PAYMENT_MODE = 'simulation';

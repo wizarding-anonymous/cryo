@@ -75,8 +75,6 @@ describe('OrderService', () => {
   describe('createOrder', () => {
     const createOrderDto: CreateOrderDto = {
       gameId: 'game-123',
-      gameName: 'Test Game',
-      amount: 1999,
     };
 
     it('should create an order successfully', async () => {
