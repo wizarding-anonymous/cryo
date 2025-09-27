@@ -254,10 +254,12 @@
 <a name='L189'></a><a href='#L189'>189</a>
 <a name='L190'></a><a href='#L190'>190</a>
 <a name='L191'></a><a href='#L191'>191</a>
-<a name='L192'></a><a href='#L192'>192</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -276,20 +278,18 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
@@ -321,16 +321,22 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -375,8 +381,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -399,6 +403,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -422,8 +428,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -469,7 +473,8 @@ interface RetryOptions {
 @Injectable()
 export class NotificationServiceClient {
   private readonly logger = new Logger(NotificationServiceClient.name);
-  private readonly baseUrl = process.env.NOTIFICATION_SERVICE_URL || <span class="branch-1 cbranch-no" title="branch not covered" >'http://notification-service:3003/api';</span>
+  private readonly baseUrl =
+    process.env.NOTIFICATION_SERVICE_URL || <span class="branch-1 cbranch-no" title="branch not covered" >'http://notification-service:3003/api';</span>
   private readonly defaultRetryOptions: RetryOptions = {
     attempts: 3,
     baseDelayMs: 300,
@@ -479,54 +484,57 @@ export class NotificationServiceClient {
 &nbsp;
   constructor(private readonly httpService: HttpService) {}
 &nbsp;
-  private async requestWithRetry&lt;T&gt;(
-    fn: () =&gt; Promise&lt;T&gt;,
-    options: RetryOptions = <span class="branch-0 cbranch-no" title="branch not covered" >{},</span>
-  ): Promise&lt;T&gt; {
+  private async requestWithRetry&lt;T&gt;(fn: () =&gt; Promise&lt;T&gt;, options: RetryOptions = <span class="branch-0 cbranch-no" title="branch not covered" >{})</span>: Promise&lt;T&gt; {
     const { attempts, baseDelayMs, maxDelayMs, timeoutMs } = {
       ...this.defaultRetryOptions,
       ...options,
     };
 &nbsp;
     let lastError: unknown;
-    
+&nbsp;
     for (let attempt = 1; attempt &lt;= attempts!; attempt++) {
       try {
         this.logger.debug(`Notification attempt ${attempt}/${attempts}`);
-        
+&nbsp;
         const result = await Promise.race([
           fn(),
-          new Promise&lt;never&gt;((_, reject) =&gt; 
-            setTimeout(<span class="fstat-no" title="function not covered" >() =</span>&gt; <span class="cstat-no" title="statement not covered" >reject(new Error('Notification request timeout')),</span> timeoutMs!)
-          )
+          new Promise&lt;never&gt;((_, reject) =&gt;
+            setTimeout(<span class="fstat-no" title="function not covered" >() =</span>&gt; <span class="cstat-no" title="statement not covered" >reject(new Error('Notification request timeout')),</span> timeoutMs!),
+          ),
         ]);
-        
+&nbsp;
         <span class="missing-if-branch" title="if path not taken" >I</span>if (attempt &gt; 1) {
 <span class="cstat-no" title="statement not covered" >          this.logger.log(`Notification sent successfully on attempt ${attempt}`);</span>
         }
-        
+&nbsp;
         return result;
       } catch (error) {
         lastError = error;
-        
+&nbsp;
         // Don't retry on client errors (4xx) except for 429 (rate limit)
         <span class="missing-if-branch" title="if path not taken" >I</span>if (this.isClientError(error) &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >!this.isRateLimitError(error))</span> {
-<span class="cstat-no" title="statement not covered" >          this.logger.warn(`Client error, not retrying notification: ${this.getErrorMessage(error)}`);</span>
+<span class="cstat-no" title="statement not covered" >          this.logger.warn(</span>
+            `Client error, not retrying notification: ${this.getErrorMessage(error)}`,
+          );
 <span class="cstat-no" title="statement not covered" >          throw error;</span>
         }
-        
+&nbsp;
         if (attempt === attempts!) {
-          this.logger.error(`All ${attempts} notification attempts failed. Last error: ${this.getErrorMessage(error)}`);
+          this.logger.error(
+            `All ${attempts} notification attempts failed. Last error: ${this.getErrorMessage(error)}`,
+          );
           break;
         }
-        
+&nbsp;
         const delay = Math.min(baseDelayMs! * Math.pow(2, attempt - 1), maxDelayMs!);
-        this.logger.warn(`Notification attempt ${attempt} failed, retrying in ${delay}ms: ${this.getErrorMessage(error)}`);
-        
+        this.logger.warn(
+          `Notification attempt ${attempt} failed, retrying in ${delay}ms: ${this.getErrorMessage(error)}`,
+        );
+&nbsp;
         await this.sleep(delay);
       }
     }
-    
+&nbsp;
     throw lastError;
   }
 &nbsp;
@@ -553,32 +561,32 @@ export class NotificationServiceClient {
   }
 &nbsp;
   private sleep(ms: number): Promise&lt;void&gt; {
-    return new Promise(resolve =&gt; setTimeout(resolve, ms));
+    return new Promise((resolve) =&gt; setTimeout(resolve, ms));
   }
 &nbsp;
   async sendNotification(dto: SendNotificationDto): Promise&lt;void&gt; {
     try {
       this.logger.debug(`Sending notification to user ${dto.userId}: ${dto.type}`);
-      
+&nbsp;
       await this.requestWithRetry(
         async () =&gt;
           firstValueFrom(
-            this.httpService
-              .post(`${this.baseUrl}/notifications`, dto)
-              .pipe(
-                timeout(6000),
-                catchError((error) =&gt; {
-                  this.logger.error(`Failed to send notification: ${error.message}`);
-                  throw error;
-                })
-              ),
+            this.httpService.post(`${this.baseUrl}/notifications`, dto).pipe(
+              timeout(6000),
+              catchError((error) =&gt; {
+                this.logger.error(`Failed to send notification: ${error.message}`);
+                throw error;
+              }),
+            ),
           ),
-        { timeoutMs: 6000 }
+        { timeoutMs: 6000 },
       );
-      
+&nbsp;
       this.logger.debug(`Notification sent successfully to user ${dto.userId}`);
     } catch (error) {
-      this.logger.error(`Failed to send notification to user ${dto.userId}: ${this.getErrorMessage(error)}`);
+      this.logger.error(
+        `Failed to send notification to user ${dto.userId}: ${this.getErrorMessage(error)}`,
+      );
       // Don't throw error to avoid breaking the main flow
       // Notifications are not critical for core functionality
     }
@@ -613,19 +621,17 @@ export class NotificationServiceClient {
       await this.requestWithRetry(
         async () =&gt;
           firstValueFrom(
-            this.httpService
-              .post(`${this.baseUrl}/notifications/batch`, { notifications })
-              .pipe(
-                timeout(10000),
-                catchError(<span class="fstat-no" title="function not covered" >(e</span>rror) =&gt; {
-<span class="cstat-no" title="statement not covered" >                  this.logger.error(`Failed to send batch notifications: ${error.message}`);</span>
-<span class="cstat-no" title="statement not covered" >                  throw error;</span>
-                })
-              ),
+            this.httpService.post(`${this.baseUrl}/notifications/batch`, { notifications }).pipe(
+              timeout(10000),
+              catchError(<span class="fstat-no" title="function not covered" >(e</span>rror) =&gt; {
+<span class="cstat-no" title="statement not covered" >                this.logger.error(`Failed to send batch notifications: ${error.message}`);</span>
+<span class="cstat-no" title="statement not covered" >                throw error;</span>
+              }),
+            ),
           ),
-        { timeoutMs: 10000, attempts: 2 }
+        { timeoutMs: 10000, attempts: 2 },
       );
-      
+&nbsp;
       this.logger.debug(`Batch notifications sent successfully`);
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      this.logger.error(`Failed to send batch notifications: ${this.getErrorMessage(error)}`);</span>
@@ -643,7 +649,7 @@ export class NotificationServiceClient {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-23T15:47:22.637Z
+                at 2025-09-27T13:45:32.637Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
