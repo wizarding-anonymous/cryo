@@ -9,9 +9,11 @@ import { ConfigModule } from './config/config.module';
 import { databaseConfig } from './config/database.config';
 import { redisConfig } from './config/redis.config';
 import { Review, GameRating } from './entities';
-import { ReviewService, RatingService, OwnershipService, MetricsService, BackgroundTasksService } from './services';
-import { ReviewController, RatingController, AdminController } from './controllers';
+import { ReviewService, RatingService, OwnershipService, MetricsService, BackgroundTasksService, AchievementService, NotificationService, GameCatalogService } from './services';
+import { ReviewController, RatingController, AdminController, ExternalController } from './controllers';
 import { HttpExceptionFilter } from './filters';
+import { HealthModule } from './health/health.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 @Module({
   imports: [
@@ -23,8 +25,10 @@ import { HttpExceptionFilter } from './filters';
       timeout: 5000,
       maxRedirects: 3,
     }),
+    HealthModule,
+    MonitoringModule,
   ],
-  controllers: [AppController, ReviewController, RatingController, AdminController],
+  controllers: [AppController, ReviewController, RatingController, AdminController, ExternalController],
   providers: [
     AppService,
     ReviewService,
@@ -32,6 +36,9 @@ import { HttpExceptionFilter } from './filters';
     OwnershipService,
     MetricsService,
     BackgroundTasksService,
+    AchievementService,
+    NotificationService,
+    GameCatalogService,
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,

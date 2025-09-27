@@ -5,6 +5,9 @@ import { ConflictException, ForbiddenException, NotFoundException } from '@nestj
 import { ReviewService } from './review.service';
 import { OwnershipService } from './ownership.service';
 import { RatingService } from './rating.service';
+import { AchievementService } from './achievement.service';
+import { NotificationService } from './notification.service';
+import { GameCatalogService } from './game-catalog.service';
 import { Review } from '../entities/review.entity';
 import { GameRating } from '../entities/game-rating.entity';
 import { CreateReviewDto, UpdateReviewDto, PaginationDto } from '../dto';
@@ -14,6 +17,9 @@ describe('ReviewService', () => {
   let reviewRepository: jest.Mocked<Repository<Review>>;
   let ownershipService: jest.Mocked<OwnershipService>;
   let ratingService: jest.Mocked<RatingService>;
+  let achievementService: jest.Mocked<AchievementService>;
+  let notificationService: jest.Mocked<NotificationService>;
+  let gameCatalogService: jest.Mocked<GameCatalogService>;
 
   const mockReview: Review = {
     id: '1',
@@ -49,6 +55,21 @@ describe('ReviewService', () => {
       updateGameRating: jest.fn(),
     };
 
+    const mockAchievementService = {
+      notifyFirstReview: jest.fn(),
+      checkUserFirstReview: jest.fn(),
+    };
+
+    const mockNotificationService = {
+      notifyNewReview: jest.fn(),
+      notifyReviewUpdate: jest.fn(),
+    };
+
+    const mockGameCatalogService = {
+      updateGameRating: jest.fn(),
+      getGameInfo: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReviewService,
@@ -64,6 +85,18 @@ describe('ReviewService', () => {
           provide: RatingService,
           useValue: mockRatingService,
         },
+        {
+          provide: AchievementService,
+          useValue: mockAchievementService,
+        },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
+        {
+          provide: GameCatalogService,
+          useValue: mockGameCatalogService,
+        },
       ],
     }).compile();
 
@@ -71,6 +104,9 @@ describe('ReviewService', () => {
     reviewRepository = module.get(getRepositoryToken(Review));
     ownershipService = module.get(OwnershipService);
     ratingService = module.get(RatingService);
+    achievementService = module.get(AchievementService);
+    notificationService = module.get(NotificationService);
+    gameCatalogService = module.get(GameCatalogService);
   });
 
   it('should be defined', () => {
@@ -90,6 +126,11 @@ describe('ReviewService', () => {
       reviewRepository.create.mockReturnValue(mockReview);
       reviewRepository.save.mockResolvedValue(mockReview);
       ratingService.updateGameRating.mockResolvedValue(mockGameRating);
+      gameCatalogService.getGameInfo.mockResolvedValue({ exists: true, name: 'Test Game' });
+      achievementService.checkUserFirstReview.mockResolvedValue(true);
+      achievementService.notifyFirstReview.mockResolvedValue(true);
+      notificationService.notifyNewReview.mockResolvedValue(true);
+      gameCatalogService.updateGameRating.mockResolvedValue(true);
 
       const result = await service.createReview('user1', createReviewDto);
 
@@ -143,6 +184,9 @@ describe('ReviewService', () => {
       reviewRepository.findOne.mockResolvedValue(mockReview);
       reviewRepository.save.mockResolvedValue({ ...mockReview, ...updateReviewDto });
       ratingService.updateGameRating.mockResolvedValue(mockGameRating);
+      gameCatalogService.getGameInfo.mockResolvedValue({ exists: true, name: 'Test Game' });
+      notificationService.notifyReviewUpdate.mockResolvedValue(true);
+      gameCatalogService.updateGameRating.mockResolvedValue(true);
 
       const result = await service.updateReview('1', 'user1', updateReviewDto);
 
@@ -168,6 +212,7 @@ describe('ReviewService', () => {
       reviewRepository.findOne.mockResolvedValue(mockReview);
       reviewRepository.remove.mockResolvedValue(mockReview);
       ratingService.updateGameRating.mockResolvedValue(mockGameRating);
+      gameCatalogService.updateGameRating.mockResolvedValue(true);
 
       await service.deleteReview('1', 'user1');
 

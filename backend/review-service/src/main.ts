@@ -1,11 +1,19 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { BackgroundTasksService } from './services/background-tasks.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+
+  // Configure logging based on environment
+  const logLevels: ('error' | 'warn' | 'log' | 'debug' | 'verbose')[] = ['error', 'warn', 'log', 'debug', 'verbose'];
+  const logLevel = (process.env.LOG_LEVEL as 'error' | 'warn' | 'log' | 'debug' | 'verbose') || 'log';
+
+  const app = await NestFactory.create(AppModule, {
+    logger: logLevels.slice(0, logLevels.indexOf(logLevel) + 1),
+  });
 
   // Enable global validation pipe
   app.useGlobalPipes(new ValidationPipe({
@@ -47,9 +55,12 @@ async function bootstrap() {
   const recalculationInterval = parseInt(process.env.RATING_RECALCULATION_INTERVAL_HOURS || '24', 10);
   await backgroundTasksService.schedulePeriodicRecalculation(recalculationInterval);
 
-  await app.listen(process.env.PORT ?? 3004);
-  console.log(`Review Service is running on: http://localhost:${process.env.PORT ?? 3004}`);
-  console.log(`Swagger documentation available at: http://localhost:${process.env.PORT ?? 3004}/api/docs`);
-  console.log(`Periodic rating recalculation scheduled every ${recalculationInterval} hours`);
+  const port = process.env.PORT ?? 3004;
+  await app.listen(port);
+
+  logger.log(`Review Service is running on: http://localhost:${port}`);
+  logger.log(`Swagger documentation available at: http://localhost:${port}/api/docs`);
+  logger.log(`Periodic rating recalculation scheduled every ${recalculationInterval} hours`);
+  logger.log(`Log level set to: ${logLevel}`);
 }
 bootstrap();

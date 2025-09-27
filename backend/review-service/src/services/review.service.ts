@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from '../entities/review.entity';
 import { CreateReviewDto, UpdateReviewDto, PaginationDto } from '../dto';
-import { OwnershipService, RatingService } from './index';
+import { OwnershipService, RatingService, AchievementService, NotificationService, GameCatalogService } from './index';
 
 @Injectable()
 export class ReviewService {
@@ -12,6 +12,9 @@ export class ReviewService {
         private readonly reviewRepository: Repository<Review>,
         private readonly ownershipService: OwnershipService,
         private readonly ratingService: RatingService,
+        private readonly achievementService: AchievementService,
+        private readonly notificationService: NotificationService,
+        private readonly gameCatalogService: GameCatalogService,
     ) { }
 
     async createReview(userId: string, createReviewDto: CreateReviewDto): Promise<Review> {
@@ -33,6 +36,9 @@ export class ReviewService {
             throw new ConflictException('You have already reviewed this game');
         }
 
+        // Check if this is user's first review for achievement
+        const isFirstReview = await this.achievementService.checkUserFirstReview(userId);
+
         // Create the review
         const review = this.reviewRepository.create({
             ...createReviewDto,
@@ -42,7 +48,26 @@ export class ReviewService {
         const savedReview = await this.reviewRepository.save(review);
 
         // Update game rating after creating review
-        await this.ratingService.updateGameRating(createReviewDto.gameId);
+        const updatedRating = await this.ratingService.updateGameRating(createReviewDto.gameId);
+
+        // Get game info for notifications
+        const gameInfo = await this.gameCatalogService.getGameInfo(createReviewDto.gameId);
+
+        // Notify Achievement Service about first review (fire and forget)
+        if (isFirstReview) {
+            this.achievementService.notifyFirstReview(userId, createReviewDto.gameId, savedReview.id)
+                .catch(error => console.warn('Achievement notification failed:', error));
+        }
+
+        // Notify Notification Service about new review (fire and forget)
+        this.notificationService.notifyNewReview(savedReview, gameInfo.name)
+            .catch(error => console.warn('New review notification failed:', error));
+
+        // Update Game Catalog Service with new rating (fire and forget)
+        if (updatedRating) {
+            this.gameCatalogService.updateGameRating(updatedRating)
+                .catch(error => console.warn('Game catalog rating update failed:', error));
+        }
 
         return savedReview;
     }
@@ -80,7 +105,20 @@ export class ReviewService {
         const updatedReview = await this.reviewRepository.save(review);
 
         // Update game rating after updating review
-        await this.ratingService.updateGameRating(review.gameId);
+        const updatedRating = await this.ratingService.updateGameRating(review.gameId);
+
+        // Get game info for notifications
+        const gameInfo = await this.gameCatalogService.getGameInfo(review.gameId);
+
+        // Notify Notification Service about review update (fire and forget)
+        this.notificationService.notifyReviewUpdate(updatedReview, gameInfo.name)
+            .catch(error => console.warn('Review update notification failed:', error));
+
+        // Update Game Catalog Service with new rating (fire and forget)
+        if (updatedRating) {
+            this.gameCatalogService.updateGameRating(updatedRating)
+                .catch(error => console.warn('Game catalog rating update failed:', error));
+        }
 
         return updatedReview;
     }
@@ -103,7 +141,13 @@ export class ReviewService {
         await this.reviewRepository.remove(review);
 
         // Update game rating after deleting review
-        await this.ratingService.updateGameRating(gameId);
+        const updatedRating = await this.ratingService.updateGameRating(gameId);
+
+        // Update Game Catalog Service with new rating (fire and forget)
+        if (updatedRating) {
+            this.gameCatalogService.updateGameRating(updatedRating)
+                .catch(error => console.warn('Game catalog rating update failed:', error));
+        }
     }
 
     async getUserReviews(userId: string, paginationDto: PaginationDto): Promise<{ reviews: Review[]; total: number }> {

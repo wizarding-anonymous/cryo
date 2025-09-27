@@ -1,0 +1,14 @@
+{
+  "name": "review-service-load-test",
+  "version": "1.0.0",
+  "description": "Load testing for Review Service",
+  "scripts": {
+    "test": "k6 run load-test.js",
+    "test:local": "BASE_URL=http://localhost:3004 k6 run load-test.js",
+    "test:staging": "BASE_URL=http://review-service-staging:3004 k6 run load-test.js",
+    "test:production": "BASE_URL=http://review-service:3004 k6 run load-test.js"
+  },
+  "devDependencies": {
+    "k6": "^0.47.0"
+  }
+}

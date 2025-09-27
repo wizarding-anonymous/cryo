@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: review-service
+  labels:
+    name: review-service
+    app: gaming-platform

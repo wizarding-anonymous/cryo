@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: review-service-config
+  namespace: review-service
+data:
+  NODE_ENV: "production"
+  PORT: "3004"
+  LOG_LEVEL: "info"
+  
+  # Database configuration
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "review_service"
+  DB_USER: "review_user"
+  
+  # Redis configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_TTL: "300"
+  
+  # External services
+  LIBRARY_SERVICE_URL: "http://library-service:3000"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:3001"
+  GAME_CATALOG_SERVICE_URL: "http://game-catalog-service:3002"
+  ACHIEVEMENT_SERVICE_URL: "http://achievement-service:3003"
+  
+  # Health check configuration
+  HEALTH_CHECK_TIMEOUT: "2000"
+  
+  # Performance settings
+  MAX_CONNECTIONS: "100"
+  CONNECTION_TIMEOUT: "30000"
