@@ -90,18 +90,20 @@ describe('Payment Service Integration Tests', () => {
     it('should validate currency code format for payment processing', async () => {
       // Test different valid currency codes
       const currencies = ['RUB', 'USD', 'EUR', 'GBP'];
-      
+
       for (const currency of currencies) {
         const mockGame = new Game();
         mockGame.id = `test-game-${currency}`;
         mockGame.title = `Test Game ${currency}`;
-        mockGame.price = 100.00;
+        mockGame.price = 100.0;
         mockGame.currency = currency;
         mockGame.available = true;
 
         (repository.findOneBy as jest.Mock).mockResolvedValue(mockGame);
 
-        const result = await service.getGamePurchaseInfo(`test-game-${currency}`);
+        const result = await service.getGamePurchaseInfo(
+          `test-game-${currency}`,
+        );
 
         expect(result.currency).toBe(currency);
         expect(result.currency).toHaveLength(3);
@@ -123,8 +125,12 @@ describe('Payment Service Integration Tests', () => {
         .mockResolvedValueOnce(mockGame); // Second call for any game
 
       // Act & Assert
-      await expect(service.getGamePurchaseInfo('unavailable-game')).rejects.toThrow(
-        new NotFoundException('Game with ID "unavailable-game" is currently unavailable')
+      await expect(
+        service.getGamePurchaseInfo('unavailable-game'),
+      ).rejects.toThrow(
+        new NotFoundException(
+          'Game with ID "unavailable-game" is currently unavailable',
+        ),
       );
     });
 
@@ -133,8 +139,10 @@ describe('Payment Service Integration Tests', () => {
       (repository.findOneBy as jest.Mock).mockResolvedValue(null);
 
       // Act & Assert
-      await expect(service.getGamePurchaseInfo('non-existent-game')).rejects.toThrow(
-        new NotFoundException('Game with ID "non-existent-game" not found')
+      await expect(
+        service.getGamePurchaseInfo('non-existent-game'),
+      ).rejects.toThrow(
+        new NotFoundException('Game with ID "non-existent-game" not found'),
       );
     });
 
@@ -156,7 +164,9 @@ describe('Payment Service Integration Tests', () => {
 
         (repository.findOneBy as jest.Mock).mockResolvedValue(mockGame);
 
-        const result = await service.getGamePurchaseInfo(`test-${testCase.price}`);
+        const result = await service.getGamePurchaseInfo(
+          `test-${testCase.price}`,
+        );
 
         expect(result.price).toBe(testCase.price);
         expect(typeof result.price).toBe('number');
@@ -213,13 +223,13 @@ describe('Payment Service Integration Tests', () => {
 
       // Act - Make multiple concurrent requests
       const promises = Array.from({ length: 5 }, () =>
-        service.getGamePurchaseInfo('concurrent-test-game')
+        service.getGamePurchaseInfo('concurrent-test-game'),
       );
 
       const results = await Promise.all(promises);
 
       // Assert - All results should be identical
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.id).toBe('concurrent-test-game');
         expect(result.price).toBe(39.99);
         expect(result.currency).toBe('RUB');

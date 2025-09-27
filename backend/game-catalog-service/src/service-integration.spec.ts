@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Game } from '../src/entities/game.entity';
-import { GameService } from '../src/game/game.service';
-import { SearchService } from '../src/search/search.service';
-import { CacheService } from '../src/common/services/cache.service';
-import { CreateGameDto } from '../src/dto/create-game.dto';
-import { UpdateGameDto } from '../src/dto/update-game.dto';
-import { GetGamesDto } from '../src/dto/get-games.dto';
-import { SearchGamesDto } from '../src/dto/search-games.dto';
+import { Game } from './entities/game.entity';
+import { GameService } from './game/game.service';
+import { SearchService } from './search/search.service';
+import { CacheService } from './common/services/cache.service';
+import { CreateGameDto } from './dto/create-game.dto';
+import { UpdateGameDto } from './dto/update-game.dto';
+import { GetGamesDto } from './dto/get-games.dto';
+import { SearchGamesDto } from './dto/search-games.dto';
 import { NotFoundException } from '@nestjs/common';
 
 describe('Service Integration Tests', () => {
