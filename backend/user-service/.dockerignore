@@ -66,8 +66,8 @@ k8s
 .prettierrc*
 eslint.config.mjs
 
-# TypeScript config (not needed in runtime)
-tsconfig*.json
+# TypeScript config (needed for build, but not in final runtime image)
+# tsconfig*.json
 
 # Data source configs (not needed in production container)
 data-source.local.ts
