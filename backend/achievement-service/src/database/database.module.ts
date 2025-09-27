@@ -29,4 +29,4 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     // using @Inject(CACHE_MANAGER) and CacheModule.register() in individual modules
   ],
 })
-export class DatabaseModule { }
+export class DatabaseModule {}

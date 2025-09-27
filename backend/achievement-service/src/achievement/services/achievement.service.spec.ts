@@ -387,6 +387,62 @@ describe('AchievementService', () => {
     });
   });
 
+  describe('getAchievementById', () => {
+    const achievementId = '123e4567-e89b-12d3-a456-426614174001';
+
+    it('should return cached achievement if available', async () => {
+      cacheManager.get.mockResolvedValue(mockAchievement);
+
+      const result = await service.getAchievementById(achievementId);
+
+      expect(cacheManager.get).toHaveBeenCalledWith(`achievement:${achievementId}`);
+      expect(result).toEqual(mockAchievement);
+      expect(achievementRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should fetch from database and cache if not in cache', async () => {
+      cacheManager.get.mockResolvedValue(undefined);
+      achievementRepository.findOne.mockResolvedValue(mockAchievement);
+
+      const result = await service.getAchievementById(achievementId);
+
+      expect(achievementRepository.findOne).toHaveBeenCalledWith({
+        where: { id: achievementId, isActive: true },
+      });
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        `achievement:${achievementId}`,
+        mockAchievement,
+        300,
+      );
+      expect(result).toEqual(mockAchievement);
+    });
+
+    it('should return null if achievement not found', async () => {
+      cacheManager.get.mockResolvedValue(undefined);
+      achievementRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.getAchievementById(achievementId);
+
+      expect(result).toBeNull();
+      expect(cacheManager.set).not.toHaveBeenCalled();
+    });
+
+    it('should handle cache errors gracefully', async () => {
+      cacheManager.get.mockRejectedValue(new Error('Cache error'));
+      achievementRepository.findOne.mockResolvedValue(mockAchievement);
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = await service.getAchievementById(achievementId);
+
+      expect(result).toEqual(mockAchievement);
+      expect(achievementRepository.findOne).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith('Cache get error:', expect.any(Error));
+
+      consoleSpy.mockRestore();
+    });
+  });
+
   describe('isAchievementUnlocked', () => {
     const userId = '123e4567-e89b-12d3-a456-426614174000';
     const achievementId = '123e4567-e89b-12d3-a456-426614174001';
@@ -513,6 +569,136 @@ describe('AchievementService', () => {
 
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(100); // Should be capped at 100
       expect(result.limit).toBe(100);
+    });
+
+    it('should handle zero and negative limit values', async () => {
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
+      cacheManager.get.mockResolvedValue(null);
+
+      const mockQueryBuilder = {
+        createQueryBuilder: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
+        getMany: jest.fn().mockResolvedValue([]),
+      } as any;
+
+      userAchievementRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      // Test with zero limit - should default to 20
+      const result1 = await service.getUserAchievements(userId, { page: 1, limit: 0 });
+      expect(result1.limit).toBe(20); // Should be normalized to default 20
+
+      // Test with negative limit - should default to 20
+      const result2 = await service.getUserAchievements(userId, { page: 1, limit: -5 });
+      expect(result2.limit).toBe(20); // Should be normalized to default 20
+    });
+
+    it('should handle cache set errors in getUserAchievements', async () => {
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
+      cacheManager.get.mockResolvedValue(null);
+      cacheManager.set.mockRejectedValue(new Error('Cache set error'));
+
+      const mockQueryBuilder = {
+        createQueryBuilder: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        getMany: jest.fn().mockResolvedValue([mockUserAchievement]),
+      } as any;
+
+      userAchievementRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getUserAchievements(userId);
+
+      expect(result.achievements).toHaveLength(1);
+      expect(cacheManager.set).toHaveBeenCalled();
+    });
+
+    it('should handle cache get errors in getUserAchievements', async () => {
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
+      cacheManager.get.mockRejectedValue(new Error('Cache get error'));
+
+      const mockQueryBuilder = {
+        createQueryBuilder: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        getMany: jest.fn().mockResolvedValue([mockUserAchievement]),
+      } as any;
+
+      userAchievementRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getUserAchievements(userId);
+
+      expect(result.achievements).toHaveLength(1);
+    });
+
+    it('should handle clearUserCache errors gracefully', async () => {
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
+      const achievementId = '123e4567-e89b-12d3-a456-426614174001';
+
+      achievementRepository.findOne.mockResolvedValue(mockAchievement);
+      userAchievementRepository.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(mockUserAchievement);
+      userAchievementRepository.create.mockReturnValue(mockUserAchievement);
+      userAchievementRepository.save.mockResolvedValue(mockUserAchievement);
+      cacheManager.del.mockRejectedValue(new Error('Cache delete error'));
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = await service.unlockAchievement(userId, achievementId);
+
+      expect(result.id).toBe(mockUserAchievement.id);
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to clear user cache:', expect.any(Error));
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle cache set errors in getAchievementById', async () => {
+      const achievementId = '123e4567-e89b-12d3-a456-426614174001';
+      cacheManager.get.mockResolvedValue(undefined);
+      cacheManager.set.mockRejectedValue(new Error('Cache set error'));
+      achievementRepository.findOne.mockResolvedValue(mockAchievement);
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = await service.getAchievementById(achievementId);
+
+      expect(result).toEqual(mockAchievement);
+      expect(consoleSpy).toHaveBeenCalledWith('Cache set error:', expect.any(Error));
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle undefined cache values correctly', async () => {
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
+      const achievementId = '123e4567-e89b-12d3-a456-426614174001';
+
+      cacheManager.get.mockResolvedValue(undefined);
+      userAchievementRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.isAchievementUnlocked(userId, achievementId);
+
+      expect(result).toBe(false);
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        `user:${userId}:achievement:${achievementId}:unlocked`,
+        false,
+        300,
+      );
     });
   });
 });

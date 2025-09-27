@@ -1,15 +1,27 @@
 # Achievement Service Tests
 
-This directory contains all tests for the Achievement Service.
+This directory contains comprehensive test suites for the Achievement Service, covering integration tests, performance tests, and error handling scenarios.
 
 ## Test Structure
 
-- `achievement.e2e-spec.ts` - Main API endpoint tests
-- `integration.e2e-spec.ts` - Full integration flow tests
-- `error-handling.e2e-spec.ts` - Error handling and edge case tests
-- `performance.e2e-spec.ts` - Performance and load tests
-- `test-utils.ts` - Test utilities and data factories
+### Core Test Files
+- `achievement.e2e-spec.ts` - Basic API endpoint tests
+- `integration.e2e-spec.ts` - Multi-user integration scenarios
+- `full-flow-integration.e2e-spec.ts` - Complete event → progress → achievement flows
+- `performance.e2e-spec.ts` - Performance, load, and stress testing
+- `error-handling.e2e-spec.ts` - Basic error handling scenarios
+- `comprehensive-error-handling.e2e-spec.ts` - Advanced error handling and edge cases
+- `integration-mvp.e2e-spec.ts` - MVP integration tests with other services
+- `app.e2e-spec.ts` - Basic application health tests
+
+### Test Configuration Files
+- `jest-e2e.json` - Main e2e test configuration
+- `jest-integration.json` - Integration test specific configuration
+- `jest-performance.json` - Performance test specific configuration
+- `test-setup.ts` - Global test setup and teardown
 - `test-database.config.ts` - Test database configuration
+- `test-database-setup.ts` - Database setup utilities
+- `test-utils.ts` - Test utilities and helper functions
 
 ## Quick Start
 
@@ -41,7 +53,7 @@ This directory contains all tests for the Achievement Service.
 - Docker and Docker Compose installed
 - Node.js and npm installed
 
-### Commands
+### Basic Commands
 ```bash
 # Start test database
 npm run test:db:start
@@ -49,29 +61,46 @@ npm run test:db:start
 # Run all e2e tests
 npm run test:e2e
 
-# Run specific test file
-npm run test:e2e -- achievement.e2e-spec.ts
-
-# Run specific test by name
-npm run test:e2e -- --testNamePattern="should return all achievements"
-
-# Run tests with coverage
-npm run test:e2e:cov
-
-# Run tests in watch mode
-npm run test:e2e:watch
-
 # Run integration tests only
 npm run test:integration
 
 # Run performance tests only
 npm run test:performance
 
+# Run error handling tests only
+npm run test:error-handling
+
+# Run full flow tests only
+npm run test:full-flow
+
+# Run with coverage
+npm run test:e2e:cov
+
+# Run in watch mode
+npm run test:e2e:watch
+npm run test:integration:watch
+npm run test:performance:watch
+
 # View database logs
 npm run test:db:logs
 
 # Stop test database
 npm run test:db:stop
+```
+
+### Advanced Commands
+```bash
+# Run specific test file
+npm run test:e2e -- achievement.e2e-spec.ts
+
+# Run tests matching pattern
+npm run test:e2e -- --testNamePattern="Performance"
+
+# Run tests with verbose output
+npm run test:e2e -- --verbose
+
+# Run tests with specific timeout
+npm run test:e2e -- --testTimeout=120000
 ```
 
 ## Test Database Setup
@@ -114,6 +143,65 @@ TEST_DB_NAME=achievement_service_test
 ```
 
 You can modify these values if needed for your environment.
+
+## Test Categories
+
+### 1. Integration Tests
+**Purpose:** Test complete flows from event to achievement unlock
+**Files:** `full-flow-integration.e2e-spec.ts`, `integration.e2e-spec.ts`
+**Coverage:**
+- Event → Progress Update → Achievement Unlock flow
+- Multi-user scenarios
+- Concurrent event processing
+- Data consistency verification
+- Complex multi-event flows
+
+### 2. Performance Tests
+**Purpose:** Validate system performance under load
+**Files:** `performance.e2e-spec.ts`
+**Coverage:**
+- Large dataset handling (100+ achievements, 1000+ users)
+- Concurrent request processing (1000+ simultaneous requests)
+- Cache effectiveness testing
+- Database query optimization
+- Memory and resource usage
+- Burst traffic patterns
+
+### 3. Error Handling Tests
+**Purpose:** Ensure robust error handling and edge case management
+**Files:** `error-handling.e2e-spec.ts`, `comprehensive-error-handling.e2e-spec.ts`
+**Coverage:**
+- Input validation (UUID formats, event types, data structures)
+- Database constraint violations
+- Network and protocol edge cases
+- Security scenarios (SQL injection, XSS, path traversal)
+- Resource exhaustion scenarios
+- Data consistency under stress
+
+### 4. MVP Integration Tests
+**Purpose:** Test integration with other MVP services
+**Files:** `integration-mvp.e2e-spec.ts`
+**Coverage:**
+- Payment Service integration
+- Review Service integration
+- Social Service integration
+- Library Service integration
+- Notification Service integration
+
+## Performance Benchmarks
+
+### Expected Performance Metrics
+- **API Response Time:** < 200ms for standard requests
+- **Concurrent Users:** Support 1000+ simultaneous users
+- **Event Processing:** 100+ events/second
+- **Database Queries:** < 500ms for complex joins
+- **Cache Hit Rate:** > 80% for frequently accessed data
+
+### Load Testing Scenarios
+- **Burst Traffic:** 100 requests in 1 second
+- **Sustained Load:** 1000 requests over 30 seconds
+- **Large Dataset:** 1000+ users with 50+ achievements each
+- **Complex Events:** Large event data (1MB+ payloads)
 
 ## Test Data
 

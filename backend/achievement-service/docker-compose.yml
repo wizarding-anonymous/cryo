@@ -6,21 +6,59 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: runner
     container_name: achievement-service
     ports:
       - "3003:3003"
     environment:
-      - NODE_ENV=production
-      - PORT=3003
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_NAME=achievement_db
-      - DATABASE_USER=achievement_user
-      - DATABASE_PASSWORD=achievement_password
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=your-jwt-secret-key
-      - CORS_ORIGIN=http://localhost:3000
+      # Application Configuration
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3003}
+      
+      # Database Configuration
+      - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+      - DATABASE_NAME=${DATABASE_NAME:-achievement_db}
+      - DATABASE_USER=${DATABASE_USER:-achievement_user}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-achievement_password}
+      - DATABASE_SSL=${DATABASE_SSL:-false}
+      - DATABASE_SYNCHRONIZE=${DATABASE_SYNCHRONIZE:-false}
+      - DATABASE_LOGGING=${DATABASE_LOGGING:-false}
+      
+      # Redis Configuration
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
+      - REDIS_TTL=${REDIS_TTL:-3600}
+      
+      # Security Configuration
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-key-change-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      
+      # CORS Configuration
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # Health Check Configuration
+      - HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-5000}
+      
+      # Rate Limiting Configuration
+      - RATE_LIMIT_TTL=${RATE_LIMIT_TTL:-60}
+      - RATE_LIMIT_LIMIT=${RATE_LIMIT_LIMIT:-100}
+      
+      # Cache Configuration
+      - CACHE_TTL=${CACHE_TTL:-300}
+      - CACHE_MAX=${CACHE_MAX:-1000}
+      
+      # MVP Service Integration URLs
+      - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL:-http://notification-service:3000}
+      - LIBRARY_SERVICE_URL=${LIBRARY_SERVICE_URL:-http://library-service:3000}
+      - PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL:-http://payment-service:3000}
+      - REVIEW_SERVICE_URL=${REVIEW_SERVICE_URL:-http://review-service:3000}
+      - SOCIAL_SERVICE_URL=${SOCIAL_SERVICE_URL:-http://social-service:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,77 +67,136 @@ services:
     networks:
       - achievement-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/api/v1/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    volumes:
+      - /tmp # Temporary files volume
 
   # PostgreSQL Database
   postgres:
     image: postgres:14-alpine
     container_name: achievement-postgres
     environment:
-      - POSTGRES_DB=achievement_db
-      - POSTGRES_USER=achievement_user
-      - POSTGRES_PASSWORD=achievement_password
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=ru_RU.UTF-8 --lc-ctype=ru_RU.UTF-8
+      - POSTGRES_DB=${DATABASE_NAME:-achievement_db}
+      - POSTGRES_USER=${DATABASE_USER:-achievement_user}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-achievement_password}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      - PGDATA=/var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      - "${DATABASE_EXTERNAL_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     networks:
       - achievement-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U achievement_user -d achievement_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-achievement_user} -d ${DATABASE_NAME:-achievement_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=100
+      -c shared_buffers=128MB
+      -c effective_cache_size=256MB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
 
   # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: achievement-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
       - achievement-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3
       start_period: 10s
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 200mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --tcp-keepalive 60
+      --timeout 300
 
   # Adminer для управления базой данных (опционально)
   adminer:
     image: adminer:4-standalone
     container_name: achievement-adminer
     ports:
-      - "8080:8080"
+      - "${ADMINER_PORT:-8080}:8080"
     environment:
       - ADMINER_DEFAULT_SERVER=postgres
+      - ADMINER_DESIGN=pepa-linha
     networks:
       - achievement-network
     restart: unless-stopped
     profiles:
       - admin
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
 
 volumes:
   postgres_data:
     driver: local
+    name: achievement_postgres_data
   redis_data:
     driver: local
+    name: achievement_redis_data
 
 networks:
   achievement-network:
     driver: bridge
     name: achievement-network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

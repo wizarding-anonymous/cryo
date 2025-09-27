@@ -1,15 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventService } from './event.service';
 import { ProgressService } from './progress.service';
+import { AchievementService } from './achievement.service';
 import { NotificationService } from './notification.service';
 import { LibraryService } from './library.service';
 import { EventType } from '../dto/update-progress.dto';
 import { UserProgressResponseDto, UserAchievementResponseDto } from '../dto';
-import { AchievementType } from '../entities/achievement.entity';
+import { AchievementType, Achievement } from '../entities/achievement.entity';
 
 describe('EventService', () => {
   let service: EventService;
   let progressService: jest.Mocked<ProgressService>;
+  let achievementService: jest.Mocked<AchievementService>;
   let notificationService: jest.Mocked<NotificationService>;
   let libraryService: jest.Mocked<LibraryService>;
 
@@ -33,6 +35,20 @@ describe('EventService', () => {
     targetValue: 1,
     progressPercentage: 100,
     updatedAt: new Date(),
+  };
+
+  const mockAchievement: Achievement = {
+    id: 'achievement-1',
+    name: 'Первая покупка',
+    description: 'Купите свою первую игру',
+    type: AchievementType.FIRST_PURCHASE,
+    iconUrl: 'icon.png',
+    points: 10,
+    condition: { type: 'first_time', field: 'gamesPurchased' },
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    userAchievements: [],
   };
 
   const mockUserAchievement: UserAchievementResponseDto = {
@@ -60,6 +76,14 @@ describe('EventService', () => {
       checkAchievements: jest.fn(),
     };
 
+    const mockAchievementService = {
+      getAchievementById: jest.fn(),
+      getAllAchievements: jest.fn(),
+      getUserAchievements: jest.fn(),
+      unlockAchievement: jest.fn(),
+      isAchievementUnlocked: jest.fn(),
+    };
+
     const mockNotificationService = {
       sendAchievementUnlockedNotification: jest.fn(),
       sendBatchNotifications: jest.fn(),
@@ -80,6 +104,10 @@ describe('EventService', () => {
           useValue: mockProgressService,
         },
         {
+          provide: AchievementService,
+          useValue: mockAchievementService,
+        },
+        {
           provide: NotificationService,
           useValue: mockNotificationService,
         },
@@ -92,6 +120,7 @@ describe('EventService', () => {
 
     service = module.get<EventService>(EventService);
     progressService = module.get(ProgressService);
+    achievementService = module.get(AchievementService);
     notificationService = module.get(NotificationService);
     libraryService = module.get(LibraryService);
   });
@@ -105,8 +134,33 @@ describe('EventService', () => {
       const userId = 'user-1';
       const gameId = 'game-1';
 
+      libraryService.getUserGameCount.mockResolvedValue(1);
       progressService.updateProgress.mockResolvedValue([mockUserProgress]);
       progressService.checkAchievements.mockResolvedValue([mockUserAchievement]);
+
+      await service.handleGamePurchase(userId, gameId);
+
+      expect(libraryService.getUserGameCount).toHaveBeenCalledWith(userId);
+      expect(progressService.updateProgress).toHaveBeenCalledWith(
+        userId,
+        EventType.GAME_PURCHASE,
+        expect.objectContaining({
+          gameId,
+          timestamp: expect.any(String),
+          gameCount: 1,
+          isFirstPurchase: true,
+        }),
+      );
+      expect(progressService.checkAchievements).toHaveBeenCalledWith(userId);
+    });
+
+    it('should handle game purchase with multiple games', async () => {
+      const userId = 'user-1';
+      const gameId = 'game-1';
+
+      libraryService.getUserGameCount.mockResolvedValue(5);
+      progressService.updateProgress.mockResolvedValue([mockUserProgress]);
+      progressService.checkAchievements.mockResolvedValue([]);
 
       await service.handleGamePurchase(userId, gameId);
 
@@ -115,10 +169,31 @@ describe('EventService', () => {
         EventType.GAME_PURCHASE,
         expect.objectContaining({
           gameId,
-          timestamp: expect.any(String),
+          gameCount: 5,
+          isFirstPurchase: false,
         }),
       );
-      expect(progressService.checkAchievements).toHaveBeenCalledWith(userId);
+    });
+
+    it('should handle library service errors gracefully', async () => {
+      const userId = 'user-1';
+      const gameId = 'game-1';
+
+      libraryService.getUserGameCount.mockResolvedValue(0); // Return 0 instead of throwing
+      progressService.updateProgress.mockResolvedValue([mockUserProgress]);
+      progressService.checkAchievements.mockResolvedValue([]);
+
+      await service.handleGamePurchase(userId, gameId);
+
+      expect(progressService.updateProgress).toHaveBeenCalledWith(
+        userId,
+        EventType.GAME_PURCHASE,
+        expect.objectContaining({
+          gameId,
+          gameCount: 0, // Should default to 0 when library service fails
+          isFirstPurchase: false,
+        }),
+      );
     });
 
     it('should handle errors during game purchase processing', async () => {
@@ -126,6 +201,7 @@ describe('EventService', () => {
       const gameId = 'game-1';
       const error = new Error('Database error');
 
+      libraryService.getUserGameCount.mockResolvedValue(1);
       progressService.updateProgress.mockRejectedValue(error);
 
       await expect(service.handleGamePurchase(userId, gameId)).rejects.toThrow('Database error');
@@ -135,6 +211,7 @@ describe('EventService', () => {
       const userId = 'user-1';
       const gameId = 'game-1';
 
+      libraryService.getUserGameCount.mockResolvedValue(1);
       progressService.updateProgress.mockResolvedValue([mockUserProgress]);
       progressService.checkAchievements.mockResolvedValue([mockUserAchievement]);
 
@@ -216,21 +293,48 @@ describe('EventService', () => {
       const userId = 'user-1';
       const achievementId = 'achievement-1';
 
+      achievementService.getAchievementById.mockResolvedValue(mockAchievement);
+      notificationService.sendAchievementUnlockedNotification.mockResolvedValue({
+        success: true,
+        message: 'Notification sent successfully',
+      });
+
       await expect(service.notifyAchievementUnlocked(userId, achievementId)).resolves.not.toThrow();
+
+      expect(achievementService.getAchievementById).toHaveBeenCalledWith(achievementId);
+      expect(notificationService.sendAchievementUnlockedNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          achievementId,
+          achievementName: mockAchievement.name,
+          achievementDescription: mockAchievement.description,
+          achievementPoints: mockAchievement.points,
+          notificationType: 'achievement_unlocked',
+        }),
+      );
     });
 
     it('should not throw error if notification fails', async () => {
       const userId = 'user-1';
       const achievementId = 'achievement-1';
 
-      // Mock private method to throw error
-      const recordEventSpy = jest
-        .spyOn(service as any, 'recordAchievementUnlockEvent')
-        .mockRejectedValue(new Error('Notification service down'));
+      achievementService.getAchievementById.mockResolvedValue(mockAchievement);
+      notificationService.sendAchievementUnlockedNotification.mockRejectedValue(
+        new Error('Notification service down'),
+      );
+
+      await expect(service.notifyAchievementUnlocked(userId, achievementId)).resolves.not.toThrow();
+    });
+
+    it('should handle achievement not found', async () => {
+      const userId = 'user-1';
+      const achievementId = 'achievement-1';
+
+      achievementService.getAchievementById.mockResolvedValue(null);
 
       await expect(service.notifyAchievementUnlocked(userId, achievementId)).resolves.not.toThrow();
 
-      recordEventSpy.mockRestore();
+      expect(notificationService.sendAchievementUnlockedNotification).not.toHaveBeenCalled();
     });
   });
 
@@ -305,6 +409,12 @@ describe('EventService', () => {
       const userId = 'user-1';
       const achievementId = 'achievement-1';
 
+      achievementService.getAchievementById.mockResolvedValue(mockAchievement);
+      notificationService.sendAchievementUnlockedNotification.mockResolvedValue({
+        success: true,
+        message: 'Notification sent successfully',
+      });
+
       // Test private method through public interface
       await expect(service.notifyAchievementUnlocked(userId, achievementId)).resolves.not.toThrow();
     });
@@ -313,14 +423,85 @@ describe('EventService', () => {
       const userId = 'user-1';
       const achievementId = 'achievement-1';
 
-      // Mock the private method to throw an error
-      const recordEventSpy = jest
-        .spyOn(service as any, 'recordAchievementUnlockEvent')
-        .mockRejectedValue(new Error('Notification service unavailable'));
+      achievementService.getAchievementById.mockResolvedValue(mockAchievement);
+      notificationService.sendAchievementUnlockedNotification.mockResolvedValue({
+        success: false,
+        message: 'Notification failed',
+      });
+
+      await expect(service.notifyAchievementUnlocked(userId, achievementId)).resolves.not.toThrow();
+    });
+
+    it('should handle recordAchievementUnlockEvent method', async () => {
+      const userId = 'user-1';
+      const achievementId = 'achievement-1';
+
+      achievementService.getAchievementById.mockResolvedValue(mockAchievement);
+      notificationService.sendAchievementUnlockedNotification.mockResolvedValue({
+        success: true,
+        message: 'Notification sent successfully',
+      });
+
+      // Access private method through reflection
+      const recordEventSpy = jest.spyOn(service as any, 'recordAchievementUnlockEvent');
+
+      await service.notifyAchievementUnlocked(userId, achievementId);
+
+      expect(recordEventSpy).toHaveBeenCalledWith(userId, achievementId);
+    });
+  });
+
+  describe('additional edge cases', () => {
+    it('should handle empty progress updates', async () => {
+      const userId = 'user-1';
+      const gameId = 'game-1';
+
+      libraryService.getUserGameCount.mockResolvedValue(1);
+      progressService.updateProgress.mockResolvedValue([]);
+      progressService.checkAchievements.mockResolvedValue([]);
+
+      await expect(service.handleGamePurchase(userId, gameId)).resolves.not.toThrow();
+    });
+
+    it('should handle null progress updates', async () => {
+      const userId = 'user-1';
+      const gameId = 'game-1';
+
+      libraryService.getUserGameCount.mockResolvedValue(1);
+      progressService.updateProgress.mockResolvedValue(null as any);
+      progressService.checkAchievements.mockResolvedValue([]);
+
+      await expect(service.handleGamePurchase(userId, gameId)).resolves.not.toThrow();
+    });
+
+    it('should handle undefined achievement in notification', async () => {
+      const userId = 'user-1';
+      const achievementId = 'achievement-1';
+
+      achievementService.getAchievementById.mockResolvedValue(undefined as any);
 
       await expect(service.notifyAchievementUnlocked(userId, achievementId)).resolves.not.toThrow();
 
-      recordEventSpy.mockRestore();
+      expect(notificationService.sendAchievementUnlockedNotification).not.toHaveBeenCalled();
+    });
+
+    it('should handle notification service returning success false', async () => {
+      const userId = 'user-1';
+      const achievementId = 'achievement-1';
+
+      achievementService.getAchievementById.mockResolvedValue(mockAchievement);
+      notificationService.sendAchievementUnlockedNotification.mockResolvedValue({
+        success: false,
+        message: 'Service unavailable',
+      });
+
+      const loggerSpy = jest.spyOn(service['logger'], 'warn').mockImplementation();
+
+      await service.notifyAchievementUnlocked(userId, achievementId);
+
+      expect(loggerSpy).toHaveBeenCalledWith('Failed to send notification: Service unavailable');
+
+      loggerSpy.mockRestore();
     });
   });
 

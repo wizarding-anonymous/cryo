@@ -6,10 +6,14 @@ describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;
   let mockExecutionContext: Partial<ExecutionContext>;
   let mockRequest: any;
+  let mockReflector: jest.Mocked<Reflector>;
 
   beforeEach(() => {
-    const reflector = new Reflector();
-    guard = new JwtAuthGuard(reflector);
+    mockReflector = {
+      getAllAndOverride: jest.fn().mockReturnValue(false), // Default to not public
+    } as any;
+
+    guard = new JwtAuthGuard(mockReflector);
     mockRequest = {
       headers: {},
     };
@@ -18,6 +22,8 @@ describe('JwtAuthGuard', () => {
       switchToHttp: jest.fn().mockReturnValue({
         getRequest: jest.fn().mockReturnValue(mockRequest),
       }),
+      getHandler: jest.fn(),
+      getClass: jest.fn(),
     };
   });
 
@@ -71,5 +77,36 @@ describe('JwtAuthGuard', () => {
 
     expect(result).toBe(true);
     expect(mockRequest.user.id).toBe('user-456');
+  });
+
+  it('should return true for public routes without checking token', () => {
+    mockReflector.getAllAndOverride.mockReturnValue(true); // Mark as public
+
+    const result = guard.canActivate(mockExecutionContext as ExecutionContext);
+
+    expect(result).toBe(true);
+    expect(mockReflector.getAllAndOverride).toHaveBeenCalled();
+  });
+
+  it('should handle token with userId field instead of sub', () => {
+    const payload = { userId: 'user-789' };
+    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64');
+    const mockToken = `header.${encodedPayload}.signature`;
+
+    mockRequest.headers.authorization = `Bearer ${mockToken}`;
+
+    const result = guard.canActivate(mockExecutionContext as ExecutionContext);
+
+    expect(result).toBe(true);
+    expect(mockRequest.user.id).toBe('user-789');
+  });
+
+  it('should fallback to mock-user-id when token parsing fails', () => {
+    mockRequest.headers.authorization = 'Bearer invalid.token.format';
+
+    const result = guard.canActivate(mockExecutionContext as ExecutionContext);
+
+    expect(result).toBe(true);
+    expect(mockRequest.user.id).toBe('mock-user-id');
   });
 });

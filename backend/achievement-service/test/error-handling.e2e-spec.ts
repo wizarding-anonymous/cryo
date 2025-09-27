@@ -8,6 +8,7 @@ import { AchievementModule } from '../src/achievement/achievement.module';
 import { testDatabaseConfig } from './test-database.config';
 import { seedTestData, cleanupTestData } from './test-utils';
 import { EventType } from '../src/achievement/dto/update-progress.dto';
+import { UserProgressResponseDto } from '../src/achievement/dto/user-progress-response.dto';
 
 describe('Error Handling and Edge Cases (e2e)', () => {
   let app: INestApplication;
@@ -411,7 +412,7 @@ describe('Error Handling and Edge Cases (e2e)', () => {
         .expect(200);
 
       const gamesPurchasedProgress = progressResponse.body.find(
-        p => p.achievement.type === 'games_purchased',
+        (p: UserProgressResponseDto) => p.achievement.type === 'games_purchased',
       );
       expect(gamesPurchasedProgress).toBeDefined();
       expect(gamesPurchasedProgress.currentValue).toBe(5);

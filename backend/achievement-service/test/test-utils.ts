@@ -107,6 +107,7 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
     await userAchievementRepo.clear();
     await achievementRepo.clear();
   } catch (error) {
-    console.warn('Error during test cleanup:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn('Error during test cleanup:', errorMessage);
   }
 }

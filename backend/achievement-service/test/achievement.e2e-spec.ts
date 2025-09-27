@@ -8,6 +8,8 @@ import { AchievementModule } from '../src/achievement/achievement.module';
 import { testDatabaseConfig } from './test-database.config';
 import { seedTestData, cleanupTestData } from './test-utils';
 import { EventType } from '../src/achievement/dto/update-progress.dto';
+import { UserProgressResponseDto } from '../src/achievement/dto/user-progress-response.dto';
+import { UserAchievementResponseDto } from '../src/achievement/dto/user-achievement-response.dto';
 
 describe('Achievement API (e2e)', () => {
   let app: INestApplication;
@@ -277,7 +279,9 @@ describe('Achievement API (e2e)', () => {
       expect(response.body.length).toBeGreaterThan(0);
 
       // Check if progress was updated
-      const progressItem = response.body.find(p => p.achievement.type === 'first_purchase');
+      const progressItem = response.body.find(
+        (p: UserProgressResponseDto) => p.achievement.type === 'first_purchase',
+      );
       expect(progressItem).toBeDefined();
       expect(progressItem.currentValue).toBe(1);
     });
@@ -295,7 +299,9 @@ describe('Achievement API (e2e)', () => {
       expect(response.body).toBeInstanceOf(Array);
 
       // Check if progress was updated
-      const progressItem = response.body.find(p => p.achievement.type === 'first_review');
+      const progressItem = response.body.find(
+        (p: UserProgressResponseDto) => p.achievement.type === 'first_review',
+      );
       expect(progressItem).toBeDefined();
       expect(progressItem.currentValue).toBe(1);
     });
@@ -313,7 +319,9 @@ describe('Achievement API (e2e)', () => {
       expect(response.body).toBeInstanceOf(Array);
 
       // Check if progress was updated
-      const progressItem = response.body.find(p => p.achievement.type === 'first_friend');
+      const progressItem = response.body.find(
+        (p: UserProgressResponseDto) => p.achievement.type === 'first_friend',
+      );
       expect(progressItem).toBeDefined();
       expect(progressItem.currentValue).toBe(1);
     });
@@ -366,7 +374,7 @@ describe('Achievement API (e2e)', () => {
 
       // Verify progress was updated
       const firstPurchaseProgress = progressResponse.body.find(
-        p => p.achievement.type === 'first_purchase',
+        (p: UserProgressResponseDto) => p.achievement.type === 'first_purchase',
       );
       expect(firstPurchaseProgress).toBeDefined();
       expect(firstPurchaseProgress.currentValue).toBe(1);
@@ -399,7 +407,7 @@ describe('Achievement API (e2e)', () => {
 
       expect(finalAchievementsResponse.body.total).toBe(2); // first_purchase + games_purchased
       const fiveGamesAchievement = finalAchievementsResponse.body.data.find(
-        a => a.achievement.type === 'games_purchased',
+        (a: UserAchievementResponseDto) => a.achievement.type === 'games_purchased',
       );
       expect(fiveGamesAchievement).toBeDefined();
     });
@@ -433,7 +441,7 @@ describe('Achievement API (e2e)', () => {
         .expect(200);
 
       const gamesPurchasedProgress = progressResponse.body.find(
-        p => p.achievement.type === 'games_purchased',
+        (p: UserProgressResponseDto) => p.achievement.type === 'games_purchased',
       );
       expect(gamesPurchasedProgress).toBeDefined();
       expect(gamesPurchasedProgress.currentValue).toBe(3);

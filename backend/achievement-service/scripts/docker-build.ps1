@@ -1,68 +1,95 @@
 # Docker Build Script for Achievement Service (PowerShell)
+# Usage: .\scripts\docker-build.ps1 [Environment] [Tag]
 
 param(
-    [string]$Tag = "latest",
     [string]$Environment = "production",
-    [switch]$Push = $false,
-    [switch]$Help = $false
+    [string]$Tag = "latest",
+    [string]$Registry = $env:DOCKER_REGISTRY
 )
 
-# Show help
-if ($Help) {
-    Write-Host "Usage: .\docker-build.ps1 [OPTIONS]"
-    Write-Host "Options:"
-    Write-Host "  -Tag TAG           Docker image tag (default: latest)"
-    Write-Host "  -Environment ENV   Environment (default: production)"
-    Write-Host "  -Push              Push image to registry"
-    Write-Host "  -Help              Show this help message"
-    exit 0
-}
+# Set error action preference
+$ErrorActionPreference = "Stop"
 
+# Constants
 $ImageName = "achievement-service"
 
-Write-Host "Building Achievement Service Docker image..." -ForegroundColor Green
-Write-Host "Image: $ImageName`:$Tag" -ForegroundColor Yellow
-Write-Host "Environment: $Environment" -ForegroundColor Yellow
+# Colors for output
+function Write-ColorOutput($ForegroundColor) {
+    $fc = $host.UI.RawUI.ForegroundColor
+    $host.UI.RawUI.ForegroundColor = $ForegroundColor
+    if ($args) {
+        Write-Output $args
+    } else {
+        $input | Write-Output
+    }
+    $host.UI.RawUI.ForegroundColor = $fc
+}
 
-# Build the Docker image
-Write-Host "Step 1: Building Docker image" -ForegroundColor Green
-$buildArgs = @(
-    "build",
-    "--build-arg", "NODE_ENV=$Environment",
-    "-t", "$ImageName`:$Tag",
-    "-f", "Dockerfile",
-    "."
-)
+Write-ColorOutput Green "🐳 Building Achievement Service Docker Image"
+Write-ColorOutput Yellow "Environment: $Environment"
+Write-ColorOutput Yellow "Tag: $Tag"
 
-$buildResult = Start-Process -FilePath "docker" -ArgumentList $buildArgs -Wait -PassThru -NoNewWindow
+# Validate environment
+switch ($Environment.ToLower()) {
+    { $_ -in @("development", "dev") } {
+        $Dockerfile = "Dockerfile"
+        $Target = "builder"
+    }
+    { $_ -in @("staging", "stage") } {
+        $Dockerfile = "Dockerfile"
+        $Target = "runner"
+    }
+    { $_ -in @("production", "prod") } {
+        $Dockerfile = "Dockerfile"
+        $Target = "runner"
+    }
+    default {
+        Write-ColorOutput Red "❌ Invalid environment: $Environment"
+        Write-Output "Valid environments: development, staging, production"
+        exit 1
+    }
+}
 
-if ($buildResult.ExitCode -eq 0) {
-    Write-Host "✓ Docker image built successfully" -ForegroundColor Green
-} else {
-    Write-Host "✗ Docker build failed" -ForegroundColor Red
+# Build image
+Write-ColorOutput Green "📦 Building Docker image..."
+try {
+    docker build `
+        --file $Dockerfile `
+        --target $Target `
+        --tag "${ImageName}:${Tag}" `
+        --tag "${ImageName}:${Environment}-${Tag}" `
+        --build-arg NODE_ENV=$Environment `
+        .
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "Docker build failed"
+    }
+} catch {
+    Write-ColorOutput Red "❌ Build failed: $_"
     exit 1
 }
 
-# Tag with environment
-if ($Tag -ne $Environment) {
-    Write-Host "Step 2: Tagging image for environment" -ForegroundColor Green
-    docker tag "$ImageName`:$Tag" "$ImageName`:$Environment"
+# Tag for registry if specified
+if ($Registry) {
+    Write-ColorOutput Green "🏷️  Tagging for registry: $Registry"
+    docker tag "${ImageName}:${Tag}" "${Registry}/${ImageName}:${Tag}"
+    docker tag "${ImageName}:${Tag}" "${Registry}/${ImageName}:${Environment}-${Tag}"
 }
 
 # Show image info
-Write-Host "Step 3: Image information" -ForegroundColor Green
-docker images $ImageName
+Write-ColorOutput Green "✅ Build completed successfully!"
+Write-ColorOutput Yellow "Image size:"
+docker images "${ImageName}:${Tag}" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
 
-# Push to registry if requested
-if ($Push) {
-    Write-Host "Step 4: Pushing to registry" -ForegroundColor Green
-    docker push "$ImageName`:$Tag"
-    if ($Tag -ne $Environment) {
-        docker push "$ImageName`:$Environment"
-    }
-    Write-Host "✓ Image pushed to registry" -ForegroundColor Green
+# Security scan (if trivy is available)
+if (Get-Command trivy -ErrorAction SilentlyContinue) {
+    Write-ColorOutput Green "🔍 Running security scan..."
+    trivy image --severity HIGH,CRITICAL "${ImageName}:${Tag}"
 }
 
-Write-Host "Build completed successfully!" -ForegroundColor Green
-Write-Host "To run the container:" -ForegroundColor Yellow
-Write-Host "docker run -p 3003:3003 --env-file .env.$Environment $ImageName`:$Tag"
+Write-ColorOutput Green "🚀 Ready to deploy!"
+Write-ColorOutput Yellow "To run: docker run -p 3003:3003 ${ImageName}:${Tag}"
+
+if ($Registry) {
+    Write-ColorOutput Yellow "To push: docker push ${Registry}/${ImageName}:${Tag}"
+}

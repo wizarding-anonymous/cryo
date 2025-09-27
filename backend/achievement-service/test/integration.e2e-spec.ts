@@ -2,14 +2,32 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
-import request from 'supertest';
+const request = require('supertest');
 import { DataSource } from 'typeorm';
 import { AchievementModule } from '../src/achievement/achievement.module';
 import { testDatabaseConfig } from './test-database.config';
-import { seedTestData, cleanupTestData, TestDataFactory } from './test-utils';
+import { seedTestData, cleanupTestData } from './test-utils';
 import { EventType } from '../src/achievement/dto/update-progress.dto';
-import { Achievement } from '../src/achievement/entities/achievement.entity';
-import { AchievementType } from '../src/achievement/entities/achievement.entity';
+
+// Type definitions for test responses
+interface ProgressResponse {
+  achievement: {
+    id: string;
+    type: string;
+  };
+  currentValue: number;
+  targetValue: number;
+  progressPercentage: number;
+}
+
+interface AchievementResponse {
+  achievement: {
+    id: string;
+    type: string;
+  };
+  userId: string;
+  unlockedAt: string;
+}
 
 describe('Integration Tests - Full Achievement Flow (e2e)', () => {
   let app: INestApplication;
@@ -92,7 +110,7 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
       // Step 4: Verify progress was created and achievement was unlocked
       expect(progressUpdate.body).toBeInstanceOf(Array);
       const firstPurchaseProgress = progressUpdate.body.find(
-        p => p.achievement.type === 'first_purchase',
+        (p: ProgressResponse) => p.achievement.type === 'first_purchase',
       );
       expect(firstPurchaseProgress).toBeDefined();
       expect(firstPurchaseProgress.currentValue).toBe(1);
@@ -115,7 +133,7 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
 
       expect(finalProgress.body.length).toBeGreaterThan(0);
       const purchaseProgress = finalProgress.body.find(
-        p => p.achievement.type === 'first_purchase',
+        (p: ProgressResponse) => p.achievement.type === 'first_purchase',
       );
       expect(purchaseProgress.currentValue).toBe(1);
     });
@@ -138,7 +156,7 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
 
       // Verify achievement was unlocked
       const firstReviewProgress = progressUpdate.body.find(
-        p => p.achievement.type === 'first_review',
+        (p: ProgressResponse) => p.achievement.type === 'first_review',
       );
       expect(firstReviewProgress).toBeDefined();
       expect(firstReviewProgress.progressPercentage).toBe(100);
@@ -168,7 +186,7 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
 
       // Verify achievement was unlocked
       const firstFriendProgress = progressUpdate.body.find(
-        p => p.achievement.type === 'first_friend',
+        (p: ProgressResponse) => p.achievement.type === 'first_friend',
       );
       expect(firstFriendProgress).toBeDefined();
       expect(firstFriendProgress.progressPercentage).toBe(100);
@@ -205,7 +223,7 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
 
         // Check progress for 5 games achievement
         const fiveGamesProgress = progressUpdate.body.find(
-          p => p.achievement.type === 'games_purchased',
+          (p: ProgressResponse) => p.achievement.type === 'games_purchased',
         );
         expect(fiveGamesProgress).toBeDefined();
         expect(fiveGamesProgress.currentValue).toBe(i);
@@ -225,7 +243,9 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
 
       expect(achievements.body.total).toBe(2); // first_purchase + games_purchased
 
-      const achievementTypes = achievements.body.data.map(a => a.achievement.type);
+      const achievementTypes = achievements.body.data.map(
+        (a: AchievementResponse) => a.achievement.type,
+      );
       expect(achievementTypes).toContain('first_purchase');
       expect(achievementTypes).toContain('games_purchased');
     });
@@ -260,7 +280,9 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
         .expect(200);
 
       // Should have progress for games_purchased achievement
-      const gamesProgress = progress.body.find(p => p.achievement.type === 'games_purchased');
+      const gamesProgress = progress.body.find(
+        (p: ProgressResponse) => p.achievement.type === 'games_purchased',
+      );
       expect(gamesProgress).toBeDefined();
       expect(gamesProgress.currentValue).toBe(3); // 3 game purchases
 
@@ -366,15 +388,12 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
 
       // User 1 should have progress for games
       const user1GamesProgress = user1Progress.body.find(
-        p => p.achievement.type === 'games_purchased',
+        (p: ProgressResponse) => p.achievement.type === 'games_purchased',
       );
       expect(user1GamesProgress).toBeDefined();
       expect(user1GamesProgress.currentValue).toBe(3);
 
       // User 2 should have progress for reviews (but no games progress)
-      const user2ReviewsProgress = user2Progress.body.find(
-        p => p.achievement.type === 'reviews_written',
-      );
       // Note: reviews_written achievement might not exist in seed data
       // This test verifies isolation between users
     });
@@ -401,7 +420,9 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
         .get(`/progress/user/${testUserId}`)
         .expect(200);
 
-      const gamesProgress = progress.body.find(p => p.achievement.type === 'games_purchased');
+      const gamesProgress = progress.body.find(
+        (p: ProgressResponse) => p.achievement.type === 'games_purchased',
+      );
       expect(gamesProgress).toBeDefined();
       expect(gamesProgress.currentValue).toBe(3);
 
@@ -411,7 +432,7 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
         .expect(200);
 
       const firstPurchaseAchievements = achievements.body.data.filter(
-        a => a.achievement.type === 'first_purchase',
+        (a: AchievementResponse) => a.achievement.type === 'first_purchase',
       );
       expect(firstPurchaseAchievements).toHaveLength(1); // Only one instance
     });
@@ -451,7 +472,9 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
         .get(`/progress/user/${testUserId}`)
         .expect(200);
 
-      const gamesProgress = finalProgress.body.find(p => p.achievement.type === 'games_purchased');
+      const gamesProgress = finalProgress.body.find(
+        (p: ProgressResponse) => p.achievement.type === 'games_purchased',
+      );
       expect(gamesProgress).toBeDefined();
       expect(gamesProgress.currentValue).toBe(4);
 
@@ -491,7 +514,9 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
         .get(`/progress/user/${testUserId}`)
         .expect(200);
 
-      const gamesProgress = progress.body.find(p => p.achievement.type === 'games_purchased');
+      const gamesProgress = progress.body.find(
+        (p: ProgressResponse) => p.achievement.type === 'games_purchased',
+      );
       expect(gamesProgress).toBeDefined();
       expect(gamesProgress.currentValue).toBe(10);
 
@@ -501,7 +526,9 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
         .expect(200);
 
       expect(achievements.body.total).toBe(2);
-      const achievementTypes = achievements.body.data.map(a => a.achievement.type);
+      const achievementTypes = achievements.body.data.map(
+        (a: AchievementResponse) => a.achievement.type,
+      );
       expect(achievementTypes).toContain('first_purchase');
       expect(achievementTypes).toContain('games_purchased');
     });
@@ -553,7 +580,7 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
       // Verify each unlocked achievement has corresponding progress
       for (const userAchievement of achievements.body.data) {
         const correspondingProgress = progress.body.find(
-          p => p.achievement.id === userAchievement.achievement.id,
+          (p: ProgressResponse) => p.achievement.id === userAchievement.achievement.id,
         );
 
         if (userAchievement.achievement.condition.type === 'first_time') {
@@ -563,7 +590,9 @@ describe('Integration Tests - Full Achievement Flow (e2e)', () => {
       }
 
       // Verify games purchased progress
-      const gamesProgress = progress.body.find(p => p.achievement.type === 'games_purchased');
+      const gamesProgress = progress.body.find(
+        (p: ProgressResponse) => p.achievement.type === 'games_purchased',
+      );
       expect(gamesProgress).toBeDefined();
       expect(gamesProgress.currentValue).toBe(3); // 3 game purchases
     });

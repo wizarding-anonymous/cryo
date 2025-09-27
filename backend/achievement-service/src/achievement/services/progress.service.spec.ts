@@ -280,6 +280,38 @@ describe('ProgressService', () => {
       expect(result).toBe(true);
     });
 
+    it('should evaluate first_time condition for all field types', async () => {
+      const evaluateCondition = (service as any).evaluateCondition.bind(service);
+
+      // Test gamesPurchased
+      let result = await evaluateCondition(
+        { type: 'first_time', field: 'gamesPurchased' },
+        { gamesPurchased: 1, reviewsWritten: 0, friendsAdded: 0 },
+      );
+      expect(result).toBe(true);
+
+      // Test reviewsWritten
+      result = await evaluateCondition(
+        { type: 'first_time', field: 'reviewsWritten' },
+        { gamesPurchased: 0, reviewsWritten: 1, friendsAdded: 0 },
+      );
+      expect(result).toBe(true);
+
+      // Test friendsAdded
+      result = await evaluateCondition(
+        { type: 'first_time', field: 'friendsAdded' },
+        { gamesPurchased: 0, reviewsWritten: 0, friendsAdded: 1 },
+      );
+      expect(result).toBe(true);
+
+      // Test unknown field
+      result = await evaluateCondition(
+        { type: 'first_time', field: 'unknownField' },
+        { gamesPurchased: 1, reviewsWritten: 0, friendsAdded: 0 },
+      );
+      expect(result).toBe(false);
+    });
+
     it('should evaluate count condition correctly', async () => {
       const condition: AchievementCondition = {
         type: 'count',
@@ -303,6 +335,24 @@ describe('ProgressService', () => {
       expect(result2).toBe(true);
     });
 
+    it('should handle count condition with missing target or field', async () => {
+      const evaluateCondition = (service as any).evaluateCondition.bind(service);
+
+      // Missing target
+      let result = await evaluateCondition(
+        { type: 'count', field: 'gamesPurchased' },
+        { gamesPurchased: 5, reviewsWritten: 0, friendsAdded: 0 },
+      );
+      expect(result).toBe(false);
+
+      // Missing field
+      result = await evaluateCondition(
+        { type: 'count', target: 5 },
+        { gamesPurchased: 5, reviewsWritten: 0, friendsAdded: 0 },
+      );
+      expect(result).toBe(false);
+    });
+
     it('should evaluate threshold condition correctly', async () => {
       const condition: AchievementCondition = {
         type: 'threshold',
@@ -319,6 +369,24 @@ describe('ProgressService', () => {
       const result = await (service as any).evaluateCondition(condition, userStats);
 
       expect(result).toBe(true);
+    });
+
+    it('should handle threshold condition with missing target or field', async () => {
+      const evaluateCondition = (service as any).evaluateCondition.bind(service);
+
+      // Missing target
+      let result = await evaluateCondition(
+        { type: 'threshold', field: 'reviewsWritten' },
+        { gamesPurchased: 0, reviewsWritten: 15, friendsAdded: 0 },
+      );
+      expect(result).toBe(false);
+
+      // Missing field
+      result = await evaluateCondition(
+        { type: 'threshold', target: 10 },
+        { gamesPurchased: 0, reviewsWritten: 15, friendsAdded: 0 },
+      );
+      expect(result).toBe(false);
     });
 
     it('should return false for unknown condition type', async () => {
@@ -372,6 +440,18 @@ describe('ProgressService', () => {
       expect(calculateValue({ type: AchievementType.FIRST_REVIEW }, userStats)).toBe(5);
       expect(calculateValue({ type: AchievementType.REVIEWS_WRITTEN }, userStats)).toBe(5);
       expect(calculateValue({ type: AchievementType.FIRST_FRIEND }, userStats)).toBe(2);
+    });
+
+    it('should return 0 for unknown achievement types', () => {
+      const userStats = {
+        gamesPurchased: 3,
+        reviewsWritten: 5,
+        friendsAdded: 2,
+      };
+
+      const calculateValue = (service as any).calculateProgressValue.bind(service);
+
+      expect(calculateValue({ type: 'UNKNOWN_TYPE' as any }, userStats)).toBe(0);
     });
   });
 
@@ -503,6 +583,35 @@ describe('ProgressService', () => {
     });
   });
 
+  describe('getAchievementById', () => {
+    it('should return achievement when found', async () => {
+      achievementRepository.findOne.mockResolvedValue(mockAchievement);
+
+      const result = await service.getAchievementById(mockAchievementId);
+
+      expect(result).toEqual(mockAchievement);
+      expect(achievementRepository.findOne).toHaveBeenCalledWith({
+        where: { id: mockAchievementId },
+      });
+    });
+
+    it('should return null when achievement not found', async () => {
+      achievementRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.getAchievementById(mockAchievementId);
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle database errors gracefully', async () => {
+      achievementRepository.findOne.mockRejectedValue(new Error('Database error'));
+
+      const result = await service.getAchievementById(mockAchievementId);
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('getUserStats', () => {
     it('should calculate user stats correctly', async () => {
       const getUserStats = (service as any).getUserStats.bind(service);
@@ -564,6 +673,108 @@ describe('ProgressService', () => {
         reviewsWritten: 0,
         friendsAdded: 0,
       });
+    });
+
+    it('should handle getUserStats with event type and data', async () => {
+      const getUserStats = (service as any).getUserStats.bind(service);
+
+      progressRepository.find.mockResolvedValue([]);
+
+      const stats1 = await getUserStats(mockUserId, EventType.GAME_PURCHASE, { gameId: 'game-1' });
+      expect(stats1.gamesPurchased).toBe(1);
+      expect(stats1.firstPurchaseDate).toBeInstanceOf(Date);
+
+      const stats2 = await getUserStats(mockUserId, EventType.REVIEW_CREATED, {
+        reviewId: 'review-1',
+      });
+      expect(stats2.reviewsWritten).toBe(1);
+      expect(stats2.firstReviewDate).toBeInstanceOf(Date);
+
+      const stats3 = await getUserStats(mockUserId, EventType.FRIEND_ADDED, {
+        friendId: 'friend-1',
+      });
+      expect(stats3.friendsAdded).toBe(1);
+      expect(stats3.firstFriendDate).toBeInstanceOf(Date);
+    });
+
+    it('should handle getUserStats without event type', async () => {
+      const getUserStats = (service as any).getUserStats.bind(service);
+
+      progressRepository.find.mockResolvedValue([]);
+
+      const stats = await getUserStats(mockUserId);
+      expect(stats).toEqual({
+        gamesPurchased: 0,
+        reviewsWritten: 0,
+        friendsAdded: 0,
+      });
+    });
+  });
+
+  describe('updateAchievementProgress', () => {
+    it('should create new progress record when none exists', async () => {
+      const updateAchievementProgress = (service as any).updateAchievementProgress.bind(service);
+      const userStats = {
+        gamesPurchased: 1,
+        reviewsWritten: 0,
+        friendsAdded: 0,
+      };
+
+      progressRepository.findOne.mockResolvedValue(null);
+      progressRepository.create.mockReturnValue(mockProgress);
+      progressRepository.save.mockResolvedValue(mockProgress);
+
+      const result = await updateAchievementProgress(mockUserId, mockAchievement, userStats);
+
+      expect(result).toEqual(mockProgress);
+      expect(progressRepository.create).toHaveBeenCalledWith({
+        userId: mockUserId,
+        achievementId: mockAchievementId,
+        currentValue: 1,
+        targetValue: 1,
+      });
+    });
+
+    it('should update existing progress record', async () => {
+      const updateAchievementProgress = (service as any).updateAchievementProgress.bind(service);
+      const userStats = {
+        gamesPurchased: 2,
+        reviewsWritten: 0,
+        friendsAdded: 0,
+      };
+
+      const existingProgress = {
+        ...mockProgress,
+        currentValue: 1,
+      };
+
+      progressRepository.findOne.mockResolvedValue(existingProgress);
+      progressRepository.save.mockResolvedValue({
+        ...existingProgress,
+        currentValue: 2,
+      });
+
+      const result = await updateAchievementProgress(mockUserId, mockAchievement, userStats);
+
+      expect(result.currentValue).toBe(2);
+      expect(progressRepository.save).toHaveBeenCalled();
+    });
+
+    it('should handle save errors gracefully', async () => {
+      const updateAchievementProgress = (service as any).updateAchievementProgress.bind(service);
+      const userStats = {
+        gamesPurchased: 1,
+        reviewsWritten: 0,
+        friendsAdded: 0,
+      };
+
+      progressRepository.findOne.mockResolvedValue(null);
+      progressRepository.create.mockReturnValue(mockProgress);
+      progressRepository.save.mockRejectedValue(new Error('Save error'));
+
+      const result = await updateAchievementProgress(mockUserId, mockAchievement, userStats);
+
+      expect(result).toBeNull();
     });
   });
 });

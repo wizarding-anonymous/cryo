@@ -1,0 +1,19 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": "(integration|full-flow).*\\.e2e-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": ["ts-jest", {
+      "transpilation": true
+    }]
+  },
+  "setupFilesAfterEnv": ["<rootDir>/test-setup.ts"],
+  "testTimeout": 60000,
+  "maxWorkers": 1,
+  "forceExit": true,
+  "detectOpenHandles": true,
+  "verbose": true,
+  "collectCoverage": false,
+  "testNamePattern": "Integration|Full Flow"
+}

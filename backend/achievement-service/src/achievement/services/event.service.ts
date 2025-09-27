@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ProgressService } from './progress.service';
+import { AchievementService } from './achievement.service';
 import { NotificationService, AchievementUnlockedNotification } from './notification.service';
 import { LibraryService } from './library.service';
 import { EventType } from '../dto/update-progress.dto';
@@ -13,6 +14,7 @@ export class EventService {
     private readonly progressService: ProgressService,
     private readonly notificationService: NotificationService,
     private readonly libraryService: LibraryService,
+    private readonly achievementService: AchievementService,
   ) {}
 
   /**
@@ -24,7 +26,7 @@ export class EventService {
     try {
       // Получаем дополнительную информацию из Library Service
       const gameCount = await this.libraryService.getUserGameCount(userId);
-      const isFirstPurchase = gameCount <= 1;
+      const isFirstPurchase = gameCount === 1;
 
       const eventData = {
         gameId,
@@ -161,7 +163,7 @@ export class EventService {
 
     try {
       // Получаем информацию о достижении для уведомления
-      const achievement = await this.progressService.getAchievementById(achievementId);
+      const achievement = await this.achievementService.getAchievementById(achievementId);
       if (!achievement) {
         this.logger.error(`Achievement ${achievementId} not found for notification`);
         return;

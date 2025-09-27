@@ -372,12 +372,354 @@ describe('Performance Tests (e2e)', () => {
       expect(endTime - startTime).toBeLessThan(400); // Should complete within 400ms
 
       // Verify that achievement data is properly joined
-      response.body.data.forEach(item => {
+      response.body.data.forEach((item: any) => {
         expect(item).toHaveProperty('achievement');
         expect(item.achievement).toHaveProperty('name');
         expect(item.achievement).toHaveProperty('description');
         expect(item.achievement).toHaveProperty('points');
       });
+    });
+  });
+
+  describe('Stress Testing with Large Datasets', () => {
+    it('should handle 1000+ concurrent progress updates', async () => {
+      const userCount = 50;
+      const eventsPerUser = 20;
+      const totalEvents = userCount * eventsPerUser;
+
+      // Create test achievements first
+      const achievements: Achievement[] = [];
+      for (let i = 1; i <= 10; i++) {
+        achievements.push(
+          TestDataFactory.createTestAchievement({
+            id: `achievement-${i.toString().padStart(3, '0')}`,
+            name: `Achievement ${i}`,
+            description: `Description for achievement ${i}`,
+            type: AchievementType.GAMES_PURCHASED,
+            condition: { type: 'count', target: i * 2 },
+            points: i * 10,
+          }),
+        );
+      }
+
+      const achievementRepo = dataSource.getRepository(Achievement);
+      await achievementRepo.save(achievements);
+
+      const promises = [];
+      const startTime = Date.now();
+
+      // Generate concurrent requests
+      for (let userId = 1; userId <= userCount; userId++) {
+        for (let eventId = 1; eventId <= eventsPerUser; eventId++) {
+          promises.push(
+            request(app.getHttpServer())
+              .post('/progress/update')
+              .send({
+                userId: `user-${userId.toString().padStart(3, '0')}`,
+                eventType: 'game_purchase',
+                eventData: {
+                  gameId: `game-${eventId}`,
+                  price: 1999,
+                  timestamp: new Date().toISOString(),
+                },
+              }),
+          );
+        }
+      }
+
+      const responses = await Promise.all(promises);
+      const endTime = Date.now();
+      const totalTime = endTime - startTime;
+
+      // All requests should succeed
+      const successfulResponses = responses.filter(r => r.status === 200);
+      expect(successfulResponses.length).toBe(totalEvents);
+
+      // Should complete within reasonable time (adjust based on your requirements)
+      expect(totalTime).toBeLessThan(30000); // 30 seconds for 1000 events
+
+      console.log(
+        `Processed ${totalEvents} events in ${totalTime}ms (${((totalEvents / totalTime) * 1000).toFixed(2)} events/sec)`,
+      );
+
+      // Verify data consistency for a sample of users
+      for (let userId = 1; userId <= Math.min(5, userCount); userId++) {
+        const userIdStr = `user-${userId.toString().padStart(3, '0')}`;
+        const progress = await request(app.getHttpServer())
+          .get(`/progress/user/${userIdStr}`)
+          .expect(200);
+
+        expect(progress.body.length).toBeGreaterThan(0);
+
+        // Check that progress values are consistent
+        const gamesProgress = progress.body.find(
+          (p: any) => p.achievement.type === 'games_purchased',
+        );
+        if (gamesProgress) {
+          expect(gamesProgress.currentValue).toBe(eventsPerUser);
+        }
+      }
+    });
+
+    it('should handle burst traffic patterns', async () => {
+      const burstSize = 100;
+      const burstCount = 5;
+      const delayBetweenBursts = 1000; // 1 second
+
+      // Create test achievements
+      const achievements: Achievement[] = [];
+      for (let i = 1; i <= 5; i++) {
+        achievements.push(
+          TestDataFactory.createTestAchievement({
+            id: `achievement-${i.toString().padStart(3, '0')}`,
+            name: `Achievement ${i}`,
+            description: `Description for achievement ${i}`,
+            type: AchievementType.GAMES_PURCHASED,
+            condition: { type: 'count', target: i * 10 },
+            points: i * 10,
+          }),
+        );
+      }
+
+      const achievementRepo = dataSource.getRepository(Achievement);
+      await achievementRepo.save(achievements);
+
+      const allResponseTimes = [];
+
+      for (let burst = 1; burst <= burstCount; burst++) {
+        const promises = [];
+        const burstStartTime = Date.now();
+
+        // Create burst of requests
+        for (let i = 1; i <= burstSize; i++) {
+          promises.push(
+            request(app.getHttpServer())
+              .post('/progress/update')
+              .send({
+                userId: `user-${(burst * 100 + i).toString().padStart(4, '0')}`,
+                eventType: 'game_purchase',
+                eventData: { gameId: `game-${i}`, price: 1999 },
+              }),
+          );
+        }
+
+        const responses = await Promise.all(promises);
+        const burstEndTime = Date.now();
+        const burstTime = burstEndTime - burstStartTime;
+
+        allResponseTimes.push(burstTime);
+
+        // All requests in burst should succeed
+        const successfulResponses = responses.filter(r => r.status === 200);
+        expect(successfulResponses.length).toBe(burstSize);
+
+        console.log(`Burst ${burst}: ${burstSize} requests in ${burstTime}ms`);
+
+        // Wait between bursts (except for the last one)
+        if (burst < burstCount) {
+          await new Promise(resolve => setTimeout(resolve, delayBetweenBursts));
+        }
+      }
+
+      // Verify system maintained performance across bursts
+      const avgResponseTime = allResponseTimes.reduce((a, b) => a + b, 0) / allResponseTimes.length;
+      const maxResponseTime = Math.max(...allResponseTimes);
+
+      expect(avgResponseTime).toBeLessThan(5000); // Average burst should complete within 5 seconds
+      expect(maxResponseTime).toBeLessThan(10000); // No burst should take more than 10 seconds
+
+      console.log(`Average burst time: ${avgResponseTime.toFixed(2)}ms, Max: ${maxResponseTime}ms`);
+    });
+
+    it('should maintain performance with large user base', async () => {
+      const userCount = 1000;
+      const achievementsPerUser = 10;
+
+      // Create achievements
+      const achievements: Achievement[] = [];
+      for (let i = 1; i <= 20; i++) {
+        achievements.push(
+          TestDataFactory.createTestAchievement({
+            id: `achievement-${i.toString().padStart(3, '0')}`,
+            name: `Achievement ${i}`,
+            description: `Description for achievement ${i}`,
+            type: i % 2 === 0 ? AchievementType.FIRST_PURCHASE : AchievementType.FIRST_REVIEW,
+            points: i * 10,
+          }),
+        );
+      }
+
+      const achievementRepo = dataSource.getRepository(Achievement);
+      await achievementRepo.save(achievements);
+
+      // Create user achievements for many users
+      const userAchievements: UserAchievement[] = [];
+      for (let userId = 1; userId <= userCount; userId++) {
+        for (let achId = 1; achId <= achievementsPerUser; achId++) {
+          userAchievements.push(
+            TestDataFactory.createTestUserAchievement({
+              id: `user-ach-${userId}-${achId}`,
+              userId: `user-${userId.toString().padStart(4, '0')}`,
+              achievementId: `achievement-${achId.toString().padStart(3, '0')}`,
+              unlockedAt: new Date(Date.now() - achId * 1000 * 60),
+            }),
+          );
+        }
+      }
+
+      // Insert in batches to avoid memory issues
+      const batchSize = 1000;
+      const userAchievementRepo = dataSource.getRepository(UserAchievement);
+
+      for (let i = 0; i < userAchievements.length; i += batchSize) {
+        const batch = userAchievements.slice(i, i + batchSize);
+        await userAchievementRepo.save(batch);
+      }
+
+      // Test query performance with large dataset
+      const testUserIds = ['user-0001', 'user-0500', 'user-1000'];
+
+      const queryTimes = [];
+
+      for (const userId of testUserIds) {
+        const startTime = Date.now();
+        const response = await request(app.getHttpServer())
+          .get(`/achievements/user/${userId}`)
+          .query({ limit: 20 })
+          .expect(200);
+        const endTime = Date.now();
+
+        const queryTime = endTime - startTime;
+        queryTimes.push(queryTime);
+
+        expect(response.body.data).toHaveLength(achievementsPerUser);
+        expect(response.body.total).toBe(achievementsPerUser);
+        expect(queryTime).toBeLessThan(1000); // Should complete within 1 second even with large dataset
+      }
+
+      const avgQueryTime = queryTimes.reduce((a, b) => a + b, 0) / queryTimes.length;
+      console.log(`Average query time with ${userCount} users: ${avgQueryTime.toFixed(2)}ms`);
+    });
+  });
+
+  describe('Memory and Resource Usage', () => {
+    it('should handle large progress tracking datasets efficiently', async () => {
+      const userCount = 100;
+      const progressEntriesPerUser = 50;
+
+      // Create achievements
+      const achievements: Achievement[] = [];
+      for (let i = 1; i <= 50; i++) {
+        achievements.push(
+          TestDataFactory.createTestAchievement({
+            id: `achievement-${i.toString().padStart(3, '0')}`,
+            name: `Achievement ${i}`,
+            description: `Description for achievement ${i}`,
+            type: AchievementType.GAMES_PURCHASED,
+            condition: { type: 'count', target: i },
+            points: i * 10,
+          }),
+        );
+      }
+
+      const achievementRepo = dataSource.getRepository(Achievement);
+      await achievementRepo.save(achievements);
+
+      // Create progress entries
+      const progressEntries: UserProgress[] = [];
+      for (let userId = 1; userId <= userCount; userId++) {
+        for (let progId = 1; progId <= progressEntriesPerUser; progId++) {
+          progressEntries.push(
+            TestDataFactory.createTestUserProgress({
+              id: `progress-${userId}-${progId}`,
+              userId: `user-${userId.toString().padStart(3, '0')}`,
+              achievementId: `achievement-${progId.toString().padStart(3, '0')}`,
+              currentValue: Math.floor(progId / 2),
+              targetValue: progId,
+            }),
+          );
+        }
+      }
+
+      // Insert in batches
+      const batchSize = 1000;
+      const progressRepo = dataSource.getRepository(UserProgress);
+
+      for (let i = 0; i < progressEntries.length; i += batchSize) {
+        const batch = progressEntries.slice(i, i + batchSize);
+        await progressRepo.save(batch);
+      }
+
+      // Test query performance
+      const testUserIds = ['user-001', 'user-050', 'user-100'];
+
+      for (const userId of testUserIds) {
+        const startTime = Date.now();
+        const response = await request(app.getHttpServer())
+          .get(`/progress/user/${userId}`)
+          .expect(200);
+        const endTime = Date.now();
+
+        expect(response.body).toHaveLength(progressEntriesPerUser);
+        expect(endTime - startTime).toBeLessThan(1000); // Should complete within 1 second
+      }
+    });
+
+    it('should handle complex event data without memory leaks', async () => {
+      const testUserId = '123e4567-e89b-12d3-a456-426614174000';
+      const eventCount = 100;
+
+      // Create achievement
+      const achievement = TestDataFactory.createTestAchievement({
+        id: 'achievement-001',
+        name: 'Test Achievement',
+        type: AchievementType.GAMES_PURCHASED,
+        condition: { type: 'count', target: eventCount },
+      });
+
+      const achievementRepo = dataSource.getRepository(Achievement);
+      await achievementRepo.save(achievement);
+
+      // Send events with large, complex data
+      for (let i = 1; i <= eventCount; i++) {
+        const complexEventData = {
+          gameId: `game-${i}`,
+          title: `Game ${i}`,
+          price: 1999 + i,
+          metadata: {
+            description: 'A'.repeat(1000), // Large string
+            tags: Array(100).fill(`tag-${i}`), // Large array
+            reviews: Array(50).fill({
+              userId: `reviewer-${i}`,
+              rating: 5,
+              text: 'Great game! '.repeat(20), // Repeated text
+            }),
+            statistics: {
+              playtime: i * 60,
+              achievements: Array(20).fill({ id: i, unlocked: true }),
+              scores: Array(100).fill(Math.random() * 1000),
+            },
+          },
+        };
+
+        await request(app.getHttpServer())
+          .post('/progress/update')
+          .send({
+            userId: testUserId,
+            eventType: 'game_purchase',
+            eventData: complexEventData,
+          })
+          .expect(200);
+      }
+
+      // Verify final state
+      const progress = await request(app.getHttpServer())
+        .get(`/progress/user/${testUserId}`)
+        .expect(200);
+
+      const gameProgress = progress.body.find((p: any) => p.achievement.id === 'achievement-001');
+      expect(gameProgress).toBeDefined();
+      expect(gameProgress.currentValue).toBe(eventCount);
     });
   });
 });

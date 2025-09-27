@@ -76,7 +76,7 @@ export class AchievementService {
     // Валидация и нормализация параметров пагинации
     const { page, limit, type, unlocked } = options;
     const normalizedPage = Math.max(1, page || 1);
-    const normalizedLimit = Math.min(100, Math.max(1, limit || 20));
+    const normalizedLimit = Math.min(100, Math.max(1, limit && limit > 0 ? limit : 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
 
     const cacheKey = `user:${userId}:achievements:${JSON.stringify(options)}`;
@@ -241,6 +241,38 @@ export class AchievementService {
     await this.clearUserCache(userId);
 
     return this.mapToUserAchievementResponseDto(fullUserAchievement);
+  }
+
+  /**
+   * Получить достижение по ID
+   */
+  async getAchievementById(achievementId: string): Promise<Achievement | null> {
+    const cacheKey = `achievement:${achievementId}`;
+
+    // Попытка получить из кеша
+    try {
+      const cached = await this.cacheManager.get<Achievement>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      console.warn('Cache get error:', error);
+    }
+
+    const achievement = await this.achievementRepository.findOne({
+      where: { id: achievementId, isActive: true },
+    });
+
+    if (achievement) {
+      // Кешируем результат на 5 минут
+      try {
+        await this.cacheManager.set(cacheKey, achievement, 300);
+      } catch (error) {
+        console.warn('Cache set error:', error);
+      }
+    }
+
+    return achievement;
   }
 
   /**

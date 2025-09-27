@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Achievement Service Production
+  # Achievement Service - Production
   achievement-service:
     build:
       context: .
@@ -14,52 +14,35 @@ services:
       - .env.production
     environment:
       - NODE_ENV=production
+      - PORT=3003
+      - DATABASE_HOST=postgres-prod
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${DATABASE_NAME:-achievement_db}
+      - DATABASE_USER=${DATABASE_USER:-achievement_user}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_SSL=${DATABASE_SSL:-true}
+      - DATABASE_SYNCHRONIZE=false
+      - DATABASE_LOGGING=false
+      - REDIS_HOST=redis-prod
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - LOG_LEVEL=${LOG_LEVEL:-warn}
+      - LOG_FORMAT=json
+      - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL}
+      - LIBRARY_SERVICE_URL=${LIBRARY_SERVICE_URL}
+      - PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL}
+      - REVIEW_SERVICE_URL=${REVIEW_SERVICE_URL}
+      - SOCIAL_SERVICE_URL=${SOCIAL_SERVICE_URL}
     depends_on:
-      postgres:
+      postgres-prod:
         condition: service_healthy
-      redis:
+      redis-prod:
         condition: service_healthy
     networks:
-      - achievement-network
-    restart: always
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/api/v1/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
-
-  # PostgreSQL Production
-  postgres:
-    image: postgres:14-alpine
-    container_name: achievement-postgres-prod
-    environment:
-      - POSTGRES_DB=achievement_db
-      - POSTGRES_USER=achievement_user
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
-    networks:
-      - achievement-network
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U achievement_user -d achievement_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      - achievement-prod-network
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -68,25 +51,92 @@ services:
         reservations:
           memory: 512M
           cpus: '0.5'
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Redis Production
-  redis:
+  # PostgreSQL Database - Production
+  postgres-prod:
+    image: postgres:14-alpine
+    container_name: achievement-postgres-prod
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME:-achievement_db}
+      - POSTGRES_USER=${DATABASE_USER:-achievement_user}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./scripts/backup:/backup
+    networks:
+      - achievement-prod-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-achievement_user} -d ${DATABASE_NAME:-achievement_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=200
+      -c shared_buffers=512MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c log_statement=all
+      -c log_duration=on
+      -c log_min_duration_statement=1000
+
+  # Redis Cache - Production
+  redis-prod:
     image: redis:7-alpine
     container_name: achievement-redis-prod
-    ports:
-      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - redis_prod_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
-      - achievement-network
-    restart: always
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+      - achievement-prod-network
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -95,14 +145,35 @@ services:
         reservations:
           memory: 256M
           cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 400mb
+      --maxmemory-policy allkeys-lru
 
 volumes:
   postgres_prod_data:
     driver: local
+    name: achievement_postgres_prod_data
   redis_prod_data:
     driver: local
+    name: achievement_redis_prod_data
 
 networks:
-  achievement-network:
+  achievement-prod-network:
     driver: bridge
     name: achievement-prod-network
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

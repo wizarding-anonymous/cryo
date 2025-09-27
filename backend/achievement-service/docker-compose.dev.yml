@@ -1,36 +1,118 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:14-alpine
-    container_name: achievement-postgres
-    environment:
-      POSTGRES_DB: achievement_service
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+  # Achievement Service - Development
+  achievement-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: achievement-service-dev
     ports:
-      - "5432:5432"
+      - "3003:3003"
+      - "9229:9229" # Debug port
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - DATABASE_HOST=postgres-dev
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=achievement_db_dev
+      - DATABASE_USER=achievement_user
+      - DATABASE_PASSWORD=achievement_password
+      - DATABASE_SSL=false
+      - DATABASE_SYNCHRONIZE=true
+      - DATABASE_LOGGING=true
+      - REDIS_HOST=redis-dev
+      - REDIS_PORT=6379
+      - JWT_SECRET=development-jwt-secret
+      - CORS_ORIGIN=http://localhost:3000,http://localhost:3001
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - achievement-dev-network
+    restart: unless-stopped
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./src:/app/src:ro
+      - ./package.json:/app/package.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./nest-cli.json:/app/nest-cli.json:ro
+    command: npm run start:debug
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database - Development
+  postgres-dev:
+    image: postgres:14-alpine
+    container_name: achievement-postgres-dev
+    environment:
+      - POSTGRES_DB=achievement_db_dev
+      - POSTGRES_USER=achievement_user
+      - POSTGRES_PASSWORD=achievement_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - achievement-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U achievement_user -d achievement_db_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
-  redis:
+  # Redis Cache - Development
+  redis-dev:
     image: redis:7-alpine
-    container_name: achievement-redis
+    container_name: achievement-redis-dev
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
-      - redis_data:/data
+      - redis_dev_data:/data
+    networks:
+      - achievement-dev-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+
+  # Adminer для управления базой данных
+  adminer-dev:
+    image: adminer:4-standalone
+    container_name: achievement-adminer-dev
+    ports:
+      - "8081:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres-dev
+      - ADMINER_DESIGN=pepa-linha
+    networks:
+      - achievement-dev-network
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
-  redis_data:
+  postgres_dev_data:
+    driver: local
+    name: achievement_postgres_dev_data
+  redis_dev_data:
+    driver: local
+    name: achievement_redis_dev_data
+
+networks:
+  achievement-dev-network:
+    driver: bridge
+    name: achievement-dev-network

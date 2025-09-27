@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Achievement, UserAchievement, UserProgress } from '../src/achievement/entities';
-import { AchievementType } from '../src/achievement/entities/achievement.entity';
+import {
+  AchievementType,
+  AchievementCondition,
+} from '../src/achievement/entities/achievement.entity';
 import { NotificationService } from '../src/achievement/services/notification.service';
 import { LibraryService } from '../src/achievement/services/library.service';
 
@@ -71,12 +74,12 @@ describe('MVP Integration (e2e)', () => {
   });
 
   async function createTestAchievements() {
-    const achievements = [
+    const achievements: Partial<Achievement>[] = [
       {
         name: 'Первая покупка',
         description: 'Купите свою первую игру',
         type: AchievementType.FIRST_PURCHASE,
-        condition: { type: 'first_time', field: 'gamesPurchased' },
+        condition: { type: 'first_time' as const },
         points: 10,
         isActive: true,
       },
@@ -84,7 +87,7 @@ describe('MVP Integration (e2e)', () => {
         name: 'Первый отзыв',
         description: 'Оставьте свой первый отзыв',
         type: AchievementType.FIRST_REVIEW,
-        condition: { type: 'first_time', field: 'reviewsWritten' },
+        condition: { type: 'first_time' as const },
         points: 5,
         isActive: true,
       },
@@ -92,7 +95,7 @@ describe('MVP Integration (e2e)', () => {
         name: 'Первый друг',
         description: 'Добавьте своего первого друга',
         type: AchievementType.FIRST_FRIEND,
-        condition: { type: 'first_time', field: 'friendsAdded' },
+        condition: { type: 'first_time' as const },
         points: 5,
         isActive: true,
       },
@@ -100,7 +103,7 @@ describe('MVP Integration (e2e)', () => {
         name: '5 игр',
         description: 'Купите 5 игр',
         type: AchievementType.GAMES_PURCHASED,
-        condition: { type: 'count', field: 'gamesPurchased', target: 5 },
+        condition: { type: 'count' as const, target: 5 },
         points: 25,
         isActive: true,
       },

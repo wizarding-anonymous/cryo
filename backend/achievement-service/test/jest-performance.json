@@ -1,0 +1,19 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": "performance.*\\.e2e-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": ["ts-jest", {
+      "transpilation": true
+    }]
+  },
+  "setupFilesAfterEnv": ["<rootDir>/test-setup.ts"],
+  "testTimeout": 120000,
+  "maxWorkers": 1,
+  "forceExit": true,
+  "detectOpenHandles": true,
+  "verbose": true,
+  "collectCoverage": false,
+  "testNamePattern": "Performance"
+}
