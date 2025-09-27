@@ -1,0 +1,390 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Social Service MVP - Integration Monitoring",
+    "tags": ["social-service", "mvp", "integrations"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Overview",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"social-service\"}",
+            "legendFormat": "Service Status",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(social_service_requests_total[5m])",
+            "legendFormat": "Requests/sec",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(social_service_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th Percentile Response Time",
+            "refId": "C"
+          },
+          {
+            "expr": "(rate(social_service_requests_total{status=~\"2..\"}[5m]) / rate(social_service_requests_total[5m])) * 100",
+            "legendFormat": "Success Rate %",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.8},
+                {"color": "green", "value": 0.95}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Integration Services Health",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "up{job=\"user-service\"}",
+            "legendFormat": "User Service",
+            "refId": "A"
+          },
+          {
+            "expr": "up{job=\"notification-service\"}",
+            "legendFormat": "Notification Service",
+            "refId": "B"
+          },
+          {
+            "expr": "up{job=\"achievement-service\"}",
+            "legendFormat": "Achievement Service",
+            "refId": "C"
+          },
+          {
+            "expr": "up{job=\"review-service\"}",
+            "legendFormat": "Review Service",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            },
+            "mappings": [
+              {"options": {"0": {"text": "DOWN"}}, "type": "value"},
+              {"options": {"1": {"text": "UP"}}, "type": "value"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Request Rate by Endpoint",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+        "targets": [
+          {
+            "expr": "rate(social_service_requests_total[5m])",
+            "legendFormat": "{{method}} {{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {"label": "Requests/sec", "min": 0},
+          {"show": false}
+        ],
+        "legend": {"show": true, "values": true, "current": true}
+      },
+      {
+        "id": 4,
+        "title": "Response Time Distribution",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(social_service_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(social_service_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(social_service_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "99th percentile",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Seconds", "min": 0},
+          {"show": false}
+        ],
+        "thresholds": [
+          {"value": 0.2, "colorMode": "critical", "op": "gt"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Integration Success Rates",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 22},
+        "targets": [
+          {
+            "expr": "social_service:user_service_success_rate",
+            "legendFormat": "User Service",
+            "refId": "A"
+          },
+          {
+            "expr": "social_service:notification_service_success_rate",
+            "legendFormat": "Notification Service",
+            "refId": "B"
+          },
+          {
+            "expr": "social_service:achievement_service_success_rate",
+            "legendFormat": "Achievement Service",
+            "refId": "C"
+          },
+          {
+            "expr": "social_service:review_service_success_rate",
+            "legendFormat": "Review Service",
+            "refId": "D"
+          }
+        ],
+        "yAxes": [
+          {"label": "Success Rate %", "min": 0, "max": 100},
+          {"show": false}
+        ],
+        "thresholds": [
+          {"value": 95, "colorMode": "critical", "op": "lt"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Integration Response Times",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(social_service_integration_duration_seconds_bucket{service=\"user-service\"}[5m]))",
+            "legendFormat": "User Service",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(social_service_integration_duration_seconds_bucket{service=\"notification-service\"}[5m]))",
+            "legendFormat": "Notification Service",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(social_service_integration_duration_seconds_bucket{service=\"achievement-service\"}[5m]))",
+            "legendFormat": "Achievement Service",
+            "refId": "C"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(social_service_integration_duration_seconds_bucket{service=\"review-service\"}[5m]))",
+            "legendFormat": "Review Service",
+            "refId": "D"
+          }
+        ],
+        "yAxes": [
+          {"label": "Seconds", "min": 0},
+          {"show": false}
+        ],
+        "thresholds": [
+          {"value": 1.0, "colorMode": "critical", "op": "gt"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Circuit Breaker Status",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+        "targets": [
+          {
+            "expr": "social_service_circuit_breaker_state{service=\"user-service\"}",
+            "legendFormat": "User Service",
+            "refId": "A"
+          },
+          {
+            "expr": "social_service_circuit_breaker_state{service=\"notification-service\"}",
+            "legendFormat": "Notification Service",
+            "refId": "B"
+          },
+          {
+            "expr": "social_service_circuit_breaker_state{service=\"achievement-service\"}",
+            "legendFormat": "Achievement Service",
+            "refId": "C"
+          },
+          {
+            "expr": "social_service_circuit_breaker_state{service=\"review-service\"}",
+            "legendFormat": "Review Service",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"options": {"0": {"text": "CLOSED", "color": "green"}}, "type": "value"},
+              {"options": {"1": {"text": "OPEN", "color": "red"}}, "type": "value"},
+              {"options": {"2": {"text": "HALF-OPEN", "color": "yellow"}}, "type": "value"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Business Metrics",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 38},
+        "targets": [
+          {
+            "expr": "rate(social_service_friend_requests_total[5m])",
+            "legendFormat": "Friend Requests/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(social_service_messages_total[5m])",
+            "legendFormat": "Messages/sec",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(social_service_status_updates_total[5m])",
+            "legendFormat": "Status Updates/sec",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Operations/sec", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Cache Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 38},
+        "targets": [
+          {
+            "expr": "(rate(social_service_cache_hits_total[5m]) / (rate(social_service_cache_hits_total[5m]) + rate(social_service_cache_misses_total[5m]))) * 100",
+            "legendFormat": "Cache Hit Rate %",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(social_service_cache_operations_total[5m])",
+            "legendFormat": "Cache Operations/sec",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {"label": "Percentage / Operations", "min": 0},
+          {"show": false}
+        ],
+        "thresholds": [
+          {"value": 70, "colorMode": "critical", "op": "lt"}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Database Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 46},
+        "targets": [
+          {
+            "expr": "rate(social_service_database_queries_total[5m])",
+            "legendFormat": "Queries/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(social_service_database_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th Percentile Query Time",
+            "refId": "B"
+          },
+          {
+            "expr": "social_service_database_connections_active",
+            "legendFormat": "Active Connections",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Queries/sec, Seconds, Connections", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Error Rates by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 46},
+        "targets": [
+          {
+            "expr": "(rate(social_service_requests_total{status=~\"4..\"}[5m]) / rate(social_service_requests_total[5m])) * 100",
+            "legendFormat": "4xx Errors %",
+            "refId": "A"
+          },
+          {
+            "expr": "(rate(social_service_requests_total{status=~\"5..\"}[5m]) / rate(social_service_requests_total[5m])) * 100",
+            "legendFormat": "5xx Errors %",
+            "refId": "B"
+          },
+          {
+            "expr": "(rate(social_service_integration_requests_total{status=~\"5..\"}[5m]) / rate(social_service_integration_requests_total[5m])) * 100",
+            "legendFormat": "Integration Errors %",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Error Rate %", "min": 0},
+          {"show": false}
+        ],
+        "thresholds": [
+          {"value": 5, "colorMode": "critical", "op": "gt"}
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Resource Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 54},
+        "targets": [
+          {
+            "expr": "(process_resident_memory_bytes{job=\"social-service\"} / 1024 / 1024)",
+            "legendFormat": "Memory Usage (MB)",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(process_cpu_seconds_total{job=\"social-service\"}[5m]) * 100",
+            "legendFormat": "CPU Usage %",
+            "refId": "B"
+          },
+          {
+            "expr": "process_open_fds{job=\"social-service\"}",
+            "legendFormat": "Open File Descriptors",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "MB, %, Count", "min": 0},
+          {"show": false}
+        ]
+      }
+    ]
+  }
+}

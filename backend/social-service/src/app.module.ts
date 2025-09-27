@@ -10,6 +10,7 @@ import { MessagesModule } from './messages/messages.module';
 import { StatusModule } from './status/status.module';
 import { HealthModule } from './common/health/health.module';
 import { ClientsModule } from './clients/clients.module';
+import { IntegrationModule } from './integration/integration.module';
 import { getDatabaseConfig } from './common/config/database.config';
 import { getRedisConfig } from './common/config/redis.config';
 
@@ -47,6 +48,7 @@ import { getRedisConfig } from './common/config/redis.config';
     FriendsModule,
     MessagesModule,
     StatusModule,
+    IntegrationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

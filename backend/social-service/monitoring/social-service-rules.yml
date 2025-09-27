@@ -1,0 +1,290 @@
+groups:
+  - name: social-service-alerts
+    rules:
+      # High Error Rate
+      - alert: SocialServiceHighErrorRate
+        expr: |
+          (
+            rate(social_service_requests_total{status=~"5.."}[5m]) /
+            rate(social_service_requests_total[5m])
+          ) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: social-service
+        annotations:
+          summary: "Social Service has high error rate"
+          description: "Social Service error rate is {{ $value }}% over the last 5 minutes"
+
+      # High Response Time
+      - alert: SocialServiceHighResponseTime
+        expr: |
+          histogram_quantile(0.95, 
+            rate(social_service_request_duration_seconds_bucket[5m])
+          ) > 0.2
+        for: 3m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "Social Service has high response time"
+          description: "Social Service 95th percentile response time is {{ $value }}s"
+
+      # Service Down
+      - alert: SocialServiceDown
+        expr: up{job="social-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: social-service
+        annotations:
+          summary: "Social Service is down"
+          description: "Social Service has been down for more than 1 minute"
+
+      # Database Connection Issues
+      - alert: SocialServiceDatabaseConnectionIssues
+        expr: social_service_database_connections_failed_total > 10
+        for: 2m
+        labels:
+          severity: critical
+          service: social-service
+        annotations:
+          summary: "Social Service database connection issues"
+          description: "Social Service has {{ $value }} failed database connections"
+
+      # Redis Connection Issues
+      - alert: SocialServiceRedisConnectionIssues
+        expr: social_service_redis_connections_failed_total > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "Social Service Redis connection issues"
+          description: "Social Service has {{ $value }} failed Redis connections"
+
+      # Integration Service Failures
+      - alert: UserServiceIntegrationFailure
+        expr: |
+          (
+            rate(social_service_integration_requests_total{service="user-service",status=~"5.."}[5m]) /
+            rate(social_service_integration_requests_total{service="user-service"}[5m])
+          ) * 100 > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: social-service
+          integration: user-service
+        annotations:
+          summary: "User Service integration failure rate high"
+          description: "User Service integration failure rate is {{ $value }}%"
+
+      - alert: NotificationServiceIntegrationFailure
+        expr: |
+          (
+            rate(social_service_integration_requests_total{service="notification-service",status=~"5.."}[5m]) /
+            rate(social_service_integration_requests_total{service="notification-service"}[5m])
+          ) * 100 > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: social-service
+          integration: notification-service
+        annotations:
+          summary: "Notification Service integration failure rate high"
+          description: "Notification Service integration failure rate is {{ $value }}%"
+
+      - alert: AchievementServiceIntegrationFailure
+        expr: |
+          (
+            rate(social_service_integration_requests_total{service="achievement-service",status=~"5.."}[5m]) /
+            rate(social_service_integration_requests_total{service="achievement-service"}[5m])
+          ) * 100 > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: social-service
+          integration: achievement-service
+        annotations:
+          summary: "Achievement Service integration failure rate high"
+          description: "Achievement Service integration failure rate is {{ $value }}%"
+
+      - alert: ReviewServiceIntegrationFailure
+        expr: |
+          (
+            rate(social_service_integration_requests_total{service="review-service",status=~"5.."}[5m]) /
+            rate(social_service_integration_requests_total{service="review-service"}[5m])
+          ) * 100 > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: social-service
+          integration: review-service
+        annotations:
+          summary: "Review Service integration failure rate high"
+          description: "Review Service integration failure rate is {{ $value }}%"
+
+      # Cache Performance
+      - alert: SocialServiceLowCacheHitRate
+        expr: |
+          (
+            rate(social_service_cache_hits_total[5m]) /
+            (rate(social_service_cache_hits_total[5m]) + rate(social_service_cache_misses_total[5m]))
+          ) * 100 < 70
+        for: 5m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "Social Service cache hit rate is low"
+          description: "Cache hit rate is {{ $value }}%, below 70% threshold"
+
+      # High Memory Usage
+      - alert: SocialServiceHighMemoryUsage
+        expr: |
+          (
+            process_resident_memory_bytes{job="social-service"} /
+            container_spec_memory_limit_bytes{pod=~"social-service-.*"}
+          ) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "Social Service high memory usage"
+          description: "Memory usage is {{ $value }}% of limit"
+
+      # High CPU Usage
+      - alert: SocialServiceHighCPUUsage
+        expr: |
+          rate(process_cpu_seconds_total{job="social-service"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "Social Service high CPU usage"
+          description: "CPU usage is {{ $value }}%"
+
+      # Friend Request Rate Anomaly
+      - alert: SocialServiceFriendRequestRateAnomaly
+        expr: |
+          rate(social_service_friend_requests_total[5m]) > 
+          (avg_over_time(rate(social_service_friend_requests_total[5m])[1h:5m]) * 3)
+        for: 2m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "Unusual friend request rate detected"
+          description: "Friend request rate is {{ $value }} requests/sec, 3x higher than normal"
+
+      # Message Rate Anomaly
+      - alert: SocialServiceMessageRateAnomaly
+        expr: |
+          rate(social_service_messages_total[5m]) > 
+          (avg_over_time(rate(social_service_messages_total[5m])[1h:5m]) * 3)
+        for: 2m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "Unusual message rate detected"
+          description: "Message rate is {{ $value }} messages/sec, 3x higher than normal"
+
+  - name: social-service-integration-health
+    rules:
+      # Integration Response Time
+      - alert: IntegrationHighResponseTime
+        expr: |
+          histogram_quantile(0.95, 
+            rate(social_service_integration_duration_seconds_bucket[5m])
+          ) > 1.0
+        for: 3m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "High integration response time"
+          description: "95th percentile integration response time is {{ $value }}s"
+
+      # Circuit Breaker Open
+      - alert: IntegrationCircuitBreakerOpen
+        expr: social_service_circuit_breaker_state{state="open"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          service: social-service
+        annotations:
+          summary: "Integration circuit breaker is open"
+          description: "Circuit breaker for {{ $labels.service }} integration is open"
+
+      # Integration Queue Backlog
+      - alert: IntegrationQueueBacklog
+        expr: social_service_integration_queue_size > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: social-service
+        annotations:
+          summary: "Integration queue backlog"
+          description: "Integration queue has {{ $value }} pending items"
+
+  - name: social-service-business-metrics
+    rules:
+      # Daily Active Users
+      - record: social_service:daily_active_users
+        expr: |
+          count(
+            increase(social_service_user_activity_total[24h]) > 0
+          )
+
+      # Friend Request Success Rate
+      - record: social_service:friend_request_success_rate
+        expr: |
+          (
+            rate(social_service_friend_requests_total{status="accepted"}[5m]) /
+            rate(social_service_friend_requests_total[5m])
+          ) * 100
+
+      # Message Delivery Success Rate
+      - record: social_service:message_delivery_success_rate
+        expr: |
+          (
+            rate(social_service_messages_total{status="delivered"}[5m]) /
+            rate(social_service_messages_total[5m])
+          ) * 100
+
+      # Average Friends Per User
+      - record: social_service:avg_friends_per_user
+        expr: |
+          social_service_friendships_total / social_service_users_with_friends_total
+
+      # Integration Success Rates
+      - record: social_service:user_service_success_rate
+        expr: |
+          (
+            rate(social_service_integration_requests_total{service="user-service",status=~"2.."}[5m]) /
+            rate(social_service_integration_requests_total{service="user-service"}[5m])
+          ) * 100
+
+      - record: social_service:notification_service_success_rate
+        expr: |
+          (
+            rate(social_service_integration_requests_total{service="notification-service",status=~"2.."}[5m]) /
+            rate(social_service_integration_requests_total{service="notification-service"}[5m])
+          ) * 100
+
+      - record: social_service:achievement_service_success_rate
+        expr: |
+          (
+            rate(social_service_integration_requests_total{service="achievement-service",status=~"2.."}[5m]) /
+            rate(social_service_integration_requests_total{service="achievement-service"}[5m])
+          ) * 100
+
+      - record: social_service:review_service_success_rate
+        expr: |
+          (
+            rate(social_service_integration_requests_total{service="review-service",status=~"2.."}[5m]) /
+            rate(social_service_integration_requests_total{service="review-service"}[5m])
+          ) * 100

@@ -9,6 +9,7 @@ import { UserServiceClient } from '../clients/user.service.client';
 import { NotificationServiceClient } from '../clients/notification.service.client';
 import { AchievementServiceClient } from '../clients/achievement.service.client';
 import { CacheService } from '../cache/cache.service';
+import { IntegrationService } from '../integration/integration.service';
 
 // Mock query builder
 const mockQueryBuilder = {
@@ -49,6 +50,12 @@ const mockCacheService = {
   invalidateUserCache: jest.fn(),
 };
 
+const mockIntegrationService = {
+  sendFriendRequestNotification: jest.fn(),
+  notifyFirstFriendAchievement: jest.fn(),
+  sendFriendRequestAcceptedNotification: jest.fn(),
+};
+
 describe('FriendsService', () => {
   let service: FriendsService;
   let repository: Repository<Friendship>;
@@ -78,6 +85,10 @@ describe('FriendsService', () => {
           useValue: {
             updateProgress: jest.fn(),
           },
+        },
+        {
+          provide: IntegrationService,
+          useValue: mockIntegrationService,
         },
       ],
     }).compile();
@@ -134,7 +145,7 @@ describe('FriendsService', () => {
       mockFriendshipRepository.findOne.mockResolvedValue(null);
       mockFriendshipRepository.create.mockReturnValue(newRequest);
       mockFriendshipRepository.save.mockResolvedValue(newRequest);
-      mockNotificationServiceClient.sendNotification.mockResolvedValue(undefined);
+      mockIntegrationService.sendFriendRequestNotification.mockResolvedValue(undefined);
       mockCacheService.invalidateUserCache.mockResolvedValue(undefined);
       mockUserServiceClient.getUsersByIds.mockResolvedValue([{ id: toUserId, username: 'friend' }]);
 
@@ -148,7 +159,11 @@ describe('FriendsService', () => {
         requestedBy: fromUserId,
       });
       expect(mockFriendshipRepository.save).toHaveBeenCalledWith(newRequest);
-      expect(mockNotificationServiceClient.sendNotification).toHaveBeenCalled();
+      expect(mockIntegrationService.sendFriendRequestNotification).toHaveBeenCalledWith(
+        fromUserId,
+        toUserId,
+        newRequest.id,
+      );
       expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(fromUserId);
       expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(toUserId);
     });
@@ -171,7 +186,9 @@ describe('FriendsService', () => {
 
       mockFriendshipRepository.findOne.mockResolvedValue(request);
       mockFriendshipRepository.save.mockResolvedValue(updatedRequest);
-      mockNotificationServiceClient.sendNotification.mockResolvedValue(undefined);
+      mockFriendshipRepository.count.mockResolvedValue(1); // First friend
+      mockIntegrationService.notifyFirstFriendAchievement.mockResolvedValue(undefined);
+      mockIntegrationService.sendFriendRequestAcceptedNotification.mockResolvedValue(undefined);
       mockCacheService.invalidateUserCache.mockResolvedValue(undefined);
       mockUserServiceClient.getUsersByIds.mockResolvedValue([
         { id: request.userId, username: 'requester' },
@@ -181,7 +198,14 @@ describe('FriendsService', () => {
 
       expect(result.status).toEqual(FriendshipStatus.ACCEPTED);
       expect(mockFriendshipRepository.save).toHaveBeenCalled();
-      expect(mockNotificationServiceClient.sendNotification).toHaveBeenCalled();
+      expect(mockIntegrationService.notifyFirstFriendAchievement).toHaveBeenCalledWith(
+        userId,
+        request.userId,
+      );
+      expect(mockIntegrationService.sendFriendRequestAcceptedNotification).toHaveBeenCalledWith(
+        userId,
+        request.userId,
+      );
       expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(request.userId);
       expect(mockCacheService.invalidateUserCache).toHaveBeenCalledWith(request.friendId);
     });

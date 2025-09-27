@@ -15,6 +15,7 @@ import { AchievementServiceClient } from '../clients/achievement.service.client'
 import { UserSearchResultDto } from './dto/user-search-result.dto';
 import { CacheService } from '../cache/cache.service';
 import { UserStatus } from '../status/entities/user-status.enum';
+import { IntegrationService } from '../integration/integration.service';
 
 @Injectable()
 export class FriendsService {
@@ -25,6 +26,7 @@ export class FriendsService {
     private readonly notificationServiceClient: NotificationServiceClient,
     private readonly achievementServiceClient: AchievementServiceClient,
     private readonly cacheService: CacheService,
+    private readonly integrationService: IntegrationService,
   ) {}
 
   async sendFriendRequest(fromUserId: string, toUserId: string): Promise<FriendDto> {
@@ -52,13 +54,12 @@ export class FriendsService {
 
     const savedRequest = await this.friendshipRepository.save(newRequest);
 
-    await this.notificationServiceClient.sendNotification({
-      userId: toUserId,
-      type: 'friend_request',
-      title: 'New Friend Request',
-      message: `You have a new friend request from user ${fromUserId}`,
-      metadata: { fromUserId, requestId: savedRequest.id },
-    });
+    // Use enhanced integration service for notifications
+    await this.integrationService.sendFriendRequestNotification(
+      fromUserId,
+      toUserId,
+      savedRequest.id,
+    );
 
     // Invalidate cache for both users
     await this.cacheService.invalidateUserCache(fromUserId);
@@ -96,23 +97,14 @@ export class FriendsService {
     await this.cacheService.invalidateUserCache(request.userId);
     await this.cacheService.invalidateUserCache(request.friendId);
 
+    // Check for first friend achievement and send notifications
     const friendCount = await this.getFriendsCount(userId);
     if (friendCount === 1) {
-      await this.achievementServiceClient.updateProgress({
-        userId,
-        eventType: 'friend_added',
-        eventData: { friendId: request.userId },
-      });
+      await this.integrationService.notifyFirstFriendAchievement(userId, request.userId);
     }
 
-    // Send notification to the requester
-    await this.notificationServiceClient.sendNotification({
-      userId: request.userId,
-      type: 'friend_request',
-      title: 'Friend Request Accepted',
-      message: `Your friend request has been accepted`,
-      metadata: { friendId: userId },
-    });
+    // Send notification to the requester using enhanced integration service
+    await this.integrationService.sendFriendRequestAcceptedNotification(userId, request.userId);
 
     const friendsInfo = await this.userServiceClient.getUsersByIds([request.userId]);
     const friendInfo = friendsInfo && friendsInfo.length > 0 ? friendsInfo[0] : undefined;

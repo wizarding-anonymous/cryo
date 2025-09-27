@@ -170,7 +170,7 @@ export class AchievementServiceClient {
         { timeoutMs: 3000, attempts: 1 },
       );
 
-      return response.data?.achievements || [];
+      return (response as any).data?.achievements || [];
     } catch (error) {
       this.logger.error(
         `Failed to get achievements for user ${userId}: ${this.getErrorMessage(error)}`,

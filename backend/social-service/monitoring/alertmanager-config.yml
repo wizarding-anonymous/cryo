@@ -1,0 +1,161 @@
+global:
+  smtp_smarthost: 'smtp.gaming-platform.ru:587'
+  smtp_from: 'alerts@gaming-platform.ru'
+  smtp_auth_username: 'alerts@gaming-platform.ru'
+  smtp_auth_password: 'smtp-password'
+
+route:
+  group_by: ['alertname', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 5s
+      repeat_interval: 30m
+    - match:
+        service: social-service
+      receiver: 'social-service-team'
+      group_wait: 10s
+      repeat_interval: 1h
+    - match:
+        integration: user-service
+      receiver: 'user-service-team'
+    - match:
+        integration: notification-service
+      receiver: 'notification-service-team'
+    - match:
+        integration: achievement-service
+      receiver: 'achievement-service-team'
+    - match:
+        integration: review-service
+      receiver: 'review-service-team'
+
+receivers:
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://webhook-service:5001/alerts'
+        send_resolved: true
+
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'critical-alerts@gaming-platform.ru'
+        subject: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Service: {{ .Labels.service }}
+          Severity: {{ .Labels.severity }}
+          Started: {{ .StartsAt }}
+          {{ end }}
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#critical-alerts'
+        title: '🚨 Critical Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          *Severity:* {{ .Labels.severity }}
+          {{ end }}
+    pagerduty_configs:
+      - routing_key: 'your-pagerduty-integration-key'
+        description: '{{ .GroupLabels.alertname }}: {{ .GroupLabels.service }}'
+
+  - name: 'social-service-team'
+    email_configs:
+      - to: 'social-team@gaming-platform.ru'
+        subject: '⚠️ Social Service Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Social Service Alert Details:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Started: {{ .StartsAt }}
+          
+          Runbook: https://runbooks.gaming-platform.ru/social-service/{{ .Labels.alertname }}
+          Dashboard: https://monitoring.gaming-platform.ru/d/social-service
+          {{ end }}
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#social-service'
+        title: 'Social Service Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Runbook:* https://runbooks.gaming-platform.ru/social-service/{{ .Labels.alertname }}
+          {{ end }}
+
+  - name: 'user-service-team'
+    email_configs:
+      - to: 'user-team@gaming-platform.ru'
+        subject: '🔗 Integration Alert: User Service'
+        body: |
+          User Service Integration Issue:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Affected Service: Social Service
+          {{ end }}
+
+  - name: 'notification-service-team'
+    email_configs:
+      - to: 'notification-team@gaming-platform.ru'
+        subject: '🔗 Integration Alert: Notification Service'
+        body: |
+          Notification Service Integration Issue:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Affected Service: Social Service
+          {{ end }}
+
+  - name: 'achievement-service-team'
+    email_configs:
+      - to: 'achievement-team@gaming-platform.ru'
+        subject: '🔗 Integration Alert: Achievement Service'
+        body: |
+          Achievement Service Integration Issue:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Affected Service: Social Service
+          {{ end }}
+
+  - name: 'review-service-team'
+    email_configs:
+      - to: 'review-team@gaming-platform.ru'
+        subject: '🔗 Integration Alert: Review Service'
+        body: |
+          Review Service Integration Issue:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Affected Service: Social Service
+          {{ end }}
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+
+  - source_match:
+      alertname: 'SocialServiceDown'
+    target_match_re:
+      alertname: 'SocialService.*'
+    equal: ['service']
