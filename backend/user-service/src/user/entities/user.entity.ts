@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 
 @Entity('users')
 export class User {
@@ -25,6 +26,7 @@ export class User {
     type: 'varchar',
     nullable: false,
   })
+  @Exclude() // Exclude password from serialization
   password: string; // This will store the hashed password
 
   @Column({

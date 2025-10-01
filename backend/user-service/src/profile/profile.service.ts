@@ -18,9 +18,7 @@ export class ProfileService {
     if (!user) {
       throw new NotFoundException(`Пользователь с ID ${id} не найден`);
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...result } = user;
-    return result;
+    return user; // UserService.findById already returns user without password
   }
 
   /**
@@ -34,13 +32,7 @@ export class ProfileService {
     id: string,
     updateProfileDto: UpdateProfileDto,
   ): Promise<Omit<User, 'password'>> {
-    const updatedUser = await this.userService.updateProfile(
-      id,
-      updateProfileDto,
-    );
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...result } = updatedUser;
-    return result;
+    return await this.userService.updateProfile(id, updateProfileDto); // UserService.updateProfile already returns user without password
   }
 
   /**

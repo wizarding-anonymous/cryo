@@ -4,21 +4,32 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
 	"download-service/internal/clients/library"
+	"download-service/internal/database"
 	"download-service/internal/models"
 	"download-service/internal/repository"
 	"download-service/internal/services"
 	"download-service/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+// Test UUIDs for consistent testing
+const (
+	TestUser1ID = "550e8400-e29b-41d4-a716-446655440001"
+	TestUser2ID = "550e8400-e29b-41d4-a716-446655440002"
+	TestGame1ID = "550e8400-e29b-41d4-a716-446655440011"
+	TestGame2ID = "550e8400-e29b-41d4-a716-446655440012"
+	TestGame3ID = "550e8400-e29b-41d4-a716-446655440013"
+	TestGame4ID = "550e8400-e29b-41d4-a716-446655440014"
 
 type LibraryE2ETestSuite struct {
 	suite.Suite
@@ -29,21 +40,27 @@ type LibraryE2ETestSuite struct {
 }
 
 func (s *LibraryE2ETestSuite) SetupSuite() {
-	// Setup in-memory SQLite database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	// Setup PostgreSQL database for testing
+	host := getEnvOrDefault("DB_HOST", "localhost")
+	port := getEnvOrDefault("DB_PORT", "5432")
+	user := getEnvOrDefault("DB_USER", "testuser")
+	password := getEnvOrDefault("DB_PASSWORD", "testpass")
+	dbname := getEnvOrDefault("DB_NAME", "testdb")
+	sslmode := getEnvOrDefault("DB_SSL_MODE", "disable")
+
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		host, port, user, password, dbname, sslmode)
+
+	db, err := database.Connect(database.Options{DSN: dsn})
 	s.Require().NoError(err)
 	s.db = db
-
-	// Auto-migrate tables
-	err = db.AutoMigrate(&models.Download{}, &models.DownloadFile{})
-	s.Require().NoError(err)
 
 	// Setup mock library client
 	s.mockLibrary = library.NewMockClient()
 	
 	// Setup test data
-	s.mockLibrary.SetUserGames("test-user-1", []string{"game-1", "game-2", "game-3"})
-	s.mockLibrary.SetUserGames("test-user-2", []string{"game-2", "game-4"})
+	s.mockLibrary.SetUserGames(TestUser1ID, []string{TestGame1ID, TestGame2ID, TestGame3ID})
+	s.mockLibrary.SetUserGames(TestUser2ID, []string{TestGame2ID, TestGame4ID})
 
 	// Setup dependencies
 	log := logger.New()
@@ -416,4 +433,12 @@ func (s *LibraryE2ETestSuite) TestHealthCheckWithLibraryDependency() {
 
 func TestLibraryE2ETestSuite(t *testing.T) {
 	suite.Run(t, new(LibraryE2ETestSuite))
+}
+/
+/ getEnvOrDefault returns environment variable value or default if not set
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }

@@ -22,6 +22,7 @@ describe('AuthController', () => {
     register: jest.fn(),
     login: jest.fn(),
     logout: jest.fn(),
+    validateUser: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -81,13 +82,17 @@ describe('AuthController', () => {
         password: 'password123',
       };
 
-      const req = { user: mockUser } as any;
       const expectedResult = { accessToken: 'jwt-token' };
 
+      mockAuthService.validateUser.mockResolvedValue(mockUser);
       mockAuthService.login.mockResolvedValue(expectedResult);
 
-      const result = await controller.login(loginDto, req);
+      const result = await controller.login(loginDto);
 
+      expect(authService.validateUser).toHaveBeenCalledWith(
+        loginDto.email,
+        loginDto.password,
+      );
       expect(authService.login).toHaveBeenCalledWith(mockUser);
       expect(result).toEqual(expectedResult);
     });

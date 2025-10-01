@@ -1,31 +1,60 @@
 package database
 
 import (
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"download-service/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {
-	// Try SQLite first, fallback to skipping if CGO is disabled
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		if err.Error() == "Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work. This is a stub" {
-			t.Skip("SQLite requires CGO, skipping database tests")
-		}
-		require.NoError(t, err)
-	}
+	t.Helper()
 
-	// Run migrations
-	err = migrate(db)
-	require.NoError(t, err)
+	// Get database configuration from environment variables
+	host := getEnvOrDefault("DB_HOST", "localhost")
+	port := getEnvOrDefault("DB_PORT", "5432")
+	user := getEnvOrDefault("DB_USER", "testuser")
+	password := getEnvOrDefault("DB_PASSWORD", "testpass")
+	dbname := getEnvOrDefault("DB_NAME", "testdb")
+	sslmode := getEnvOrDefault("DB_SSL_MODE", "disable")
+
+	// Create DSN
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		host, port, user, password, dbname, sslmode)
+
+	// Connect to database
+	db, err := Connect(Options{DSN: dsn})
+	require.NoError(t, err, "Failed to connect to test database")
+
+	// Clean up tables before each test
+	cleanupTables(t, db)
 
 	return db
+}
+
+// cleanupTables removes all data from test tables
+func cleanupTables(t *testing.T, db *gorm.DB) {
+	t.Helper()
+
+	// Delete in correct order due to foreign key constraints
+	err := db.Exec("DELETE FROM download_files").Error
+	require.NoError(t, err)
+
+	err = db.Exec("DELETE FROM downloads").Error
+	require.NoError(t, err)
+}
+
+// getEnvOrDefault returns environment variable value or default if not set
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 func TestConnect(t *testing.T) {
@@ -89,10 +118,10 @@ func TestHealthCheck(t *testing.T) {
 func TestDownloadModel(t *testing.T) {
 	db := setupTestDB(t)
 
-	// Create a test download
+	// Create a test download with valid UUIDs
 	download := &models.Download{
-		UserID:         "user-123",
-		GameID:         "game-456",
+		UserID:         "550e8400-e29b-41d4-a716-446655440001",
+		GameID:         "550e8400-e29b-41d4-a716-446655440002",
 		Status:         models.StatusPending,
 		Progress:       0,
 		TotalSize:      1000000,
@@ -133,10 +162,10 @@ func TestDownloadModel(t *testing.T) {
 func TestDownloadFileModel(t *testing.T) {
 	db := setupTestDB(t)
 
-	// Create a parent download first
+	// Create a parent download first with valid UUIDs
 	download := &models.Download{
-		UserID:         "user-123",
-		GameID:         "game-456",
+		UserID:         "550e8400-e29b-41d4-a716-446655440001",
+		GameID:         "550e8400-e29b-41d4-a716-446655440002",
 		Status:         models.StatusPending,
 		Progress:       0,
 		TotalSize:      1000000,
@@ -188,8 +217,8 @@ func TestDownloadStatusConstraints(t *testing.T) {
 		{
 			name: "valid progress should succeed",
 			download: models.Download{
-				UserID:   "user-123",
-				GameID:   "game-456",
+				UserID:   "550e8400-e29b-41d4-a716-446655440001",
+				GameID:   "550e8400-e29b-41d4-a716-446655440002",
 				Status:   models.StatusDownloading,
 				Progress: 50,
 			},
@@ -198,8 +227,8 @@ func TestDownloadStatusConstraints(t *testing.T) {
 		{
 			name: "progress over 100 should fail",
 			download: models.Download{
-				UserID:   "user-123",
-				GameID:   "game-456",
+				UserID:   "550e8400-e29b-41d4-a716-446655440001",
+				GameID:   "550e8400-e29b-41d4-a716-446655440002",
 				Status:   models.StatusDownloading,
 				Progress: 150,
 			},
@@ -208,8 +237,8 @@ func TestDownloadStatusConstraints(t *testing.T) {
 		{
 			name: "negative progress should fail",
 			download: models.Download{
-				UserID:   "user-123",
-				GameID:   "game-456",
+				UserID:   "550e8400-e29b-41d4-a716-446655440001",
+				GameID:   "550e8400-e29b-41d4-a716-446655440002",
 				Status:   models.StatusDownloading,
 				Progress: -10,
 			},
@@ -232,12 +261,12 @@ func TestDownloadStatusConstraints(t *testing.T) {
 func TestIndexPerformance(t *testing.T) {
 	db := setupTestDB(t)
 
-	// Create test data
-	userID := "user-123"
+	// Create test data with valid UUID
+	userID := "550e8400-e29b-41d4-a716-446655440001"
 	for i := 0; i < 100; i++ {
 		download := &models.Download{
 			UserID:         userID,
-			GameID:         "game-" + string(rune(i)),
+			GameID:         fmt.Sprintf("550e8400-e29b-41d4-a716-4466554400%02d", i),
 			Status:         models.StatusCompleted,
 			Progress:       100,
 			TotalSize:      1000000,

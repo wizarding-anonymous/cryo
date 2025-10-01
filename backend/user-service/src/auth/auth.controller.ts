@@ -3,10 +3,10 @@ import {
   Post,
   Body,
   UseGuards,
-  Request,
   HttpCode,
   HttpStatus,
   Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,8 +16,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { User } from '../user/entities/user.entity';
+
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
 
@@ -42,7 +41,6 @@ export class AuthController {
   }
 
   @HttpCode(HttpStatus.OK)
-  @UseGuards(LocalAuthGuard)
   @Post('login')
   @ApiOperation({ summary: 'Log in a user' })
   @ApiResponse({
@@ -50,12 +48,16 @@ export class AuthController {
     description: 'User successfully logged in. Returns an access token.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async login(
-    @Body() loginDto: LoginDto,
-    @Request() req: { user: Omit<User, 'password'> },
-  ) {
-    // loginDto is used for swagger documentation, req.user is populated by LocalStrategy
-    return this.authService.login(req.user);
+  async login(@Body() loginDto: LoginDto) {
+    // Validate user credentials manually instead of using LocalAuthGuard
+    const user = await this.authService.validateUser(
+      loginDto.email,
+      loginDto.password,
+    );
+    if (!user) {
+      throw new UnauthorizedException('Неверный email или пароль');
+    }
+    return this.authService.login(user);
   }
 
   @ApiBearerAuth()

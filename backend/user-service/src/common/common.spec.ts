@@ -192,7 +192,7 @@ describe('Common Components', () => {
         mockResponse,
         {
           error: {
-            code: 'CONFLICT_ERROR',
+            code: 'CONFLICT',
             message: 'Resource already exists',
             details: {},
           },

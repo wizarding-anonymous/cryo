@@ -32,8 +32,10 @@ func Connect(opts Options) (*gorm.DB, error) {
 }
 
 func migrate(db *gorm.DB) error {
-	// Enable pgcrypto for gen_random_uuid() if available
-	db.Exec(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`)
+	// Enable pgcrypto for gen_random_uuid() if available (PostgreSQL only)
+	if db.Dialector.Name() == "postgres" {
+		db.Exec(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`)
+	}
 
 	// AutoMigrate models
 	if err := db.AutoMigrate(&models.Download{}, &models.DownloadFile{}); err != nil {
@@ -51,16 +53,30 @@ func migrate(db *gorm.DB) error {
 // createAdditionalIndexes creates additional performance indexes
 func createAdditionalIndexes(db *gorm.DB) error {
 	// Composite index for user downloads with status and creation time
-	db.Exec(`CREATE INDEX IF NOT EXISTS idx_downloads_user_status_created 
-		ON downloads (user_id, status, created_at DESC)`)
-	
-	// Index for active downloads (downloading, paused)
-	db.Exec(`CREATE INDEX IF NOT EXISTS idx_downloads_active_status 
-		ON downloads (status) WHERE status IN ('downloading', 'paused')`)
-	
-	// Index for download files by status and size
-	db.Exec(`CREATE INDEX IF NOT EXISTS idx_download_files_status_size 
-		ON download_files (status, file_size)`)
+	if db.Dialector.Name() == "postgres" {
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_downloads_user_status_created 
+			ON downloads (user_id, status, created_at DESC)`)
+		
+		// Index for active downloads (downloading, paused) - PostgreSQL specific WHERE clause
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_downloads_active_status 
+			ON downloads (status) WHERE status IN ('downloading', 'paused')`)
+		
+		// Index for download files by status and size
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_download_files_status_size 
+			ON download_files (status, file_size)`)
+	} else {
+		// SQLite compatible indexes
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_downloads_user_status_created 
+			ON downloads (user_id, status, created_at)`)
+		
+		// Simple index for status (SQLite doesn't support partial indexes in the same way)
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_downloads_status 
+			ON downloads (status)`)
+		
+		// Index for download files by status and size
+		db.Exec(`CREATE INDEX IF NOT EXISTS idx_download_files_status_size 
+			ON download_files (status, file_size)`)
+	}
 
 	return nil
 }

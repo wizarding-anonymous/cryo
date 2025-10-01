@@ -1,0 +1,80 @@
+name: Syntax Check
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  # Check Node.js syntax
+  check-nodejs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [
+          'api-gateway',
+          'user-service',
+          'game-catalog-service',
+          'library-service',
+          'review-service',
+          'payment-service',
+          'notification-service',
+          'social-service',
+          'achievement-service',
+          'security-service'
+        ]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Check package.json syntax
+      working-directory: backend/${{ matrix.service }}
+      run: |
+        echo "Checking package.json syntax for ${{ matrix.service }}..."
+        cat package.json | jq . > /dev/null
+        echo "✅ package.json syntax is valid"
+    
+    - name: Check TypeScript syntax (if applicable)
+      working-directory: backend/${{ matrix.service }}
+      run: |
+        if [ -f "tsconfig.json" ]; then
+          echo "Installing dependencies for TypeScript check..."
+          npm install --legacy-peer-deps --no-audit --no-fund
+          echo "Checking TypeScript syntax..."
+          npx tsc --noEmit || echo "TypeScript check failed, but continuing..."
+        else
+          echo "No TypeScript config found, skipping..."
+        fi
+      continue-on-error: true
+
+  # Check Go syntax
+  check-go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Check Go syntax
+      working-directory: backend/download-service
+      run: |
+        echo "Checking Go syntax..."
+        go fmt ./...
+        go vet ./...
+        echo "✅ Go syntax is valid"

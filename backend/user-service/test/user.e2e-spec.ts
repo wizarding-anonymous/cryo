@@ -32,11 +32,23 @@ describe('User Endpoints (e2e)', () => {
       }),
     };
 
+    // Create a mock RedisService
+    const mockRedisService = {
+      blacklistToken: jest.fn().mockResolvedValue(undefined),
+      isTokenBlacklisted: jest.fn().mockResolvedValue(false),
+      cacheUserSession: jest.fn().mockResolvedValue(undefined),
+      getUserSession: jest.fn().mockResolvedValue(null),
+      removeUserSession: jest.fn().mockResolvedValue(undefined),
+      healthCheck: jest.fn().mockResolvedValue(true),
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [TestAppModule],
     })
       .overrideProvider('CACHE_MANAGER')
       .useValue(cacheManager)
+      .overrideProvider('RedisService')
+      .useValue(mockRedisService)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -45,6 +57,7 @@ describe('User Endpoints (e2e)', () => {
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
     app.useGlobalInterceptors(new ResponseInterceptor());
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -70,10 +83,12 @@ describe('User Endpoints (e2e)', () => {
 
     beforeAll(async () => {
       // Register and login to get a token
-      await request(app.getHttpServer()).post('/auth/register').send(testUser);
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send(testUser);
 
       const loginRes = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: testUser.email,
           password: testUser.password,
@@ -85,7 +100,7 @@ describe('User Endpoints (e2e)', () => {
     describe('GET /users/profile', () => {
       it('should get user profile with valid token', () => {
         return request(app.getHttpServer())
-          .get('/users/profile')
+          .get('/api/users/profile')
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200)
           .then((res) => {
@@ -100,7 +115,7 @@ describe('User Endpoints (e2e)', () => {
 
       it('should return 401 for missing token', () => {
         return request(app.getHttpServer())
-          .get('/users/profile')
+          .get('/api/users/profile')
           .expect(401)
           .then((res) => {
             expect(res.body.error.code).toEqual('UNAUTHENTICATED');
@@ -109,7 +124,7 @@ describe('User Endpoints (e2e)', () => {
 
       it('should return 401 for invalid token', () => {
         return request(app.getHttpServer())
-          .get('/users/profile')
+          .get('/api/users/profile')
           .set('Authorization', 'Bearer invalid-token')
           .expect(401)
           .then((res) => {
@@ -122,7 +137,7 @@ describe('User Endpoints (e2e)', () => {
       it('should update user profile successfully', () => {
         const updatedName = 'Updated User Name';
         return request(app.getHttpServer())
-          .put('/users/profile')
+          .put('/api/users/profile')
           .set('Authorization', `Bearer ${accessToken}`)
           .send({ name: updatedName })
           .expect(200)
@@ -135,7 +150,7 @@ describe('User Endpoints (e2e)', () => {
 
       it('should return 400 for invalid name (empty string)', () => {
         return request(app.getHttpServer())
-          .put('/users/profile')
+          .put('/api/users/profile')
           .set('Authorization', `Bearer ${accessToken}`)
           .send({ name: '' })
           .expect(400)
@@ -147,7 +162,7 @@ describe('User Endpoints (e2e)', () => {
       it('should return 400 for name too long', () => {
         const longName = 'a'.repeat(101); // Max is 100 characters
         return request(app.getHttpServer())
-          .put('/users/profile')
+          .put('/api/users/profile')
           .set('Authorization', `Bearer ${accessToken}`)
           .send({ name: longName })
           .expect(400)
@@ -158,7 +173,7 @@ describe('User Endpoints (e2e)', () => {
 
       it('should return 400 for extra fields', () => {
         return request(app.getHttpServer())
-          .put('/users/profile')
+          .put('/api/users/profile')
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             name: 'Valid Name',
@@ -172,7 +187,7 @@ describe('User Endpoints (e2e)', () => {
 
       it('should return 401 for missing token', () => {
         return request(app.getHttpServer())
-          .put('/users/profile')
+          .put('/api/users/profile')
           .send({ name: 'New Name' })
           .expect(401)
           .then((res) => {
@@ -182,7 +197,7 @@ describe('User Endpoints (e2e)', () => {
 
       it('should allow empty body (no updates)', () => {
         return request(app.getHttpServer())
-          .put('/users/profile')
+          .put('/api/users/profile')
           .set('Authorization', `Bearer ${accessToken}`)
           .send({})
           .expect(200)
@@ -204,11 +219,11 @@ describe('User Endpoints (e2e)', () => {
         };
 
         await request(app.getHttpServer())
-          .post('/auth/register')
+          .post('/api/auth/register')
           .send(deleteTestUser);
 
         const loginRes = await request(app.getHttpServer())
-          .post('/auth/login')
+          .post('/api/auth/login')
           .send({
             email: deleteTestUser.email,
             password: deleteTestUser.password,
@@ -219,14 +234,14 @@ describe('User Endpoints (e2e)', () => {
 
       it('should delete user profile successfully', () => {
         return request(app.getHttpServer())
-          .delete('/users/profile')
+          .delete('/api/users/profile')
           .set('Authorization', `Bearer ${deleteTestToken}`)
           .expect(204);
       });
 
       it('should return 401 for missing token', () => {
         return request(app.getHttpServer())
-          .delete('/users/profile')
+          .delete('/api/users/profile')
           .expect(401)
           .then((res) => {
             expect(res.body.error.code).toEqual('UNAUTHENTICATED');
@@ -235,7 +250,7 @@ describe('User Endpoints (e2e)', () => {
 
       it('should return 401 for invalid token', () => {
         return request(app.getHttpServer())
-          .delete('/users/profile')
+          .delete('/api/users/profile')
           .set('Authorization', 'Bearer invalid-token')
           .expect(401)
           .then((res) => {
@@ -252,12 +267,12 @@ describe('User Endpoints (e2e)', () => {
 
         // Register user
         await request(app.getHttpServer())
-          .post('/auth/register')
+          .post('/api/auth/register')
           .send(deleteTestUser);
 
         // Login to get token
         const loginRes = await request(app.getHttpServer())
-          .post('/auth/login')
+          .post('/api/auth/login')
           .send({
             email: deleteTestUser.email,
             password: deleteTestUser.password,
@@ -267,13 +282,13 @@ describe('User Endpoints (e2e)', () => {
 
         // Delete account
         await request(app.getHttpServer())
-          .delete('/users/profile')
+          .delete('/api/users/profile')
           .set('Authorization', `Bearer ${token}`)
           .expect(204);
 
         // Try to login again - should fail
         await request(app.getHttpServer())
-          .post('/auth/login')
+          .post('/api/auth/login')
           .send({
             email: deleteTestUser.email,
             password: deleteTestUser.password,

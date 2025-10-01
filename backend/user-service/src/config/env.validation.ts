@@ -69,8 +69,8 @@ export const envValidationSchema = Joi.object({
   NOTIFICATION_SERVICE_URL: Joi.string().uri().optional(),
 
   // Monitoring
-  SENTRY_DSN: Joi.string().uri().optional(),
-  JAEGER_ENDPOINT: Joi.string().uri().optional(),
+  SENTRY_DSN: Joi.string().uri().allow('').optional(),
+  JAEGER_ENDPOINT: Joi.string().uri().allow('').optional(),
 });
 
 export interface EnvironmentVariables {

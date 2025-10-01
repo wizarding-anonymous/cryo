@@ -21,7 +21,7 @@ const mockSecurityClient = {
 
 describe('UserService', () => {
   let service: UserService;
-  let repository: Repository<User>;
+  let _repository: Repository<User>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -39,7 +39,7 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
-    repository = module.get<Repository<User>>(getRepositoryToken(User));
+    _repository = module.get<Repository<User>>(getRepositoryToken(User));
   });
 
   afterEach(() => {

@@ -1,20 +1,13 @@
-package repository
+package main
 
 import (
 	"fmt"
 	"os"
-	"testing"
 
 	"download-service/internal/database"
-	"download-service/internal/models"
-	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 )
 
-// setupTestDB creates a PostgreSQL database connection for testing
-func setupTestDB(t *testing.T) *gorm.DB {
-	t.Helper()
-
+func main() {
 	// Get database configuration from environment variables
 	host := getEnvOrDefault("DB_HOST", "localhost")
 	port := getEnvOrDefault("DB_PORT", "5432")
@@ -27,26 +20,22 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		host, port, user, password, dbname, sslmode)
 
+	fmt.Printf("Attempting to connect to database with DSN: %s\n", dsn)
+
 	// Connect to database
 	db, err := database.Connect(database.Options{DSN: dsn})
-	require.NoError(t, err, "Failed to connect to test database")
+	if err != nil {
+		fmt.Printf("❌ Failed to connect to database: %v\n", err)
+		os.Exit(1)
+	}
 
-	// Clean up tables before each test
-	cleanupTables(t, db)
+	// Test health check
+	if err := database.HealthCheck(db); err != nil {
+		fmt.Printf("❌ Database health check failed: %v\n", err)
+		os.Exit(1)
+	}
 
-	return db
-}
-
-// cleanupTables removes all data from test tables
-func cleanupTables(t *testing.T, db *gorm.DB) {
-	t.Helper()
-
-	// Delete in correct order due to foreign key constraints
-	err := db.Exec("DELETE FROM download_files").Error
-	require.NoError(t, err)
-
-	err = db.Exec("DELETE FROM downloads").Error
-	require.NoError(t, err)
+	fmt.Println("✅ Database connection successful!")
 }
 
 // getEnvOrDefault returns environment variable value or default if not set

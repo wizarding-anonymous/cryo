@@ -74,13 +74,16 @@ export class AuthService {
   }
 
   /**
-   * Logs a user in and returns JWT tokens.
+   * Logs a user in and returns JWT tokens and user info.
    * @param user - The user object (typically from validateUser).
-   * @returns An object containing the access token.
+   * @returns An object containing the access token and user info.
    */
   async login(user: Omit<User, 'password'>) {
-    // We need the full user object for the payload, but the password-less one is fine here.
-    return this.generateTokens(user as User);
+    const tokens = await this.generateTokens(user as User);
+    return {
+      user,
+      accessToken: tokens.accessToken,
+    };
   }
 
   /**

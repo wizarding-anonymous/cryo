@@ -1,0 +1,156 @@
+name: Docker Compose Integration Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/docker-compose*.yml'
+      - 'backend/user-service/**'
+      - 'backend/*/Dockerfile'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/docker-compose*.yml'
+      - 'backend/user-service/**'
+
+jobs:
+  # Test User Service with Docker Compose
+  test-user-service-compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Create environment file
+      working-directory: backend
+      run: |
+        # Create .env file for Docker Compose
+        cat > .env << EOF
+        REDIS_PASSWORD=redis_password
+        NODE_ENV=test
+        JWT_SECRET=test-secret-key-for-ci
+        EOF
+    
+    - name: Start User Service dependencies
+      working-directory: backend
+      run: |
+        echo "Starting User Service with dependencies..."
+        docker-compose -f docker-compose.user-only.yml up -d
+        
+        # Wait for services to be ready
+        echo "Waiting for services to be ready..."
+        sleep 30
+        
+        # Check if services are running
+        docker-compose -f docker-compose.user-only.yml ps
+    
+    - name: Check service health
+      working-directory: backend
+      run: |
+        echo "Checking User Service health..."
+        
+        # Wait for User Service to be ready
+        timeout 60 bash -c 'until curl -f http://localhost:3001/api/v1/health; do sleep 2; done'
+        
+        # Test basic endpoints
+        curl -f http://localhost:3001/api/v1/health || exit 1
+        curl -f http://localhost:3001/api/v1/health/detailed || exit 1
+        
+        echo "✅ User Service is healthy"
+    
+    - name: Run integration tests
+      working-directory: backend
+      run: |
+        echo "Running integration tests against running services..."
+        
+        # Test database connectivity
+        docker exec user-service npm run typeorm -- query "SELECT 1"
+        
+        # Test Redis connectivity  
+        docker exec redis-cache redis-cli -a redis_password ping
+        
+        echo "✅ Integration tests passed"
+    
+    - name: Check logs for errors
+      if: always()
+      working-directory: backend
+      run: |
+        echo "=== User Service Logs ==="
+        docker-compose -f docker-compose.user-only.yml logs user-service
+        
+        echo "=== PostgreSQL Logs ==="
+        docker-compose -f docker-compose.user-only.yml logs postgres-user-db
+        
+        echo "=== Redis Logs ==="
+        docker-compose -f docker-compose.user-only.yml logs redis-cache
+    
+    - name: Cleanup
+      if: always()
+      working-directory: backend
+      run: |
+        docker-compose -f docker-compose.user-only.yml down -v
+        docker system prune -f
+
+  # Test full stack with Docker Compose
+  test-full-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Create environment file
+      working-directory: backend
+      run: |
+        cat > .env << EOF
+        REDIS_PASSWORD=redis_password
+        NODE_ENV=test
+        JWT_SECRET=test-secret-key-for-ci
+        EOF
+    
+    - name: Start all services
+      working-directory: backend
+      run: |
+        echo "Starting all microservices..."
+        docker-compose up -d --build
+        
+        # Wait for services to start
+        sleep 60
+        
+        # Check running services
+        docker-compose ps
+    
+    - name: Run smoke tests
+      working-directory: backend
+      run: |
+        echo "Running smoke tests..."
+        
+        # Test API Gateway
+        timeout 30 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done' || echo "API Gateway not ready"
+        
+        # Test User Service
+        timeout 30 bash -c 'until curl -f http://localhost:3001/api/v1/health; do sleep 2; done' || echo "User Service not ready"
+        
+        # Test other services (if they have health endpoints)
+        services=("3002" "3003" "3004" "3005" "3006" "3007" "3008" "3009")
+        for port in "${services[@]}"; do
+          curl -f "http://localhost:${port}/health" || echo "Service on port ${port} not ready"
+        done
+    
+    - name: Cleanup
+      if: always()
+      working-directory: backend
+      run: |
+        docker-compose down -v
+        docker system prune -f

@@ -8,7 +8,6 @@ import { Request } from 'express';
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
   let redisService: jest.Mocked<RedisService>;
-  let configService: jest.Mocked<ConfigService>;
 
   const mockJwtPayload = {
     sub: 'user-123',
@@ -46,7 +45,6 @@ describe('JwtStrategy', () => {
 
     strategy = module.get<JwtStrategy>(JwtStrategy);
     redisService = module.get(RedisService);
-    configService = module.get(ConfigService);
   });
 
   it('should be defined', () => {

@@ -20,7 +20,7 @@ const getErrorCode = (status: HttpStatus): string => {
     case HttpStatus.NOT_FOUND:
       return 'NOT_FOUND';
     case HttpStatus.CONFLICT:
-      return 'CONFLICT_ERROR';
+      return 'CONFLICT';
     default:
       return 'INTERNAL_SERVER_ERROR';
   }

@@ -32,11 +32,23 @@ describe('Profile and Auth Flow (e2e)', () => {
       }),
     };
 
+    // Create a mock RedisService
+    const mockRedisService = {
+      blacklistToken: jest.fn().mockResolvedValue(undefined),
+      isTokenBlacklisted: jest.fn().mockResolvedValue(false),
+      cacheUserSession: jest.fn().mockResolvedValue(undefined),
+      getUserSession: jest.fn().mockResolvedValue(null),
+      removeUserSession: jest.fn().mockResolvedValue(undefined),
+      healthCheck: jest.fn().mockResolvedValue(true),
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [TestAppModule],
     })
       .overrideProvider('CACHE_MANAGER')
       .useValue(cacheManager)
+      .overrideProvider('RedisService')
+      .useValue(mockRedisService)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -45,6 +57,7 @@ describe('Profile and Auth Flow (e2e)', () => {
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
     app.useGlobalInterceptors(new ResponseInterceptor());
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -77,7 +90,7 @@ describe('Profile and Auth Flow (e2e)', () => {
 
     it('POST /auth/register - should register a new user', () => {
       return request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send(user)
         .expect(201)
         .then((res) => {
@@ -89,7 +102,7 @@ describe('Profile and Auth Flow (e2e)', () => {
 
     it('POST /auth/login - should log the user in and return a new token', () => {
       return request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(200)
         .then((res) => {
@@ -100,7 +113,7 @@ describe('Profile and Auth Flow (e2e)', () => {
 
     it('GET /profile - should get the user profile with a valid token', () => {
       return request(app.getHttpServer())
-        .get('/profile')
+        .get('/api/profile')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
         .then((res) => {
@@ -112,7 +125,7 @@ describe('Profile and Auth Flow (e2e)', () => {
     it('PUT /profile - should update the user profile', () => {
       const newName = 'E2E Test User Updated';
       return request(app.getHttpServer())
-        .put('/profile')
+        .put('/api/profile')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ name: newName })
         .expect(200)
@@ -124,13 +137,13 @@ describe('Profile and Auth Flow (e2e)', () => {
     it('POST /auth/logout - should blacklist the token and subsequent requests should fail', async () => {
       // First, logout to blacklist the token
       await request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/api/auth/logout')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(204);
 
       // Then verify the token is blacklisted
       await request(app.getHttpServer())
-        .get('/profile')
+        .get('/api/profile')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(401)
         .then((res) => {
@@ -144,23 +157,36 @@ describe('Profile and Auth Flow (e2e)', () => {
         await (cacheManager.reset as () => Promise<void>)();
       }
 
-      // Log in again to get a fresh token
+      // Create a new user for deletion test
+      const deleteUser = {
+        name: 'Delete Test User',
+        email: `delete-${Date.now()}@test.com`,
+        password: 'password123',
+      };
+
+      // Register the new user
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send(deleteUser)
+        .expect(201);
+
+      // Log in to get a token
       const loginRes = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email: user.email, password: user.password });
+        .post('/api/auth/login')
+        .send({ email: deleteUser.email, password: deleteUser.password });
 
       const freshToken = loginRes.body.data.accessToken as string;
 
       // Delete the account
       await request(app.getHttpServer())
-        .delete('/profile')
+        .delete('/api/profile')
         .set('Authorization', `Bearer ${freshToken}`)
         .expect(204);
 
       // Verify user can no longer log in
       await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({ email: user.email, password: user.password })
+        .post('/api/auth/login')
+        .send({ email: deleteUser.email, password: deleteUser.password })
         .expect(401);
     });
   });

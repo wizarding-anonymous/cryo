@@ -58,7 +58,7 @@ async function bootstrap() {
     .addBearerAuth() // For JWT authentication
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document);
+  SwaggerModule.setup('api/api-docs', app, document);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

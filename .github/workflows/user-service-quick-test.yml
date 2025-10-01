@@ -1,0 +1,110 @@
+name: User Service Quick Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/user-service/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/user-service/**'
+
+jobs:
+  quick-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/user-service/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: backend/user-service
+      run: npm ci --legacy-peer-deps
+    
+    - name: Run linting
+      working-directory: backend/user-service
+      run: npm run lint
+    
+    - name: Run unit tests
+      working-directory: backend/user-service
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: testuser
+        DB_PASSWORD: testpass
+        DB_NAME: testdb
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        NODE_ENV: test
+        JWT_SECRET: test-secret-key
+      run: npm test -- --passWithNoTests --ci --coverage=false --maxWorkers=2
+    
+    - name: Build application
+      working-directory: backend/user-service
+      run: npm run build
+    
+    - name: Test Docker build
+      working-directory: backend/user-service
+      run: |
+        echo "Testing Docker build..."
+        docker build -t user-service-test .
+        echo "✅ Docker build successful"
+    
+    - name: Test Docker Compose integration
+      working-directory: backend
+      run: |
+        echo "Testing Docker Compose integration..."
+        
+        # Create minimal test environment
+        cat > .env.test << EOF
+        REDIS_PASSWORD=redis_password
+        NODE_ENV=test
+        JWT_SECRET=test-secret-key
+        EOF
+        
+        # Start only User Service dependencies
+        docker-compose -f docker-compose.user-only.yml up -d
+        
+        # Wait and check health
+        sleep 30
+        timeout 30 bash -c 'until curl -f http://localhost:3001/api/v1/health; do sleep 2; done'
+        
+        echo "✅ Docker Compose integration test passed"
+        
+        # Cleanup
+        docker-compose -f docker-compose.user-only.yml down -v

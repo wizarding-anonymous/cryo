@@ -12,7 +12,7 @@ const mockUserService = {
 
 describe('ProfileService', () => {
   let service: ProfileService;
-  let userService: UserService;
+  let _userService: UserService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -26,7 +26,7 @@ describe('ProfileService', () => {
     }).compile();
 
     service = module.get<ProfileService>(ProfileService);
-    userService = module.get<UserService>(UserService);
+    _userService = module.get<UserService>(UserService);
   });
 
   afterEach(() => {
@@ -44,7 +44,7 @@ describe('ProfileService', () => {
         id: userId,
         name: 'Test',
         email: 'test@example.com',
-        password: 'hashed_password',
+        // UserService.findById now returns user without password
       };
       mockUserService.findById.mockResolvedValue(user);
 
@@ -75,7 +75,7 @@ describe('ProfileService', () => {
         id: userId,
         name: 'Updated Name',
         email: 'test@example.com',
-        password: 'hashed_password',
+        // UserService.updateProfile now returns user without password
         createdAt: new Date(),
         updatedAt: new Date(),
       };

@@ -66,10 +66,16 @@ export class UserService {
   /**
    * Finds a user by their ID.
    * @param id - The UUID of the user to find.
-   * @returns The user if found, otherwise null.
+   * @returns The user if found (without password), otherwise null.
    */
-  async findById(id: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id } });
+  async findById(id: string): Promise<Omit<User, 'password'> | null> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      return null;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
   /**
@@ -126,12 +132,15 @@ export class UserService {
    * Updates a user's profile information.
    * @param id - The ID of the user to update.
    * @param updateData - The profile data to update.
-   * @returns The updated user.
+   * @returns The updated user (without password).
    */
   async updateProfile(
     id: string,
     updateData: { name?: string },
-  ): Promise<User> {
-    return this.update(id, updateData);
+  ): Promise<Omit<User, 'password'>> {
+    const updatedUser = await this.update(id, updateData);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = updatedUser;
+    return userWithoutPassword;
   }
 }

@@ -32,11 +32,23 @@ describe('Auth Endpoints (e2e)', () => {
       }),
     };
 
+    // Create a mock RedisService
+    const mockRedisService = {
+      blacklistToken: jest.fn().mockResolvedValue(undefined),
+      isTokenBlacklisted: jest.fn().mockResolvedValue(false),
+      cacheUserSession: jest.fn().mockResolvedValue(undefined),
+      getUserSession: jest.fn().mockResolvedValue(null),
+      removeUserSession: jest.fn().mockResolvedValue(undefined),
+      healthCheck: jest.fn().mockResolvedValue(true),
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [TestAppModule],
     })
       .overrideProvider('CACHE_MANAGER')
       .useValue(cacheManager)
+      .overrideProvider('RedisService')
+      .useValue(mockRedisService)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -45,6 +57,7 @@ describe('Auth Endpoints (e2e)', () => {
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
     app.useGlobalInterceptors(new ResponseInterceptor());
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -65,7 +78,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should register a new user successfully', () => {
       return request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send({
           name: 'Test User',
           email: uniqueEmail,
@@ -83,7 +96,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 409 when email already exists', () => {
       return request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send({
           name: 'Test User 2',
           email: uniqueEmail, // Same email as above
@@ -97,7 +110,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 400 for invalid email format', () => {
       return request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send({
           name: 'Test User',
           email: 'invalid-email',
@@ -111,7 +124,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 400 for short password', () => {
       return request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send({
           name: 'Test User',
           email: 'test2@example.com',
@@ -125,7 +138,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 400 for missing required fields', () => {
       return request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send({
           email: 'test3@example.com',
           // Missing name and password
@@ -138,7 +151,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 400 for extra fields', () => {
       return request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send({
           name: 'Test User',
           email: 'test4@example.com',
@@ -161,12 +174,14 @@ describe('Auth Endpoints (e2e)', () => {
 
     beforeAll(async () => {
       // Register a user for login tests
-      await request(app.getHttpServer()).post('/auth/register').send(testUser);
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send(testUser);
     });
 
     it('should login successfully with correct credentials', () => {
       return request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: testUser.email,
           password: testUser.password,
@@ -181,7 +196,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 401 for incorrect password', () => {
       return request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: testUser.email,
           password: 'wrongpassword',
@@ -194,7 +209,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 401 for non-existent user', () => {
       return request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'nonexistent@example.com',
           password: 'password123',
@@ -207,7 +222,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 400 for invalid email format', () => {
       return request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'invalid-email',
           password: 'password123',
@@ -220,7 +235,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 400 for missing credentials', () => {
       return request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: testUser.email,
           // Missing password
@@ -242,10 +257,12 @@ describe('Auth Endpoints (e2e)', () => {
 
     beforeAll(async () => {
       // Register and login to get a token
-      await request(app.getHttpServer()).post('/auth/register').send(testUser);
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send(testUser);
 
       const loginRes = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: testUser.email,
           password: testUser.password,
@@ -256,14 +273,14 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should logout successfully with valid token', () => {
       return request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/api/auth/logout')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(204);
     });
 
     it('should return 401 for missing token', () => {
       return request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/api/auth/logout')
         .expect(401)
         .then((res) => {
           expect(res.body.error.code).toEqual('UNAUTHENTICATED');
@@ -272,7 +289,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 401 for invalid token', () => {
       return request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/api/auth/logout')
         .set('Authorization', 'Bearer invalid-token')
         .expect(401)
         .then((res) => {
@@ -282,7 +299,7 @@ describe('Auth Endpoints (e2e)', () => {
 
     it('should return 401 for malformed authorization header', () => {
       return request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/api/auth/logout')
         .set('Authorization', 'InvalidFormat')
         .expect(401)
         .then((res) => {

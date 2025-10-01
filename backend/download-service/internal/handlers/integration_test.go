@@ -17,6 +17,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
+)
+
+// Test UUIDs for consistent testing
+const (
+	TestUser1ID = "550e8400-e29b-41d4-a716-446655440001"
+	TestUser2ID = "550e8400-e29b-41d4-a716-446655440002"
+	TestGame1ID = "550e8400-e29b-41d4-a716-446655440011"
+	TestGame2ID = "550e8400-e29b-41d4-a716-446655440012"
+	TestGame3ID = "550e8400-e29b-41d4-a716-446655440013"
+	TestGame4ID = "550e8400-e29b-41d4-a716-446655440014"
 
 	"download-service/internal/cache"
 	"download-service/internal/clients/library"
@@ -76,8 +86,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	// Mock library client
 	libraryClient := &library.MockClient{
 		OwnedGames: map[string][]string{
-			"test-user-1": {"game-1", "game-2", "game-3"},
-			"test-user-2": {"game-2", "game-4"},
+			TestUser1ID: {TestGame1ID, TestGame2ID, TestGame3ID},
+			TestUser2ID: {TestGame2ID, TestGame4ID},
 		},
 	}
 

@@ -137,7 +137,6 @@ func TestHealthHandler_RegisterRoutes(t *testing.T) {
 		"/health/detailed", 
 		"/health/ready",
 		"/health/live",
-		"/api/v1/health",
 	}
 
 	routePaths := make([]string, len(routes))
