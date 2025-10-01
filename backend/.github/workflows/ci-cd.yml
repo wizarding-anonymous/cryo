@@ -1,10 +1,11 @@
-name: Microservices CI/CD
+name: Cryo Microservices CI/CD
 
 on:
   push:
     branches: [ main, develop ]
     paths:
       - 'backend/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
     paths:
@@ -189,16 +190,34 @@ jobs:
     - name: Deploy to staging
       run: |
         export KUBECONFIG=kubeconfig
+        
+        # Apply common resources
         kubectl apply -f backend/k8s/namespace.yaml
         kubectl apply -f backend/k8s/configmap.yaml
         kubectl apply -f backend/k8s/secrets.yaml
+        kubectl apply -f backend/k8s/ingress.yaml
         
-        # Update image tags for staging
+        # Deploy all services
         for service in api-gateway user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
-          kubectl set image deployment/$service-deployment $service=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/$service:develop-${{ github.sha }} -n microservices
+          echo "Deploying $service to staging..."
+          
+          # Apply service-specific k8s files if they exist
+          if [ -f "backend/k8s/${service}-deployment.yaml" ]; then
+            kubectl apply -f "backend/k8s/${service}-deployment.yaml"
+          fi
+          
+          if [ -f "backend/k8s/${service}-monitoring.yaml" ]; then
+            kubectl apply -f "backend/k8s/${service}-monitoring.yaml"
+          fi
+          
+          # Update image tag
+          kubectl set image deployment/${service}-deployment ${service}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${service}:develop-${{ github.sha }} -n microservices
         done
         
-        kubectl rollout status deployment -n microservices
+        # Wait for rollout
+        for service in api-gateway user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
+          kubectl rollout status deployment/${service}-deployment -n microservices --timeout=300s
+        done
 
   # Deploy to production
   deploy-production:
@@ -224,21 +243,41 @@ jobs:
     - name: Deploy to production
       run: |
         export KUBECONFIG=kubeconfig
+        
+        # Apply common resources
         kubectl apply -f backend/k8s/namespace.yaml
         kubectl apply -f backend/k8s/configmap.yaml
         kubectl apply -f backend/k8s/secrets.yaml
+        kubectl apply -f backend/k8s/ingress.yaml
         
-        # Update image tags for production
+        # Deploy all services
         for service in api-gateway user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
-          kubectl set image deployment/$service-deployment $service=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/$service:main-${{ github.sha }} -n microservices
+          echo "Deploying $service to production..."
+          
+          # Apply service-specific k8s files if they exist
+          if [ -f "backend/k8s/${service}-deployment.yaml" ]; then
+            kubectl apply -f "backend/k8s/${service}-deployment.yaml"
+          fi
+          
+          if [ -f "backend/k8s/${service}-monitoring.yaml" ]; then
+            kubectl apply -f "backend/k8s/${service}-monitoring.yaml"
+          fi
+          
+          # Update image tag
+          kubectl set image deployment/${service}-deployment ${service}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${service}:main-${{ github.sha }} -n microservices
         done
         
-        kubectl rollout status deployment -n microservices
+        # Wait for rollout
+        for service in api-gateway user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
+          kubectl rollout status deployment/${service}-deployment -n microservices --timeout=600s
+        done
     
     - name: Run smoke tests
       run: |
         # Add smoke tests here
+        sleep 30
         curl -f https://api.yourdomain.com/health || exit 1
+        curl -f https://api.yourdomain.com/api/users/health || exit 1
 
   # Notification
   notify:
@@ -253,5 +292,6 @@ jobs:
         status: ${{ job.status }}
         channel: '#deployments'
         webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
