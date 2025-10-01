@@ -1,0 +1,117 @@
+name: Debug Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '.github/workflows/test-debug.yml'
+
+jobs:
+  debug-services:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [
+          'notification-service',
+          'api-gateway'
+        ]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Debug service structure
+      run: |
+        echo "=== Debugging ${{ matrix.service }} ==="
+        echo "Service directory exists: $(test -d backend/${{ matrix.service }} && echo 'YES' || echo 'NO')"
+        
+        if [ -d "backend/${{ matrix.service }}" ]; then
+          echo "Files in service directory:"
+          ls -la backend/${{ matrix.service }}/
+          
+          echo "Package.json exists: $(test -f backend/${{ matrix.service }}/package.json && echo 'YES' || echo 'NO')"
+          echo "Package-lock.json exists: $(test -f backend/${{ matrix.service }}/package-lock.json && echo 'YES' || echo 'NO')"
+          
+          if [ -f "backend/${{ matrix.service }}/package.json" ]; then
+            echo "Available scripts:"
+            cat backend/${{ matrix.service }}/package.json | jq -r '.scripts // {} | keys[]' 2>/dev/null || echo "Could not parse scripts"
+          fi
+        fi
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Try install dependencies
+      working-directory: backend/${{ matrix.service }}
+      run: |
+        echo "Attempting to install dependencies..."
+        if [ -f "package-lock.json" ]; then
+          echo "Using npm ci..."
+          npm ci --legacy-peer-deps || echo "npm ci failed"
+        else
+          echo "Using npm install..."
+          npm install --legacy-peer-deps || echo "npm install failed"
+        fi
+      continue-on-error: true
+    
+    - name: Try running tests
+      working-directory: backend/${{ matrix.service }}
+      run: |
+        echo "Attempting to run tests..."
+        npm test -- --passWithNoTests --ci --coverage=false || echo "Tests failed"
+      continue-on-error: true
+
+  debug-go:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Debug Go service
+      run: |
+        echo "=== Debugging download-service ==="
+        echo "Service directory exists: $(test -d backend/download-service && echo 'YES' || echo 'NO')"
+        
+        if [ -d "backend/download-service" ]; then
+          echo "Files in service directory:"
+          ls -la backend/download-service/
+          
+          echo "go.mod exists: $(test -f backend/download-service/go.mod && echo 'YES' || echo 'NO')"
+          echo "go.sum exists: $(test -f backend/download-service/go.sum && echo 'YES' || echo 'NO')"
+          
+          echo "Looking for main.go files:"
+          find backend/download-service -name "main.go" -type f || echo "No main.go found"
+        fi
+    
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache-dependency-path: backend/download-service/go.sum
+    
+    - name: Try Go operations
+      working-directory: backend/download-service
+      run: |
+        echo "Go version:"
+        go version
+        
+        echo "Attempting go mod download..."
+        go mod download || echo "go mod download failed"
+        
+        echo "Attempting go test..."
+        go test ./... || echo "go test failed"
+        
+        echo "Attempting go build..."
+        if [ -f "cmd/server/main.go" ]; then
+          go build -o main cmd/server/main.go || echo "build failed"
+        elif [ -f "cmd/main.go" ]; then
+          go build -o main cmd/main.go || echo "build failed"
+        else
+          echo "Could not find main.go file"
+        fi
+      continue-on-error: true
