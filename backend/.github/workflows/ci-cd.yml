@@ -1,4 +1,4 @@
-name: Cryo Microservices CI/CD
+name: CRYO Microservices CI/CD
 
 on:
   push:
