@@ -88,14 +88,14 @@ describe('GameController (e2e)', () => {
 
   it('GET /api/games/:id - should return 404 for non-existent game', async () => {
     const response = await apiClient.getGame(
-      '123e4567-e89b-12d3-a456-426614174000',
+      '00000000-0000-0000-0000-000000000000',
     );
     expect(response.status).toBe(404);
   });
 
   it('GET /api/games/:id/purchase-info - should return 404 for non-existent game', async () => {
     const response = await apiClient.getPurchaseInfo(
-      '123e4567-e89b-12d3-a456-426614174000',
+      '00000000-0000-0000-0000-000000000000',
     );
     expect(response.status).toBe(404);
   });

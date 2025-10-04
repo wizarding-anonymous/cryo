@@ -2,12 +2,17 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Param,
   Query,
   Body,
   ParseUUIDPipe,
   UseInterceptors,
   HttpStatus,
+  UsePipes,
+  ValidationPipe,
+  HttpCode,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,12 +22,15 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { GameService } from './game.service';
+import { SearchService } from '../search/search.service';
+import { SearchGamesDto } from '../dto/search-games.dto';
 import { GetGamesDto } from '../dto/get-games.dto';
 import { GameResponseDto } from '../dto/game-response.dto';
 import { GameListResponseDto } from '../dto/game-list-response.dto';
 import { PurchaseInfoDto } from '../dto/purchase-info.dto';
 import { ErrorResponseDto } from '../dto/error-response.dto';
 import { CreateGameDto } from '../dto/create-game.dto';
+import { UpdateGameDto } from '../dto/update-game.dto';
 import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
 import { PerformanceInterceptor } from '../common/interceptors/performance.interceptor';
 import {
@@ -45,7 +53,10 @@ import { Cache } from '../common/decorators/cache.decorator';
   ResponseTransformationInterceptor,
 )
 export class GameController {
-  constructor(private readonly gameService: GameService) {}
+  constructor(
+    private readonly gameService: GameService,
+    private readonly searchService: SearchService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -102,6 +113,39 @@ export class GameController {
   ): Promise<GameListResponseDto> {
     const result = await this.gameService.getAllGames(getGamesDto);
 
+    // Transform Game entities to GameResponseDto
+    const gameResponseDtos = result.games.map(
+      (game) => new GameResponseDto(game),
+    );
+
+    return new GameListResponseDto(
+      gameResponseDtos,
+      result.total,
+      result.page,
+      result.limit,
+    );
+  }
+
+  @Get('search')
+  @ApiOperation({
+    summary: 'Search for games',
+    description: 'Search games using various criteria and filters',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Successfully retrieved search results',
+    type: GameListResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid search parameters',
+    type: ErrorResponseDto,
+  })
+  @ExcludeTransform()
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async searchGames(@Query() searchDto: SearchGamesDto): Promise<GameListResponseDto> {
+    const result = await this.searchService.searchGames(searchDto);
+    
     // Transform Game entities to GameResponseDto
     const gameResponseDtos = result.games.map(
       (game) => new GameResponseDto(game),
@@ -211,9 +255,74 @@ export class GameController {
     description: 'Invalid game data',
     type: ErrorResponseDto,
   })
-  @TransformResponse({ includeMetadata: true })
+  @ExcludeTransform()
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async createGame(@Body() createGameDto: CreateGameDto): Promise<GameResponseDto> {
     const game = await this.gameService.createGame(createGameDto);
     return new GameResponseDto(game);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Update a game',
+    description: 'Update an existing game by its UUID',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Game updated successfully',
+    type: GameResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid game data or ID format',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Game not found',
+    type: ErrorResponseDto,
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the game',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ExcludeTransform()
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async updateGame(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateGameDto: UpdateGameDto,
+  ): Promise<GameResponseDto> {
+    const game = await this.gameService.updateGame(id, updateGameDto);
+    return new GameResponseDto(game);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete a game',
+    description: 'Delete a game by its UUID',
+  })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Game deleted successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid game ID format',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Game not found',
+    type: ErrorResponseDto,
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the game',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteGame(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    await this.gameService.deleteGame(id);
   }
 }

@@ -125,6 +125,14 @@ export class GameResponseDto {
   @Type(() => Date)
   createdAt: Date;
 
+  @ApiProperty({
+    description: 'Date when the game was last updated',
+    example: '2023-01-15T10:30:00Z',
+  })
+  @Expose()
+  @Type(() => Date)
+  updatedAt: Date;
+
   constructor(game: Game) {
     this.id = game.id;
     this.title = game.title;
@@ -140,5 +148,6 @@ export class GameResponseDto {
     this.systemRequirements = game.systemRequirements;
     this.available = game.available;
     this.createdAt = game.createdAt;
+    this.updatedAt = game.updatedAt;
   }
 }

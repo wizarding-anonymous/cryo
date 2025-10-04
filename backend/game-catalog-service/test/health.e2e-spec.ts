@@ -47,7 +47,7 @@ describe('Health Endpoints (e2e)', () => {
       expect(health.details).toHaveProperty('database');
       expect(health.details).toHaveProperty('memory_heap');
       expect(health.details).toHaveProperty('memory_rss');
-      expect(health.details).toHaveProperty('redis');
+      expect(health.details).toHaveProperty('cache');
       expect(health.details).toHaveProperty('application');
 
       // Verify database health
@@ -67,8 +67,8 @@ describe('Health Endpoints (e2e)', () => {
       expect(memoryRssHealth).toHaveProperty('status');
 
       // Verify cache health (should work with fallback)
-      const redisHealth = health.details.redis as Record<string, unknown>;
-      expect(redisHealth).toHaveProperty('status');
+      const cacheHealth = health.details.cache as Record<string, unknown>;
+      expect(cacheHealth).toHaveProperty('status');
 
       // Verify application health
       const appHealth = health.details.application as Record<string, unknown>;
@@ -88,7 +88,7 @@ describe('Health Endpoints (e2e)', () => {
       const health: TestHealthResponse = extractHealthResponse(response);
       expectValidHealthResponse(health);
       expect(health.details).toHaveProperty('database');
-      expect(health.details).toHaveProperty('redis');
+      expect(health.details).toHaveProperty('cache');
     });
   });
 

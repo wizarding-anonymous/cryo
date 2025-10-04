@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
-import { HealthController } from './health.controller';
+import { HealthController, V1HealthController } from './health.controller';
 import { MetricsService } from './metrics.service';
 import { LoggingService } from './logging.service';
 import { HealthMonitoringInterceptor } from './health-monitoring.interceptor';
@@ -23,7 +23,7 @@ import { DatabaseModule } from '../database/database.module';
       },
     }),
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, V1HealthController],
   providers: [MetricsService, LoggingService, HealthMonitoringInterceptor],
   exports: [MetricsService, LoggingService, HealthMonitoringInterceptor],
 })

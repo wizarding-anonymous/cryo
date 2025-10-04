@@ -135,7 +135,7 @@ export class SearchService {
       case 'all':
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         queryBuilder.andWhere(
-          "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '')) @@ to_tsquery('russian', :query)",
+          "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '') || ' ' || COALESCE(game.developer, '') || ' ' || COALESCE(game.publisher, '')) @@ to_tsquery('russian', :query)",
           { query: sanitizedQuery },
         );
         break;

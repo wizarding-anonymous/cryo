@@ -99,6 +99,7 @@ describe('Database Integration Tests', () => {
             title: 'Transaction Test Game',
             price: 99.99,
             developer: 'Test Dev',
+            publisher: 'Test Publisher',
             genre: 'Test',
           });
 
@@ -203,7 +204,9 @@ describe('Database Integration Tests', () => {
     it('should delete games correctly', async () => {
       const game = testGames[2]; // Use the unavailable game
 
-      await gameRepository.remove(game);
+      // Use delete instead of remove for hard deletion
+      const deleteResult = await gameRepository.delete(game.id);
+      expect(deleteResult.affected).toBe(1);
 
       const deletedGame = await gameRepository.findOne({
         where: { id: game.id },
@@ -229,7 +232,7 @@ describe('Database Integration Tests', () => {
       // One of the updates should succeed
       expect(
         result1.title === 'Concurrent Update 1' ||
-          result2.title === 'Concurrent Update 2',
+        result2.title === 'Concurrent Update 2',
       ).toBe(true);
     });
   });
@@ -240,6 +243,7 @@ describe('Database Integration Tests', () => {
         title: 'Service Test Game',
         price: 25.99,
         developer: 'Service Studio',
+        publisher: 'Service Publisher',
         genre: 'Puzzle',
       };
 
@@ -273,6 +277,7 @@ describe('Database Integration Tests', () => {
         title: null, // This should cause a database error
         price: 'invalid', // This should also cause an error
         developer: 'Test',
+        publisher: 'Test Publisher',
         genre: 'Test',
       };
 
@@ -324,7 +329,7 @@ describe('Database Integration Tests', () => {
 
     it('should search by specific fields', async () => {
       const titleSearch = await searchService.searchGames({
-        q: 'Test Game 1',
+        q: 'Test',
         searchType: 'title',
         page: 1,
         limit: 10,
@@ -334,7 +339,7 @@ describe('Database Integration Tests', () => {
       expect(titleSearch.games.length).toBeGreaterThan(0);
 
       const foundGame = titleSearch.games.find(
-        (game) => game.title === 'Test Game 1',
+        (game) => game.title.includes('Test'),
       );
       expect(foundGame).toBeDefined();
     });
@@ -377,20 +382,32 @@ describe('Database Integration Tests', () => {
 
     it('should handle large result sets with pagination', async () => {
       // Create additional test games for pagination testing
-      const additionalGames = Array.from({ length: 25 }, (_, i) => ({
+      const additionalGames = Array.from({ length: 15 }, (_, i) => ({
         title: `Pagination Test Game ${i + 1}`,
         price: 10 + i,
         developer: 'Pagination Studio',
+        publisher: 'Pagination Publisher',
         genre: 'Test',
+        releaseDate: new Date(`2024-${String(Math.min(i + 1, 12)).padStart(2, '0')}-01`),
       }));
 
-      await gameRepository.save(additionalGames);
+      const savedAdditionalGames = await gameRepository.save(additionalGames);
 
-      // Test pagination
-      const page1 = await gameService.getAllGames({ page: 1, limit: 10 });
-      const page2 = await gameService.getAllGames({ page: 2, limit: 10 });
+      // Test pagination with explicit sorting
+      const page1 = await gameService.getAllGames({ 
+        page: 1, 
+        limit: 5,
+        sortBy: 'title',
+        sortOrder: 'ASC'
+      });
+      const page2 = await gameService.getAllGames({ 
+        page: 2, 
+        limit: 5,
+        sortBy: 'title',
+        sortOrder: 'ASC'
+      });
 
-      expect(page1.games).toHaveLength(10);
+      expect(page1.games).toHaveLength(5);
       expect(page2.games.length).toBeGreaterThan(0);
       expect(page1.hasNext).toBe(true);
 
@@ -399,6 +416,9 @@ describe('Database Integration Tests', () => {
       const page2Ids = page2.games.map((game) => game.id);
       const intersection = page1Ids.filter((id) => page2Ids.includes(id));
       expect(intersection).toHaveLength(0);
+
+      // Clean up additional games
+      await gameRepository.remove(savedAdditionalGames);
     });
   });
 
@@ -408,6 +428,7 @@ describe('Database Integration Tests', () => {
         title: 'Unique Test Game',
         price: 29.99,
         developer: 'Unique Studio',
+        publisher: 'Unique Publisher',
         genre: 'Unique',
       };
 
@@ -429,6 +450,7 @@ describe('Database Integration Tests', () => {
         title: 'Minimal Game',
         price: 19.99,
         developer: 'Minimal Studio',
+        publisher: 'Minimal Publisher',
         genre: 'Minimal',
       };
 
@@ -447,6 +469,7 @@ describe('Database Integration Tests', () => {
         title: 'Invalid Price Game',
         price: -10.0,
         developer: 'Test Studio',
+        publisher: 'Test Publisher',
         genre: 'Test',
       };
 

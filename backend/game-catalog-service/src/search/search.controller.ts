@@ -20,11 +20,12 @@ import {
 import {
   ResponseTransformationInterceptor,
   TransformResponse,
+  ExcludeTransform,
 } from '../common/interceptors/response-transformation.interceptor';
 import { Cache } from '../common/decorators/cache.decorator';
 
 @ApiTags('Games')
-@Controller('games')
+@Controller('search')
 @UseInterceptors(
   TimeoutInterceptor,
   HttpCacheInterceptor,
@@ -39,7 +40,7 @@ export class SearchController {
   @Get('search')
   @Cache('search_{{query}}', 300) // 5 minutes TTL for search results
   @Timeout(12000) // 12 seconds timeout for search operations
-  @TransformResponse({ includeMetadata: true })
+  @ExcludeTransform()
   @ApiOperation({
     summary: 'Search for games by title, description, or all fields',
     description:

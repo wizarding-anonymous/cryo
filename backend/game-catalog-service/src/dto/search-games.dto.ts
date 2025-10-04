@@ -4,10 +4,38 @@ import {
   MinLength,
   MaxLength,
   IsIn,
+  IsNumber,
+  Min,
+  ValidateIf,
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { GetGamesDto } from './get-games.dto';
+
+// Custom validator for price range validation
+function IsGreaterThanOrEqual(property: string, validationOptions?: ValidationOptions) {
+  return function (object: Object, propertyName: string) {
+    registerDecorator({
+      name: 'isGreaterThanOrEqual',
+      target: object.constructor,
+      propertyName: propertyName,
+      constraints: [property],
+      options: validationOptions,
+      validator: {
+        validate(value: any, args: ValidationArguments) {
+          const [relatedPropertyName] = args.constraints;
+          const relatedValue = (args.object as any)[relatedPropertyName];
+          return typeof value === 'number' && typeof relatedValue === 'number' 
+            ? value >= relatedValue 
+            : true; // Skip validation if either value is not a number
+        },
+      },
+    });
+  };
+}
 
 export class SearchGamesDto extends GetGamesDto {
   @ApiProperty({
@@ -46,6 +74,8 @@ export class SearchGamesDto extends GetGamesDto {
   })
   @IsOptional()
   @Transform(({ value }) => (value ? parseFloat(String(value)) : undefined))
+  @IsNumber({}, { message: 'Minimum price must be a number' })
+  @Min(0, { message: 'Minimum price cannot be negative' })
   minPrice?: number;
 
   @ApiProperty({
@@ -55,5 +85,11 @@ export class SearchGamesDto extends GetGamesDto {
   })
   @IsOptional()
   @Transform(({ value }) => (value ? parseFloat(String(value)) : undefined))
+  @IsNumber({}, { message: 'Maximum price must be a number' })
+  @Min(0, { message: 'Maximum price cannot be negative' })
+  @ValidateIf((o) => o.minPrice !== undefined && o.maxPrice !== undefined)
+  @IsGreaterThanOrEqual('minPrice', { 
+    message: 'Maximum price must be greater than or equal to minimum price' 
+  })
   maxPrice?: number;
 }
