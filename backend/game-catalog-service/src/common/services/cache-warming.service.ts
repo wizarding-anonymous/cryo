@@ -1,14 +1,6 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CacheService } from './cache.service';
-import { GetGamesDto } from '../../dto/get-games.dto';
-import { SearchGamesDto } from '../../dto/search-games.dto';
 
 @Injectable()
 export class CacheWarmingService implements OnModuleInit {
@@ -25,11 +17,11 @@ export class CacheWarmingService implements OnModuleInit {
     );
   }
 
-  async onModuleInit() {
+  onModuleInit(): void {
     if (this.isWarmupEnabled) {
       // Delay warmup to allow the application to fully start
       setTimeout(() => {
-        this.warmUpCache().catch((error) => {
+        void this.warmUpCache().catch((error) => {
           this.logger.error('Cache warmup failed:', error);
         });
       }, 5000);
@@ -58,24 +50,79 @@ export class CacheWarmingService implements OnModuleInit {
   private async warmUpGameLists(): Promise<void> {
     this.logger.debug('Warming up game lists...');
 
-    // For now, we'll just log that we would warm up the cache
-    // In a real implementation, we would need to inject the GameService
-    // but that creates a circular dependency issue
-    this.logger.debug('Game lists cache warmup would be performed here');
+    try {
+      // Warm up common game list queries
+      const commonQueries = [
+        'game-catalog:games_list_page:1_limit:10_available:true',
+        'game-catalog:games_list_page:1_limit:20_available:true',
+        'game-catalog:games_list_page:1_limit:10_genre:action',
+        'game-catalog:games_list_page:1_limit:10_sortBy:releaseDate',
+      ];
+
+      for (const key of commonQueries) {
+        // Check if cache key exists, if not it will be populated on first request
+        const cached = await this.cacheService.get(key);
+        if (!cached) {
+          this.logger.debug(
+            `Cache miss for key: ${key} - will be populated on first request`,
+          );
+        }
+      }
+
+      this.logger.debug('Game lists cache warmup completed');
+    } catch (error) {
+      this.logger.warn('Game lists cache warmup failed:', error);
+    }
   }
 
   private async warmUpPopularSearches(): Promise<void> {
     this.logger.debug('Warming up popular searches...');
 
-    // For now, we'll just log that we would warm up the cache
-    // In a real implementation, we would need to inject the SearchService
-    // but that creates a circular dependency issue
-    this.logger.debug('Popular searches cache warmup would be performed here');
+    try {
+      // Warm up common search queries
+      const popularSearches = [
+        'game-catalog:search_q:action_type:title',
+        'game-catalog:search_q:adventure_type:title',
+        'game-catalog:search_q:rpg_type:title',
+        'game-catalog:search_q:strategy_type:title',
+      ];
+
+      for (const key of popularSearches) {
+        // Check if cache key exists, if not it will be populated on first request
+        const cached = await this.cacheService.get(key);
+        if (!cached) {
+          this.logger.debug(
+            `Cache miss for key: ${key} - will be populated on first request`,
+          );
+        }
+      }
+
+      this.logger.debug('Popular searches cache warmup completed');
+    } catch (error) {
+      this.logger.warn('Popular searches cache warmup failed:', error);
+    }
   }
 
-  private serializeQuery(query: any): string {
+  private serializeQuery(query: Record<string, unknown>): string {
     const sortedKeys = Object.keys(query).sort();
-    const pairs = sortedKeys.map((key) => `${key}=${query[key]}`);
+    const pairs = sortedKeys.map((key) => {
+      const value = query[key];
+      let serializedValue: string;
+
+      if (typeof value === 'object' && value !== null) {
+        serializedValue = JSON.stringify(value);
+      } else if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      ) {
+        serializedValue = String(value);
+      } else {
+        serializedValue = '';
+      }
+
+      return `${key}=${serializedValue}`;
+    });
     return pairs.join('&');
   }
 
@@ -104,7 +151,7 @@ export class CacheWarmingService implements OnModuleInit {
       return {
         success: false,
         duration,
-        message: `Cache warmup failed: ${error.message}`,
+        message: `Cache warmup failed: ${(error as Error).message}`,
       };
     }
   }

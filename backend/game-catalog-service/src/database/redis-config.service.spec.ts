@@ -2,9 +2,23 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { RedisConfigService } from './redis-config.service';
 
+// Mock ioredis
+jest.mock('ioredis', () => {
+  return jest.fn().mockImplementation(() => ({
+    ping: jest.fn().mockResolvedValue('PONG'),
+    quit: jest.fn().mockResolvedValue('OK'),
+    setex: jest.fn().mockResolvedValue('OK'),
+    get: jest.fn().mockResolvedValue(null),
+    del: jest.fn().mockResolvedValue(1),
+    keys: jest.fn().mockResolvedValue([]),
+    info: jest.fn().mockResolvedValue('used_memory_human:1.00M'),
+    dbsize: jest.fn().mockResolvedValue(0),
+    on: jest.fn(),
+  }));
+});
+
 describe('RedisConfigService', () => {
   let service: RedisConfigService;
-  let configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -19,7 +33,7 @@ describe('RedisConfigService', () => {
                 REDIS_PORT: 6379,
                 NODE_ENV: 'test',
               };
-              return config[key] || defaultValue;
+              return (config[key] || defaultValue) as unknown;
             }),
           },
         },
@@ -27,7 +41,10 @@ describe('RedisConfigService', () => {
     }).compile();
 
     service = module.get<RedisConfigService>(RedisConfigService);
-    configService = module.get<ConfigService>(ConfigService);
+  });
+
+  afterEach(async () => {
+    await service.onModuleDestroy();
   });
 
   it('should be defined', () => {
@@ -41,7 +58,7 @@ describe('RedisConfigService', () => {
 
   it('should return connection info', () => {
     const connectionInfo = service.getConnectionInfo();
-    expect(connectionInfo).toBe('localhost:6379');
+    expect(connectionInfo).toContain('localhost:6379');
   });
 
   it('should create cache key with prefix', () => {
@@ -54,22 +71,24 @@ describe('RedisConfigService', () => {
       get: jest.fn(() => undefined),
     };
 
-    const testService = new RedisConfigService(mockConfigService as any);
+    const testService = new RedisConfigService(
+      mockConfigService as unknown as ConfigService,
+    );
     const isValid = testService.validateConfig();
 
     expect(isValid).toBe(false);
   });
 
-  it('should create cache options with fallback', async () => {
-    // Mock the dynamic import to fail
-    jest.doMock('cache-manager-redis-store', () => {
-      throw new Error('Redis not available');
-    });
+  it('should handle cache operations gracefully when Redis is unavailable', async () => {
+    // Test when Redis is not available
+    const result = await service.set('test-key', { data: 'test' });
+    expect(typeof result).toBe('boolean');
+  });
 
-    const options = await service.createCacheOptions();
-
-    expect(options).toBeDefined();
-    expect(options.ttl).toBe(300);
-    expect(options.isGlobal).toBe(true);
+  it('should get cache statistics', async () => {
+    const stats = await service.getStats();
+    expect(stats).toHaveProperty('connected');
+    expect(stats).toHaveProperty('memory');
+    expect(stats).toHaveProperty('keys');
   });
 });

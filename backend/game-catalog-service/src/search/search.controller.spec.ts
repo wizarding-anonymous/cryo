@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Reflector } from '@nestjs/core';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { SearchController } from './search.controller';
@@ -8,19 +8,35 @@ import { SearchGamesDto } from '../dto/search-games.dto';
 import { PerformanceInterceptor } from '../common/interceptors/performance.interceptor';
 import { PerformanceMonitoringService } from '../common/services/performance-monitoring.service';
 import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
+import { CacheService } from '../common/services/cache.service';
+import { RedisConfigService } from '../database/redis-config.service';
 
 const mockSearchService = {
   searchGames: jest.fn(),
 };
 
-const mockCacheManager = {
+const mockCacheService = {
   get: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
+  delByPattern: jest.fn(),
+  invalidateGameCache: jest.fn(),
+  getCacheStats: jest.fn(),
 };
 
 const mockPerformanceMonitoringService = {
   recordEndpointMetrics: jest.fn(),
+};
+
+const mockRedisConfigService = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+  isAvailable: jest.fn().mockReturnValue(true),
+  getClient: jest.fn(),
+  clearPattern: jest.fn(),
+  createCacheKey: jest.fn(),
+  getStats: jest.fn(),
 };
 
 describe('SearchController', () => {
@@ -44,12 +60,16 @@ describe('SearchController', () => {
           useValue: mockPerformanceMonitoringService,
         },
         {
+          provide: RedisConfigService,
+          useValue: mockRedisConfigService,
+        },
+        {
           provide: HttpCacheInterceptor,
           useValue: {},
         },
         {
-          provide: CACHE_MANAGER,
-          useValue: mockCacheManager,
+          provide: CacheService,
+          useValue: mockCacheService,
         },
         Reflector,
       ],

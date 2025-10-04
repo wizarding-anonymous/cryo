@@ -175,12 +175,12 @@ export class MetricsService {
   /**
    * Get current metrics summary for logging
    */
-  getMetricsSummary(): Record<string, any> {
+  getMetricsSummary(): Record<string, unknown> {
     return {
-      httpRequests: this.httpRequestsTotal['hashMap'],
-      dbConnections: this.dbConnectionsActive['value'],
-      cacheHits: this.cacheHits['hashMap'],
-      gamesCatalogSize: this.gamesCatalogSize['value'],
+      httpRequests: this.httpRequestsTotal['hashMap'] as unknown,
+      dbConnections: this.dbConnectionsActive['value'] as unknown,
+      cacheHits: this.cacheHits['hashMap'] as unknown,
+      gamesCatalogSize: this.gamesCatalogSize['value'] as unknown,
     };
   }
 }

@@ -1,13 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
-import { plainToClass } from 'class-transformer';
-import { validate } from 'class-validator';
 import { GetGamesDto, SearchGamesDto, CreateGameDto } from './index';
 
 describe('DTO Integration Tests', () => {
   let validationPipe: ValidationPipe;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     validationPipe = new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -29,10 +26,10 @@ describe('DTO Integration Tests', () => {
         available: 'true',
       };
 
-      const result = await validationPipe.transform(rawData, {
+      const result = (await validationPipe.transform(rawData, {
         type: 'query',
         metatype: GetGamesDto,
-      });
+      })) as GetGamesDto;
 
       expect(result).toBeInstanceOf(GetGamesDto);
       expect(result.page).toBe(2);
@@ -66,10 +63,10 @@ describe('DTO Integration Tests', () => {
         maxPrice: '5000',
       };
 
-      const result = await validationPipe.transform(rawData, {
+      const result = (await validationPipe.transform(rawData, {
         type: 'query',
         metatype: SearchGamesDto,
-      });
+      })) as SearchGamesDto;
 
       expect(result).toBeInstanceOf(SearchGamesDto);
       expect(result.q).toBe('cyberpunk');
@@ -107,10 +104,10 @@ describe('DTO Integration Tests', () => {
         },
       };
 
-      const result = await validationPipe.transform(rawData, {
+      const result = (await validationPipe.transform(rawData, {
         type: 'body',
         metatype: CreateGameDto,
-      });
+      })) as CreateGameDto;
 
       expect(result).toBeInstanceOf(CreateGameDto);
       expect(result.title).toBe('Test Game');
@@ -166,10 +163,10 @@ describe('DTO Integration Tests', () => {
         anotherBadField: 'also removed',
       };
 
-      const result = await lenientPipe.transform(rawData, {
+      const result = (await lenientPipe.transform(rawData, {
         type: 'query',
         metatype: GetGamesDto,
-      });
+      })) as GetGamesDto;
 
       expect(result).not.toHaveProperty('maliciousField');
       expect(result).not.toHaveProperty('anotherBadField');

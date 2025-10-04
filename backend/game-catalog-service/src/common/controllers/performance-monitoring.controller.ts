@@ -54,7 +54,7 @@ export class PerformanceMonitoringController {
       },
     },
   })
-  async getPerformanceStats(@Query('minutes') minutes: number = 5) {
+  getPerformanceStats(@Query('minutes') minutes: number = 5) {
     return this.performanceMonitoringService.getPerformanceStats(minutes);
   }
 
@@ -86,7 +86,7 @@ export class PerformanceMonitoringController {
       },
     },
   })
-  async getCacheStats(@Query('minutes') minutes: number = 5) {
+  getCacheStats(@Query('minutes') minutes: number = 5) {
     return this.performanceMonitoringService.getCacheStats(minutes);
   }
 
@@ -106,7 +106,7 @@ export class PerformanceMonitoringController {
       },
     },
   })
-  async clearMetrics() {
+  clearMetrics() {
     try {
       this.performanceMonitoringService.clearMetrics();
       return {
@@ -116,7 +116,7 @@ export class PerformanceMonitoringController {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to clear metrics: ${error.message}`,
+        message: `Failed to clear metrics: ${(error as Error).message}`,
       };
     }
   }

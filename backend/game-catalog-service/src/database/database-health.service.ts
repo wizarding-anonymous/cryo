@@ -45,7 +45,7 @@ export class DatabaseHealthService extends HealthIndicator {
       throw new HealthCheckError(
         'Database health check failed',
         this.getStatus(key, false, {
-          message: error.message,
+          message: (error as Error).message,
           timestamp: new Date(),
         }),
       );
@@ -57,17 +57,37 @@ export class DatabaseHealthService extends HealthIndicator {
    */
   async isRedisHealthy(key: string): Promise<HealthIndicatorResult> {
     try {
-      // This would need to be implemented with actual Redis client
-      // For now, we'll return a basic check
+      const ioredis = await import('ioredis');
+      const Redis = ioredis.default;
+      const redisHost = process.env.REDIS_HOST || 'redis';
+      const redisPort = parseInt(process.env.REDIS_PORT || '6379');
+      const redisPassword = process.env.REDIS_PASSWORD;
+
+      const redis = new (Redis as any)({
+        host: redisHost,
+        port: redisPort,
+        password: redisPassword || undefined,
+        connectTimeout: 5000,
+        lazyConnect: true,
+        maxRetriesPerRequest: 1,
+      });
+
+      const startTime = Date.now();
+      await redis.ping();
+      const responseTime = Date.now() - startTime;
+
+      redis.disconnect();
+
       return this.getStatus(key, true, {
         message: 'Redis connection is healthy',
+        responseTime,
         timestamp: new Date(),
       });
     } catch (error) {
       throw new HealthCheckError(
         'Redis health check failed',
         this.getStatus(key, false, {
-          message: error.message,
+          message: (error as Error).message,
           timestamp: new Date(),
         }),
       );
@@ -85,18 +105,52 @@ export class DatabaseHealthService extends HealthIndicator {
       this.dataSource,
     );
 
+    let redisStatus = {
+      status: 'unknown',
+      message: 'Redis status check failed',
+      host: process.env.REDIS_HOST || 'redis',
+      port: process.env.REDIS_PORT || '6379',
+    };
+
+    try {
+      const ioredis = await import('ioredis');
+      const Redis = ioredis.default;
+      const redis = new (Redis as any)({
+        host: process.env.REDIS_HOST || 'redis',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD || undefined,
+        connectTimeout: 3000,
+        lazyConnect: true,
+        maxRetriesPerRequest: 1,
+      });
+
+      await redis.ping();
+      const info = await redis.info('server');
+      const versionMatch = info.match(/redis_version:([^\r\n]+)/);
+
+      redisStatus = {
+        status: 'connected',
+        message: 'Redis connection is healthy',
+        host: process.env.REDIS_HOST || 'redis',
+        port: process.env.REDIS_PORT || '6379',
+        ...(versionMatch && { version: versionMatch[1] }),
+      };
+
+      redis.disconnect();
+    } catch (error) {
+      redisStatus.message = `Redis connection failed: ${(error as Error).message}`;
+    }
+
     return {
       database: {
         isConnected: dbStatus.isConnected,
         hasActiveConnections: dbStatus.hasActiveConnections,
         driver: this.dataSource.driver.constructor.name,
         database: this.dataSource.options.database,
+        host: (this.dataSource.options as any).host,
+        port: (this.dataSource.options as any).port,
       },
-      redis: {
-        // This would be implemented with actual Redis client status
-        status: 'unknown',
-        message: 'Redis status check not implemented yet',
-      },
+      redis: redisStatus,
     };
   }
 }

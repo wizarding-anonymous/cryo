@@ -36,8 +36,10 @@ export class CacheAdminController {
       },
     },
   })
-  async getCacheStats() {
-    return this.cacheService.getCacheStats();
+  async getCacheStats(): Promise<Record<string, unknown>> {
+    return this.cacheService.getCacheStats() as Promise<
+      Record<string, unknown>
+    >;
   }
 
   @Post('warmup')
@@ -88,7 +90,7 @@ export class CacheAdminController {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to invalidate game caches: ${error.message}`,
+        message: `Failed to invalidate game caches: ${(error as Error).message}`,
       };
     }
   }
@@ -124,7 +126,7 @@ export class CacheAdminController {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to invalidate cache for game ${gameId}: ${error.message}`,
+        message: `Failed to invalidate cache for game ${gameId}: ${(error as Error).message}`,
       };
     }
   }

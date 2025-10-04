@@ -1,140 +1,132 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
-  IsNotEmpty,
   IsNumber,
-  IsPositive,
-  IsBoolean,
   IsOptional,
-  IsDate,
-  MaxLength,
-  Length,
+  IsBoolean,
   IsArray,
+  IsDateString,
   IsObject,
-  ValidateNested,
+  Min,
+  Max,
+  Length,
+  IsIn,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
-import { SystemRequirements } from '../interfaces/game.interface';
-
-class SystemRequirementsValidator implements SystemRequirements {
-  @ApiProperty({
-    example: 'Windows 10, 8GB RAM',
-    description: 'Minimum system requirements',
-  })
-  @IsString()
-  @IsNotEmpty()
-  minimum: string;
-
-  @ApiProperty({
-    example: 'Windows 11, 16GB RAM, RTX 3060',
-    description: 'Recommended system requirements',
-  })
-  @IsString()
-  @IsNotEmpty()
-  recommended: string;
-}
 
 export class CreateGameDto {
   @ApiProperty({
-    example: 'Cyberpunk 2077',
-    description: 'The title of the game',
+    description: 'Game title',
+    example: 'The Witcher 3: Wild Hunt',
+    minLength: 1,
+    maxLength: 255,
   })
   @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
+  @Length(1, 255)
   title: string;
 
   @ApiProperty({
-    example: 'A story-driven, open-world RPG...',
-    description: 'Full description of the game',
+    description: 'Game description',
+    example: 'An epic RPG adventure in a fantasy world',
+    required: false,
   })
-  @IsString()
   @IsOptional()
+  @IsString()
   description?: string;
 
   @ApiProperty({
-    example: 'Keanu Reeves, big city, lots of guns.',
-    description: 'A short, catchy description',
+    description: 'Short game description',
+    example: 'Epic RPG adventure',
+    required: false,
   })
-  @IsString()
   @IsOptional()
-  @MaxLength(500)
+  @IsString()
   shortDescription?: string;
 
-  @ApiProperty({ example: 59.99, description: 'Price of the game' })
-  @IsNumber()
-  @IsPositive()
+  @ApiProperty({
+    description: 'Game price in rubles',
+    example: 1999.99,
+    minimum: 0,
+    maximum: 999999.99,
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999999.99)
   price: number;
 
   @ApiProperty({
-    example: 'USD',
+    description: 'Currency code',
+    example: 'RUB',
     default: 'RUB',
-    description: 'Currency code (ISO 4217)',
   })
-  @IsString()
   @IsOptional()
-  @Length(3, 3)
+  @IsString()
+  @IsIn(['RUB', 'USD', 'EUR'])
   currency?: string = 'RUB';
 
-  @ApiProperty({ example: 'RPG', description: 'The genre of the game' })
-  @IsString()
-  @IsOptional()
-  @MaxLength(100)
-  genre?: string;
-
   @ApiProperty({
-    example: 'CD PROJEKT RED',
-    description: 'The developer of the game',
+    description: 'Game developer',
+    example: 'CD Projekt RED',
   })
   @IsString()
-  @IsOptional()
-  @MaxLength(255)
-  developer?: string;
+  @Length(1, 255)
+  developer: string;
 
   @ApiProperty({
-    example: 'CD PROJEKT RED',
-    description: 'The publisher of the game',
+    description: 'Game publisher',
+    example: 'CD Projekt',
   })
   @IsString()
-  @IsOptional()
-  @MaxLength(255)
-  publisher?: string;
+  @Length(1, 255)
+  publisher: string;
 
   @ApiProperty({
-    example: '2020-12-10',
-    description: 'The release date of the game',
+    description: 'Game genre',
+    example: 'RPG',
   })
-  @Type(() => Date)
-  @IsDate()
-  @IsOptional()
-  releaseDate?: Date;
+  @IsString()
+  @Length(1, 100)
+  genre: string;
 
   @ApiProperty({
-    type: [String],
-    example: ['/img/cp1.jpg', '/img/cp2.jpg'],
-    description: 'List of image URLs',
+    description: 'Game release date',
+    example: '2015-05-19',
+    required: false,
   })
+  @IsOptional()
+  @IsDateString()
+  releaseDate?: string;
+
+  @ApiProperty({
+    description: 'Game availability status',
+    example: true,
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  available?: boolean = true;
+
+  @ApiProperty({
+    description: 'Game images URLs',
+    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+    required: false,
+  })
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @IsOptional()
   images?: string[];
 
   @ApiProperty({
-    type: SystemRequirementsValidator,
-    description: 'System requirements for the game',
+    description: 'System requirements',
+    example: {
+      minimum: 'OS: Windows 7 64-bit, Processor: Intel CPU Core i5-2500K 3.3GHz',
+      recommended: 'OS: Windows 10 64-bit, Processor: Intel CPU Core i7 3770 3.4 GHz'
+    },
+    required: false,
   })
+  @IsOptional()
   @IsObject()
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => SystemRequirementsValidator)
-  systemRequirements?: SystemRequirements;
-
-  @ApiProperty({
-    example: true,
-    default: true,
-    description: 'Is the game available for purchase?',
-  })
-  @IsBoolean()
-  @IsOptional()
-  available?: boolean = true;
+  systemRequirements?: {
+    minimum?: string;
+    recommended?: string;
+  };
 }

@@ -53,7 +53,7 @@ describe('DTO Validation Tests', () => {
       expect(errors[0].property).toBe('sortBy');
     });
 
-    it('should transform sortOrder to uppercase', async () => {
+    it('should transform sortOrder to uppercase', () => {
       const dto = plainToClass(GetGamesDto, { sortOrder: 'asc' });
       expect(dto.sortOrder).toBe('ASC');
     });
@@ -85,7 +85,7 @@ describe('DTO Validation Tests', () => {
       expect(errors[0].property).toBe('q');
     });
 
-    it('should trim search query', async () => {
+    it('should trim search query', () => {
       const dto = plainToClass(SearchGamesDto, { q: '  cyberpunk  ' });
       expect(dto.q).toBe('cyberpunk');
     });
@@ -149,7 +149,7 @@ describe('DTO Validation Tests', () => {
       expect(errors.some((error) => error.property === 'currency')).toBe(true);
     });
 
-    it('should use default currency RUB', async () => {
+    it('should use default currency RUB', () => {
       const dto = plainToClass(CreateGameDto, {
         title: 'Test Game',
         price: 59.99,
@@ -251,7 +251,7 @@ describe('DTO Validation Tests', () => {
       const mockGame = {
         id: '123',
         title: 'Test Game',
-        price: '59.99' as any, // Simulate string price from database
+        price: '59.99' as unknown as number, // Simulate string price from database
         currency: 'USD',
         available: true,
       } as Game;

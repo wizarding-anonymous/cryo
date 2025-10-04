@@ -1,63 +1,98 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DatabaseConnectionUtil } from './database-connection.util';
 
 @Injectable()
 export class MigrationService {
   private readonly logger = new Logger(MigrationService.name);
 
   constructor(
-    @InjectDataSource()
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
-   * Runs all pending migrations
+   * Validates that the database schema is in sync with migrations
+   * Note: Migrations should be run manually using npm run migration:run
    */
-  async runMigrations(): Promise<void> {
+  async validateSchema(): Promise<boolean> {
     try {
-      await DatabaseConnectionUtil.runMigrations(this.dataSource);
+      // Check if migrations table exists
+      const migrationsTableExists = await this.dataSource.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_type = 'BASE TABLE'
+      `);
+
+      const hasGamesTable = migrationsTableExists.some(
+        (table: any) => table.table_name === 'games',
+      );
+      const hasMigrationsTable = migrationsTableExists.some(
+        (table: any) => table.table_name === 'migrations',
+      );
+
+      if (!hasGamesTable) {
+        this.logger.error(
+          'Games table not found. Please run migrations manually using: npm run migration:run',
+        );
+        return false;
+      }
+
+      if (!hasMigrationsTable) {
+        this.logger.warn(
+          'Migrations table not found. This might indicate migrations were not run through TypeORM CLI.',
+        );
+        this.logger.warn(
+          'Please run migrations manually using: npm run migration:run',
+        );
+        return false;
+      }
+
+      // Check if migrations have been executed
+      const executedMigrations = await this.dataSource.query(
+        'SELECT COUNT(*) as count FROM migrations',
+      );
+      
+      if (executedMigrations[0].count === 0) {
+        this.logger.warn(
+          'No executed migrations found. Please run migrations manually using: npm run migration:run',
+        );
+        return false;
+      }
+
+      this.logger.log('Database schema validation passed');
+      return true;
     } catch (error) {
-      this.logger.error('Migration execution failed', error);
-      throw error;
+      this.logger.error('Database schema validation failed', error);
+      this.logger.error('Please ensure migrations have been run manually using: npm run migration:run');
+      return false;
     }
   }
 
   /**
-   * Reverts the last migration
-   */
-  async revertLastMigration(): Promise<void> {
-    try {
-      await DatabaseConnectionUtil.revertMigration(this.dataSource);
-    } catch (error) {
-      this.logger.error('Migration revert failed', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Gets migration status
+   * Gets the current migration status
    */
   async getMigrationStatus(): Promise<{
-    executedMigrations: string[];
-    pendingMigrations: string[];
+    executed: any[];
+    pending: any[];
   }> {
     try {
       const executedMigrations = await this.dataSource.query(
-        'SELECT * FROM migrations ORDER BY timestamp DESC',
+        'SELECT * FROM migrations ORDER BY timestamp ASC',
       );
 
-      // Get all migration files
-      const allMigrations = this.dataSource.migrations.map((m) => m.name);
-      const executedNames = executedMigrations.map((m) => m.name);
-      const pendingMigrations = allMigrations.filter(
-        (name) => !executedNames.includes(name),
+      // Get pending migrations by comparing with available migration files
+      const availableMigrations = this.dataSource.migrations;
+      const executedNames = executedMigrations.map((m: any) => m.name);
+      
+      const pendingMigrations = availableMigrations.filter(
+        (migration) => !executedNames.includes(migration.name),
       );
 
       return {
-        executedMigrations: executedNames,
-        pendingMigrations,
+        executed: executedMigrations,
+        pending: pendingMigrations.map((m) => ({ name: m.name })),
       };
     } catch (error) {
       this.logger.error('Failed to get migration status', error);
@@ -66,64 +101,22 @@ export class MigrationService {
   }
 
   /**
-   * Validates database schema
+   * Logs migration information for debugging
    */
-  async validateSchema(): Promise<boolean> {
+  async logMigrationInfo(): Promise<void> {
     try {
-      // Check if required tables exist
-      const tables = await this.dataSource.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_type = 'BASE TABLE'
-      `);
-
-      const tableNames = tables.map((t) => t.table_name);
-      const requiredTables = ['games', 'migrations'];
-
-      const missingTables = requiredTables.filter(
-        (table) => !tableNames.includes(table),
-      );
-
-      if (missingTables.length > 0) {
-        this.logger.error(
-          `Missing required tables: ${missingTables.join(', ')}`,
+      const status = await this.getMigrationStatus();
+      
+      this.logger.log(`Executed migrations: ${status.executed.length}`);
+      this.logger.log(`Pending migrations: ${status.pending.length}`);
+      
+      if (status.pending.length > 0) {
+        this.logger.warn(
+          `Pending migrations: ${status.pending.map((m) => m.name).join(', ')}`,
         );
-        return false;
       }
-
-      this.logger.log('Database schema validation passed');
-      return true;
     } catch (error) {
-      this.logger.error('Schema validation failed', error);
-      return false;
-    }
-  }
-
-  /**
-   * Seeds the database with initial data
-   */
-  async seedDatabase(): Promise<void> {
-    try {
-      // Check if games table has data
-      const gameCount = await this.dataSource.query(
-        'SELECT COUNT(*) FROM games',
-      );
-
-      if (parseInt(gameCount[0].count) > 0) {
-        this.logger.log('Database already contains data, skipping seed');
-        return;
-      }
-
-      this.logger.log('Seeding database with initial data...');
-
-      // The seed data is already included in the migration
-      // This method can be extended for additional seeding if needed
-
-      this.logger.log('Database seeding completed');
-    } catch (error) {
-      this.logger.error('Database seeding failed', error);
-      throw error;
+      this.logger.error('Failed to log migration info', error);
     }
   }
 }

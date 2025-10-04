@@ -23,14 +23,14 @@ export class OptimizeGameIndexes1703000000000 implements MigrationInterface {
     // Index for games list with availability and release date (for default sorting)
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "idx_games_available_release_date" 
-      ON "games" ("available", "release_date" DESC) 
+      ON "games" ("available", "releaseDate" DESC) 
       WHERE "available" = true
     `);
 
     // Composite index for search with price filtering
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "idx_games_search_price" 
-      ON "games" ("available", "price", "release_date" DESC) 
+      ON "games" ("available", "price", "releaseDate" DESC) 
       WHERE "available" = true
     `);
 
@@ -52,7 +52,7 @@ export class OptimizeGameIndexes1703000000000 implements MigrationInterface {
       ON "games" USING gin(to_tsvector('russian', 
         "title" || ' ' || 
         COALESCE("description", '') || ' ' || 
-        COALESCE("short_description", '')
+        COALESCE("shortDescription", '')
       ))
     `);
 

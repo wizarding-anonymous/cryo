@@ -174,7 +174,7 @@ export class LoggingService {
     checkType: string,
     status: 'up' | 'down',
     duration: number,
-    details?: any,
+    details?: unknown,
   ): void {
     const logData = {
       type: 'health_check',

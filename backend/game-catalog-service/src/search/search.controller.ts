@@ -153,12 +153,9 @@ export class SearchController {
     try {
       this.logger.log(`Search request: ${JSON.stringify(searchGamesDto)}`);
 
-      // Validate search parameters
-      if (searchGamesDto.q && searchGamesDto.q.trim().length === 0) {
-        throw new HttpException(
-          'Search query cannot be empty',
-          HttpStatus.BAD_REQUEST,
-        );
+      // Allow empty search queries to return all games
+      if (searchGamesDto.q !== undefined && searchGamesDto.q.trim().length === 0) {
+        searchGamesDto.q = undefined; // Convert empty string to undefined for "show all" behavior
       }
 
       if (
@@ -204,8 +201,8 @@ export class SearchController {
       }
 
       this.logger.error(
-        `Search operation failed: ${error.message}`,
-        error.stack,
+        `Search operation failed: ${(error as Error).message}`,
+        (error as Error).stack,
       );
       throw new HttpException(
         'Search operation failed',

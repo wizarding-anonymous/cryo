@@ -21,6 +21,12 @@
 
 
 
+
+
+
+
+
+
   - Set up TypeORM with PostgreSQL connection
   - Configure Redis for caching
   - Create database configuration module

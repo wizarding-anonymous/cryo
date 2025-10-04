@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of } from 'rxjs';
@@ -7,8 +8,8 @@ describe('RequestLoggingInterceptor', () => {
   let interceptor: RequestLoggingInterceptor;
   let mockExecutionContext: ExecutionContext;
   let mockCallHandler: CallHandler;
-  let mockRequest: any;
-  let mockResponse: any;
+  let mockRequest: { method: string; originalUrl: string };
+  let mockResponse: { statusCode: number };
 
   beforeEach(async () => {
     mockRequest = {
@@ -152,10 +153,10 @@ describe('RequestLoggingInterceptor', () => {
         );
 
         // Verify that the logged message contains a time measurement
-        const logCall = logSpy.mock.calls[0][0];
+        const logCall = logSpy.mock.calls[0][0] as string;
         const timeMatch = logCall.match(/(\d+)ms/);
         expect(timeMatch).toBeTruthy();
-        expect(parseInt(timeMatch[1])).toBeGreaterThanOrEqual(0);
+        expect(parseInt(String(timeMatch?.[1]))).toBeGreaterThanOrEqual(0);
 
         done();
       });

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { PerformanceInterceptor } from './performance.interceptor';
 import { PerformanceMonitoringService } from '../services/performance-monitoring.service';
 
@@ -88,7 +88,6 @@ describe('PerformanceInterceptor', () => {
 
     const mockCallHandler = {
       handle: () => {
-        const { throwError } = require('rxjs');
         return throwError(() => new Error('Test error'));
       },
     } as CallHandler;

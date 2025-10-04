@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -352,7 +354,14 @@ describe('Service Integration Tests', () => {
   });
 
   describe('SearchService Integration', () => {
-    let mockQueryBuilder: any;
+    let mockQueryBuilder: {
+      andWhere: jest.Mock;
+      orderBy: jest.Mock;
+      addOrderBy: jest.Mock;
+      skip: jest.Mock;
+      take: jest.Mock;
+      getManyAndCount: jest.Mock;
+    };
 
     beforeEach(() => {
       mockQueryBuilder = {
@@ -363,7 +372,9 @@ describe('Service Integration Tests', () => {
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn(),
       };
-      gameRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      gameRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       jest.clearAllMocks();
     });
 

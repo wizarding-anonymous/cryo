@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -49,11 +54,11 @@ describe('ResponseTransformationInterceptor', () => {
 
     mockExecutionContext = {
       switchToHttp: () => ({
-        getRequest: () => mockRequest,
-        getResponse: () => mockResponse,
+        getRequest: () => mockRequest as unknown,
+        getResponse: () => mockResponse as unknown,
       }),
       getHandler: jest.fn(),
-    } as any;
+    } as unknown as ExecutionContext;
 
     mockCallHandler = {
       handle: jest.fn(),

@@ -6,9 +6,9 @@ import { GlobalExceptionFilter } from './global-exception.filter';
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
   let httpAdapterHost: HttpAdapterHost;
-  let mockHttpAdapter: any;
+  let mockHttpAdapter: { reply: jest.Mock };
   let mockArgumentsHost: ArgumentsHost;
-  let mockResponse: any;
+  let mockResponse: { status: jest.Mock; json: jest.Mock };
 
   beforeEach(async () => {
     mockHttpAdapter = {
@@ -36,7 +36,7 @@ describe('GlobalExceptionFilter', () => {
 
     httpAdapterHost = {
       httpAdapter: mockHttpAdapter,
-    } as HttpAdapterHost;
+    } as unknown as HttpAdapterHost;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

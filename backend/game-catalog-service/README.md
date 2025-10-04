@@ -77,11 +77,18 @@ cp .env.production .env
 ### Option 1: Docker Compose (Recommended)
 
 ```bash
-# Start all services (app, PostgreSQL, Redis)
-docker-compose up --build
+# 1. Start database and Redis first
+docker-compose up -d postgres-catalog redis
 
-# Run in background
+# 2. Run migrations manually (REQUIRED)
+docker-compose exec game-catalog-service npm run migration:run
+
+# 3. Start the application
+docker-compose up -d game-catalog-service
+
+# Or start all services and run migrations separately
 docker-compose up -d --build
+docker-compose exec game-catalog-service npm run migration:run
 
 # View logs
 docker-compose logs -f game-catalog-service
@@ -93,13 +100,13 @@ docker-compose down
 ### Option 2: Local Development
 
 ```bash
-# Start database and Redis (if using Docker)
-docker-compose up -d postgres redis
+# 1. Start database and Redis (if using Docker)
+docker-compose up -d postgres-catalog redis
 
-# Run database migrations
+# 2. Run database migrations manually (REQUIRED)
 npm run migration:run
 
-# Start the application in development mode
+# 3. Start the application in development mode
 npm run start:dev
 
 # Start in debug mode
@@ -352,21 +359,105 @@ spec:
 ## 🔧 Database Management
 
 ### Migrations
-```bash
-# Generate new migration
-npm run migration:generate -- --name=AddNewFeature
 
-# Run migrations
+**⚠️ IMPORTANT: All migrations must be run manually for safety and control.**
+
+#### Manual Migration Process
+
+1. **Check Migration Status**
+```bash
+# Show current migration status
+npm run migration:show
+
+# Or use the migration script
+./scripts/run-migrations.sh show
+```
+
+2. **Run Migrations**
+```bash
+# Run pending migrations manually
 npm run migration:run
 
+# Or use the interactive script
+./scripts/run-migrations.sh run
+```
+
+3. **Revert Migrations (if needed)**
+```bash
 # Revert last migration
 npm run migration:revert
+
+# Or use the interactive script
+./scripts/run-migrations.sh revert
+```
+
+#### Docker Environment
+
+For Docker deployments, migrations must be run inside the container:
+
+```bash
+# Enter the container
+docker exec -it game-catalog-service bash
+
+# Run migrations inside container
+npm run migration:run
+
+# Or check status
+npm run migration:show
+```
+
+#### Production Deployment Process
+
+1. **Before Deployment**
+```bash
+# 1. Backup database
+pg_dump -h $POSTGRES_HOST -U $POSTGRES_USER $POSTGRES_DB > backup.sql
+
+# 2. Check migration status
+npm run migration:show
+
+# 3. Run migrations manually
+npm run migration:run
+
+# 4. Verify migrations
+npm run migration:show
+```
+
+2. **Deploy Application**
+```bash
+# Deploy after migrations are complete
+docker-compose up -d game-catalog-service
 ```
 
 ### Database Setup
+
 ```bash
-# Setup database with migrations
+# Initial database setup (run migrations)
 npm run db:setup
+```
+
+### Migration Files
+
+Current migrations:
+- `1702000000000-CreateGamesTable.ts` - Creates games table with sample data
+- `1703000000000-OptimizeGameIndexes.ts` - Adds performance indexes
+
+### Migration Configuration
+
+The service is configured for **manual migrations only**:
+
+- **All Environments**: Migrations must be run manually using `npm run migration:run`
+- **Docker**: Set `RUN_MIGRATIONS=false` to prevent automatic execution
+- **Safety**: Manual execution prevents accidental schema changes
+
+### Creating New Migrations
+
+```bash
+# Generate new migration based on entity changes
+npm run migration:generate -- --name=AddNewFeature
+
+# Create empty migration file
+npm run migration:create -- --name=CustomMigration
 ```
 
 ## 🚨 Troubleshooting

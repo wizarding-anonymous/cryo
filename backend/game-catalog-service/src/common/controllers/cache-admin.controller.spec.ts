@@ -60,7 +60,7 @@ describe('CacheAdminController', () => {
       };
       mockCacheService.getCacheStats.mockResolvedValue(mockStats);
 
-      const result = await controller.getCacheStats();
+      const result = (await controller.getCacheStats()) as typeof mockStats;
 
       expect(mockCacheService.getCacheStats).toHaveBeenCalled();
       expect(result).toEqual(mockStats);

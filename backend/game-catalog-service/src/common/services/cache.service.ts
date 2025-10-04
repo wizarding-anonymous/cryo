@@ -1,5 +1,5 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
-import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
+import { Injectable, Logger } from '@nestjs/common';
+import { RedisConfigService } from '../../database/redis-config.service';
 import { PerformanceMonitoringService } from './performance-monitoring.service';
 
 @Injectable()
@@ -7,7 +7,7 @@ export class CacheService {
   private readonly logger = new Logger(CacheService.name);
 
   constructor(
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly redisService: RedisConfigService,
     private readonly performanceMonitoringService: PerformanceMonitoringService,
   ) {}
 
@@ -18,7 +18,7 @@ export class CacheService {
     const startTime = Date.now();
 
     try {
-      const value = await this.cacheManager.get<T>(key);
+      const value = await this.redisService.get<T>(key);
       const responseTime = Date.now() - startTime;
       const hit = !!value;
 
@@ -41,7 +41,7 @@ export class CacheService {
     } catch (error) {
       const responseTime = Date.now() - startTime;
       this.logger.warn(
-        `Cache GET failed for key ${key} (${responseTime}ms): ${error.message}`,
+        `Cache GET failed for key ${key} (${responseTime}ms): ${(error as Error).message}`,
       );
 
       // Record failed cache operation
@@ -64,8 +64,7 @@ export class CacheService {
     const startTime = Date.now();
 
     try {
-      const ttlMs = ttl ? ttl * 1000 : undefined;
-      await this.cacheManager.set(key, value, ttlMs);
+      await this.redisService.set(key, value, ttl);
 
       const responseTime = Date.now() - startTime;
       this.logger.debug(
@@ -83,7 +82,7 @@ export class CacheService {
     } catch (error) {
       const responseTime = Date.now() - startTime;
       this.logger.warn(
-        `Cache SET failed for key ${key} (${responseTime}ms): ${error.message}`,
+        `Cache SET failed for key ${key} (${responseTime}ms): ${(error as Error).message}`,
       );
     }
   }
@@ -95,7 +94,7 @@ export class CacheService {
     const startTime = Date.now();
 
     try {
-      await this.cacheManager.del(key);
+      await this.redisService.del(key);
 
       const responseTime = Date.now() - startTime;
       this.logger.debug(`Cache DEL for key: ${key} (${responseTime}ms)`);
@@ -111,7 +110,7 @@ export class CacheService {
     } catch (error) {
       const responseTime = Date.now() - startTime;
       this.logger.warn(
-        `Cache DEL failed for key ${key} (${responseTime}ms): ${error.message}`,
+        `Cache DEL failed for key ${key} (${responseTime}ms): ${(error as Error).message}`,
       );
     }
   }
@@ -123,35 +122,21 @@ export class CacheService {
     const startTime = Date.now();
 
     try {
-      // Note: This is a simplified implementation
-      // In production, you might want to use Redis SCAN for better performance
-      const keys = await this.getKeysByPattern(pattern);
-
-      for (const key of keys) {
-        await this.del(key);
-      }
+      const deletedCount = await this.redisService.clearPattern(pattern);
 
       const responseTime = Date.now() - startTime;
       this.logger.debug(
-        `Cache DEL by pattern: ${pattern}, deleted ${keys.length} keys (${responseTime}ms)`,
+        `Cache DEL by pattern: ${pattern}, deleted ${deletedCount} keys (${responseTime}ms)`,
       );
     } catch (error) {
       const responseTime = Date.now() - startTime;
       this.logger.warn(
-        `Cache DEL by pattern failed for ${pattern} (${responseTime}ms): ${error.message}`,
+        `Cache DEL by pattern failed for ${pattern} (${responseTime}ms): ${(error as Error).message}`,
       );
     }
   }
 
-  /**
-   * Get cache keys by pattern (simplified implementation)
-   */
-  private async getKeysByPattern(pattern: string): Promise<string[]> {
-    // This is a simplified implementation
-    // In a real Redis implementation, you would use SCAN command
-    // For now, we'll return an empty array as this depends on the cache store implementation
-    return [];
-  }
+
 
   /**
    * Invalidate cache for games (used when games are updated)
@@ -174,31 +159,35 @@ export class CacheService {
   /**
    * Warm up cache with frequently accessed data
    */
-  async warmUpCache(): Promise<void> {
+  warmUpCache(): Promise<void> {
     this.logger.log('Starting cache warm-up...');
 
     // This could be implemented to pre-load popular games, search results, etc.
     // For now, we'll just log the intention
 
     this.logger.log('Cache warm-up completed');
+    return Promise.resolve();
   }
 
   /**
-   * Get cache statistics (if supported by the cache store)
+   * Get cache statistics
    */
   async getCacheStats(): Promise<any> {
     try {
-      // This would depend on the cache store implementation
-      // For Redis, you could use INFO command
+      const stats = await this.redisService.getStats();
       return {
-        status: 'available',
+        status: stats.connected ? 'available' : 'unavailable',
+        memory: stats.memory,
+        keys: stats.keys,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      this.logger.warn(`Failed to get cache stats: ${error.message}`);
+      this.logger.warn(
+        `Failed to get cache stats: ${(error as Error).message}`,
+      );
       return {
         status: 'unavailable',
-        error: error.message,
+        error: (error as Error).message,
         timestamp: new Date().toISOString(),
       };
     }

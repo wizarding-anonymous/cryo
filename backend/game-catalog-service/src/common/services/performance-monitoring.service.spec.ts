@@ -8,7 +8,6 @@ import {
 
 describe('PerformanceMonitoringService', () => {
   let service: PerformanceMonitoringService;
-  let configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,7 +23,7 @@ describe('PerformanceMonitoringService', () => {
                 case 'SLOW_QUERY_THRESHOLD_MS':
                   return 500;
                 default:
-                  return defaultValue;
+                  return defaultValue as unknown;
               }
             }),
           },
@@ -35,7 +34,6 @@ describe('PerformanceMonitoringService', () => {
     service = module.get<PerformanceMonitoringService>(
       PerformanceMonitoringService,
     );
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {
@@ -319,7 +317,7 @@ describe('PerformanceMonitoringService', () => {
             useValue: {
               get: jest.fn((key: string, defaultValue?: any) => {
                 if (key === 'PERFORMANCE_MONITORING_ENABLED') return false;
-                return defaultValue;
+                return defaultValue as unknown;
               }),
             },
           },

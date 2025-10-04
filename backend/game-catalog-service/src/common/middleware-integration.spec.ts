@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   INestApplication,
@@ -8,7 +10,7 @@ import {
   Param,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import * as request from 'supertest';
+import request from 'supertest';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { RequestLoggingInterceptor } from './interceptors/request-logging.interceptor';
 import { GetGamesDto } from '../dto/get-games.dto';
@@ -18,7 +20,7 @@ import { SearchGamesDto } from '../dto/search-games.dto';
 @Controller('games')
 class TestGameController {
   @Get()
-  async getGames(@Query() query: GetGamesDto) {
+  getGames(@Query() query: GetGamesDto) {
     return {
       games: [],
       total: 0,
@@ -31,7 +33,7 @@ class TestGameController {
   }
 
   @Get(':id')
-  async getGame(@Param('id') id: string) {
+  getGame(@Param('id') id: string) {
     if (id === 'error') {
       throw new Error('Test error');
     }
@@ -61,7 +63,7 @@ class TestGameController {
 @Controller('games')
 class TestSearchController {
   @Get('search')
-  async searchGames(@Query() query: SearchGamesDto) {
+  searchGames(@Query() query: SearchGamesDto) {
     return {
       games: [],
       total: 0,
@@ -114,8 +116,8 @@ describe('Middleware Integration Tests', () => {
         .get('/games?page=2&limit=20&available=true')
         .expect(200);
 
-      expect(response.body.page).toBe(2);
-      expect(response.body.limit).toBe(20);
+      expect((response.body as { page: number; limit: number }).page).toBe(2);
+      expect((response.body as { page: number; limit: number }).limit).toBe(20);
     });
 
     it('should reject invalid query parameters with proper error format', async () => {
@@ -123,11 +125,14 @@ describe('Middleware Integration Tests', () => {
         .get('/games?page=0&limit=101')
         .expect(400);
 
-      expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toHaveProperty('code', 'VALIDATION_ERROR');
-      expect(response.body.error).toHaveProperty('message');
-      expect(response.body.error.message).toContain('Page must be at least 1');
-      expect(response.body.error.message).toContain('Limit cannot exceed 100');
+      const errorBody = response.body as {
+        error: { code: string; message: string };
+      };
+      expect(errorBody).toHaveProperty('error');
+      expect(errorBody.error).toHaveProperty('code', 'VALIDATION_ERROR');
+      expect(errorBody.error).toHaveProperty('message');
+      expect(errorBody.error.message).toContain('Page must be at least 1');
+      expect(errorBody.error.message).toContain('Limit cannot exceed 100');
     });
 
     it('should reject non-whitelisted properties', async () => {

@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { CacheService } from './cache.service';
+import { RedisConfigService } from '../../database/redis-config.service';
 import { PerformanceMonitoringService } from './performance-monitoring.service';
 
-const mockCacheManager = {
+const mockRedisConfigService = {
   get: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
+  clearPattern: jest.fn(),
+  getStats: jest.fn(),
 };
 
 const mockPerformanceMonitoringService = {
@@ -21,8 +23,8 @@ describe('CacheService', () => {
       providers: [
         CacheService,
         {
-          provide: CACHE_MANAGER,
-          useValue: mockCacheManager,
+          provide: RedisConfigService,
+          useValue: mockRedisConfigService,
         },
         {
           provide: PerformanceMonitoringService,
@@ -42,16 +44,16 @@ describe('CacheService', () => {
   describe('get', () => {
     it('should return cached value when available', async () => {
       const testValue = { data: 'test' };
-      mockCacheManager.get.mockResolvedValue(testValue);
+      mockRedisConfigService.get.mockResolvedValue(testValue);
 
       const result = await service.get('test-key');
 
-      expect(mockCacheManager.get).toHaveBeenCalledWith('test-key');
+      expect(mockRedisConfigService.get).toHaveBeenCalledWith('test-key');
       expect(result).toEqual(testValue);
     });
 
     it('should return null when cache miss', async () => {
-      mockCacheManager.get.mockResolvedValue(undefined);
+      mockRedisConfigService.get.mockResolvedValue(undefined);
 
       const result = await service.get('test-key');
 
@@ -59,7 +61,7 @@ describe('CacheService', () => {
     });
 
     it('should return null when cache operation fails', async () => {
-      mockCacheManager.get.mockRejectedValue(new Error('Cache error'));
+      mockRedisConfigService.get.mockRejectedValue(new Error('Cache error'));
 
       const result = await service.get('test-key');
 
@@ -70,19 +72,19 @@ describe('CacheService', () => {
   describe('set', () => {
     it('should set value in cache with TTL', async () => {
       const testValue = { data: 'test' };
-      mockCacheManager.set.mockResolvedValue(undefined);
+      mockRedisConfigService.set.mockResolvedValue(undefined);
 
       await service.set('test-key', testValue, 300);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith(
+      expect(mockRedisConfigService.set).toHaveBeenCalledWith(
         'test-key',
         testValue,
-        300000,
+        300,
       );
     });
 
     it('should handle cache set failures gracefully', async () => {
-      mockCacheManager.set.mockRejectedValue(new Error('Cache error'));
+      mockRedisConfigService.set.mockRejectedValue(new Error('Cache error'));
 
       await expect(service.set('test-key', 'value')).resolves.not.toThrow();
     });
@@ -90,15 +92,15 @@ describe('CacheService', () => {
 
   describe('del', () => {
     it('should delete value from cache', async () => {
-      mockCacheManager.del.mockResolvedValue(undefined);
+      mockRedisConfigService.del.mockResolvedValue(undefined);
 
       await service.del('test-key');
 
-      expect(mockCacheManager.del).toHaveBeenCalledWith('test-key');
+      expect(mockRedisConfigService.del).toHaveBeenCalledWith('test-key');
     });
 
     it('should handle cache delete failures gracefully', async () => {
-      mockCacheManager.del.mockRejectedValue(new Error('Cache error'));
+      mockRedisConfigService.del.mockRejectedValue(new Error('Cache error'));
 
       await expect(service.del('test-key')).resolves.not.toThrow();
     });
@@ -122,7 +124,10 @@ describe('CacheService', () => {
 
   describe('getCacheStats', () => {
     it('should return cache statistics', async () => {
-      const stats = await service.getCacheStats();
+      const stats = (await service.getCacheStats()) as {
+        status: string;
+        timestamp: Date;
+      };
 
       expect(stats).toHaveProperty('status');
       expect(stats).toHaveProperty('timestamp');

@@ -135,7 +135,7 @@ export class DatabaseConnectionUtil {
     } catch (error) {
       return {
         status: 'unhealthy',
-        message: `Database health check failed: ${error.message}`,
+        message: `Database health check failed: ${(error as Error).message}`,
         timestamp: new Date(),
         responseTime: Date.now() - startTime,
       };

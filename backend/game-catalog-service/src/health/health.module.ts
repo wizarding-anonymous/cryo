@@ -6,11 +6,13 @@ import { MetricsService } from './metrics.service';
 import { LoggingService } from './logging.service';
 import { HealthMonitoringInterceptor } from './health-monitoring.interceptor';
 import { HttpModule } from '@nestjs/axios';
+import { DatabaseModule } from '../database/database.module';
 
 @Module({
   imports: [
     TerminusModule,
     HttpModule,
+    DatabaseModule,
     PrometheusModule.register({
       path: '/metrics',
       defaultMetrics: {

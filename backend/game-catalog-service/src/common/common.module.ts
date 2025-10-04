@@ -8,9 +8,11 @@ import { TimeoutInterceptor } from './interceptors/timeout.interceptor';
 import { ResponseTransformationInterceptor } from './interceptors/response-transformation.interceptor';
 import { CacheAdminController } from './controllers/cache-admin.controller';
 import { PerformanceMonitoringController } from './controllers/performance-monitoring.controller';
+import { DatabaseModule } from '../database/database.module';
 
 @Global()
 @Module({
+  imports: [DatabaseModule],
   controllers: [CacheAdminController, PerformanceMonitoringController],
   providers: [
     PerformanceMonitoringService,
@@ -22,6 +24,7 @@ import { PerformanceMonitoringController } from './controllers/performance-monit
     ResponseTransformationInterceptor,
   ],
   exports: [
+    DatabaseModule, // Экспортируем DatabaseModule чтобы RedisConfigService был доступен
     PerformanceMonitoringService,
     CacheService,
     CacheWarmingService,

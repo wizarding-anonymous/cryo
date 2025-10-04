@@ -23,7 +23,7 @@ export class GameService implements IGameService {
     const skip = (page - 1) * limit;
 
     // Build where clause with business logic for availability
-    const whereClause: any = {};
+    const whereClause: Record<string, unknown> = {};
 
     // Default to showing only available games unless explicitly requested otherwise
     if (available !== undefined) {
@@ -38,7 +38,7 @@ export class GameService implements IGameService {
     }
 
     // Build order clause
-    const orderClause: any = {};
+    const orderClause: Record<string, 'ASC' | 'DESC'> = {};
     if (sortBy && sortOrder) {
       orderClause[sortBy] = sortOrder;
     } else {

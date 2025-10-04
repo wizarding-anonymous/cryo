@@ -1,13 +1,13 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateGameTable1694000000000 implements MigrationInterface {
-  name = 'CreateGameTable1694000000000';
+export class CreateGamesTable1702000000000 implements MigrationInterface {
+  name = 'CreateGamesTable1702000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    `);
+    // Create UUID extension if not exists
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
+    // Create games table
     await queryRunner.query(`
       CREATE TABLE "games" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -25,28 +25,24 @@ export class CreateGameTable1694000000000 implements MigrationInterface {
         "available" boolean NOT NULL DEFAULT true,
         "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-        CONSTRAINT "PK_c9b16b62917b5595af982d66337" PRIMARY KEY ("id")
+        CONSTRAINT "PK_games" PRIMARY KEY ("id")
       )
     `);
 
-    // Create indexes for better performance
+    // Create basic indexes
     await queryRunner.query(`
-      CREATE INDEX "IDX_games_title_search" ON "games" USING gin(to_tsvector('russian', "title"));
+      CREATE INDEX "IDX_games_available" ON "games" ("available")
+    `);
+    
+    await queryRunner.query(`
+      CREATE INDEX "IDX_games_genre" ON "games" ("genre")
+    `);
+    
+    await queryRunner.query(`
+      CREATE INDEX "IDX_games_price" ON "games" ("price")
     `);
 
-    await queryRunner.query(`
-      CREATE INDEX "IDX_games_available" ON "games" ("available");
-    `);
-
-    await queryRunner.query(`
-      CREATE INDEX "IDX_games_genre" ON "games" ("genre");
-    `);
-
-    await queryRunner.query(`
-      CREATE INDEX "IDX_games_price" ON "games" ("price");
-    `);
-
-    // Insert sample data for testing
+    // Insert sample data
     await queryRunner.query(`
       INSERT INTO "games" (
         "title", 
@@ -108,10 +104,6 @@ export class CreateGameTable1694000000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX "IDX_games_price"`);
-    await queryRunner.query(`DROP INDEX "IDX_games_genre"`);
-    await queryRunner.query(`DROP INDEX "IDX_games_available"`);
-    await queryRunner.query(`DROP INDEX "IDX_games_title_search"`);
     await queryRunner.query(`DROP TABLE "games"`);
   }
 }

@@ -175,7 +175,11 @@ describe('Game Entity', () => {
 
   describe('TypeORM decorators', () => {
     it('should have correct entity metadata', () => {
-      const metadata = Reflect.getMetadata('design:type', Game.prototype, 'id');
+      const metadata = Reflect.getMetadata(
+        'design:type',
+        Game.prototype,
+        'id',
+      ) as unknown;
       expect(metadata).toBe(String);
     });
 

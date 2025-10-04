@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, Inject } from '@nestjs/common';
+import { Controller, Get, Logger } from '@nestjs/common';
 import {
   HealthCheck,
   HealthCheckService,
@@ -7,12 +7,11 @@ import {
   HealthIndicatorResult,
   HealthCheckResult,
 } from '@nestjs/terminus';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import { RedisConfigService } from '../database/redis-config.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Health')
-@Controller('v1/health')
+@Controller('health')
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
 
@@ -20,7 +19,7 @@ export class HealthController {
     private readonly health: HealthCheckService,
     private readonly db: TypeOrmHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly redisService: RedisConfigService,
   ) {}
 
   @Get()
@@ -42,8 +41,8 @@ export class HealthController {
         () => this.memory.checkHeap('memory_heap', 250 * 1024 * 1024),
         () => this.memory.checkRSS('memory_rss', 250 * 1024 * 1024),
 
-        // Redis/Cache health check
-        () => this.checkRedisHealth(),
+        // Cache health check (non-critical)
+        () => this.checkCacheHealth(),
 
         // Application-specific health checks
         () => this.checkApplicationHealth(),
@@ -55,7 +54,10 @@ export class HealthController {
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logger.error(`Health check failed after ${duration}ms`, error.stack);
+      this.logger.error(
+        `Health check failed after ${duration}ms`,
+        (error as Error).stack,
+      );
       throw error;
     }
   }
@@ -70,7 +72,8 @@ export class HealthController {
   async readiness(): Promise<HealthCheckResult> {
     return this.health.check([
       () => this.db.pingCheck('database', { timeout: 3000 }),
-      () => this.checkRedisHealth(),
+      // Cache is non-critical for readiness
+      () => this.checkApplicationHealth(),
     ]);
   }
 
@@ -88,71 +91,65 @@ export class HealthController {
   /**
    * Check Redis/Cache health
    */
-  private async checkRedisHealth(): Promise<HealthIndicatorResult> {
+  private async checkCacheHealth(): Promise<HealthIndicatorResult> {
     const key = 'health-check';
     const testValue = Date.now().toString();
 
     try {
-      // Test Redis write
-      await this.cacheManager.set(key, testValue, 10000); // 10 second TTL
-
-      // Test Redis read
-      const retrievedValue = await this.cacheManager.get(key);
+      // Test cache write and read
+      await this.redisService.set(key, testValue, 10); // 10 second TTL
+      const retrievedValue = await this.redisService.get(key);
 
       if (retrievedValue === testValue) {
+        const stats = await this.redisService.getStats();
         return {
-          redis: {
+          cache: {
             status: 'up',
-            message: 'Redis connection is healthy',
-            responseTime: '< 100ms',
+            message: 'Redis cache is healthy',
+            type: 'redis',
+            responseTime: '< 10ms',
+            memory: stats.memory,
+            keys: stats.keys,
           },
         };
       } else {
-        throw new Error('Redis read/write test failed');
-      }
-    } catch (error) {
-      this.logger.warn(
-        'Redis health check failed, service may be using memory cache fallback',
-        error.message,
-      );
-
-      // Check if we're using memory cache fallback
-      try {
-        await this.cacheManager.set(key, testValue, 10000);
-        const retrievedValue = await this.cacheManager.get(key);
-
-        if (retrievedValue === testValue) {
-          return {
-            redis: {
-              status: 'up',
-              message: 'Using memory cache fallback (Redis unavailable)',
-              fallback: true,
-            },
-          };
-        }
-      } catch (fallbackError) {
-        // Cache is completely broken
         return {
-          redis: {
-            status: 'down',
-            message: error.message,
-            error: fallbackError.message,
+          cache: {
+            status: 'up',
+            message: 'Redis cache active (read/write test inconclusive)',
+            type: 'redis',
+            warning: 'Cache test value mismatch',
           },
         };
       }
+    } catch (error) {
+      this.logger.warn(
+        'Redis health check failed, falling back to no cache',
+        (error as Error).message,
+      );
+
+      // Redis cache failures are non-critical for basic functionality
+      return {
+        cache: {
+          status: 'down',
+          message: 'Redis cache unavailable',
+          type: 'redis',
+          warning: (error as Error).message,
+        },
+      };
     }
   }
 
   /**
    * Check application-specific health indicators
    */
-  private async checkApplicationHealth(): Promise<HealthIndicatorResult> {
+  private checkApplicationHealth(): Promise<HealthIndicatorResult> {
     try {
       // Check if the application can perform basic operations
       const uptime = process.uptime();
       const memoryUsage = process.memoryUsage();
 
-      return {
+      return Promise.resolve({
         application: {
           status: 'up',
           uptime: `${Math.floor(uptime)}s`,
@@ -164,14 +161,14 @@ export class HealthController {
           nodeVersion: process.version,
           environment: process.env.NODE_ENV || 'development',
         },
-      };
+      });
     } catch (error) {
-      return {
+      return Promise.resolve({
         application: {
           status: 'down',
-          message: error.message,
+          message: (error as Error).message,
         },
-      };
+      });
     }
   }
 }

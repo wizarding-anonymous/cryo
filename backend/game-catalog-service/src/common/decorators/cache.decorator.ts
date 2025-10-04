@@ -11,7 +11,11 @@ export const CACHE_TTL_METADATA = 'cache_ttl';
  * @param ttl - Time to live in seconds (optional, defaults to 300s)
  */
 export const Cache = (key: string, ttl?: number) => {
-  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+  return (
+    target: object,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) => {
     SetMetadata(CACHE_KEY_METADATA, key)(target, propertyKey, descriptor);
     if (ttl !== undefined) {
       SetMetadata(CACHE_TTL_METADATA, ttl)(target, propertyKey, descriptor);

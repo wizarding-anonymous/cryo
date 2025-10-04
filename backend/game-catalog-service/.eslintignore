@@ -1,0 +1,18 @@
+# JavaScript files that should not be linted with TypeScript rules
+src/**/*.js
+
+# Build output
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+
+# Environment files
+.env*
+
+# Coverage
+coverage/

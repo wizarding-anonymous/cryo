@@ -13,15 +13,26 @@ dotenv.config();
  */
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: process.env.POSTGRES_HOST,
-  port: parseInt(process.env.POSTGRES_PORT, 10),
-  username: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
-  database: process.env.POSTGRES_DB,
-  entities: ['src/**/*.entity.ts'], // Point to TS files for development
-  migrations: ['src/database/migrations/*.ts'], // Point to TS files for development
+  host: process.env.POSTGRES_HOST || 'localhost',
+  port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+  username: process.env.POSTGRES_USER || 'catalog_service',
+  password: process.env.POSTGRES_PASSWORD || 'catalog_password',
+  database: process.env.POSTGRES_DB || 'catalog_db',
+  entities: [
+    process.env.NODE_ENV === 'production' 
+      ? 'dist/src/entities/*.entity.js' 
+      : 'src/entities/*.entity.ts'
+  ],
+  migrations: [
+    process.env.NODE_ENV === 'production' 
+      ? 'dist/src/database/migrations/*.js' 
+      : 'src/database/migrations/*.ts'
+  ],
   migrationsTableName: 'migrations',
-  synchronize: false, // Migrations will handle the schema
+  synchronize: false,
+  logging: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  migrationsRun: false, // We handle migrations manually
+  ssl: false, // Disable SSL for Docker containers
 };
 
 const AppDataSource = new DataSource(dataSourceOptions);

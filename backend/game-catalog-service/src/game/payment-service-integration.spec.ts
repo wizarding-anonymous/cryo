@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { GameService } from './game.service';
 import { Game } from '../entities/game.entity';
 import { PurchaseInfoDto } from '../dto/purchase-info.dto';
@@ -245,7 +246,7 @@ describe('Payment Service Integration Tests', () => {
       const mockGame = new Game();
       mockGame.id = 'price-cast-test';
       mockGame.title = 'Price Cast Test';
-      mockGame.price = '59.99' as any; // Simulate string from database
+      mockGame.price = '59.99' as unknown as number; // Simulate string from database
       mockGame.currency = 'RUB';
       mockGame.available = true;
 
@@ -310,7 +311,7 @@ describe('Payment Service Integration Tests', () => {
       const mockGame = new Game();
       mockGame.id = 'casting-test';
       mockGame.title = 'Casting Test';
-      mockGame.price = '199.99' as any; // Simulate string price
+      mockGame.price = '199.99' as unknown as number; // Simulate string price
       mockGame.currency = 'RUB';
       mockGame.available = true;
 

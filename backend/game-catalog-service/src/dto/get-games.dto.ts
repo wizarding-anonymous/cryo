@@ -52,7 +52,9 @@ export class GetGamesDto {
   })
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => value?.toUpperCase())
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toUpperCase() : (value as 'ASC' | 'DESC'),
+  )
   @IsIn(['ASC', 'DESC'], {
     message: 'Sort order must be either ASC or DESC',
   })

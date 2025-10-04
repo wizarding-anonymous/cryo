@@ -9,6 +9,13 @@ import {
 import { Observable, throwError, TimeoutError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
+
+interface RequestWithTimeout extends Request {
+  requestId?: string;
+  timedOut?: boolean;
+  timeoutDuration?: number;
+}
 
 export const TIMEOUT_METADATA = 'timeout';
 
@@ -18,12 +25,16 @@ export const TIMEOUT_METADATA = 'timeout';
  */
 export const Timeout = (timeoutMs: number) => {
   return (
-    target: any,
+    target: object,
     _propertyKey?: string,
     descriptor?: PropertyDescriptor,
   ) => {
     if (descriptor) {
-      Reflect.defineMetadata(TIMEOUT_METADATA, timeoutMs, descriptor.value);
+      Reflect.defineMetadata(
+        TIMEOUT_METADATA,
+        timeoutMs,
+        descriptor.value as object,
+      );
       return descriptor;
     }
     Reflect.defineMetadata(TIMEOUT_METADATA, timeoutMs, target);
@@ -38,9 +49,9 @@ export class TimeoutInterceptor implements NestInterceptor {
 
   constructor(private readonly reflector: Reflector) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const handler = context.getHandler();
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RequestWithTimeout>();
     const { method, url } = request;
 
     // Get custom timeout from decorator or use default
@@ -56,7 +67,7 @@ export class TimeoutInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       timeout(timeoutMs),
-      catchError((error) => {
+      catchError((error: unknown) => {
         const responseTime = Date.now() - startTime;
 
         if (error instanceof TimeoutError) {
@@ -81,7 +92,7 @@ export class TimeoutInterceptor implements NestInterceptor {
           );
         }
 
-        return throwError(() => error);
+        return throwError(() => error as Error);
       }),
     );
   }

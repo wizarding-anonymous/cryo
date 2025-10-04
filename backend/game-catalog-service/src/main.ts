@@ -1,3 +1,9 @@
+// Polyfill for crypto in Node.js environments
+import { webcrypto } from 'node:crypto';
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto as Crypto;
+}
+
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
@@ -132,18 +138,22 @@ async function bootstrap() {
     }
 
     // --- Graceful Shutdown Handling ---
-    process.on('SIGTERM', async () => {
-      logger.log('SIGTERM received, shutting down gracefully');
-      loggingService.logShutdown('SIGTERM');
-      await app.close();
-      process.exit(0);
+    process.on('SIGTERM', () => {
+      void (async () => {
+        logger.log('SIGTERM received, shutting down gracefully');
+        loggingService.logShutdown('SIGTERM');
+        await app.close();
+        process.exit(0);
+      })();
     });
 
-    process.on('SIGINT', async () => {
-      logger.log('SIGINT received, shutting down gracefully');
-      loggingService.logShutdown('SIGINT');
-      await app.close();
-      process.exit(0);
+    process.on('SIGINT', () => {
+      void (async () => {
+        logger.log('SIGINT received, shutting down gracefully');
+        loggingService.logShutdown('SIGINT');
+        await app.close();
+        process.exit(0);
+      })();
     });
 
     // --- Unhandled Exception Handling ---
@@ -153,9 +163,15 @@ async function bootstrap() {
       process.exit(1);
     });
 
-    process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      loggingService.logError(new Error(String(reason)), 'unhandled_rejection');
+    process.on('unhandledRejection', (reason: unknown, promise) => {
+      const reasonStr =
+        reason instanceof Error
+          ? reason.message
+          : typeof reason === 'string'
+            ? reason
+            : JSON.stringify(reason);
+      logger.error('Unhandled Rejection at:', promise, 'reason:', reasonStr);
+      loggingService.logError(new Error(reasonStr), 'unhandled_rejection');
     });
     const environment = process.env.NODE_ENV || 'development';
 
@@ -179,4 +195,4 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+void bootstrap();

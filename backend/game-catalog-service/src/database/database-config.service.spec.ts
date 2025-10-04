@@ -4,7 +4,6 @@ import { DatabaseConfigService } from './database-config.service';
 
 describe('DatabaseConfigService', () => {
   let service: DatabaseConfigService;
-  let configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,7 +21,7 @@ describe('DatabaseConfigService', () => {
                 POSTGRES_DB: 'testdb',
                 NODE_ENV: 'test',
               };
-              return config[key] || defaultValue;
+              return (config[key] || defaultValue) as unknown;
             }),
           },
         },
@@ -30,7 +29,6 @@ describe('DatabaseConfigService', () => {
     }).compile();
 
     service = module.get<DatabaseConfigService>(DatabaseConfigService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {
@@ -38,7 +36,16 @@ describe('DatabaseConfigService', () => {
   });
 
   it('should create TypeORM options', () => {
-    const options = service.createTypeOrmOptions() as any;
+    const options = service.createTypeOrmOptions() as {
+      type: string;
+      host: string;
+      port: number;
+      username: string;
+      password: string;
+      database: string;
+      synchronize: boolean;
+      autoLoadEntities: boolean;
+    };
 
     expect(options).toBeDefined();
     expect(options.type).toBe('postgres');
@@ -66,7 +73,9 @@ describe('DatabaseConfigService', () => {
       get: jest.fn(() => undefined),
     };
 
-    const testService = new DatabaseConfigService(mockConfigService as any);
+    const testService = new DatabaseConfigService(
+      mockConfigService as unknown as ConfigService,
+    );
     const isValid = testService.validateConfig();
 
     expect(isValid).toBe(false);

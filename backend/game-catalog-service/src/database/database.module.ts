@@ -1,23 +1,17 @@
-import { Module, OnModuleInit, Logger } from '@nestjs/common';
+import { Module, OnModuleInit, Logger, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { CacheModule } from '@nestjs/cache-manager';
 import { DatabaseConfigService } from './database-config.service';
 import { RedisConfigService } from './redis-config.service';
 import { MigrationService } from './migration.service';
 
+@Global()
 @Module({
   imports: [
     // TypeORM configuration
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useClass: DatabaseConfigService,
-    }),
-    // Redis cache configuration
-    CacheModule.registerAsync({
-      imports: [ConfigModule],
-      useClass: RedisConfigService,
-      isGlobal: true,
     }),
   ],
   providers: [DatabaseConfigService, RedisConfigService, MigrationService],
@@ -48,18 +42,18 @@ export class DatabaseModule implements OnModuleInit {
       );
     }
 
-    // Validate database schema
+    // Validate database schema (non-blocking)
     try {
       const schemaValid = await this.migrationService.validateSchema();
       if (!schemaValid) {
         this.logger.warn(
-          'Database schema validation failed - migrations may be needed',
+          'Database schema validation failed - please run migrations manually using: npm run migration:run',
         );
       }
     } catch (error) {
       this.logger.warn(
-        'Could not validate database schema on startup',
-        error.message,
+        'Could not validate database schema on startup. Please ensure migrations have been run manually.',
+        (error as Error).message,
       );
     }
 

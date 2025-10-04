@@ -25,12 +25,17 @@
     "test:integration:api": "ts-node -r tsconfig-paths/register test/run-integration-tests.ts 'API Workflows'",
     "test:integration:errors": "ts-node -r tsconfig-paths/register test/run-integration-tests.ts 'Error Scenarios'",
     "test:db": "ts-node -r tsconfig-paths/register scripts/test-db-connection.ts",
+    "test:db:prod": "node scripts/test-production-connection.js",
+    "test:redis": "node scripts/test-redis-connection.js",
     "test:all": "npm run test && npm run test:e2e",
-    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource ./data-source.ts",
+    "typeorm": "ts-node --require tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource ./data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate src/database/migrations/$npm_config_name",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "db:setup": "npm run migration:run && echo 'Database setup completed'"
+    "migration:show": "npm run typeorm -- migration:show",
+    "migration:create": "npm run typeorm -- migration:create src/database/migrations/$npm_config_name",
+    "db:setup": "npm run migration:run && echo 'Database setup completed'",
+    "db:migrate:prod": "NODE_ENV=production npm run typeorm -- migration:run"
   },
   "dependencies": {
     "@nestjs/axios": "^3.1.3",
@@ -48,8 +53,7 @@
     "@willsoto/nestjs-prometheus": "^6.0.2",
     "axios": "^1.7.9",
     "bcrypt": "^6.0.0",
-    "cache-manager": "^5.7.6",
-    "cache-manager-redis-store": "^3.0.1",
+    "ioredis": "^5.7.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "dotenv": "^17.2.2",
@@ -60,9 +64,11 @@
     "passport-local": "^1.0.0",
     "pg": "^8.16.3",
     "prom-client": "^15.1.3",
-    "redis": "^5.8.2",
+
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typeorm": "^0.3.26",
     "winston": "^3.17.0"
   },
@@ -89,10 +95,12 @@
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
   },
   "jest": {
     "moduleFileExtensions": [

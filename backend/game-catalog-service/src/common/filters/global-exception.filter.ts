@@ -11,15 +11,15 @@ import { HttpAdapterHost } from '@nestjs/core';
 // A simple mapping from HTTP status to a custom error code string
 const getErrorCode = (status: number): string => {
   switch (status) {
-    case HttpStatus.BAD_REQUEST:
+    case 400: // HttpStatus.BAD_REQUEST
       return 'VALIDATION_ERROR';
-    case HttpStatus.UNAUTHORIZED:
+    case 401: // HttpStatus.UNAUTHORIZED
       return 'UNAUTHENTICATED';
-    case HttpStatus.FORBIDDEN:
+    case 403: // HttpStatus.FORBIDDEN
       return 'FORBIDDEN';
-    case HttpStatus.NOT_FOUND:
+    case 404: // HttpStatus.NOT_FOUND
       return 'NOT_FOUND';
-    case HttpStatus.CONFLICT:
+    case 409: // HttpStatus.CONFLICT
       return 'CONFLICT_ERROR';
     default:
       return 'INTERNAL_SERVER_ERROR';
@@ -42,27 +42,38 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const exceptionResponse: any = isHttpException
+    const exceptionResponse: unknown = isHttpException
       ? exception.getResponse()
       : 'Internal server error';
 
     // For class-validator errors, the response is an object with a 'message' array
-    const errorMessage = Array.isArray(exceptionResponse.message)
-      ? exceptionResponse.message.join(', ')
-      : exceptionResponse.message || exceptionResponse;
+    const responseObj =
+      typeof exceptionResponse === 'object' && exceptionResponse !== null
+        ? exceptionResponse
+        : {};
+    const messageField = (responseObj as Record<string, unknown>).message;
+    const errorMessage = Array.isArray(messageField)
+      ? messageField.join(', ')
+      : messageField || exceptionResponse;
+
+    // Safely convert error message to string
+    const errorMessageStr =
+      typeof errorMessage === 'string'
+        ? errorMessage
+        : typeof errorMessage === 'object' && errorMessage !== null
+          ? JSON.stringify(errorMessage)
+          : 'Unknown error';
 
     this.logger.error(
-      `[${httpStatus}] ${errorMessage}`,
+      `[${httpStatus}] ${errorMessageStr}`,
       exception instanceof Error ? exception.stack : '',
     );
 
     const responseBody = {
       error: {
         code: getErrorCode(httpStatus),
-        message: errorMessage,
-        details: Array.isArray(exceptionResponse.message)
-          ? { fields: exceptionResponse.message }
-          : {},
+        message: errorMessageStr,
+        details: Array.isArray(messageField) ? { fields: messageField } : {},
       },
     };
 

@@ -19,9 +19,10 @@ export class SearchGamesDto extends GetGamesDto {
   })
   @IsOptional()
   @IsString({ message: 'Search query must be a string' })
-  @MinLength(1, { message: 'Search query must be at least 1 character long' })
   @MaxLength(255, { message: 'Search query cannot exceed 255 characters' })
-  @Transform(({ value }) => value?.trim())
+  @Transform(
+    ({ value }) => (typeof value === 'string' ? value.trim() || undefined : value) as string | undefined,
+  )
   q?: string;
 
   @ApiProperty({
@@ -44,7 +45,7 @@ export class SearchGamesDto extends GetGamesDto {
     example: 100,
   })
   @IsOptional()
-  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
+  @Transform(({ value }) => (value ? parseFloat(String(value)) : undefined))
   minPrice?: number;
 
   @ApiProperty({
@@ -53,6 +54,6 @@ export class SearchGamesDto extends GetGamesDto {
     example: 5000,
   })
   @IsOptional()
-  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
+  @Transform(({ value }) => (value ? parseFloat(String(value)) : undefined))
   maxPrice?: number;
 }

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
+import { Request, Response } from 'express';
 import { MetricsService } from './metrics.service';
 import { LoggingService } from './logging.service';
 
@@ -19,9 +20,9 @@ export class HealthMonitoringInterceptor implements NestInterceptor {
     private readonly loggingService: LoggingService,
   ) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const request = context.switchToHttp().getRequest<Request>();
+    const response = context.switchToHttp().getResponse<Response>();
     const startTime = Date.now();
 
     const { method, url, headers, ip } = request;
@@ -34,21 +35,35 @@ export class HealthMonitoringInterceptor implements NestInterceptor {
     response.setHeader('x-request-id', requestId);
 
     return next.handle().pipe(
-      tap((data) => {
+      tap((data: unknown) => {
         const duration = (Date.now() - startTime) / 1000;
         const statusCode = response.statusCode;
 
         // Record metrics
-        this.metricsService.incrementHttpRequests(method, url, statusCode);
-        this.metricsService.recordHttpRequestDuration(method, url, duration);
+        this.metricsService.incrementHttpRequests(
+          String(method),
+          String(url),
+          statusCode,
+        );
+        this.metricsService.recordHttpRequestDuration(
+          String(method),
+          String(url),
+          duration,
+        );
 
         // Log request
-        this.loggingService.logHttpRequest(method, url, statusCode, duration, {
-          requestId,
-          userAgent,
-          ip,
-          responseSize: JSON.stringify(data).length,
-        });
+        this.loggingService.logHttpRequest(
+          String(method),
+          String(url),
+          statusCode,
+          duration,
+          {
+            requestId: String(requestId),
+            userAgent: String(userAgent),
+            ip: String(ip),
+            responseSize: JSON.stringify(data).length,
+          },
+        );
 
         // Log performance metrics for slow requests
         if (duration > 1) {
@@ -59,28 +74,36 @@ export class HealthMonitoringInterceptor implements NestInterceptor {
               memoryUsage: process.memoryUsage().heapUsed,
             },
             {
-              requestId,
-              method,
-              url,
+              requestId: String(requestId),
+              method: String(method),
+              url: String(url),
             },
           );
         }
       }),
-      catchError((error) => {
+      catchError((error: unknown) => {
         const duration = (Date.now() - startTime) / 1000;
-        const statusCode = error.status || 500;
+        const statusCode = (error as { status?: number }).status || 500;
 
         // Record error metrics
-        this.metricsService.incrementHttpRequests(method, url, statusCode);
-        this.metricsService.recordHttpRequestDuration(method, url, duration);
+        this.metricsService.incrementHttpRequests(
+          String(method),
+          String(url),
+          statusCode,
+        );
+        this.metricsService.recordHttpRequestDuration(
+          String(method),
+          String(url),
+          duration,
+        );
 
         // Log error
-        this.loggingService.logError(error, 'http_request', {
-          requestId,
-          method,
-          url,
-          userAgent,
-          ip,
+        this.loggingService.logError(error as Error, 'http_request', {
+          requestId: String(requestId),
+          method: String(method),
+          url: String(url),
+          userAgent: String(userAgent),
+          ip: String(ip),
           duration,
         });
 

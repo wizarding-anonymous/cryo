@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { PerformanceMonitoringController } from './performance-monitoring.controller';
 import { PerformanceMonitoringService } from '../services/performance-monitoring.service';
@@ -59,8 +60,8 @@ describe('PerformanceMonitoringController', () => {
   });
 
   describe('getPerformanceStats', () => {
-    it('should return performance statistics with default time period', async () => {
-      const result = await controller.getPerformanceStats();
+    it('should return performance statistics with default time period', () => {
+      const result = controller.getPerformanceStats();
 
       expect(
         performanceMonitoringService.getPerformanceStats,
@@ -68,8 +69,8 @@ describe('PerformanceMonitoringController', () => {
       expect(result).toEqual(mockPerformanceStats);
     });
 
-    it('should return performance statistics with custom time period', async () => {
-      const result = await controller.getPerformanceStats(10);
+    it('should return performance statistics with custom time period', () => {
+      const result = controller.getPerformanceStats(10);
 
       expect(
         performanceMonitoringService.getPerformanceStats,
@@ -79,8 +80,8 @@ describe('PerformanceMonitoringController', () => {
   });
 
   describe('getCacheStats', () => {
-    it('should return cache statistics with default time period', async () => {
-      const result = await controller.getCacheStats();
+    it('should return cache statistics with default time period', () => {
+      const result = controller.getCacheStats();
 
       expect(performanceMonitoringService.getCacheStats).toHaveBeenCalledWith(
         5,
@@ -88,8 +89,8 @@ describe('PerformanceMonitoringController', () => {
       expect(result).toEqual(mockCacheStats);
     });
 
-    it('should return cache statistics with custom time period', async () => {
-      const result = await controller.getCacheStats(15);
+    it('should return cache statistics with custom time period', () => {
+      const result = controller.getCacheStats(15);
 
       expect(performanceMonitoringService.getCacheStats).toHaveBeenCalledWith(
         15,
@@ -99,8 +100,8 @@ describe('PerformanceMonitoringController', () => {
   });
 
   describe('clearMetrics', () => {
-    it('should clear metrics successfully', async () => {
-      const result = await controller.clearMetrics();
+    it('should clear metrics successfully', () => {
+      const result = controller.clearMetrics();
 
       expect(performanceMonitoringService.clearMetrics).toHaveBeenCalled();
       expect(result).toEqual({
@@ -109,14 +110,14 @@ describe('PerformanceMonitoringController', () => {
       });
     });
 
-    it('should handle errors when clearing metrics', async () => {
+    it('should handle errors when clearing metrics', () => {
       jest
         .spyOn(performanceMonitoringService, 'clearMetrics')
         .mockImplementation(() => {
           throw new Error('Clear failed');
         });
 
-      const result = await controller.clearMetrics();
+      const result = controller.clearMetrics();
 
       expect(result).toEqual({
         success: false,

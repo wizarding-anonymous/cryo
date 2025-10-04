@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Reflector } from '@nestjs/core';
 import { GameController } from './game.controller';
 import { GameService } from './game.service';
@@ -11,6 +11,8 @@ import { Game } from '../entities/game.entity';
 import { PerformanceInterceptor } from '../common/interceptors/performance.interceptor';
 import { PerformanceMonitoringService } from '../common/services/performance-monitoring.service';
 import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
+import { CacheService } from '../common/services/cache.service';
+import { RedisConfigService } from '../database/redis-config.service';
 
 const mockGameService = {
   getAllGames: jest.fn(),
@@ -18,14 +20,28 @@ const mockGameService = {
   getGamePurchaseInfo: jest.fn(),
 };
 
-const mockCacheManager = {
+const mockCacheService = {
   get: jest.fn(),
   set: jest.fn(),
   del: jest.fn(),
+  delByPattern: jest.fn(),
+  invalidateGameCache: jest.fn(),
+  getCacheStats: jest.fn(),
 };
 
 const mockPerformanceMonitoringService = {
   recordEndpointMetrics: jest.fn(),
+};
+
+const mockRedisConfigService = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+  isAvailable: jest.fn().mockReturnValue(true),
+  getClient: jest.fn(),
+  clearPattern: jest.fn(),
+  createCacheKey: jest.fn(),
+  getStats: jest.fn(),
 };
 
 describe('GameController', () => {
@@ -41,8 +57,8 @@ describe('GameController', () => {
           useValue: mockGameService,
         },
         {
-          provide: CACHE_MANAGER,
-          useValue: mockCacheManager,
+          provide: CacheService,
+          useValue: mockCacheService,
         },
         {
           provide: PerformanceInterceptor,
@@ -51,6 +67,10 @@ describe('GameController', () => {
         {
           provide: PerformanceMonitoringService,
           useValue: mockPerformanceMonitoringService,
+        },
+        {
+          provide: RedisConfigService,
+          useValue: mockRedisConfigService,
         },
         {
           provide: HttpCacheInterceptor,

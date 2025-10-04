@@ -7,30 +7,35 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
+import { RedisConfigService } from '../../database/redis-config.service';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { Request } from 'express';
 import {
   CACHE_KEY_METADATA,
   CACHE_INVALIDATE_METADATA,
   CACHE_TTL_METADATA,
 } from '../decorators/cache.decorator';
 
+interface RequestWithCache extends Request {
+  cacheHit?: boolean;
+}
+
 @Injectable()
 export class HttpCacheInterceptor implements NestInterceptor {
   private readonly logger = new Logger(HttpCacheInterceptor.name);
 
   constructor(
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly redisService: RedisConfigService,
     private readonly reflector: Reflector,
   ) {}
 
   async intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Promise<Observable<any>> {
+  ): Promise<Observable<unknown>> {
     const handler = context.getHandler();
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RequestWithCache>();
     const startTime = Date.now();
 
     // --- Cache Invalidation Logic ---
@@ -44,17 +49,19 @@ export class HttpCacheInterceptor implements NestInterceptor {
         `Cache invalidation requested for patterns: ${invalidatePatterns.join(', ')}`,
       );
       return next.handle().pipe(
-        tap(async () => {
+        tap(() => {
           for (const pattern of invalidatePatterns) {
             const key = this.generateKey(pattern, request);
-            try {
-              await this.cacheManager.del(key);
-              this.logger.debug(`Cache invalidated for key: ${key}`);
-            } catch (error) {
-              this.logger.warn(
-                `Failed to invalidate cache key ${key}: ${error.message}`,
-              );
-            }
+            void this.redisService
+              .del(key)
+              .then(() => {
+                this.logger.debug(`Cache invalidated for key: ${key}`);
+              })
+              .catch((error) => {
+                this.logger.warn(
+                  `Failed to invalidate cache key ${key}: ${(error as Error).message}`,
+                );
+              });
           }
         }),
       );
@@ -73,61 +80,80 @@ export class HttpCacheInterceptor implements NestInterceptor {
     const customTtl = this.reflector.get<number>(CACHE_TTL_METADATA, handler);
 
     try {
-      const cachedValue = await this.cacheManager.get(cacheKey);
+      const cachedValue = await this.redisService.get(cacheKey);
       if (cachedValue) {
         const responseTime = Date.now() - startTime;
         this.logger.debug(`Cache HIT for key: ${cacheKey} (${responseTime}ms)`);
 
         // Mark request as cache hit for performance monitoring
-        request.cacheHit = true;
+        (request as Record<string, any>).cacheHit = true;
 
         return of(cachedValue);
       }
     } catch (error) {
       this.logger.warn(
-        `Cache retrieval failed for key ${cacheKey}: ${error.message}`,
+        `Cache retrieval failed for key ${cacheKey}: ${(error as Error).message}`,
       );
     }
 
     this.logger.debug(`Cache MISS for key: ${cacheKey}`);
 
     return next.handle().pipe(
-      tap(async (response) => {
-        try {
-          const ttl = customTtl || 300; // Default 5 minutes
-          await this.cacheManager.set(cacheKey, response, ttl * 1000);
-          const responseTime = Date.now() - startTime;
-          this.logger.debug(
-            `Cache SET for key: ${cacheKey}, TTL: ${ttl}s (${responseTime}ms)`,
-          );
-        } catch (error) {
-          this.logger.warn(
-            `Cache storage failed for key ${cacheKey}: ${error.message}`,
-          );
-        }
+      tap((response) => {
+        const ttl = customTtl || 300; // Default 5 minutes
+        void this.redisService
+          .set(cacheKey, response, ttl)
+          .then(() => {
+            const responseTime = Date.now() - startTime;
+            this.logger.debug(
+              `Cache SET for key: ${cacheKey}, TTL: ${ttl}s (${responseTime}ms)`,
+            );
+          })
+          .catch((error) => {
+            this.logger.warn(
+              `Cache storage failed for key ${cacheKey}: ${(error as Error).message}`,
+            );
+          });
       }),
     );
   }
 
-  private generateKey(pattern: string, request: any): string {
+  private generateKey(pattern: string, request: RequestWithCache): string {
     let key = pattern;
 
     // Replace parameter placeholders
-    if (request.params) {
-      for (const param in request.params) {
-        key = key.replace(`{{params.${param}}}`, request.params[param]);
+    const params = request.params;
+    if (params && typeof params === 'object') {
+      for (const param in params) {
+        key = key.replace(`{{params.${param}}}`, String(params[param]));
       }
     }
 
     // Replace query placeholders
-    if (request.query) {
+    const query = request.query;
+    if (query && typeof query === 'object') {
       // Handle special case for query object serialization
       if (key.includes('{{query}}')) {
-        const queryString = this.serializeQuery(request.query);
+        const queryString = this.serializeQuery(
+          query as Record<string, unknown>,
+        );
         key = key.replace('{{query}}', queryString);
       } else {
-        for (const q in request.query) {
-          key = key.replace(`{{query.${q}}}`, request.query[q]);
+        for (const q in query) {
+          const value = query[q];
+          let stringValue: string;
+          if (typeof value === 'object' && value !== null) {
+            stringValue = JSON.stringify(value);
+          } else if (
+            typeof value === 'string' ||
+            typeof value === 'number' ||
+            typeof value === 'boolean'
+          ) {
+            stringValue = String(value);
+          } else {
+            stringValue = '';
+          }
+          key = key.replace(`{{query.${q}}}`, stringValue);
         }
       }
     }
@@ -136,9 +162,24 @@ export class HttpCacheInterceptor implements NestInterceptor {
     return `game-catalog:${key}`;
   }
 
-  private serializeQuery(query: any): string {
+  private serializeQuery(query: Record<string, unknown>): string {
     const sortedKeys = Object.keys(query).sort();
-    const pairs = sortedKeys.map((key) => `${key}=${query[key]}`);
+    const pairs = sortedKeys.map((key) => {
+      const value = query[key];
+      let stringValue: string;
+      if (typeof value === 'object' && value !== null) {
+        stringValue = JSON.stringify(value);
+      } else if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      ) {
+        stringValue = String(value);
+      } else {
+        stringValue = '';
+      }
+      return `${key}=${stringValue}`;
+    });
     return pairs.join('&');
   }
 }

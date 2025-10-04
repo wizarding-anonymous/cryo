@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -261,7 +262,7 @@ describe('SearchService', () => {
         q: 'test query',
         page: 1,
         limit: 10,
-        searchType: 'invalid' as any,
+        searchType: 'invalid' as unknown as 'title' | 'description' | 'all',
       };
 
       await service.searchGames(searchGamesDto);

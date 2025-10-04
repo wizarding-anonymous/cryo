@@ -1,8 +1,10 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Query,
+  Body,
   ParseUUIDPipe,
   UseInterceptors,
   HttpStatus,
@@ -20,6 +22,7 @@ import { GameResponseDto } from '../dto/game-response.dto';
 import { GameListResponseDto } from '../dto/game-list-response.dto';
 import { PurchaseInfoDto } from '../dto/purchase-info.dto';
 import { ErrorResponseDto } from '../dto/error-response.dto';
+import { CreateGameDto } from '../dto/create-game.dto';
 import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
 import { PerformanceInterceptor } from '../common/interceptors/performance.interceptor';
 import {
@@ -29,6 +32,7 @@ import {
 import {
   ResponseTransformationInterceptor,
   TransformResponse,
+  ExcludeTransform,
 } from '../common/interceptors/response-transformation.interceptor';
 import { Cache } from '../common/decorators/cache.decorator';
 
@@ -92,7 +96,7 @@ export class GameController {
   })
   @Cache('games_list_{{query}}', 600) // 10 minutes TTL for game lists
   @Timeout(15000) // 15 seconds timeout for list operations
-  @TransformResponse({ includeMetadata: true })
+  @ExcludeTransform()
   async getGames(
     @Query() getGamesDto: GetGamesDto,
   ): Promise<GameListResponseDto> {
@@ -144,7 +148,7 @@ export class GameController {
   })
   @Cache('game_{{params.id}}', 1800) // 30 minutes TTL for individual games
   @Timeout(10000) // 10 seconds timeout for single game retrieval
-  @TransformResponse({ includeMetadata: true })
+  @ExcludeTransform()
   async getGameById(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<GameResponseDto> {
@@ -185,10 +189,31 @@ export class GameController {
   })
   @Cache('game_purchase_{{params.id}}', 900) // 15 minutes TTL for purchase info
   @Timeout(8000) // 8 seconds timeout for purchase info (critical for payment flow)
-  @TransformResponse({ includeMetadata: true, excludeFields: ['internalId'] })
+  @ExcludeTransform()
   async getGamePurchaseInfo(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<PurchaseInfoDto> {
     return this.gameService.getGamePurchaseInfo(id);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: 'Create a new game',
+    description: 'Create a new game in the catalog (for testing purposes)',
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Game created successfully',
+    type: GameResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid game data',
+    type: ErrorResponseDto,
+  })
+  @TransformResponse({ includeMetadata: true })
+  async createGame(@Body() createGameDto: CreateGameDto): Promise<GameResponseDto> {
+    const game = await this.gameService.createGame(createGameDto);
+    return new GameResponseDto(game);
   }
 }

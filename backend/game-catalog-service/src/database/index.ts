@@ -8,6 +8,10 @@ export { DatabaseHealthService } from './database-health.service';
 // Database utilities
 export { DatabaseConnectionUtil } from './database-connection.util';
 
+// Cache utilities
+export { Cache, CacheClear } from './cache.decorator';
+export { CacheInterceptor } from './cache.interceptor';
+
 // Re-export TypeORM decorators and types for convenience
 export {
   InjectDataSource,

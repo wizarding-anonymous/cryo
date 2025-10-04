@@ -67,7 +67,10 @@ export class SearchService {
         hasNext: total > page * limit,
       };
     } catch (error) {
-      this.logger.error(`Error searching games: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error searching games: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
 
       // Return empty results on error to prevent service failure
       return {
@@ -114,6 +117,7 @@ export class SearchService {
 
     switch (searchType) {
       case 'title':
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         queryBuilder.andWhere(
           "to_tsvector('russian', game.title) @@ to_tsquery('russian', :query)",
           { query: sanitizedQuery },
@@ -121,6 +125,7 @@ export class SearchService {
         break;
 
       case 'description':
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         queryBuilder.andWhere(
           "to_tsvector('russian', COALESCE(game.description, '')) @@ to_tsquery('russian', :query)",
           { query: sanitizedQuery },
@@ -128,6 +133,7 @@ export class SearchService {
         break;
 
       case 'all':
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         queryBuilder.andWhere(
           "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '')) @@ to_tsquery('russian', :query)",
           { query: sanitizedQuery },
@@ -136,6 +142,7 @@ export class SearchService {
 
       default:
         // Default to title search
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         queryBuilder.andWhere(
           "to_tsvector('russian', game.title) @@ to_tsquery('russian', :query)",
           { query: sanitizedQuery },

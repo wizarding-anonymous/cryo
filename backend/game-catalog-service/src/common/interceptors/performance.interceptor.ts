@@ -7,7 +7,13 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { Request } from 'express';
 import { PerformanceMonitoringService } from '../services/performance-monitoring.service';
+
+interface RequestWithMetadata extends Request {
+  requestId?: string;
+  cacheHit?: boolean;
+}
 
 @Injectable()
 export class PerformanceInterceptor implements NestInterceptor {
@@ -17,10 +23,10 @@ export class PerformanceInterceptor implements NestInterceptor {
     private readonly performanceMonitoringService: PerformanceMonitoringService,
   ) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const startTime = Date.now();
-    const request = context.switchToHttp().getRequest();
-    const { method, url, query, params } = request;
+    const request = context.switchToHttp().getRequest<RequestWithMetadata>();
+    const { method, url } = request;
 
     const requestId = this.generateRequestId();
     request.requestId = requestId;
@@ -29,7 +35,7 @@ export class PerformanceInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap({
-        next: (response) => {
+        next: (response: unknown) => {
           const responseTime = Date.now() - startTime;
           const responseSize = this.calculateResponseSize(response);
           const cacheHit = request.cacheHit || false;
@@ -49,11 +55,11 @@ export class PerformanceInterceptor implements NestInterceptor {
             status: 'success',
           });
         },
-        error: (error) => {
+        error: (error: unknown) => {
           const responseTime = Date.now() - startTime;
 
           this.logger.error(
-            `[${requestId}] ${method} ${url} - Failed in ${responseTime}ms: ${error.message}`,
+            `[${requestId}] ${method} ${url} - Failed in ${responseTime}ms: ${(error as Error).message}`,
           );
 
           // Record error metrics
@@ -65,7 +71,7 @@ export class PerformanceInterceptor implements NestInterceptor {
             responseSize: 0,
             timestamp: new Date(),
             status: 'error',
-            error: error.message,
+            error: (error as Error).message,
           });
         },
       }),
@@ -76,7 +82,7 @@ export class PerformanceInterceptor implements NestInterceptor {
     return Math.random().toString(36).substring(2, 15);
   }
 
-  private calculateResponseSize(response: any): number {
+  private calculateResponseSize(response: unknown): number {
     if (!response) return 0;
 
     try {

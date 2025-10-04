@@ -8,6 +8,7 @@ import {
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Reflector } from '@nestjs/core';
+import { Request, Response } from 'express';
 
 export const TRANSFORM_RESPONSE_METADATA = 'transform_response';
 export const EXCLUDE_TRANSFORM_METADATA = 'exclude_transform';
@@ -18,21 +19,26 @@ interface TransformResponseOptions {
   addTimestamp?: boolean;
 }
 
+interface RequestWithMetadata extends Request {
+  requestId?: string;
+  cacheHit?: boolean;
+}
+
 /**
  * Decorator to enable response transformation for specific endpoints
  * @param options Transformation options
  */
 export const TransformResponse = (options?: TransformResponseOptions) => {
   return (
-    target: any,
-    propertyKey?: string,
+    target: object,
+    _propertyKey?: string,
     descriptor?: PropertyDescriptor,
   ) => {
     if (descriptor) {
       Reflect.defineMetadata(
         TRANSFORM_RESPONSE_METADATA,
         options || {},
-        descriptor.value,
+        descriptor.value as object,
       );
       return descriptor;
     }
@@ -46,7 +52,7 @@ export const TransformResponse = (options?: TransformResponseOptions) => {
  */
 export const ExcludeTransform = () => {
   return (
-    target: any,
+    target: object,
     _propertyKey?: string,
     descriptor?: PropertyDescriptor,
   ) => {
@@ -54,7 +60,7 @@ export const ExcludeTransform = () => {
       Reflect.defineMetadata(
         EXCLUDE_TRANSFORM_METADATA,
         true,
-        descriptor.value,
+        descriptor.value as object,
       );
       return descriptor;
     }
@@ -63,7 +69,7 @@ export const ExcludeTransform = () => {
   };
 };
 
-interface TransformedResponse<T = any> {
+interface TransformedResponse<T = unknown> {
   data: T;
   meta?: {
     timestamp: string;
@@ -80,10 +86,10 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
 
   constructor(private readonly reflector: Reflector) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const handler = context.getHandler();
-    const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
+    const request = context.switchToHttp().getRequest<RequestWithMetadata>();
+    const response = context.switchToHttp().getResponse<Response>();
 
     // Check if transformation should be excluded
     const excludeTransform = this.reflector.get<boolean>(
@@ -105,7 +111,7 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
     const requestId = request.requestId;
 
     return next.handle().pipe(
-      map((data) => {
+      map((data: unknown) => {
         const responseTime = Date.now() - startTime;
 
         // Skip transformation for health checks and non-JSON responses
@@ -114,8 +120,11 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
         }
 
         // Apply field exclusions if specified
-        let transformedData = data;
-        if (transformOptions?.excludeFields?.length > 0) {
+        let transformedData: unknown = data;
+        if (
+          transformOptions?.excludeFields?.length &&
+          transformOptions.excludeFields.length > 0
+        ) {
           transformedData = this.excludeFields(
             data,
             transformOptions.excludeFields,
@@ -155,9 +164,9 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
   }
 
   private shouldSkipTransformation(
-    request: any,
-    response: any,
-    data: any,
+    request: RequestWithMetadata,
+    response: Response,
+    data: unknown,
   ): boolean {
     // Skip for health check endpoints
     if (request.url?.includes('/health')) {
@@ -166,7 +175,7 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
 
     // Skip if response is not JSON
     const contentType = response.getHeader('content-type');
-    if (contentType && !contentType.includes('application/json')) {
+    if (contentType && !String(contentType).includes('application/json')) {
       return true;
     }
 
@@ -183,7 +192,7 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
     return false;
   }
 
-  private excludeFields(obj: any, fieldsToExclude: string[]): any {
+  private excludeFields(obj: unknown, fieldsToExclude: string[]): unknown {
     if (!obj || typeof obj !== 'object') {
       return obj;
     }
@@ -192,7 +201,7 @@ export class ResponseTransformationInterceptor implements NestInterceptor {
       return obj.map((item) => this.excludeFields(item, fieldsToExclude));
     }
 
-    const result = { ...obj };
+    const result = { ...(obj as Record<string, unknown>) };
     fieldsToExclude.forEach((field) => {
       if (field.includes('.')) {
         // Handle nested field exclusion (e.g., 'user.password')

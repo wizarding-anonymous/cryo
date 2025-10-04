@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { HealthController } from './health.controller';
 import {
@@ -6,15 +7,15 @@ import {
   MemoryHealthIndicator,
   HealthCheckResult,
 } from '@nestjs/terminus';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import { CacheService } from '../common/services/cache.service';
+import { RedisConfigService } from '../database/redis-config.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
   let healthCheckService: jest.Mocked<HealthCheckService>;
   let dbHealthIndicator: jest.Mocked<TypeOrmHealthIndicator>;
   let memoryHealthIndicator: jest.Mocked<MemoryHealthIndicator>;
-  let cacheManager: jest.Mocked<Cache>;
+  let cacheService: jest.Mocked<CacheService>;
 
   beforeEach(async () => {
     const mockHealthCheckService = {
@@ -30,9 +31,13 @@ describe('HealthController', () => {
       checkRSS: jest.fn(),
     };
 
-    const mockCacheManager = {
-      set: jest.fn(),
+    const mockCacheService = {
       get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+      delByPattern: jest.fn(),
+      invalidateGameCache: jest.fn(),
+      getCacheStats: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -51,8 +56,18 @@ describe('HealthController', () => {
           useValue: mockMemoryHealthIndicator,
         },
         {
-          provide: CACHE_MANAGER,
-          useValue: mockCacheManager,
+          provide: CacheService,
+          useValue: mockCacheService,
+        },
+        {
+          provide: RedisConfigService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
+            isAvailable: jest.fn().mockReturnValue(true),
+            getConnectionInfo: jest.fn().mockReturnValue('localhost:6379 (connected)'),
+          },
         },
       ],
     }).compile();
@@ -61,7 +76,7 @@ describe('HealthController', () => {
     healthCheckService = module.get(HealthCheckService);
     dbHealthIndicator = module.get(TypeOrmHealthIndicator);
     memoryHealthIndicator = module.get(MemoryHealthIndicator);
-    cacheManager = module.get(CACHE_MANAGER);
+    cacheService = module.get(CacheService);
   });
 
   it('should be defined', () => {
@@ -99,8 +114,8 @@ describe('HealthController', () => {
       memoryHealthIndicator.checkRSS.mockResolvedValue({
         memory_rss: { status: 'up' },
       });
-      cacheManager.set.mockResolvedValue(undefined);
-      cacheManager.get.mockResolvedValue('test-value');
+      cacheService.set.mockResolvedValue(undefined);
+      cacheService.get.mockResolvedValue('test-value');
 
       const result = await controller.check();
 
@@ -161,8 +176,8 @@ describe('HealthController', () => {
       dbHealthIndicator.pingCheck.mockResolvedValue({
         database: { status: 'up' },
       });
-      cacheManager.set.mockResolvedValue(undefined);
-      cacheManager.get.mockResolvedValue('test-value');
+      cacheService.set.mockResolvedValue(undefined);
+      cacheService.get.mockResolvedValue('test-value');
 
       const result = await controller.readiness();
 
@@ -256,8 +271,8 @@ describe('HealthController', () => {
 
   describe('Redis health check', () => {
     it('should handle Redis connection success', async () => {
-      cacheManager.set.mockResolvedValue(undefined);
-      cacheManager.get.mockResolvedValue('test-value');
+      cacheService.set.mockResolvedValue(undefined);
+      cacheService.get.mockResolvedValue('test-value');
 
       // Call the private method through the public check method
       const mockResult: HealthCheckResult = {
@@ -278,11 +293,11 @@ describe('HealthController', () => {
     });
 
     it('should handle Redis connection failure with memory fallback', async () => {
-      cacheManager.set.mockRejectedValueOnce(
+      cacheService.set.mockRejectedValueOnce(
         new Error('Redis connection failed'),
       );
-      cacheManager.set.mockResolvedValueOnce(undefined); // Memory cache fallback
-      cacheManager.get.mockResolvedValue('test-value');
+      cacheService.set.mockResolvedValueOnce(undefined); // Memory cache fallback
+      cacheService.get.mockResolvedValue('test-value');
 
       const mockResult: HealthCheckResult = {
         status: 'ok',
