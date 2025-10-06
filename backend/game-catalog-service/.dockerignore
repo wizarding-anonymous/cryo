@@ -105,9 +105,6 @@ docker-compose*
 
 # Documentation (keep essential deployment docs)
 README.md
-API_DOCUMENTATION.md
-PAYMENT_SERVICE_INTEGRATION.md
-PRODUCTION_CHECKLIST.md
 
 # Test files
 test/

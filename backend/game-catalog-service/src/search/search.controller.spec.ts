@@ -5,6 +5,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { SearchController } from './search.controller';
 import { SearchService } from './search.service';
 import { SearchGamesDto } from '../dto/search-games.dto';
+import { GameListResponse } from '../interfaces/game.interface';
 import { PerformanceInterceptor } from '../common/interceptors/performance.interceptor';
 import { PerformanceMonitoringService } from '../common/services/performance-monitoring.service';
 import { HttpCacheInterceptor } from '../common/interceptors/http-cache.interceptor';
@@ -116,17 +117,22 @@ describe('SearchController', () => {
       expect(result).toEqual(mockGameListResponse);
     });
 
-    it('should throw BadRequestException for empty search query', async () => {
+    it('should handle empty search query gracefully', async () => {
       const searchGamesDto: SearchGamesDto = { q: '   ', page: 1, limit: 10 };
+      const mockGameListResponse: GameListResponse = {
+        games: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+        hasNext: false,
+      };
 
-      await expect(controller.searchGames(searchGamesDto)).rejects.toThrow(
-        new HttpException(
-          'Search query cannot be empty',
-          HttpStatus.BAD_REQUEST,
-        ),
-      );
+      service.searchGames = jest.fn().mockResolvedValue(mockGameListResponse);
 
-      expect(service.searchGames).not.toHaveBeenCalled();
+      const result = await controller.searchGames(searchGamesDto);
+
+      expect(service.searchGames).toHaveBeenCalledWith(searchGamesDto);
+      expect(result).toEqual(mockGameListResponse);
     });
 
     it('should throw BadRequestException when minPrice > maxPrice', async () => {

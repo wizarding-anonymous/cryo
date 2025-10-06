@@ -55,10 +55,20 @@ export class CacheInterceptor implements NestInterceptor {
       // Cache miss - execute handler and cache result
       this.logger.debug(`Cache miss: ${resolvedKey}`);
       return next.handle().pipe(
-        tap(async (result) => {
+        tap((result) => {
           if (result !== null && result !== undefined) {
-            await this.redisService.set(resolvedKey, result, cacheTtl || 300);
-            this.logger.debug(`Cached result: ${resolvedKey}`);
+            // Fire and forget - don't await to avoid blocking the response
+            this.redisService
+              .set(resolvedKey, result, cacheTtl || 300)
+              .then(() => {
+                this.logger.debug(`Cached result: ${resolvedKey}`);
+              })
+              .catch((error) => {
+                this.logger.warn(
+                  `Failed to cache result: ${resolvedKey}`,
+                  error,
+                );
+              });
           }
         }),
       );
@@ -68,9 +78,12 @@ export class CacheInterceptor implements NestInterceptor {
     }
   }
 
-  private resolveCacheKey(pattern: string, params: Record<string, any>): string {
+  private resolveCacheKey(
+    pattern: string,
+    params: Record<string, any>,
+  ): string {
     let resolvedKey = pattern;
-    
+
     // Replace {param} placeholders with actual values
     Object.keys(params).forEach((key) => {
       const placeholder = `{${key}}`;

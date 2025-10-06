@@ -107,7 +107,10 @@ export class CreateGameDto {
 
   @ApiProperty({
     description: 'Game images URLs',
-    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+    example: [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+    ],
     required: false,
   })
   @IsOptional()
@@ -118,8 +121,10 @@ export class CreateGameDto {
   @ApiProperty({
     description: 'System requirements',
     example: {
-      minimum: 'OS: Windows 7 64-bit, Processor: Intel CPU Core i5-2500K 3.3GHz',
-      recommended: 'OS: Windows 10 64-bit, Processor: Intel CPU Core i7 3770 3.4 GHz'
+      minimum:
+        'OS: Windows 7 64-bit, Processor: Intel CPU Core i5-2500K 3.3GHz',
+      recommended:
+        'OS: Windows 10 64-bit, Processor: Intel CPU Core i7 3770 3.4 GHz',
     },
     required: false,
   })

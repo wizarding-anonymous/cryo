@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -63,7 +68,9 @@ export class RedisConfigService implements OnModuleInit, OnModuleDestroy {
 
       this.redisClient.on('ready', () => {
         this.isRedisAvailable = true;
-        this.logger.log(`✅ Redis ready at ${redisHost}:${redisPort} (DB: ${redisDb})`);
+        this.logger.log(
+          `✅ Redis ready at ${redisHost}:${redisPort} (DB: ${redisDb})`,
+        );
       });
 
       this.redisClient.on('error', (error) => {
@@ -83,10 +90,14 @@ export class RedisConfigService implements OnModuleInit, OnModuleDestroy {
       // Test connection
       await this.redisClient.ping();
       this.logger.log(`🚀 Production Redis cache initialized: TTL=300s`);
-
     } catch (error) {
-      this.logger.error('❌ Failed to initialize Redis:', (error as Error).message);
-      this.logger.warn('⚠️  Falling back to memory cache - NOT RECOMMENDED for production');
+      this.logger.error(
+        '❌ Failed to initialize Redis:',
+        (error as Error).message,
+      );
+      this.logger.warn(
+        '⚠️  Falling back to memory cache - NOT RECOMMENDED for production',
+      );
       this.redisClient = null;
     }
   }
@@ -116,7 +127,10 @@ export class RedisConfigService implements OnModuleInit, OnModuleDestroy {
         return true;
       }
     } catch (error) {
-      this.logger.error(`Failed to set cache key ${key}:`, (error as Error).message);
+      this.logger.error(
+        `Failed to set cache key ${key}:`,
+        (error as Error).message,
+      );
     }
     return false;
   }
@@ -131,7 +145,10 @@ export class RedisConfigService implements OnModuleInit, OnModuleDestroy {
         return value ? JSON.parse(value) : null;
       }
     } catch (error) {
-      this.logger.error(`Failed to get cache key ${key}:`, (error as Error).message);
+      this.logger.error(
+        `Failed to get cache key ${key}:`,
+        (error as Error).message,
+      );
     }
     return null;
   }
@@ -146,7 +163,10 @@ export class RedisConfigService implements OnModuleInit, OnModuleDestroy {
         return true;
       }
     } catch (error) {
-      this.logger.error(`Failed to delete cache key ${key}:`, (error as Error).message);
+      this.logger.error(
+        `Failed to delete cache key ${key}:`,
+        (error as Error).message,
+      );
     }
     return false;
   }
@@ -164,7 +184,10 @@ export class RedisConfigService implements OnModuleInit, OnModuleDestroy {
         }
       }
     } catch (error) {
-      this.logger.error(`Failed to clear cache pattern ${pattern}:`, (error as Error).message);
+      this.logger.error(
+        `Failed to clear cache pattern ${pattern}:`,
+        (error as Error).message,
+      );
     }
     return 0;
   }
@@ -177,7 +200,9 @@ export class RedisConfigService implements OnModuleInit, OnModuleDestroy {
     const port = this.configService.get<number>('REDIS_PORT');
 
     if (!host || !port) {
-      this.logger.warn('Redis configuration incomplete, will use memory cache as fallback');
+      this.logger.warn(
+        'Redis configuration incomplete, will use memory cache as fallback',
+      );
       return false;
     }
 
@@ -218,9 +243,9 @@ export class RedisConfigService implements OnModuleInit, OnModuleDestroy {
       const info = await this.redisClient.info('memory');
       const memoryMatch = info.match(/used_memory_human:([^\r\n]+)/);
       const memory = memoryMatch ? memoryMatch[1].trim() : '0B';
-      
+
       const dbSize = await this.redisClient.dbsize();
-      
+
       return {
         connected: true,
         memory,

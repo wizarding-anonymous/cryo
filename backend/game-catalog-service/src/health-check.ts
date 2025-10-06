@@ -12,24 +12,34 @@ const TIMEOUT = 3000; // 3 seconds timeout
 
 function performHealthCheck(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = http.get(HEALTH_CHECK_URL, { timeout: TIMEOUT }, (response) => {
-      let data = '';
+    const request = http.get(
+      HEALTH_CHECK_URL,
+      { timeout: TIMEOUT },
+      (response) => {
+        let data = '';
 
-      response.on('data', (chunk) => {
-        data += chunk;
-      });
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
 
-      response.on('end', () => {
-        if (response.statusCode === 200) {
-          console.log('Health check passed');
-          resolve();
-        } else {
-          console.error(`Health check failed with status: ${response.statusCode}`);
-          console.error('Response:', data);
-          reject(new Error(`Health check failed with status: ${response.statusCode}`));
-        }
-      });
-    });
+        response.on('end', () => {
+          if (response.statusCode === 200) {
+            console.log('Health check passed');
+            resolve();
+          } else {
+            console.error(
+              `Health check failed with status: ${response.statusCode}`,
+            );
+            console.error('Response:', data);
+            reject(
+              new Error(
+                `Health check failed with status: ${response.statusCode}`,
+              ),
+            );
+          }
+        });
+      },
+    );
 
     request.on('error', (error) => {
       console.error('Health check request failed:', error.message);

@@ -56,10 +56,14 @@ export class Game {
   @MaxLength(500)
   shortDescription: string;
 
-  @Column('decimal', { precision: 10, scale: 2, transformer: {
-    to: (value: number) => value,
-    from: (value: string) => parseFloat(value)
-  }})
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value),
+    },
+  })
   @Index()
   @Type(() => Number)
   @IsNumber()

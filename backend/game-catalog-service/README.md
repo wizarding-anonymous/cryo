@@ -1,581 +1,510 @@
 # Game Catalog Service
 
-A production-ready microservice for managing game catalogs in a Russian gaming platform. Built with NestJS, TypeScript, PostgreSQL, and Redis for high performance and scalability.
+Микросервис каталога игр для игровой платформы. Обеспечивает управление каталогом игр, поиск, фильтрацию и предоставление информации о играх для других сервисов.
 
-## 🚀 Features
+## 📋 Описание
 
-- **Game Catalog Management**: Browse, search, and retrieve game information
-- **High Performance**: Redis caching with sub-200ms response times
-- **Production Ready**: Docker containerization, health checks, monitoring
-- **Comprehensive API**: RESTful API with full Swagger documentation
-- **Search Functionality**: Full-text search with PostgreSQL and Russian language support
-- **Payment Integration**: Specialized endpoints for Payment Service integration
-- **100% Test Coverage**: Unit, integration, and e2e tests
+Game Catalog Service - это микросервис, отвечающий за управление каталогом игр в игровой платформе. Он предоставляет функциональность просмотра, поиска, фильтрации игр, а также управления каталогом. Сервис построен на NestJS с использованием TypeScript и интегрирован с PostgreSQL для хранения данных и Redis для кэширования. Включает полнотекстовый поиск с поддержкой русского языка.
 
-## 📋 Prerequisites
+## 🚀 Основной функционал
 
-### Development
-- Node.js 18+ 
-- npm 8+
-- Docker & Docker Compose
-- PostgreSQL 14+ (optional for local development)
-- Redis 6+ (optional for local development)
+### Управление каталогом игр
+- ✅ Просмотр списка игр с пагинацией
+- ✅ Получение детальной информации об игре
+- ✅ Создание новых игр в каталоге
+- ✅ Обновление информации об играх
+- ✅ Удаление игр из каталога
+- ✅ Фильтрация по жанру и доступности
 
-### Production
-- Kubernetes cluster
-- PostgreSQL 14+ database
-- Redis 6+ cache
-- Container registry access
+### Поиск и фильтрация
+- ✅ Полнотекстовый поиск по названию и описанию
+- ✅ Поддержка русского языка в поиске
+- ✅ Фильтрация по цене (минимальная/максимальная)
+- ✅ Сортировка по различным полям
+- ✅ Пагинация результатов поиска
 
-## 🛠️ Installation & Setup
+### Интеграция с другими сервисами
+- ✅ Предоставление информации для Payment Service
+- ✅ API для получения данных о покупке игры
+- ✅ Кэширование для оптимизации производительности
 
-### 1. Clone and Install Dependencies
+### Производительность и надежность
+- ✅ Redis кэширование с настраиваемым TTL
+- ✅ Таймауты для операций
+- ✅ Перехватчики производительности
+- ✅ Трансформация ответов
+- ✅ Валидация входящих данных
 
+### Мониторинг и логирование
+- ✅ Health checks для базы данных и Redis
+- ✅ Prometheus метрики
+- ✅ Структурированное логирование
+- ✅ Глобальная обработка ошибок
+- ✅ Swagger документация API
+
+## 🔄 Game Flows
+
+### 1. Просмотр каталога игр
+```
+Пользователь → GET /api/games → Валидация параметров → 
+Получение из кэша/БД → Применение фильтров → 
+Пагинация → Возврат списка игр
+```
+
+### 2. Поиск игр
+```
+Пользователь → GET /api/games/search?q=запрос → Валидация параметров → 
+Полнотекстовый поиск в PostgreSQL → Применение фильтров → 
+Пагинация → Возврат результатов поиска
+```
+
+### 3. Получение информации об игре
+```
+Пользователь → GET /api/games/:id → Валидация UUID → 
+Проверка кэша → Получение из БД → Возврат детальной информации
+```
+
+### 4. Получение информации для покупки
+```
+Payment Service → GET /api/games/:id/purchase-info → Валидация UUID → 
+Проверка доступности → Получение цены и валюты → 
+Возврат информации для платежа
+```
+
+### 5. Создание игры
+```
+Администратор → POST /api/games → Валидация данных → 
+Сохранение в БД → Очистка кэша → Возврат созданной игры
+```
+
+### 6. Обновление игры
+```
+Администратор → PATCH /api/games/:id → Валидация данных → 
+Обновление в БД → Очистка кэша → Возврат обновленной игры
+```
+
+## 🛠 API Эндпоинты
+
+### Games (`/api/games`)
+
+| Метод | Эндпоинт | Описание | Кэширование |
+|-------|----------|----------|-------------|
+| `GET` | `/games` | Получение списка игр с пагинацией | ✅ 10 мин |
+| `GET` | `/games/search` | Поиск игр по различным критериям | ✅ 5 мин |
+| `GET` | `/games/:id` | Получение детальной информации об игре | ✅ 30 мин |
+| `GET` | `/games/:id/purchase-info` | Получение информации для покупки | ✅ 15 мин |
+| `POST` | `/games` | Создание новой игры | ❌ |
+| `PATCH` | `/games/:id` | Обновление игры | ❌ |
+| `DELETE` | `/games/:id` | Удаление игры | ❌ |
+
+#### GET /api/games
+**Описание:** Получение пагинированного списка игр с фильтрацией и сортировкой
+**Query параметры:**
+- `page` (optional): Номер страницы (по умолчанию: 1)
+- `limit` (optional): Количество элементов на странице (по умолчанию: 10, максимум: 100)
+- `sortBy` (optional): Поле для сортировки (title, price, releaseDate, createdAt)
+- `sortOrder` (optional): Порядок сортировки (ASC, DESC)
+- `genre` (optional): Фильтр по жанру
+- `available` (optional): Фильтр по доступности
+
+**Ответ:**
+```json
+{
+  "games": [
+    {
+      "id": "uuid",
+      "title": "Cyberpunk 2077",
+      "description": "Futuristic RPG...",
+      "shortDescription": "Futuristic RPG in Night City",
+      "price": 2999.99,
+      "currency": "RUB",
+      "genre": "Action RPG",
+      "developer": "CD Projekt RED",
+      "publisher": "CD Projekt",
+      "releaseDate": "2020-12-10",
+      "images": ["url1", "url2"],
+      "systemRequirements": {
+        "minimum": "OS: Windows 10...",
+        "recommended": "OS: Windows 11..."
+      },
+      "available": true,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "total": 100,
+  "page": 1,
+  "limit": 10
+}
+```
+
+#### GET /api/games/search
+**Описание:** Поиск игр с полнотекстовым поиском и фильтрацией
+**Query параметры:**
+- `q` (optional): Поисковый запрос (1-255 символов)
+- `searchType` (optional): Тип поиска (title, description, all)
+- `page` (optional): Номер страницы
+- `limit` (optional): Количество элементов на странице
+- `minPrice` (optional): Минимальная цена
+- `maxPrice` (optional): Максимальная цена
+
+#### GET /api/games/:id
+**Описание:** Получение детальной информации об игре по UUID
+**Параметры:**
+- `id`: UUID игры
+
+#### GET /api/games/:id/purchase-info
+**Описание:** Получение информации для покупки (используется Payment Service)
+**Ответ:**
+```json
+{
+  "id": "uuid",
+  "title": "Game Title",
+  "price": 1999.99,
+  "currency": "RUB",
+  "available": true
+}
+```
+
+#### POST /api/games
+**Описание:** Создание новой игры в каталоге
+**Body:**
+```json
+{
+  "title": "The Witcher 3: Wild Hunt",
+  "description": "An epic RPG adventure...",
+  "shortDescription": "Epic RPG adventure",
+  "price": 1999.99,
+  "currency": "RUB",
+  "developer": "CD Projekt RED",
+  "publisher": "CD Projekt",
+  "genre": "RPG",
+  "releaseDate": "2015-05-19",
+  "available": true,
+  "images": ["url1", "url2"],
+  "systemRequirements": {
+    "minimum": "OS: Windows 7...",
+    "recommended": "OS: Windows 10..."
+  }
+}
+```
+
+#### PATCH /api/games/:id
+**Описание:** Обновление существующей игры
+**Параметры:**
+- `id`: UUID игры
+**Body:** Частичные данные игры для обновления
+
+#### DELETE /api/games/:id
+**Описание:** Удаление игры из каталога
+**Параметры:**
+- `id`: UUID игры
+**Ответ:** `204 No Content`
+
+### Search (`/api/search`)
+
+| Метод | Эндпоинт | Описание | Кэширование |
+|-------|----------|----------|-------------|
+| `GET` | `/search/search` | Расширенный поиск игр | ✅ 5 мин |
+
+### Health Check (`/api/v1/health`)
+
+| Метод | Эндпоинт | Описание | Аутентификация |
+|-------|----------|----------|----------------|
+| `GET` | `/v1/health` | Базовая проверка здоровья сервиса | ❌ |
+| `GET` | `/v1/health/detailed` | Детальная проверка здоровья сервиса | ❌ |
+
+### Root
+
+| Метод | Эндпоинт | Описание | Аутентификация |
+|-------|----------|----------|----------------|
+| `GET` | `/` | Приветственное сообщение | ❌ |
+
+### Документация API
+
+| Эндпоинт | Описание |
+|----------|----------|
+| `/api/api-docs` | Swagger UI документация |
+
+## 🏗 Архитектура
+
+### Технологический стек
+- **Framework:** NestJS (Node.js)
+- **Language:** TypeScript
+- **Database:** PostgreSQL с полнотекстовым поиском
+- **Cache:** Redis
+- **Validation:** class-validator, class-transformer
+- **Documentation:** Swagger/OpenAPI
+- **Logging:** Winston
+- **Metrics:** Prometheus
+- **Testing:** Jest
+
+### Структура проекта
+```
+src/
+├── game/                 # Модуль игр
+│   ├── game.controller.ts # Контроллер игр
+│   ├── game.service.ts   # Бизнес-логика игр
+│   └── game.module.ts    # Модуль игр
+├── search/              # Модуль поиска
+│   ├── search.controller.ts # Контроллер поиска
+│   ├── search.service.ts    # Сервис поиска
+│   └── search.module.ts     # Модуль поиска
+├── entities/            # TypeORM сущности
+│   └── game.entity.ts   # Сущность игры
+├── dto/                 # Data Transfer Objects
+│   ├── create-game.dto.ts
+│   ├── update-game.dto.ts
+│   ├── game-response.dto.ts
+│   ├── search-games.dto.ts
+│   └── purchase-info.dto.ts
+├── interfaces/          # Интерфейсы
+│   ├── game.interface.ts
+│   └── game-service.interface.ts
+├── database/            # Конфигурация БД
+│   ├── migrations/      # Миграции БД
+│   ├── database.module.ts
+│   └── redis-config.service.ts
+├── health/              # Health checks
+│   ├── health.controller.ts
+│   ├── metrics.service.ts
+│   └── logging.service.ts
+├── common/              # Общие компоненты
+│   ├── controllers/     # Базовые контроллеры
+│   ├── decorators/      # Декораторы (кэширование)
+│   ├── filters/         # Exception filters
+│   ├── interceptors/    # Interceptors
+│   └── services/        # Общие сервисы
+└── types/               # Типы TypeScript
+```
+
+## 🚀 Установка и запуск
+
+### Предварительные требования
+- Node.js 20+
+- PostgreSQL 13+
+- Redis 6+
+- Docker (опционально)
+
+### Локальная разработка
+
+1. **Клонирование репозитория:**
 ```bash
-# Navigate to the service directory
+git clone <repository-url>
 cd backend/game-catalog-service
+```
 
-# Install dependencies
+2. **Установка зависимостей:**
+```bash
 npm install
 ```
 
-### 2. Environment Configuration
-
-Copy the appropriate environment file for your setup:
-
+3. **Настройка переменных окружения:**
 ```bash
-# For local development
 cp .env.example .env
-
-# For Docker development
-cp .env.docker .env
-
-# For production deployment
-cp .env.production .env
+# Отредактируйте .env файл с вашими настройками
 ```
 
-### 3. Environment Variables
-
-| Variable | Description | Development | Production |
-|----------|-------------|-------------|------------|
-| `NODE_ENV` | Application environment | `development` | `production` |
-| `PORT` | Service port | `3002` | `3002` |
-| `POSTGRES_HOST` | PostgreSQL hostname | `localhost` | `${POSTGRES_HOST}` |
-| `POSTGRES_PORT` | PostgreSQL port | `5432` | `${POSTGRES_PORT}` |
-| `POSTGRES_USER` | Database username | `user` | `${POSTGRES_USER}` |
-| `POSTGRES_PASSWORD` | Database password | `password` | `${POSTGRES_PASSWORD}` |
-| `POSTGRES_DB` | Database name | `game_catalog_db` | `${POSTGRES_DB}` |
-| `REDIS_HOST` | Redis hostname | `localhost` | `${REDIS_HOST}` |
-| `REDIS_PORT` | Redis port | `6379` | `${REDIS_PORT}` |
-| `JWT_SECRET` | JWT signing secret | `dev-secret` | `${JWT_SECRET}` |
-| `CACHE_TTL` | Cache TTL (seconds) | `300` | `600` |
-| `LOG_LEVEL` | Logging level | `debug` | `info` |
-| `SWAGGER_ENABLED` | Enable Swagger docs | `true` | `false` |
-
-## 🚀 Running the Application
-
-### Option 1: Docker Compose (Recommended)
-
+4. **Запуск базы данных и Redis:**
 ```bash
-# 1. Start database and Redis first
-docker-compose up -d postgres-catalog redis
+# Используя Docker Compose
+docker-compose up -d postgres redis
 
-# 2. Run migrations manually (REQUIRED)
-docker-compose exec game-catalog-service npm run migration:run
-
-# 3. Start the application
-docker-compose up -d game-catalog-service
-
-# Or start all services and run migrations separately
-docker-compose up -d --build
-docker-compose exec game-catalog-service npm run migration:run
-
-# View logs
-docker-compose logs -f game-catalog-service
-
-# Stop services
-docker-compose down
+# Или запустите локально установленные сервисы
 ```
 
-### Option 2: Local Development
-
+5. **Запуск миграций:**
 ```bash
-# 1. Start database and Redis (if using Docker)
-docker-compose up -d postgres-catalog redis
-
-# 2. Run database migrations manually (REQUIRED)
 npm run migration:run
-
-# 3. Start the application in development mode
-npm run start:dev
-
-# Start in debug mode
-npm run start:debug
 ```
 
-### Option 3: Production Build
-
+6. **Запуск в режиме разработки:**
 ```bash
-# Build the application
-npm run build
+npm run start:dev
+```
 
-# Start in production mode
+Сервис будет доступен по адресу: `http://localhost:3002/api`
+
+### Docker
+
+1. **Сборка образа:**
+```bash
+docker build -t game-catalog-service .
+```
+
+2. **Запуск с Docker Compose:**
+```bash
+docker-compose up -d
+```
+
+### Продакшн
+
+1. **Сборка приложения:**
+```bash
+npm run build
+```
+
+2. **Запуск в продакшн режиме:**
+```bash
 npm run start:prod
 ```
 
-## 📚 API Documentation
+## 🧪 Тестирование
 
-### Swagger/OpenAPI Documentation
-
-Once the application is running, access the interactive API documentation:
-
-- **Development**: `http://localhost:3002/api-docs`
-- **Production**: Disabled by default for security
-
-### Main API Endpoints
-
-#### Games Management
-- `GET /api/games` - Get paginated list of games
-- `GET /api/games/:id` - Get game details by ID
-- `GET /api/games/:id/purchase-info` - Get purchase information (Payment Service)
-
-#### Search
-- `GET /api/games/search` - Search games with filters
-
-#### Health & Monitoring
-- `GET /api/v1/health` - Comprehensive health check
-- `GET /api/v1/health/ready` - Kubernetes readiness probe
-- `GET /api/v1/health/live` - Kubernetes liveness probe
-- `GET /metrics` - Prometheus metrics
-
-### API Examples
-
-#### Get Games with Pagination
+### Запуск тестов
 ```bash
-curl "http://localhost:3002/api/games?page=1&limit=10&sortBy=title&sortOrder=ASC"
-```
+# Unit тесты
+npm run test
 
-#### Search Games
-```bash
-curl "http://localhost:3002/api/games/search?q=cyberpunk&searchType=title&minPrice=100&maxPrice=5000"
-```
-
-#### Get Game Details
-```bash
-curl "http://localhost:3002/api/games/123e4567-e89b-12d3-a456-426614174000"
-```
-
-#### Health Check
-```bash
-curl "http://localhost:3002/api/v1/health"
-```
-
-## 🧪 Testing
-
-### Run All Tests
-```bash
-# Unit tests
-npm test
-
-# Unit tests with coverage
-npm run test:cov
-
-# E2E tests
+# E2E тесты
 npm run test:e2e
 
-# Integration tests
+# Тесты с покрытием
+npm run test:cov
+
+# Тесты в watch режиме
+npm run test:watch
+
+# Интеграционные тесты
 npm run test:integration
 
-# All tests
-npm run test:all
-```
-
-### Test Coverage
-The service maintains 100% test coverage across:
-- Unit tests for services and controllers
-- Integration tests for database operations
-- E2E tests for complete API workflows
-- Error scenario testing
-
-### Test Database
-```bash
-# Test database connection
+# Тестирование подключения к БД
 npm run test:db
 
-# Run specific integration tests
-npm run test:integration:db
-npm run test:integration:api
-npm run test:integration:errors
+# Тестирование Redis
+npm run test:redis
 ```
 
-## 🐳 Docker Deployment
-
-### Build Docker Image
-```bash
-# Build production image
-docker build -t game-catalog-service:latest .
-
-# Build with specific tag
-docker build -t game-catalog-service:v1.0.0 .
-```
-
-### Run Docker Container
-```bash
-# Run with environment file
-docker run -d \
-  --name game-catalog-service \
-  --env-file .env.production \
-  -p 3002:3002 \
-  game-catalog-service:latest
-
-# Run with individual environment variables
-docker run -d \
-  --name game-catalog-service \
-  -e NODE_ENV=production \
-  -e POSTGRES_HOST=your-db-host \
-  -e REDIS_HOST=your-redis-host \
-  -p 3002:3002 \
-  game-catalog-service:latest
-```
-
-## ☸️ Kubernetes Deployment
-
-### Prerequisites
-- Kubernetes cluster (1.20+)
-- kubectl configured
-- Container registry access
-- PostgreSQL and Redis services
-
-### Deployment Steps
-
-1. **Create Namespace**
-```bash
-kubectl create namespace gaming-platform
-```
-
-2. **Create Secrets**
-```bash
-# Database credentials
-kubectl create secret generic game-catalog-db-secret \
-  --from-literal=POSTGRES_USER=your-user \
-  --from-literal=POSTGRES_PASSWORD=your-password \
-  --from-literal=JWT_SECRET=your-jwt-secret \
-  -n gaming-platform
-
-# Redis credentials (if needed)
-kubectl create secret generic game-catalog-redis-secret \
-  --from-literal=REDIS_PASSWORD=your-redis-password \
-  -n gaming-platform
-```
-
-3. **Create ConfigMap**
-```bash
-kubectl create configmap game-catalog-config \
-  --from-literal=POSTGRES_HOST=postgres-service \
-  --from-literal=POSTGRES_PORT=5432 \
-  --from-literal=POSTGRES_DB=game_catalog_db \
-  --from-literal=REDIS_HOST=redis-service \
-  --from-literal=REDIS_PORT=6379 \
-  --from-literal=NODE_ENV=production \
-  --from-literal=PORT=3002 \
-  --from-literal=LOG_LEVEL=info \
-  -n gaming-platform
-```
-
-4. **Deploy Application**
-```bash
-# Apply Kubernetes manifests (create these based on your cluster setup)
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/ingress.yaml
-```
-
-### Sample Kubernetes Deployment
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: game-catalog-service
-  namespace: gaming-platform
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: game-catalog-service
-  template:
-    metadata:
-      labels:
-        app: game-catalog-service
-    spec:
-      containers:
-      - name: game-catalog-service
-        image: your-registry/game-catalog-service:latest
-        ports:
-        - containerPort: 3002
-        envFrom:
-        - configMapRef:
-            name: game-catalog-config
-        - secretRef:
-            name: game-catalog-db-secret
-        livenessProbe:
-          httpGet:
-            path: /api/v1/health/live
-            port: 3002
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /api/v1/health/ready
-            port: 3002
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-```
-
-## 📊 Monitoring & Observability
+## 📊 Мониторинг
 
 ### Health Checks
-- **Comprehensive**: `/api/v1/health` - Full system health
-- **Readiness**: `/api/v1/health/ready` - Ready to serve traffic
-- **Liveness**: `/api/v1/health/live` - Application is alive
+- **Базовый:** `GET /api/v1/health`
+- **Детальный:** `GET /api/v1/health/detailed`
 
-### Metrics
-- **Prometheus**: `/metrics` - Application and system metrics
-- **Performance**: Request duration, throughput, error rates
-- **Business**: Game catalog size, search queries, cache hit rates
+### Метрики Prometheus
+Доступны по адресу: `http://localhost:9090/metrics` (если включены)
 
-### Logging
-- **Structured JSON logs** in production
-- **Request/response logging** with correlation IDs
-- **Error tracking** with stack traces
-- **Performance monitoring** with execution times
+### Кэширование
+- Списки игр: 10 минут TTL
+- Детальная информация об игре: 30 минут TTL
+- Результаты поиска: 5 минут TTL
+- Информация для покупки: 15 минут TTL
 
-## 🔧 Database Management
+### Логирование
+- Структурированные логи в JSON формате (продакшн)
+- Простой формат для разработки
+- Настраиваемый уровень логирования
 
-### Migrations
+## 🔧 Конфигурация
 
-**⚠️ IMPORTANT: All migrations must be run manually for safety and control.**
+### Основные переменные окружения
 
-#### Manual Migration Process
+| Переменная | Описание | По умолчанию |
+|------------|----------|--------------|
+| `NODE_ENV` | Окружение | `development` |
+| `PORT` | Порт сервиса | `3002` |
+| `POSTGRES_HOST` | Хост PostgreSQL | `localhost` |
+| `POSTGRES_PORT` | Порт PostgreSQL | `5432` |
+| `POSTGRES_DB` | База данных | `game_catalog` |
+| `REDIS_HOST` | Хост Redis | `localhost` |
+| `REDIS_PORT` | Порт Redis | `6379` |
+| `CACHE_TTL` | TTL кэша по умолчанию | `600` |
+| `LOG_LEVEL` | Уровень логирования | `info` |
 
-1. **Check Migration Status**
+### Настройки поиска
+- Поддержка русского языка в полнотекстовом поиске
+- Индексы для оптимизации поиска по названию и жанру
+- Настраиваемые лимиты пагинации
+
+### Таймауты
+- Список игр: 15 секунд
+- Поиск: 12 секунд
+- Детальная информация: 10 секунд
+- Информация для покупки: 8 секунд
+
+## 🔗 Интеграции
+
+### Внешние сервисы
+- **Payment Service:** Предоставление информации для покупки игр
+- **Library Service:** Информация о доступных играх
+- **User Service:** Интеграция через API Gateway
+
+### База данных
+- PostgreSQL с TypeORM
+- Полнотекстовый поиск с поддержкой русского языка
+- Индексы для оптимизации запросов
+- JSONB для системных требований
+
+### Кэширование
+- Redis для кэширования результатов
+- Настраиваемые TTL для разных типов данных
+- Автоматическая очистка кэша при обновлениях
+
+## 📝 Разработка
+
+### Команды разработчика
 ```bash
-# Show current migration status
-npm run migration:show
+# Генерация миграции
+npm run migration:generate --name=MigrationName
 
-# Or use the migration script
-./scripts/run-migrations.sh show
-```
-
-2. **Run Migrations**
-```bash
-# Run pending migrations manually
+# Запуск миграций
 npm run migration:run
 
-# Or use the interactive script
-./scripts/run-migrations.sh run
-```
-
-3. **Revert Migrations (if needed)**
-```bash
-# Revert last migration
+# Откат миграции
 npm run migration:revert
 
-# Or use the interactive script
-./scripts/run-migrations.sh revert
-```
-
-#### Docker Environment
-
-For Docker deployments, migrations must be run inside the container:
-
-```bash
-# Enter the container
-docker exec -it game-catalog-service bash
-
-# Run migrations inside container
-npm run migration:run
-
-# Or check status
-npm run migration:show
-```
-
-#### Production Deployment Process
-
-1. **Before Deployment**
-```bash
-# 1. Backup database
-pg_dump -h $POSTGRES_HOST -U $POSTGRES_USER $POSTGRES_DB > backup.sql
-
-# 2. Check migration status
+# Просмотр статуса миграций
 npm run migration:show
 
-# 3. Run migrations manually
-npm run migration:run
+# Создание новой миграции
+npm run migration:create --name=MigrationName
 
-# 4. Verify migrations
-npm run migration:show
-```
-
-2. **Deploy Application**
-```bash
-# Deploy after migrations are complete
-docker-compose up -d game-catalog-service
-```
-
-### Database Setup
-
-```bash
-# Initial database setup (run migrations)
+# Настройка БД
 npm run db:setup
+
+# Линтинг
+npm run lint
+
+# Форматирование кода
+npm run format
 ```
 
-### Migration Files
+### Стандарты кода
+- ESLint для статического анализа
+- Prettier для форматирования
+- TypeScript для типизации
+- Валидация DTO с class-validator
 
-Current migrations:
-- `1702000000000-CreateGamesTable.ts` - Creates games table with sample data
-- `1703000000000-OptimizeGameIndexes.ts` - Adds performance indexes
+## 🐛 Отладка
 
-### Migration Configuration
-
-The service is configured for **manual migrations only**:
-
-- **All Environments**: Migrations must be run manually using `npm run migration:run`
-- **Docker**: Set `RUN_MIGRATIONS=false` to prevent automatic execution
-- **Safety**: Manual execution prevents accidental schema changes
-
-### Creating New Migrations
-
+### Логи
 ```bash
-# Generate new migration based on entity changes
-npm run migration:generate -- --name=AddNewFeature
+# Просмотр логов Docker
+docker-compose logs game-catalog-service
 
-# Create empty migration file
-npm run migration:create -- --name=CustomMigration
+# Локальные логи
+tail -f logs/app.log
 ```
 
-## 🚨 Troubleshooting
+### Отладка в IDE
+Настройте отладчик для порта `9229` при запуске с `--debug`
 
-### Common Issues
+## 📚 Дополнительные ресурсы
 
-1. **Database Connection Failed**
-   ```bash
-   # Check database connectivity
-   npm run test:db
-   
-   # Verify environment variables
-   echo $POSTGRES_HOST $POSTGRES_PORT
-   ```
+- [NestJS Documentation](https://docs.nestjs.com/)
+- [TypeORM Documentation](https://typeorm.io/)
+- [PostgreSQL Full-Text Search](https://www.postgresql.org/docs/current/textsearch.html)
+- [Redis Documentation](https://redis.io/documentation)
+- [Swagger Documentation](http://localhost:3002/api/api-docs)
 
-2. **Redis Connection Issues**
-   ```bash
-   # Test Redis connection
-   redis-cli -h $REDIS_HOST -p $REDIS_PORT ping
-   ```
+## 🤝 Вклад в разработку
 
-3. **Port Already in Use**
-   ```bash
-   # Find process using port 3002
-   lsof -i :3002
-   
-   # Kill process
-   kill -9 <PID>
-   ```
+1. Создайте feature branch
+2. Внесите изменения
+3. Добавьте тесты
+4. Запустите линтинг и тесты
+5. Создайте Pull Request
 
-4. **Docker Build Issues**
-   ```bash
-   # Clean Docker cache
-   docker system prune -a
-   
-   # Rebuild without cache
-   docker build --no-cache -t game-catalog-service .
-   ```
+## 📄 Лицензия
 
-### Performance Issues
-
-1. **Slow Database Queries**
-   - Check database indexes
-   - Monitor query execution plans
-   - Verify connection pool settings
-
-2. **Cache Miss Issues**
-   - Verify Redis connectivity
-   - Check cache TTL settings
-   - Monitor cache hit rates
-
-3. **High Memory Usage**
-   - Check for memory leaks
-   - Monitor heap usage
-   - Adjust Node.js memory limits
-
-## 📈 Performance Benchmarks
-
-### Target Performance Metrics
-- **Response Time**: < 200ms (95th percentile)
-- **Throughput**: 1000+ requests/second
-- **Availability**: 99.9% uptime
-- **Cache Hit Rate**: > 80%
-
-### Load Testing
-```bash
-# Install artillery for load testing
-npm install -g artillery
-
-# Run load test
-artillery run load-test.yml
-```
-
-## 🔐 Security
-
-### Security Features
-- **Input validation** with class-validator
-- **SQL injection protection** via TypeORM
-- **Rate limiting** to prevent abuse
-- **CORS configuration** for cross-origin requests
-- **Helmet.js** for security headers
-- **Non-root Docker user** for container security
-
-### Security Best Practices
-- Use environment variables for secrets
-- Enable HTTPS in production
-- Implement proper authentication
-- Regular security updates
-- Monitor for vulnerabilities
-
-## 🤝 Contributing
-
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch
-3. Make changes with tests
-4. Run full test suite
-5. Submit pull request
-
-### Code Standards
-- **TypeScript** with strict mode
-- **ESLint** for code quality
-- **Prettier** for formatting
-- **100% test coverage** requirement
-- **Conventional commits** for changelog
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 📞 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the troubleshooting section
-- Review the API documentation
-- Contact the development team
-
----
-
-**Game Catalog Service** - Part of the Russian Gaming Platform MVP
+Этот проект использует лицензию UNLICENSED.

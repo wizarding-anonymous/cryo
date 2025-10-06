@@ -71,11 +71,10 @@ describe('DTO Validation Tests', () => {
       expect(errors).toHaveLength(0);
     });
 
-    it('should fail validation with empty search query', async () => {
+    it('should pass validation with empty search query', async () => {
       const dto = plainToClass(SearchGamesDto, { q: '' });
       const errors = await validate(dto);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].property).toBe('q');
+      expect(errors).toHaveLength(0);
     });
 
     it('should fail validation with too long search query', async () => {

@@ -19,7 +19,7 @@ import {
 } from '../common/interceptors/timeout.interceptor';
 import {
   ResponseTransformationInterceptor,
-  TransformResponse,
+  TransformResponse, // eslint-disable-line @typescript-eslint/no-unused-vars
   ExcludeTransform,
 } from '../common/interceptors/response-transformation.interceptor';
 import { Cache } from '../common/decorators/cache.decorator';
@@ -155,7 +155,10 @@ export class SearchController {
       this.logger.log(`Search request: ${JSON.stringify(searchGamesDto)}`);
 
       // Allow empty search queries to return all games
-      if (searchGamesDto.q !== undefined && searchGamesDto.q.trim().length === 0) {
+      if (
+        searchGamesDto.q !== undefined &&
+        searchGamesDto.q.trim().length === 0
+      ) {
         searchGamesDto.q = undefined; // Convert empty string to undefined for "show all" behavior
       }
 

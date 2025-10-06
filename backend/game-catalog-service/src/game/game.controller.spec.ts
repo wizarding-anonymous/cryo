@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import { GameController } from './game.controller';
 import { GameService } from './game.service';
+import { SearchService } from '../search/search.service';
 import { GetGamesDto } from '../dto/get-games.dto';
 import { GameResponseDto } from '../dto/game-response.dto';
 import { GameListResponseDto } from '../dto/game-list-response.dto';
@@ -27,6 +28,10 @@ const mockCacheService = {
   delByPattern: jest.fn(),
   invalidateGameCache: jest.fn(),
   getCacheStats: jest.fn(),
+};
+
+const mockSearchService = {
+  searchGames: jest.fn(),
 };
 
 const mockPerformanceMonitoringService = {
@@ -59,6 +64,10 @@ describe('GameController', () => {
         {
           provide: CacheService,
           useValue: mockCacheService,
+        },
+        {
+          provide: SearchService,
+          useValue: mockSearchService,
         },
         {
           provide: PerformanceInterceptor,

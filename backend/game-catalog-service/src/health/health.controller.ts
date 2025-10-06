@@ -185,30 +185,29 @@ export class V1HealthController {
 
   @Get()
   @HealthCheck()
-  @ApiOperation({ summary: 'Comprehensive health check for all service dependencies' })
+  @ApiOperation({
+    summary: 'Comprehensive health check for all service dependencies',
+  })
   @ApiResponse({ status: 200, description: 'Service is healthy' })
   @ApiResponse({ status: 503, description: 'Service is unhealthy' })
   async check(): Promise<HealthCheckResult> {
-    const startTime = Date.now();
+    const result = await this.health.check([
+      () => this.db.pingCheck('database', { timeout: 5000 }),
+      () => this.memory.checkHeap('memory_heap', 250 * 1024 * 1024),
+      () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024), // Increased for test environment
+      () => this.checkCacheHealth(),
+      () => this.checkApplicationHealth(),
+    ]);
 
-    try {
-      const result = await this.health.check([
-        () => this.db.pingCheck('database', { timeout: 5000 }),
-        () => this.memory.checkHeap('memory_heap', 250 * 1024 * 1024),
-        () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024), // Increased for test environment
-        () => this.checkCacheHealth(),
-        () => this.checkApplicationHealth(),
-      ]);
-
-      return result;
-    } catch (error) {
-      throw error;
-    }
+    return result;
   }
 
   @Get('ready')
   @ApiOperation({ summary: 'Readiness probe for Kubernetes' })
-  @ApiResponse({ status: 200, description: 'Service is ready to accept traffic' })
+  @ApiResponse({
+    status: 200,
+    description: 'Service is ready to accept traffic',
+  })
   @ApiResponse({ status: 503, description: 'Service is not ready' })
   async readiness(): Promise<HealthCheckResult> {
     return this.health.check([

@@ -112,7 +112,10 @@ export function isErrorResponse(obj: unknown): obj is TestErrorResponse {
   // Handle both custom error format and NestJS default format
   if (typeof obj === 'object' && obj !== null) {
     // Custom format with nested error object
-    if ('error' in obj && typeof (obj as TestErrorResponse).error === 'object') {
+    if (
+      'error' in obj &&
+      typeof (obj as TestErrorResponse).error === 'object'
+    ) {
       return true;
     }
     // NestJS default format - convert it to expected format
@@ -121,15 +124,19 @@ export function isErrorResponse(obj: unknown): obj is TestErrorResponse {
       // Transform NestJS format to expected format
       (obj as any).error = {
         code: 'VALIDATION_ERROR',
-        message: Array.isArray(nestError.message) ? nestError.message.join(', ') : nestError.message,
+        message: Array.isArray(nestError.message)
+          ? nestError.message.join(', ')
+          : nestError.message,
         statusCode: nestError.statusCode,
         timestamp: new Date().toISOString(),
         path: '',
-        details: Array.isArray(nestError.message) ? nestError.message.map((msg: string) => ({
-          field: 'unknown',
-          message: msg,
-          value: null
-        })) : []
+        details: Array.isArray(nestError.message)
+          ? nestError.message.map((msg: string) => ({
+              field: 'unknown',
+              message: msg,
+              value: null,
+            }))
+          : [],
       };
       return true;
     }

@@ -66,7 +66,9 @@ describe('HealthController', () => {
             set: jest.fn(),
             del: jest.fn(),
             isAvailable: jest.fn().mockReturnValue(true),
-            getConnectionInfo: jest.fn().mockReturnValue('localhost:6379 (connected)'),
+            getConnectionInfo: jest
+              .fn()
+              .mockReturnValue('localhost:6379 (connected)'),
           },
         },
       ],
@@ -183,6 +185,7 @@ describe('HealthController', () => {
 
       expect(result).toEqual(mockResult);
       expect(healthCheckService.check).toHaveBeenCalledWith([
+        expect.any(Function),
         expect.any(Function),
         expect.any(Function),
       ]);

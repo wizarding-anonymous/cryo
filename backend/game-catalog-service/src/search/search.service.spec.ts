@@ -95,7 +95,7 @@ describe('SearchService', () => {
       await service.searchGames(searchGamesDto);
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '')) @@ to_tsquery('russian', :query)",
+        "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '') || ' ' || COALESCE(game.developer, '') || ' ' || COALESCE(game.publisher, '')) @@ to_tsquery('russian', :query)",
         { query: 'test:* & query:*' },
       );
     });

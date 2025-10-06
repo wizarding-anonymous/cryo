@@ -25,7 +25,7 @@ describe('API Workflows (e2e)', () => {
     // Mirror the main.ts setup for realistic testing
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
-    
+
     app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({

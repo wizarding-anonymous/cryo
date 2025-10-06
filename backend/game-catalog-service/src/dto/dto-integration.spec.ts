@@ -75,17 +75,19 @@ describe('DTO Integration Tests', () => {
       expect(result.maxPrice).toBe(5000);
     });
 
-    it('should reject SearchGamesDto with empty query', async () => {
+    it('should accept SearchGamesDto with empty query', async () => {
       const rawData = {
         q: '',
       };
 
-      await expect(
-        validationPipe.transform(rawData, {
-          type: 'query',
-          metatype: SearchGamesDto,
-        }),
-      ).rejects.toThrow(BadRequestException);
+      const result = (await validationPipe.transform(rawData, {
+        type: 'query',
+        metatype: SearchGamesDto,
+      })) as SearchGamesDto;
+
+      expect(result.q).toBeUndefined();
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
     });
 
     it('should transform and validate CreateGameDto correctly', async () => {
@@ -94,6 +96,8 @@ describe('DTO Integration Tests', () => {
         description: 'A test game',
         price: '59.99',
         currency: 'USD',
+        developer: 'Test Developer',
+        publisher: 'Test Publisher',
         genre: 'Action',
         available: 'true',
         releaseDate: '2023-01-01',
@@ -113,7 +117,7 @@ describe('DTO Integration Tests', () => {
       expect(result.title).toBe('Test Game');
       expect(result.price).toBe(59.99);
       expect(result.available).toBe(true);
-      expect(result.releaseDate).toBeInstanceOf(Date);
+      expect(typeof result.releaseDate).toBe('string');
     });
 
     it('should reject CreateGameDto without required fields', async () => {

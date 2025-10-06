@@ -136,8 +136,6 @@ export class CacheService {
     }
   }
 
-
-
   /**
    * Invalidate cache for games (used when games are updated)
    */

@@ -39,7 +39,7 @@ import {
 } from '../common/interceptors/timeout.interceptor';
 import {
   ResponseTransformationInterceptor,
-  TransformResponse,
+  TransformResponse, // eslint-disable-line @typescript-eslint/no-unused-vars
   ExcludeTransform,
 } from '../common/interceptors/response-transformation.interceptor';
 import { Cache } from '../common/decorators/cache.decorator';
@@ -143,9 +143,11 @@ export class GameController {
   })
   @ExcludeTransform()
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async searchGames(@Query() searchDto: SearchGamesDto): Promise<GameListResponseDto> {
+  async searchGames(
+    @Query() searchDto: SearchGamesDto,
+  ): Promise<GameListResponseDto> {
     const result = await this.searchService.searchGames(searchDto);
-    
+
     // Transform Game entities to GameResponseDto
     const gameResponseDtos = result.games.map(
       (game) => new GameResponseDto(game),
@@ -257,7 +259,9 @@ export class GameController {
   })
   @ExcludeTransform()
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async createGame(@Body() createGameDto: CreateGameDto): Promise<GameResponseDto> {
+  async createGame(
+    @Body() createGameDto: CreateGameDto,
+  ): Promise<GameResponseDto> {
     const game = await this.gameService.createGame(createGameDto);
     return new GameResponseDto(game);
   }

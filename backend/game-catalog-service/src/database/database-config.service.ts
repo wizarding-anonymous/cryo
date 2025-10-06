@@ -10,8 +10,6 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
   constructor(private configService: ConfigService) {}
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
-    const isProduction =
-      this.configService.get<string>('NODE_ENV') === 'production';
     const isDevelopment =
       this.configService.get<string>('NODE_ENV') === 'development';
 
@@ -19,17 +17,20 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
       type: 'postgres',
       host: this.configService.get<string>('POSTGRES_HOST', 'localhost'),
       port: this.configService.get<number>('POSTGRES_PORT', 5432),
-      username: this.configService.get<string>('POSTGRES_USER', 'catalog_service'),
-      password: this.configService.get<string>('POSTGRES_PASSWORD', 'catalog_password'),
-      database: this.configService.get<string>(
-        'POSTGRES_DB',
-        'catalog_db',
+      username: this.configService.get<string>(
+        'POSTGRES_USER',
+        'catalog_service',
       ),
+      password: this.configService.get<string>(
+        'POSTGRES_PASSWORD',
+        'catalog_password',
+      ),
+      database: this.configService.get<string>('POSTGRES_DB', 'catalog_db'),
       entities: [Game],
       migrations: [
-        isDevelopment 
-          ? 'src/database/migrations/*.ts' 
-          : 'dist/src/database/migrations/*.js'
+        isDevelopment
+          ? 'src/database/migrations/*.ts'
+          : 'dist/src/database/migrations/*.js',
       ],
       migrationsTableName: 'migrations',
       migrationsRun: false, // Never run migrations automatically

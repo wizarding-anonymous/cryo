@@ -7,10 +7,7 @@ import { Game } from '../entities/game.entity';
 import { CommonModule } from '../common/common.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Game]),
-    CommonModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Game]), CommonModule],
   controllers: [GameController],
   providers: [GameService, SearchService],
 })

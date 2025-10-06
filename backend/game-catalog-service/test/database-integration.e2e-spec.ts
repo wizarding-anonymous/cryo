@@ -74,12 +74,12 @@ describe('Database Integration Tests', () => {
   });
 
   describe('Database Connection and Schema', () => {
-    it('should have a valid database connection', async () => {
+    it('should have a valid database connection', () => {
       expect(dataSource.isInitialized).toBe(true);
       expect(dataSource.driver.database).toBe(process.env.POSTGRES_DB);
     });
 
-    it('should have the Game entity properly mapped', async () => {
+    it('should have the Game entity properly mapped', () => {
       const metadata = dataSource.getMetadata(Game);
       expect(metadata).toBeDefined();
       expect(metadata.tableName).toBe('games');
@@ -232,7 +232,7 @@ describe('Database Integration Tests', () => {
       // One of the updates should succeed
       expect(
         result1.title === 'Concurrent Update 1' ||
-        result2.title === 'Concurrent Update 2',
+          result2.title === 'Concurrent Update 2',
       ).toBe(true);
     });
   });
@@ -338,8 +338,8 @@ describe('Database Integration Tests', () => {
       expect(titleSearch.games).toBeDefined();
       expect(titleSearch.games.length).toBeGreaterThan(0);
 
-      const foundGame = titleSearch.games.find(
-        (game) => game.title.includes('Test'),
+      const foundGame = titleSearch.games.find((game) =>
+        game.title.includes('Test'),
       );
       expect(foundGame).toBeDefined();
     });
@@ -388,23 +388,25 @@ describe('Database Integration Tests', () => {
         developer: 'Pagination Studio',
         publisher: 'Pagination Publisher',
         genre: 'Test',
-        releaseDate: new Date(`2024-${String(Math.min(i + 1, 12)).padStart(2, '0')}-01`),
+        releaseDate: new Date(
+          `2024-${String(Math.min(i + 1, 12)).padStart(2, '0')}-01`,
+        ),
       }));
 
       const savedAdditionalGames = await gameRepository.save(additionalGames);
 
       // Test pagination with explicit sorting
-      const page1 = await gameService.getAllGames({ 
-        page: 1, 
+      const page1 = await gameService.getAllGames({
+        page: 1,
         limit: 5,
         sortBy: 'title',
-        sortOrder: 'ASC'
+        sortOrder: 'ASC',
       });
-      const page2 = await gameService.getAllGames({ 
-        page: 2, 
+      const page2 = await gameService.getAllGames({
+        page: 2,
         limit: 5,
         sortBy: 'title',
-        sortOrder: 'ASC'
+        sortOrder: 'ASC',
       });
 
       expect(page1.games).toHaveLength(5);

@@ -53,7 +53,7 @@ export class MigrationService {
       const executedMigrations = await this.dataSource.query(
         'SELECT COUNT(*) as count FROM migrations',
       );
-      
+
       if (executedMigrations[0].count === 0) {
         this.logger.warn(
           'No executed migrations found. Please run migrations manually using: npm run migration:run',
@@ -65,7 +65,9 @@ export class MigrationService {
       return true;
     } catch (error) {
       this.logger.error('Database schema validation failed', error);
-      this.logger.error('Please ensure migrations have been run manually using: npm run migration:run');
+      this.logger.error(
+        'Please ensure migrations have been run manually using: npm run migration:run',
+      );
       return false;
     }
   }
@@ -85,7 +87,7 @@ export class MigrationService {
       // Get pending migrations by comparing with available migration files
       const availableMigrations = this.dataSource.migrations;
       const executedNames = executedMigrations.map((m: any) => m.name);
-      
+
       const pendingMigrations = availableMigrations.filter(
         (migration) => !executedNames.includes(migration.name),
       );
@@ -106,10 +108,10 @@ export class MigrationService {
   async logMigrationInfo(): Promise<void> {
     try {
       const status = await this.getMigrationStatus();
-      
+
       this.logger.log(`Executed migrations: ${status.executed.length}`);
       this.logger.log(`Pending migrations: ${status.pending.length}`);
-      
+
       if (status.pending.length > 0) {
         this.logger.warn(
           `Pending migrations: ${status.pending.map((m) => m.name).join(', ')}`,

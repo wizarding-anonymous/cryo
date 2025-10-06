@@ -1,7 +1,6 @@
 import {
   IsOptional,
   IsString,
-  MinLength,
   MaxLength,
   IsIn,
   IsNumber,
@@ -16,8 +15,11 @@ import { Transform } from 'class-transformer';
 import { GetGamesDto } from './get-games.dto';
 
 // Custom validator for price range validation
-function IsGreaterThanOrEqual(property: string, validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+function IsGreaterThanOrEqual(
+  property: string,
+  validationOptions?: ValidationOptions,
+) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isGreaterThanOrEqual',
       target: object.constructor,
@@ -28,8 +30,8 @@ function IsGreaterThanOrEqual(property: string, validationOptions?: ValidationOp
         validate(value: any, args: ValidationArguments) {
           const [relatedPropertyName] = args.constraints;
           const relatedValue = (args.object as any)[relatedPropertyName];
-          return typeof value === 'number' && typeof relatedValue === 'number' 
-            ? value >= relatedValue 
+          return typeof value === 'number' && typeof relatedValue === 'number'
+            ? value >= relatedValue
             : true; // Skip validation if either value is not a number
         },
       },
@@ -49,7 +51,10 @@ export class SearchGamesDto extends GetGamesDto {
   @IsString({ message: 'Search query must be a string' })
   @MaxLength(255, { message: 'Search query cannot exceed 255 characters' })
   @Transform(
-    ({ value }) => (typeof value === 'string' ? value.trim() || undefined : value) as string | undefined,
+    ({ value }) =>
+      (typeof value === 'string' ? value.trim() || undefined : value) as
+        | string
+        | undefined,
   )
   q?: string;
 
@@ -88,8 +93,8 @@ export class SearchGamesDto extends GetGamesDto {
   @IsNumber({}, { message: 'Maximum price must be a number' })
   @Min(0, { message: 'Maximum price cannot be negative' })
   @ValidateIf((o) => o.minPrice !== undefined && o.maxPrice !== undefined)
-  @IsGreaterThanOrEqual('minPrice', { 
-    message: 'Maximum price must be greater than or equal to minimum price' 
+  @IsGreaterThanOrEqual('minPrice', {
+    message: 'Maximum price must be greater than or equal to minimum price',
   })
   maxPrice?: number;
 }

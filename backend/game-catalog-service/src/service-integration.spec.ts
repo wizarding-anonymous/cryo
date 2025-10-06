@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -233,10 +233,15 @@ describe('Service Integration Tests', () => {
           title: 'New Game',
           price: 39.99,
           developer: 'New Studio',
+          publisher: 'New Publisher',
           genre: 'Adventure',
         };
 
-        const newGame = { ...mockGame, ...createGameDto };
+        const newGame = {
+          ...mockGame,
+          ...createGameDto,
+          releaseDate: new Date(mockGame.releaseDate),
+        } as Game;
 
         gameRepository.create.mockReturnValue(newGame);
         gameRepository.save.mockResolvedValue(newGame);
@@ -254,6 +259,7 @@ describe('Service Integration Tests', () => {
           title: 'New Game',
           price: 39.99,
           developer: 'New Studio',
+          publisher: 'New Publisher',
           genre: 'Adventure',
         };
 
@@ -275,7 +281,11 @@ describe('Service Integration Tests', () => {
           price: 59.99,
         };
 
-        const updatedGame = { ...mockGame, ...updateGameDto };
+        const updatedGame = {
+          ...mockGame,
+          ...updateGameDto,
+          releaseDate: new Date(mockGame.releaseDate),
+        } as Game;
 
         gameRepository.preload.mockResolvedValue(updatedGame);
         gameRepository.save.mockResolvedValue(updatedGame);
@@ -462,7 +472,7 @@ describe('Service Integration Tests', () => {
         await searchService.searchGames(searchDto);
 
         expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-          "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '')) @@ to_tsquery('russian', :query)",
+          "to_tsvector('russian', game.title || ' ' || COALESCE(game.description, '') || ' ' || COALESCE(game.shortDescription, '') || ' ' || COALESCE(game.developer, '') || ' ' || COALESCE(game.publisher, '')) @@ to_tsquery('russian', :query)",
           { query: 'epic:*' },
         );
       });
@@ -570,10 +580,15 @@ describe('Service Integration Tests', () => {
         title: 'Searchable Game',
         price: 29.99,
         developer: 'Search Studio',
+        publisher: 'Search Publisher',
         genre: 'Adventure',
       };
 
-      const newGame = { ...mockGame, ...createGameDto };
+      const newGame = {
+        ...mockGame,
+        ...createGameDto,
+        releaseDate: new Date(mockGame.releaseDate),
+      } as Game;
       gameRepository.create.mockReturnValue(newGame);
       gameRepository.save.mockResolvedValue(newGame);
 
@@ -611,7 +626,11 @@ describe('Service Integration Tests', () => {
         price: 49.99,
       };
 
-      const updatedGame = { ...mockGame, ...updateDto };
+      const updatedGame = {
+        ...mockGame,
+        ...updateDto,
+        releaseDate: new Date(mockGame.releaseDate),
+      } as Game;
       gameRepository.preload.mockResolvedValue(updatedGame);
       gameRepository.save.mockResolvedValue(updatedGame);
 
@@ -680,10 +699,15 @@ describe('Service Integration Tests', () => {
         title: 'Cache Test Game',
         price: 29.99,
         developer: 'Cache Studio',
+        publisher: 'Cache Publisher',
         genre: 'Test',
       };
 
-      const newGame = { ...mockGame, ...createGameDto };
+      const newGame = {
+        ...mockGame,
+        ...createGameDto,
+        releaseDate: new Date(mockGame.releaseDate),
+      } as Game;
       gameRepository.create.mockReturnValue(newGame);
       gameRepository.save.mockResolvedValue(newGame);
       cacheService.invalidateGameCache.mockRejectedValue(

@@ -33,11 +33,11 @@ export class CreateGamesTable1702000000000 implements MigrationInterface {
     await queryRunner.query(`
       CREATE INDEX "IDX_games_available" ON "games" ("available")
     `);
-    
+
     await queryRunner.query(`
       CREATE INDEX "IDX_games_genre" ON "games" ("genre")
     `);
-    
+
     await queryRunner.query(`
       CREATE INDEX "IDX_games_price" ON "games" ("price")
     `);

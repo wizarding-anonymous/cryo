@@ -67,7 +67,7 @@ class IntegrationTestRunner {
   /**
    * Run specific test suite
    */
-  async runTestSuite(suiteName: string): Promise<void> {
+  runTestSuite(suiteName: string): void {
     try {
       console.log(`\n🧪 Running ${suiteName} tests...`);
 
@@ -88,7 +88,7 @@ class IntegrationTestRunner {
   /**
    * Run all integration tests
    */
-  async runAllTests(): Promise<void> {
+  runAllTests(): void {
     try {
       console.log('\n🧪 Running all integration and e2e tests...');
 
@@ -149,11 +149,11 @@ class IntegrationTestRunner {
 
       if (args.length === 0) {
         // Run all tests
-        await this.runAllTests();
+        this.runAllTests();
       } else {
         // Run specific test suites
         for (const suite of args) {
-          await this.runTestSuite(suite);
+          this.runTestSuite(suite);
         }
       }
 
