@@ -127,7 +127,7 @@ describe('LibraryIntegrationService', () => {
       httpService.post.mockReturnValue(throwError(() => error));
 
       const result = await service.addGameToLibrary(mockAddGameRequest);
-      
+
       expect(result).toBe(false);
       expect(httpService.post).toHaveBeenCalledTimes(3); // Should retry 3 times
       expect(metricsService.recordIntegrationRequest).toHaveBeenCalledWith(
@@ -212,18 +212,20 @@ describe('LibraryIntegrationService', () => {
 
     it('should respect max retries configuration', async () => {
       // Mock config to return 2 max retries
-      configService.get.mockImplementation((key: string, defaultValue?: any) => {
-        switch (key) {
-          case 'LIBRARY_SERVICE_URL':
-            return 'http://library-service:3000';
-          case 'LIBRARY_SERVICE_MAX_RETRIES':
-            return 2;
-          case 'LIBRARY_SERVICE_RETRY_DELAY':
-            return 100; // Short delay for testing
-          default:
-            return defaultValue;
-        }
-      });
+      configService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          switch (key) {
+            case 'LIBRARY_SERVICE_URL':
+              return 'http://library-service:3000';
+            case 'LIBRARY_SERVICE_MAX_RETRIES':
+              return 2;
+            case 'LIBRARY_SERVICE_RETRY_DELAY':
+              return 100; // Short delay for testing
+            default:
+              return defaultValue;
+          }
+        },
+      );
 
       // Recreate service with new config
       const module: TestingModule = await Test.createTestingModule({
@@ -235,7 +237,9 @@ describe('LibraryIntegrationService', () => {
         ],
       }).compile();
 
-      const testService = module.get<LibraryIntegrationService>(LibraryIntegrationService);
+      const testService = module.get<LibraryIntegrationService>(
+        LibraryIntegrationService,
+      );
 
       const error = new Error('Persistent failure');
       httpService.post.mockReturnValue(throwError(() => error));

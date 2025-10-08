@@ -11,7 +11,6 @@ import { PaymentProvider } from '../common/enums/payment-provider.enum';
 describe('Happy Path (E2E)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
-  let gameCatalogService: GameCatalogIntegrationService;
   let libraryService: LibraryIntegrationService;
 
   const mockGameInfo: GamePurchaseInfo = {
@@ -41,9 +40,6 @@ describe('Happy Path (E2E)', () => {
     await app.init();
 
     jwtService = moduleFixture.get<JwtService>(JwtService);
-    gameCatalogService = moduleFixture.get<GameCatalogIntegrationService>(
-      GameCatalogIntegrationService,
-    );
     libraryService = moduleFixture.get<LibraryIntegrationService>(
       LibraryIntegrationService,
     );

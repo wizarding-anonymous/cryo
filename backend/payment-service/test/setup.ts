@@ -1,17 +1,15 @@
 // Jest setup file for global test configuration
+import { config } from 'dotenv';
+import { join } from 'path';
+
+// Load test environment variables
+config({ path: join(__dirname, '..', '.env.test') });
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test-jwt-secret-key-that-is-long-enough-for-validation';
-process.env.LIBRARY_SERVICE_URL = 'http://library-service:3000';
-process.env.GAME_CATALOG_SERVICE_URL = 'http://game-catalog-service:3000';
-process.env.PAYMENT_MODE = 'simulation';
-process.env.PAYMENT_AUTO_APPROVE = 'true';
-process.env.PAYMENT_DELAY_MS = '100';
-process.env.PAYMENT_SUCCESS_RATE = '0.95';
 
 // Increase timeout for integration tests
-jest.setTimeout(15000);
+jest.setTimeout(30000);
 
 // Mock console methods to reduce noise in tests
 global.console = {

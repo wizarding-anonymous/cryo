@@ -120,13 +120,20 @@ export class PaymentService {
 
     const order = await this.orderService.getOrder(payment.orderId);
     if (order) {
-      await this.libraryIntegrationService.addGameToLibrary({
-        userId: order.userId,
-        gameId: order.gameId,
-        orderId: order.id,
-        purchasePrice: order.amount,
-        currency: order.currency,
-      });
+      try {
+        await this.libraryIntegrationService.addGameToLibrary({
+          userId: order.userId,
+          gameId: order.gameId,
+          orderId: order.id,
+          purchasePrice: order.amount,
+          currency: order.currency,
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to add game to library for payment ${id}: ${error.message}`,
+        );
+        // Continue with payment completion even if library integration fails
+      }
 
       const eventPayload: PaymentCompletedEvent = {
         paymentId: updatedPayment.id,

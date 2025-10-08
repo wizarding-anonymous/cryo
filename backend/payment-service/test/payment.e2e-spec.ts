@@ -6,19 +6,51 @@ import { JwtService } from '@nestjs/jwt';
 import { PaymentProvider } from '../src/common/enums/payment-provider.enum';
 import { OrderStatus } from '../src/common/enums/order-status.enum';
 import { PaymentStatus } from '../src/common/enums/payment-status.enum';
+import { GameCatalogIntegrationService } from '../src/integrations/game-catalog/game-catalog.service';
+import { LibraryIntegrationService } from '../src/integrations/library/library.service';
+import { ResponseInterceptor } from '../src/common/interceptors/response.interceptor';
 
 describe('PaymentController (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
   let authToken: string;
 
+  // Mock services
+  const mockGameCatalogService = {
+    getGameInfo: jest.fn().mockResolvedValue({
+      id: '550e8400-e29b-41d4-a716-446655440010',
+      name: 'Test E2E Payment Game',
+      price: 999,
+      available: true,
+    }),
+    getGamePurchaseInfo: jest.fn().mockResolvedValue({
+      id: '550e8400-e29b-41d4-a716-446655440010',
+      title: 'Test E2E Payment Game',
+      price: 999,
+      currency: 'RUB',
+      available: true,
+    }),
+    checkHealth: jest.fn().mockResolvedValue({ status: 'up' }),
+  };
+
+  const mockLibraryService = {
+    addGameToLibrary: jest.fn().mockResolvedValue({ success: true }),
+    checkHealth: jest.fn().mockResolvedValue({ status: 'up' }),
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(GameCatalogIntegrationService)
+      .useValue(mockGameCatalogService)
+      .overrideProvider(LibraryIntegrationService)
+      .useValue(mockLibraryService)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalInterceptors(new ResponseInterceptor());
     await app.init();
 
     jwtService = moduleFixture.get<JwtService>(JwtService);
@@ -26,7 +58,9 @@ describe('PaymentController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   let orderId: string;
@@ -37,9 +71,7 @@ describe('PaymentController (e2e)', () => {
       .post('/orders')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        gameId: 'e2e-game-456',
-        gameName: 'Test E2E Payment Game',
-        amount: 999,
+        gameId: '550e8400-e29b-41d4-a716-446655440010',
       })
       .expect(201);
 
@@ -69,7 +101,7 @@ describe('PaymentController (e2e)', () => {
       .expect(201);
 
     expect(response.body.data.paymentUrl).toContain(
-      `/payments/${paymentId}/mock-form`,
+      `/mock/sberbank/payment-form/${paymentId}`,
     );
   });
 

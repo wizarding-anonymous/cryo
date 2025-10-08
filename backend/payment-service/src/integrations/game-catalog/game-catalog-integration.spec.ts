@@ -12,8 +12,6 @@ import { BadRequestException } from '@nestjs/common';
 describe('Game Catalog Integration with Order Service', () => {
   let orderService: OrderService;
   let gameCatalogService: GameCatalogIntegrationService;
-  let httpService: HttpService;
-  let orderRepository: any;
 
   const mockHttpService = {
     get: jest.fn(),
@@ -52,8 +50,6 @@ describe('Game Catalog Integration with Order Service', () => {
     gameCatalogService = module.get<GameCatalogIntegrationService>(
       GameCatalogIntegrationService,
     );
-    httpService = module.get<HttpService>(HttpService);
-    orderRepository = module.get(getRepositoryToken(Order));
   });
 
   afterEach(() => {

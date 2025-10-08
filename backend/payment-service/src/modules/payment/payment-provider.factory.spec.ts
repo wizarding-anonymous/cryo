@@ -8,7 +8,6 @@ import { TinkoffMockProvider } from './providers/tinkoff.provider';
 
 describe('PaymentProviderFactory', () => {
   let factory: PaymentProviderFactory;
-  let configService: ConfigService;
 
   const mockConfigService = {
     get: jest.fn(),
@@ -23,7 +22,6 @@ describe('PaymentProviderFactory', () => {
     }).compile();
 
     factory = module.get<PaymentProviderFactory>(PaymentProviderFactory);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {

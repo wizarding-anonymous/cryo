@@ -48,7 +48,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
       errorResponse = {
         error: {
-          code: error.toUpperCase().replace(/ /g, '_'),
+          code:
+            typeof error === 'string'
+              ? error.toUpperCase().replace(/ /g, '_')
+              : 'HTTP_EXCEPTION',
           message,
         },
         timestamp: new Date().toISOString(),

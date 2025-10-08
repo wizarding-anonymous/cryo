@@ -74,7 +74,7 @@ export class YMoneyMockProvider implements PaymentProviderInterface {
     this.logger.log(`Handling YMoney webhook: ${JSON.stringify(data)}`);
 
     // Simulate YMoney webhook format
-    const { operation_id, status: ymoneyStatus, amount, currency } = data;
+    const { operation_id, status: ymoneyStatus } = data;
 
     // Map YMoney statuses to internal statuses
     let status = 'pending';

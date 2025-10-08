@@ -20,14 +20,20 @@ export class LibraryIntegrationService {
     this.libraryServiceUrl = this.configService.get<string>(
       'LIBRARY_SERVICE_URL',
     );
-    this.maxRetries = this.configService.get<number>('LIBRARY_SERVICE_MAX_RETRIES', 3);
-    this.baseRetryDelay = this.configService.get<number>('LIBRARY_SERVICE_RETRY_DELAY', 1000);
+    this.maxRetries = this.configService.get<number>(
+      'LIBRARY_SERVICE_MAX_RETRIES',
+      3,
+    );
+    this.baseRetryDelay = this.configService.get<number>(
+      'LIBRARY_SERVICE_RETRY_DELAY',
+      1000,
+    );
   }
 
   async addGameToLibrary(payload: AddGameToLibraryDto): Promise<boolean> {
     const startTime = Date.now();
     const url = `${this.libraryServiceUrl}/api/library/add`;
-    
+
     this.logger.log(
       `Adding game ${payload.gameId} to library for user ${payload.userId} (order: ${payload.orderId})`,
       {
@@ -54,9 +60,17 @@ export class LibraryIntegrationService {
             duration,
           },
         );
-        
-        this.metricsService.recordIntegrationRequest('library', 'addGame', 'failed');
-        this.metricsService.recordIntegrationDuration('library', 'addGame', duration);
+
+        this.metricsService.recordIntegrationRequest(
+          'library',
+          'addGame',
+          'failed',
+        );
+        this.metricsService.recordIntegrationDuration(
+          'library',
+          'addGame',
+          duration,
+        );
         return false;
       }
 
@@ -69,15 +83,23 @@ export class LibraryIntegrationService {
           duration,
         },
       );
-      
-      this.metricsService.recordIntegrationRequest('library', 'addGame', 'success');
-      this.metricsService.recordIntegrationDuration('library', 'addGame', duration);
+
+      this.metricsService.recordIntegrationRequest(
+        'library',
+        'addGame',
+        'success',
+      );
+      this.metricsService.recordIntegrationDuration(
+        'library',
+        'addGame',
+        duration,
+      );
       return true;
     } catch (error) {
       const duration = (Date.now() - startTime) / 1000;
       const errorMessage = error?.message || 'Unknown error';
       const errorStack = error?.stack || 'No stack trace available';
-      
+
       this.logger.error(
         `Unhandled exception when calling Library Service: ${errorMessage}`,
         {
@@ -89,16 +111,27 @@ export class LibraryIntegrationService {
           duration,
         },
       );
-      
-      this.metricsService.recordIntegrationRequest('library', 'addGame', 'error');
-      this.metricsService.recordIntegrationDuration('library', 'addGame', duration);
+
+      this.metricsService.recordIntegrationRequest(
+        'library',
+        'addGame',
+        'error',
+      );
+      this.metricsService.recordIntegrationDuration(
+        'library',
+        'addGame',
+        duration,
+      );
       return false;
     }
   }
 
-  private async retryAddGameToLibrary(url: string, payload: AddGameToLibraryDto): Promise<any> {
+  private async retryAddGameToLibrary(
+    url: string,
+    payload: AddGameToLibraryDto,
+  ): Promise<any> {
     let lastError: any;
-    
+
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
         this.logger.debug(
@@ -118,7 +151,7 @@ export class LibraryIntegrationService {
         return response;
       } catch (error) {
         lastError = error;
-        
+
         if (attempt === this.maxRetries) {
           this.logger.error(
             `All ${this.maxRetries} attempts failed for library integration`,
@@ -147,7 +180,7 @@ export class LibraryIntegrationService {
           },
         );
 
-        await new Promise(resolve => setTimeout(resolve, totalDelay));
+        await new Promise((resolve) => setTimeout(resolve, totalDelay));
       }
     }
 
@@ -157,26 +190,30 @@ export class LibraryIntegrationService {
   async checkHealth(): Promise<{ status: string }> {
     const startTime = Date.now();
     const url = `${this.libraryServiceUrl}/api/health`;
-    
+
     try {
       const response = await firstValueFrom(
         this.httpService.get(url).pipe(timeout(2000)),
       );
-      
+
       const duration = (Date.now() - startTime) / 1000;
       const isHealthy = response.data?.status === 'ok';
-      
+
       this.metricsService.recordIntegrationRequest(
-        'library', 
-        'healthCheck', 
-        isHealthy ? 'success' : 'failed'
+        'library',
+        'healthCheck',
+        isHealthy ? 'success' : 'failed',
       );
-      this.metricsService.recordIntegrationDuration('library', 'healthCheck', duration);
-      
+      this.metricsService.recordIntegrationDuration(
+        'library',
+        'healthCheck',
+        duration,
+      );
+
       return { status: isHealthy ? 'up' : 'down' };
     } catch (error) {
       const duration = (Date.now() - startTime) / 1000;
-      
+
       this.logger.error(
         `Library Service health check failed: ${error?.message || 'Unknown error'}`,
         {
@@ -184,10 +221,18 @@ export class LibraryIntegrationService {
           duration,
         },
       );
-      
-      this.metricsService.recordIntegrationRequest('library', 'healthCheck', 'error');
-      this.metricsService.recordIntegrationDuration('library', 'healthCheck', duration);
-      
+
+      this.metricsService.recordIntegrationRequest(
+        'library',
+        'healthCheck',
+        'error',
+      );
+      this.metricsService.recordIntegrationDuration(
+        'library',
+        'healthCheck',
+        duration,
+      );
+
       return { status: 'down' };
     }
   }

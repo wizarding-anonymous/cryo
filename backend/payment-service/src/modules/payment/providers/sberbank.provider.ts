@@ -74,7 +74,7 @@ export class SberbankMockProvider implements PaymentProviderInterface {
     this.logger.log(`Handling Sberbank webhook: ${JSON.stringify(data)}`);
 
     // Simulate Sberbank webhook format
-    const { orderNumber, orderStatus, amount, currency } = data;
+    const { orderNumber, orderStatus } = data;
 
     // Map Sberbank statuses to internal statuses
     let status = 'pending';

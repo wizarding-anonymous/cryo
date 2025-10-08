@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
 import { TinkoffMockProvider } from './tinkoff.provider';
 import { Payment } from '../entities/payment.entity';
 import { PaymentProvider } from '../../../common/enums/payment-provider.enum';

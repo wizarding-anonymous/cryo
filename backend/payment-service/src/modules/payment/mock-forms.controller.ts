@@ -6,7 +6,6 @@ import {
   Query,
   Body,
   Render,
-  Redirect,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';

@@ -53,21 +53,18 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         envConfig.logging ||
         (environment === 'development' ? ['query', 'error'] : ['error']),
 
-      // Performance Configuration
-      cache: {
-        type: 'redis',
-        options: {
-          host: this.configService.get<string>('REDIS_HOST'),
-          port: this.configService.get<number>('REDIS_PORT'),
-          password:
-            this.configService.get<string>('REDIS_PASSWORD') || undefined,
-          db: this.configService.get<number>('REDIS_DB', 1), // Use different DB for query cache
-        },
-        duration: 30000, // 30 seconds cache
-      },
-
-      // Connection Options
-      connectTimeoutMS: 10000,
+      // Performance Configuration - temporarily disabled
+      // cache: {
+      //   type: 'redis',
+      //   options: {
+      //     host: this.configService.get<string>('REDIS_HOST'),
+      //     port: this.configService.get<number>('REDIS_PORT'),
+      //     password:
+      //       this.configService.get<string>('REDIS_PASSWORD') || undefined,
+      //     db: this.configService.get<number>('REDIS_DB', 1), // Use different DB for query cache
+      //   },
+      //   duration: 30000, // 30 seconds cache
+      // },
 
       // Retry Configuration
       retryAttempts: 3,

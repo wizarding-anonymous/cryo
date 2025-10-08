@@ -1,0 +1,96 @@
+version: '3.8'
+
+# Docker Compose configuration for testing Payment Service only
+# This file is used for CI/CD testing and local development
+
+services:
+  # Payment Service
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+      target: development
+    container_name: payment-service
+    ports:
+      - "3005:3005"
+    depends_on:
+      - postgres-payment-db
+      - redis-cache
+    environment:
+      - NODE_ENV=test
+      - PORT=3005
+      - POSTGRES_HOST=postgres-payment-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USERNAME=payment_service
+      - POSTGRES_PASSWORD=payment_password
+      - POSTGRES_DATABASE=payment_db
+      - REDIS_HOST=redis-cache
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis_password
+      - JWT_SECRET=test-secret-key-for-ci
+      - PAYMENT_MODE=simulation
+      - PAYMENT_AUTO_APPROVE=true
+      - PAYMENT_SUCCESS_RATE=0.95
+      - ENABLED_PROVIDERS=sberbank,yandex,tbank
+      - SBERBANK_MOCK_API_KEY=mock_sberbank_key_12345
+      - YANDEX_MOCK_API_KEY=mock_ymoney_key_67890
+      - TBANK_MOCK_API_KEY=mock_tbank_key_abcde
+      - USER_SERVICE_URL=http://localhost:3001
+      - GAME_CATALOG_SERVICE_URL=http://localhost:3002
+      - LIBRARY_SERVICE_URL=http://localhost:3000
+    networks:
+      - payment-test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database for Payment Service
+  postgres-payment-db:
+    image: postgres:15-alpine
+    container_name: postgres-payment-db
+    environment:
+      POSTGRES_USER: payment_service
+      POSTGRES_PASSWORD: payment_password
+      POSTGRES_DB: payment_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_payment_data:/var/lib/postgresql/data
+      - ./payment-service/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - payment-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_service -d payment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis-cache:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass redis_password
+    networks:
+      - payment-test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Volumes for data persistence
+volumes:
+  postgres_payment_data:
+  redis_data:
+
+# Network for inter-service communication
+networks:
+  payment-test-network:
+    driver: bridge

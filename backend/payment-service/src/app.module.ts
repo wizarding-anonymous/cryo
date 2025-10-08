@@ -26,6 +26,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -71,7 +73,9 @@ import { DatabaseModule } from './database/database.module';
     HealthModule,
     AdminModule,
   ],
+  controllers: [AppController],
   providers: [
+    AppService,
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,

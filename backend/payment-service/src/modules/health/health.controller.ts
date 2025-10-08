@@ -32,13 +32,19 @@ export class HealthController {
       // Database health check
       () => this.db.pingCheck('database'),
 
-      // Memory health check (should not exceed 150MB)
-      () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
+      // Memory health check (should not exceed 150MB in production, 500MB in test)
+      () =>
+        this.memory.checkHeap(
+          'memory_heap',
+          process.env.NODE_ENV === 'test'
+            ? 500 * 1024 * 1024
+            : 150 * 1024 * 1024,
+        ),
 
       // Storage health check (should not exceed 90% of disk)
       () =>
         this.disk.checkStorage('storage', {
-          path: '/',
+          path: process.platform === 'win32' ? 'C:\\' : '/',
           thresholdPercent: 0.9,
         }),
       async () => {

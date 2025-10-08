@@ -6,7 +6,6 @@ import { PaymentCacheInterceptor } from './payment-cache.interceptor';
 
 describe('PaymentCacheInterceptor', () => {
   let interceptor: PaymentCacheInterceptor;
-  let cacheManager: any;
 
   const mockCacheManager = {
     get: jest.fn(),
@@ -27,7 +26,6 @@ describe('PaymentCacheInterceptor', () => {
     }).compile();
 
     interceptor = module.get<PaymentCacheInterceptor>(PaymentCacheInterceptor);
-    cacheManager = module.get(CACHE_MANAGER);
   });
 
   it('should be defined', () => {

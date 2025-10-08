@@ -15,6 +15,90 @@ on:
       - 'backend/user-service/**'
 
 jobs:
+  # Test Payment Service with Docker Compose
+  test-payment-service-compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Create environment file
+      working-directory: backend
+      run: |
+        # Create .env file for Docker Compose
+        cat > .env << EOF
+        REDIS_PASSWORD=redis_password
+        NODE_ENV=test
+        JWT_SECRET=test-secret-key-for-ci
+        EOF
+    
+    - name: Start Payment Service dependencies
+      working-directory: backend
+      run: |
+        echo "Starting Payment Service with dependencies..."
+        docker-compose -f docker-compose.payment-only.yml up -d
+        
+        # Wait for services to be ready
+        echo "Waiting for services to be ready..."
+        sleep 45
+        
+        # Check if services are running
+        docker-compose -f docker-compose.payment-only.yml ps
+    
+    - name: Check service health
+      working-directory: backend
+      run: |
+        echo "Checking Payment Service health..."
+        
+        # Wait for Payment Service to be ready
+        timeout 90 bash -c 'until curl -f http://localhost:3005/health; do sleep 3; done'
+        
+        # Test basic endpoints
+        curl -f http://localhost:3005/health || exit 1
+        curl -f http://localhost:3005/health/ready || exit 1
+        curl -f http://localhost:3005/health/live || exit 1
+        curl -f http://localhost:3005/metrics || exit 1
+        
+        echo "✅ Payment Service is healthy"
+    
+    - name: Run integration tests
+      working-directory: backend
+      run: |
+        echo "Running integration tests against running services..."
+        
+        # Test database connectivity
+        docker exec payment-service npm run typeorm -- query "SELECT 1"
+        
+        # Test Redis connectivity  
+        docker exec redis-cache redis-cli -a redis_password ping
+        
+        echo "✅ Integration tests passed"
+    
+    - name: Check logs for errors
+      if: always()
+      working-directory: backend
+      run: |
+        echo "=== Payment Service Logs ==="
+        docker-compose -f docker-compose.payment-only.yml logs payment-service
+        
+        echo "=== PostgreSQL Logs ==="
+        docker-compose -f docker-compose.payment-only.yml logs postgres-payment-db
+        
+        echo "=== Redis Logs ==="
+        docker-compose -f docker-compose.payment-only.yml logs redis-cache
+    
+    - name: Cleanup
+      if: always()
+      working-directory: backend
+      run: |
+        docker-compose -f docker-compose.payment-only.yml down -v
+        docker system prune -f
+
   # Test User Service with Docker Compose
   test-user-service-compose:
     runs-on: ubuntu-latest
@@ -142,8 +226,11 @@ jobs:
         # Test User Service
         timeout 30 bash -c 'until curl -f http://localhost:3001/api/v1/health; do sleep 2; done' || echo "User Service not ready"
         
+        # Test Payment Service specifically
+        timeout 30 bash -c 'until curl -f http://localhost:3005/health; do sleep 2; done' || echo "Payment Service not ready"
+        
         # Test other services (if they have health endpoints)
-        services=("3002" "3003" "3004" "3005" "3006" "3007" "3008" "3009")
+        services=("3002" "3003" "3004" "3006" "3007" "3008" "3009")
         for port in "${services[@]}"; do
           curl -f "http://localhost:${port}/health" || echo "Service on port ${port} not ready"
         done

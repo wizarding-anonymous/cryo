@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: payment-service-monitor
+  namespace: microservices
+  labels:
+    app: payment-service
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: payment-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service-metrics
+  namespace: microservices
+  labels:
+    app: payment-service
+    metrics: "true"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3005
+    targetPort: 3005
+    protocol: TCP
+    name: metrics
+  selector:
+    app: payment-service

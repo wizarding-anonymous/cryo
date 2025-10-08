@@ -33,7 +33,6 @@ const paymentFormat = winston.format.printf(
 
 // Environment-based configuration
 const isProduction = process.env.NODE_ENV === 'production';
-const isDevelopment = process.env.NODE_ENV === 'development';
 const logLevel = process.env.LOG_LEVEL || (isProduction ? 'info' : 'silly');
 const maxSize = process.env.LOG_FILE_MAX_SIZE || '20m';
 const maxFiles = process.env.LOG_FILE_MAX_FILES || '14d';

@@ -74,7 +74,7 @@ export class TinkoffMockProvider implements PaymentProviderInterface {
     this.logger.log(`Handling T-Bank webhook: ${JSON.stringify(data)}`);
 
     // Simulate T-Bank webhook format
-    const { PaymentId, Status, Amount, Currency } = data;
+    const { PaymentId, Status } = data;
 
     // Map T-Bank statuses to internal statuses
     let status = 'pending';
