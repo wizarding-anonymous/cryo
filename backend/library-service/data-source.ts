@@ -19,11 +19,23 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.DATABASE_USERNAME || 'postgres',
   password: process.env.DATABASE_PASSWORD || 'password',
   database: process.env.DATABASE_NAME || 'library_service',
-  entities: [join(__dirname, 'src/**/*.entity{.ts,.js}')],
-  migrations: [join(__dirname, 'src/migrations/*{.ts,.js}')],
+  entities: [
+    // Для разработки используем TS файлы, для production - JS
+    process.env.NODE_ENV === 'production'
+      ? 'dist/src/**/*.entity.js'
+      : 'src/**/*.entity.ts'
+  ],
+  migrations: [
+    // Для разработки используем TS файлы, для production - JS
+    process.env.NODE_ENV === 'production'
+      ? 'dist/src/migrations/*.js'
+      : 'src/migrations/*.ts'
+  ],
   migrationsTableName: 'migrations',
   synchronize: false, // Never true in production with migrations
   logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
+  // SSL configuration - disabled for Docker containers
+  ssl: false,
   // Connection pooling configuration
   extra: {
     max: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '20', 10),

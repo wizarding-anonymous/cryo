@@ -31,7 +31,7 @@ export class GameCatalogIntegrationService {
     }
 
     this.logger.log(`Cache miss for game ${gameId}. Fetching from service.`);
-    const url = `${this.gameCatalogUrl}/api/internal/games/${gameId}/purchase-info`;
+    const url = `${this.gameCatalogUrl}/api/games/${gameId}/purchase-info`;
 
     try {
       const response = await firstValueFrom(
@@ -62,7 +62,7 @@ export class GameCatalogIntegrationService {
   }
 
   async checkHealth(): Promise<{ status: string }> {
-    const url = `${this.gameCatalogUrl}/v1/health`;
+    const url = `${this.gameCatalogUrl}/api/v1/health`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url).pipe(timeout(2000)),

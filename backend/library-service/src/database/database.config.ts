@@ -46,12 +46,8 @@ export const createDatabaseConfig = (
     softIdleTimeoutMillis:
       configService.get('database.softIdleTimeout') || 300000, // 5 minutes
 
-    // SSL configuration for production
-    ...(process.env.NODE_ENV === 'production' && {
-      ssl: {
-        rejectUnauthorized: false,
-      },
-    }),
+    // SSL configuration disabled for Docker containers
+    // SSL is not needed for local Docker PostgreSQL instances
   },
 
   // Query result caching for better performance
@@ -65,6 +61,9 @@ export const createDatabaseConfig = (
     duration: configService.get('database.cacheTimeout') || 30000, // 30 seconds default
   },
 
+  // SSL configuration - disabled for Docker containers
+  ssl: false,
+  
   // Connection retry configuration
   retryAttempts: configService.get('database.retryAttempts') || 3,
   retryDelay: configService.get('database.retryDelay') || 3000,
