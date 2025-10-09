@@ -19,13 +19,15 @@ export const dataSourceOptions: DataSourceOptions = {
   password: process.env.POSTGRES_PASSWORD || 'catalog_password',
   database: process.env.POSTGRES_DB || 'catalog_db',
   entities: [
+    // Для разработки используем TS файлы, для production - JS
     process.env.NODE_ENV === 'production' 
-      ? 'dist/src/entities/*.entity.js' 
+      ? 'dist/src/entities/*.entity.js'
       : 'src/entities/*.entity.ts'
   ],
   migrations: [
-    process.env.NODE_ENV === 'production' 
-      ? 'dist/src/database/migrations/*.js' 
+    // Для разработки используем TS файлы, для production - JS
+    process.env.NODE_ENV === 'production'
+      ? 'dist/src/database/migrations/*.js'
       : 'src/database/migrations/*.ts'
   ],
   migrationsTableName: 'migrations',

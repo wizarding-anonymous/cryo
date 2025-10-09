@@ -24,7 +24,7 @@ import {
 import { Type } from 'class-transformer';
 import { SystemRequirements } from '../interfaces/game.interface';
 
-class SystemRequirementsValidator implements SystemRequirements {
+class SystemRequirementsValidator {
   @IsString()
   minimum: string;
 

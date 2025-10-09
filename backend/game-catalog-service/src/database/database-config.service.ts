@@ -28,6 +28,7 @@ export class DatabaseConfigService implements TypeOrmOptionsFactory {
       database: this.configService.get<string>('POSTGRES_DB', 'catalog_db'),
       entities: [Game],
       migrations: [
+        // Для разработки используем TS файлы, для production - JS
         isDevelopment
           ? 'src/database/migrations/*.ts'
           : 'dist/src/database/migrations/*.js',

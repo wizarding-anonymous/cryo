@@ -1,5 +1,5 @@
 // Polyfill for crypto in Node.js environments
-import { webcrypto } from 'node:crypto';
+import { webcrypto } from 'crypto';
 if (!globalThis.crypto) {
   globalThis.crypto = webcrypto as Crypto;
 }
@@ -97,7 +97,7 @@ async function bootstrap() {
         .build();
 
       const document = SwaggerModule.createDocument(app, config, {
-        operationIdFactory: (controllerKey: string, methodKey: string) =>
+        operationIdFactory: (_controllerKey: string, methodKey: string) =>
           methodKey,
         deepScanRoutes: true,
       });

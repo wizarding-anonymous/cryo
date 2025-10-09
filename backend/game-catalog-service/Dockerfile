@@ -49,15 +49,15 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies (now includes ts-node and tsconfig-paths)
+# Install production dependencies and required dev dependencies for TypeORM CLI
 RUN npm install --only=production --legacy-peer-deps && \
+    npm install ts-node tsconfig-paths typescript --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /usr/src/app/dist ./dist
 
-# Copy source files needed for migrations and TypeORM CLI
-COPY --from=builder --chown=nestjs:nodejs /usr/src/app/src ./src
+# Copy data-source for TypeORM CLI
 COPY --from=builder --chown=nestjs:nodejs /usr/src/app/data-source.ts ./data-source.ts
 COPY --from=builder --chown=nestjs:nodejs /usr/src/app/tsconfig.json ./tsconfig.json
 
@@ -73,7 +73,7 @@ RUN chmod +x ./scripts/*.sh && \
 USER nestjs
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
   CMD node dist/src/health-check.js || exit 1
 
 # The service will run on port 3002
