@@ -76,7 +76,7 @@ services:
       - postgres-library
       - redis
     env_file:
-      - ./library-service/.env
+      - ./library-service/.env.docker
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     networks:
@@ -109,8 +109,9 @@ services:
       - "3005:3005"
     depends_on:
       - postgres-payment
+      - redis
     env_file:
-      - ./payment-service/.env
+      - ./payment-service/.env.docker
     networks:
       - microservices-network
     restart: unless-stopped
@@ -176,7 +177,7 @@ services:
       dockerfile: Dockerfile
     container_name: security-service
     ports:
-      - "3009:3008"
+      - "3009:3009"
     depends_on:
       - postgres-security
       - redis
@@ -210,7 +211,7 @@ services:
   # Databases
   postgres-user:
     image: postgres:15-alpine
-    container_name: postgres-user-db
+    container_name: cryo-postgres-user-db
     environment:
       POSTGRES_USER: user_service
       POSTGRES_PASSWORD: user_password
@@ -225,7 +226,7 @@ services:
 
   postgres-catalog:
     image: postgres:15-alpine
-    container_name: postgres-catalog-db
+    container_name: cryo-postgres-catalog-db
     environment:
       POSTGRES_USER: catalog_service
       POSTGRES_PASSWORD: catalog_password
@@ -240,7 +241,7 @@ services:
 
   postgres-library:
     image: postgres:15-alpine
-    container_name: postgres-library-db
+    container_name: cryo-postgres-library-db
     environment:
       POSTGRES_USER: library_service
       POSTGRES_PASSWORD: library_password
@@ -255,7 +256,7 @@ services:
 
   postgres-review:
     image: postgres:15-alpine
-    container_name: postgres-review-db
+    container_name: cryo-postgres-review-db
     environment:
       POSTGRES_USER: review_service
       POSTGRES_PASSWORD: review_password
@@ -270,7 +271,7 @@ services:
 
   postgres-payment:
     image: postgres:15-alpine
-    container_name: postgres-payment-db
+    container_name: cryo-postgres-payment-db
     environment:
       POSTGRES_USER: payment_service
       POSTGRES_PASSWORD: payment_password
@@ -285,7 +286,7 @@ services:
 
   postgres-notification:
     image: postgres:15-alpine
-    container_name: postgres-notification-db
+    container_name: cryo-postgres-notification-db
     environment:
       POSTGRES_USER: notification_service
       POSTGRES_PASSWORD: notification_password
@@ -300,7 +301,7 @@ services:
 
   postgres-social:
     image: postgres:15-alpine
-    container_name: postgres-social-db
+    container_name: cryo-postgres-social-db
     environment:
       POSTGRES_USER: social_service
       POSTGRES_PASSWORD: social_password
@@ -315,7 +316,7 @@ services:
 
   postgres-achievement:
     image: postgres:15-alpine
-    container_name: postgres-achievement-db
+    container_name: cryo-postgres-achievement-db
     environment:
       POSTGRES_USER: achievement_service
       POSTGRES_PASSWORD: achievement_password
@@ -330,7 +331,7 @@ services:
 
   postgres-security:
     image: postgres:15-alpine
-    container_name: postgres-security-db
+    container_name: cryo-postgres-security-db
     environment:
       POSTGRES_USER: security_service
       POSTGRES_PASSWORD: security_password
@@ -345,7 +346,7 @@ services:
 
   postgres-download:
     image: postgres:15-alpine
-    container_name: postgres-download-db
+    container_name: cryo-postgres-download-db
     environment:
       POSTGRES_USER: download_service
       POSTGRES_PASSWORD: download_password
@@ -361,7 +362,7 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: redis-cache
+    container_name: cryo-redis-cache
     ports:
       - "6379:6379"
     volumes:

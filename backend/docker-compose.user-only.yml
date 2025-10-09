@@ -26,7 +26,7 @@ services:
   # User Database
   postgres-user:
     image: postgres:15-alpine
-    container_name: postgres-user-db
+    container_name: cryo-postgres-user-db
     environment:
       POSTGRES_USER: user_service
       POSTGRES_PASSWORD: user_password
@@ -42,7 +42,7 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: redis-cache
+    container_name: cryo-redis-cache
     ports:
       - "6379:6379"
     volumes:

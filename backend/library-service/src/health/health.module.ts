@@ -11,6 +11,7 @@ import { AppCacheModule } from '../cache/cache.module';
 import { DatabaseModule } from '../database/database.module';
 import { ClientsModule } from '../clients/clients.module';
 import { MonitoringModule } from '../monitoring/monitoring.module';
+import { SecretsManagerService } from '../common/services/secrets-manager.service';
 
 import { metricsProviders } from './metrics.config';
 
@@ -30,6 +31,7 @@ import { metricsProviders } from './metrics.config';
     ExternalServicesHealthIndicator,
     ProductionHealthService,
     MetricsService,
+    SecretsManagerService,
     ...metricsProviders,
   ],
   exports: [MetricsService, ProductionHealthService],

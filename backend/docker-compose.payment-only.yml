@@ -50,7 +50,7 @@ services:
   # PostgreSQL Database for Payment Service
   postgres-payment-db:
     image: postgres:15-alpine
-    container_name: postgres-payment-db
+    container_name: cryo-postgres-payment-db
     environment:
       POSTGRES_USER: payment_service
       POSTGRES_PASSWORD: payment_password
@@ -71,7 +71,7 @@ services:
   # Redis Cache
   redis-cache:
     image: redis:7-alpine
-    container_name: redis-cache
+    container_name: cryo-redis-cache
     ports:
       - "6379:6379"
     volumes:

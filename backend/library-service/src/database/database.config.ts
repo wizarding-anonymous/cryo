@@ -34,7 +34,7 @@ export const createDatabaseConfig = (
     application_name: 'library-service',
 
     // PostgreSQL specific optimizations
-    options: '-c default_transaction_isolation=read_committed',
+    // options: '-c default_transaction_isolation=read_committed', // Using default
 
     // Connection validation
     testOnBorrow: true,

@@ -1,0 +1,93 @@
+version: '3.8'
+
+# Docker Compose file for Library Service only
+# This file runs only the Library Service with its required infrastructure
+
+services:
+  # Library Service
+  library-service:
+    build:
+      context: ./library-service
+      dockerfile: Dockerfile
+    container_name: cryo-library-service
+    ports:
+      - "3003:3000"
+    depends_on:
+      - postgres-library
+      - redis
+    env_file:
+      - ./library-service/.env
+    environment:
+      - NODE_ENV=development
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+    networks:
+      - library-network
+    restart: unless-stopped
+    volumes:
+      - ./library-service/src:/usr/src/app/src
+      - ./library-service/test:/usr/src/app/test
+
+  # Library Database
+  postgres-library:
+    image: postgres:15-alpine
+    container_name: cryo-postgres-library-db
+    environment:
+      POSTGRES_USER: library_service
+      POSTGRES_PASSWORD: library_password
+      POSTGRES_DB: library_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_library_data:/var/lib/postgresql/data
+    networks:
+      - library-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: cryo-redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - library-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_password
+
+  # Development tools
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - library-network
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:redis_password
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - library-network
+    restart: unless-stopped
+
+# Volumes for data persistence
+volumes:
+  postgres_library_data:
+  redis_data:
+
+# Network for service communication
+networks:
+  library-network:
+    driver: bridge
