@@ -99,11 +99,7 @@ describe('Common Components', () => {
       expect(mockHttpAdapter.reply).toHaveBeenCalledWith(
         mockResponse,
         {
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Test error',
-            details: {},
-          },
+          message: 'Test error',
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -118,11 +114,7 @@ describe('Common Components', () => {
       expect(mockHttpAdapter.reply).toHaveBeenCalledWith(
         mockResponse,
         {
-          error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Internal server error',
-            details: {},
-          },
+          message: 'Internal server error',
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -145,13 +137,7 @@ describe('Common Components', () => {
       expect(mockHttpAdapter.reply).toHaveBeenCalledWith(
         mockResponse,
         {
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Name is required, Email must be valid',
-            details: {
-              fields: ['Name is required', 'Email must be valid'],
-            },
-          },
+          message: ['Name is required', 'Email must be valid'],
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -169,11 +155,7 @@ describe('Common Components', () => {
       expect(mockHttpAdapter.reply).toHaveBeenCalledWith(
         mockResponse,
         {
-          error: {
-            code: 'UNAUTHENTICATED',
-            message: 'Unauthorized',
-            details: {},
-          },
+          message: 'Unauthorized',
         },
         HttpStatus.UNAUTHORIZED,
       );
@@ -191,11 +173,7 @@ describe('Common Components', () => {
       expect(mockHttpAdapter.reply).toHaveBeenCalledWith(
         mockResponse,
         {
-          error: {
-            code: 'CONFLICT',
-            message: 'Resource already exists',
-            details: {},
-          },
+          message: 'Resource already exists',
         },
         HttpStatus.CONFLICT,
       );

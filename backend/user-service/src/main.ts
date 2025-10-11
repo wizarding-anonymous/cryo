@@ -2,11 +2,12 @@ import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { WinstonModule } from 'nest-winston';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { createWinstonConfig } from './common/logging/winston.config';
+import { Reflector } from '@nestjs/core';
 
 async function bootstrap() {
   // Create Winston configuration based on environment
@@ -37,6 +38,7 @@ async function bootstrap() {
 
   // Apply global interceptors
   app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector)), // For @Exclude decorator
     new LoggingInterceptor(),
     new ResponseInterceptor(),
   );
@@ -55,7 +57,6 @@ async function bootstrap() {
     .setTitle('User Service API')
     .setDescription('API documentation for the User Service microservice')
     .setVersion('1.0')
-    .addBearerAuth() // For JWT authentication
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/api-docs', app, document);

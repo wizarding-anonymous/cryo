@@ -32,11 +32,7 @@ export const envValidationSchema = Joi.object({
   REDIS_MAX_RETRIES: Joi.number().min(0).default(3),
   REDIS_RETRY_DELAY: Joi.number().min(100).default(1000),
 
-  // JWT
-  JWT_SECRET: Joi.string().min(32).required(),
-  JWT_EXPIRES_IN: Joi.string().default('1h'),
-  JWT_REFRESH_SECRET: Joi.string().min(32).optional(),
-  JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
+
 
   // Rate Limiting
   THROTTLE_TTL: Joi.number().min(1000).default(60000), // 1 minute
@@ -97,11 +93,7 @@ export interface EnvironmentVariables {
   REDIS_MAX_RETRIES: number;
   REDIS_RETRY_DELAY: number;
 
-  // JWT
-  JWT_SECRET: string;
-  JWT_EXPIRES_IN: string;
-  JWT_REFRESH_SECRET?: string;
-  JWT_REFRESH_EXPIRES_IN: string;
+
 
   // Rate Limiting
   THROTTLE_TTL: number;

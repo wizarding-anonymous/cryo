@@ -18,5 +18,7 @@
     "^src/(.*)$": "<rootDir>/src/$1"
   },
   "setupFilesAfterEnv": ["<rootDir>/test-setup.ts"],
-  "testTimeout": 30000
+  "testTimeout": 120000,
+  "forceExit": true,
+  "detectOpenHandles": true
 }

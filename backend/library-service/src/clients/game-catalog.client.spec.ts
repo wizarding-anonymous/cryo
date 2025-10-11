@@ -15,7 +15,7 @@ describe('GameCatalogClient', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      if (key === 'services.gamesCatalog.url') {
+      if (key === 'GAMES_CATALOG_SERVICE_URL') {
         return 'http://fake-url';
       }
       return undefined;

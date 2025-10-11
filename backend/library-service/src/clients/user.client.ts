@@ -41,7 +41,7 @@ export class UserServiceClient {
     private readonly configService: ConfigService,
   ) {
     const configuredBaseUrl =
-      this.configService.get<string>('services.user.url');
+      this.configService.get<string>('USER_SERVICE_URL');
     if (!configuredBaseUrl) {
       throw new Error('User service URL is not configured');
     }

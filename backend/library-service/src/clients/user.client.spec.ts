@@ -16,7 +16,7 @@ describe('UserServiceClient', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      if (key === 'services.user.url') {
+      if (key === 'USER_SERVICE_URL') {
         return 'http://fake-user-service';
       }
       return undefined;

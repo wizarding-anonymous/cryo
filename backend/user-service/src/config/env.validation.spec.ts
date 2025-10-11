@@ -9,8 +9,6 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
       };
 
       const { error } = envValidationSchema.validate(validEnv);
@@ -30,37 +28,7 @@ describe('Environment Validation Schema', () => {
     });
   });
 
-  describe('JWT_SECRET validation', () => {
-    it('should fail when JWT_SECRET is too short', () => {
-      const invalidEnv = {
-        POSTGRES_HOST: 'localhost',
-        POSTGRES_USER: 'user',
-        POSTGRES_PASSWORD: 'password',
-        POSTGRES_DB: 'testdb',
-        REDIS_HOST: 'localhost',
-        JWT_SECRET: 'short', // Too short
-      };
 
-      const { error } = envValidationSchema.validate(invalidEnv);
-      expect(error).toBeDefined();
-      expect(error.details[0].message).toContain('at least 32 characters');
-    });
-
-    it('should pass when JWT_SECRET is long enough', () => {
-      const validEnv = {
-        POSTGRES_HOST: 'localhost',
-        POSTGRES_USER: 'user',
-        POSTGRES_PASSWORD: 'password',
-        POSTGRES_DB: 'testdb',
-        REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
-      };
-
-      const { error } = envValidationSchema.validate(validEnv);
-      expect(error).toBeUndefined();
-    });
-  });
 
   describe('PORT validation', () => {
     it('should use default port when not provided', () => {
@@ -70,8 +38,6 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
       };
 
       const { error, value } = envValidationSchema.validate(env);
@@ -87,8 +53,6 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
       };
 
       const { error } = envValidationSchema.validate(invalidEnv);
@@ -108,8 +72,6 @@ describe('Environment Validation Schema', () => {
           POSTGRES_PASSWORD: 'password',
           POSTGRES_DB: 'testdb',
           REDIS_HOST: 'localhost',
-          JWT_SECRET:
-            'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
         };
 
         const { error } = envValidationSchema.validate(env);
@@ -125,8 +87,6 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
       };
 
       const { error } = envValidationSchema.validate(invalidEnv);
@@ -143,8 +103,6 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
       };
 
       const { error, value } = envValidationSchema.validate(env);
@@ -163,8 +121,6 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
       };
 
       const { error, value } = envValidationSchema.validate(env);
@@ -184,8 +140,6 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
         GAME_CATALOG_SERVICE_URL: 'http://localhost:3002',
         NOTIFICATION_SERVICE_URL: 'https://api.example.com/notifications',
       };
@@ -201,8 +155,6 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
-        JWT_SECRET:
-          'this-is-a-very-long-secret-key-that-meets-minimum-requirements',
         GAME_CATALOG_SERVICE_URL: 'not-a-valid-url',
       };
 

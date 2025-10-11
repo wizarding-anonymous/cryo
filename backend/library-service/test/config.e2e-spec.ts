@@ -1,40 +1,36 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import { TestAppModule } from './test-app.module';
 import { DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { E2ETestBase } from './e2e-test-base';
 
 describe('Configuration (e2e)', () => {
-  let app: INestApplication;
+  let testBase: E2ETestBase;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [TestAppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+    testBase = new E2ETestBase();
+    await testBase.setup();
   });
 
   afterAll(async () => {
-    await app.close();
+    if (testBase) {
+      await testBase.teardown();
+    }
   });
 
   it('should load database configuration correctly', () => {
-    const dataSource = app.get(DataSource);
+    const dataSource = testBase.app.get(DataSource);
     expect(dataSource).toBeDefined();
     expect(dataSource.options.type).toBe('postgres'); // PostgreSQL for tests too
   });
 
   it('should load cache configuration correctly', () => {
-    const configService = app.get(ConfigService);
+    const configService = testBase.app.get(ConfigService);
     // In test environment, we use memory cache instead of Redis
     expect(configService).toBeDefined();
   });
 
   it('should have test database configured', () => {
-    const dataSource = app.get(DataSource);
-    expect(dataSource.options.database).toBe('library_service_test');
+    const dataSource = testBase.app.get(DataSource);
+    expect(dataSource.options.database).toBe('library_db'); // Actual test DB name
     expect(dataSource.options.synchronize).toBe(true);
   });
 });

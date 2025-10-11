@@ -21,10 +21,10 @@ describe('Cache Configuration', () => {
           useValue: {
             get: jest.fn((key: string, defaultValue?: any) => {
               const config: Record<string, any> = {
-                'redis.ttl': 300,
-                'redis.host': 'localhost',
-                'redis.port': 6379,
-                'redis.password': undefined,
+                'CACHE_TTL': 300,
+                'REDIS_HOST': 'localhost',
+                'REDIS_PORT': 6379,
+                'REDIS_PASSWORD': undefined,
               };
               return config[key] ?? defaultValue;
             }),
@@ -71,11 +71,11 @@ describe('Cache Configuration', () => {
 
     expect(config).toBeDefined();
     expect(config.ttl).toBe(300000); // Default 300 seconds
-    expect(mockConfigService.get).toHaveBeenCalledWith('redis.ttl', 300);
+    expect(mockConfigService.get).toHaveBeenCalledWith('CACHE_TTL', 300);
     expect(mockConfigService.get).toHaveBeenCalledWith(
-      'redis.host',
+      'REDIS_HOST',
       'localhost',
     );
-    expect(mockConfigService.get).toHaveBeenCalledWith('redis.port', 6379);
+    expect(mockConfigService.get).toHaveBeenCalledWith('REDIS_PORT', 6379);
   });
 });

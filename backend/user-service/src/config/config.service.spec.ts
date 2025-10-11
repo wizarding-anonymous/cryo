@@ -97,29 +97,7 @@ describe('AppConfigService', () => {
     });
   });
 
-  describe('jwtConfig', () => {
-    it('should return JWT configuration object', () => {
-      const mockConfig = {
-        JWT_SECRET: 'secret-key',
-        JWT_EXPIRES_IN: '1h',
-        JWT_REFRESH_SECRET: 'refresh-secret',
-        JWT_REFRESH_EXPIRES_IN: '7d',
-      };
 
-      jest
-        .spyOn(configService, 'get')
-        .mockImplementation((key) => mockConfig[key]);
-
-      const result = service.jwtConfig;
-
-      expect(result).toEqual({
-        secret: 'secret-key',
-        expiresIn: '1h',
-        refreshSecret: 'refresh-secret',
-        refreshExpiresIn: '7d',
-      });
-    });
-  });
 
   describe('throttleConfig', () => {
     it('should return throttle configuration object', () => {

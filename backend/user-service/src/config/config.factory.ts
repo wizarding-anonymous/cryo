@@ -128,17 +128,7 @@ export class ConfigFactory {
     };
   }
 
-  /**
-   * Create JWT configuration
-   */
-  createJwtConfig() {
-    return {
-      secret: this.configService.get('JWT_SECRET', { infer: true }),
-      signOptions: {
-        expiresIn: this.configService.get('JWT_EXPIRES_IN', { infer: true }),
-      },
-    };
-  }
+
 
   /**
    * Create CORS configuration
@@ -207,7 +197,6 @@ export class ConfigFactory {
       'POSTGRES_PASSWORD',
       'POSTGRES_DB',
       'REDIS_HOST',
-      'JWT_SECRET',
     ];
 
     const missingVars = requiredVars.filter(
@@ -221,11 +210,7 @@ export class ConfigFactory {
       );
     }
 
-    // Validate JWT secret length
-    const jwtSecret = this.configService.get('JWT_SECRET', { infer: true });
-    if (jwtSecret && jwtSecret.length < 32) {
-      throw new Error('JWT_SECRET must be at least 32 characters long');
-    }
+
 
     // Validate production-specific requirements
     const nodeEnv = this.configService.get('NODE_ENV', { infer: true });
@@ -239,13 +224,7 @@ export class ConfigFactory {
    */
   private validateProductionConfig(): void {
     const productionChecks = [
-      {
-        key: 'JWT_SECRET',
-        check: (value: string) =>
-          value !==
-          'CHANGE_ME_IN_PRODUCTION_MUST_BE_AT_LEAST_32_CHARACTERS_LONG',
-        message: 'JWT_SECRET must be changed from default value in production',
-      },
+
       {
         key: 'POSTGRES_PASSWORD',
         check: (value: string) => value !== 'CHANGE_ME_IN_PRODUCTION',

@@ -5,24 +5,41 @@ import {
   MinLength,
   MaxLength,
 } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * This DTO is used internally by the UserService to create a new user.
  * It is separate from RegisterDto to decouple the user domain from the auth domain.
+ * The password field should contain an already hashed password from Auth Service.
  */
 export class CreateUserDto {
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
+  @ApiProperty({
+    description: 'User full name',
+    example: 'John Doe',
+    maxLength: 100,
+  })
+  @IsNotEmpty({ message: 'Name is required' })
+  @IsString({ message: 'Name must be a string' })
+  @MaxLength(100, { message: 'Name cannot be longer than 100 characters' })
   name: string;
 
-  @IsNotEmpty()
-  @IsEmail()
-  @MaxLength(255)
+  @ApiProperty({
+    description: 'User email address',
+    example: 'user@example.com',
+    maxLength: 255,
+  })
+  @IsNotEmpty({ message: 'Email is required' })
+  @IsEmail({}, { message: 'Email must be valid' })
+  @MaxLength(255, { message: 'Email cannot be longer than 255 characters' })
   email: string;
 
-  @IsNotEmpty()
-  @IsString()
-  @MinLength(8)
-  password: string;
+  @ApiProperty({
+    description: 'Pre-hashed password from Auth Service',
+    example: '$2b$10$...',
+    minLength: 60, // bcrypt hash length
+  })
+  @IsNotEmpty({ message: 'Password is required' })
+  @IsString({ message: 'Password must be a string' })
+  @MinLength(60, { message: 'Password hash must be at least 60 characters (bcrypt format)' })
+  password: string; // Already hashed password from Auth Service
 }

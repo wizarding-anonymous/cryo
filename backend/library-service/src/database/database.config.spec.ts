@@ -13,17 +13,17 @@ describe('Database Configuration', () => {
           useValue: {
             get: jest.fn((key: string) => {
               const config: Record<string, any> = {
-                'database.host': 'localhost',
-                'database.port': 5432,
-                'database.username': 'postgres',
-                'database.password': 'password',
-                'database.database': 'library_service_test',
-                'database.synchronize': false,
-                'database.logging': false,
-                'database.maxConnections': 20,
-                'database.minConnections': 5,
-                'database.acquireTimeout': 60000,
-                'database.idleTimeout': 600000,
+                'DATABASE_HOST': 'localhost',
+                'DATABASE_PORT': 5432,
+                'DATABASE_USERNAME': 'postgres',
+                'DATABASE_PASSWORD': 'password',
+                'DATABASE_NAME': 'library_service_test',
+                'DATABASE_SYNCHRONIZE': false,
+                'DATABASE_LOGGING': false,
+                'DATABASE_MAX_CONNECTIONS': 20,
+                'DATABASE_MIN_CONNECTIONS': 5,
+                'DATABASE_ACQUIRE_TIMEOUT': 60000,
+                'DATABASE_IDLE_TIMEOUT': 600000,
               };
               return config[key];
             }),
@@ -45,8 +45,8 @@ describe('Database Configuration', () => {
     expect(config.username).toBe('postgres');
     expect(config.password).toBe('password');
     expect(config.database).toBe('library_service_test');
-    expect(config.synchronize).toBe(false);
-    expect(config.logging).toBe(false);
+    expect(config.synchronize).toBe(true); // NODE_ENV=test, not production
+    expect(config.logging).toEqual(['error']); // Always includes error logging
     expect(config.entities).toHaveLength(2);
     expect(config.extra.max).toBe(20);
     expect(config.extra.min).toBe(5);

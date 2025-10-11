@@ -9,6 +9,7 @@ import {
   UseGuards,
   Req,
   UseInterceptors,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -264,7 +265,7 @@ export class LibraryController {
   })
   async checkOwnership(
     @Req() request: AuthenticatedRequest,
-    @Param('gameId') gameId: string,
+    @Param('gameId', new ParseUUIDPipe()) gameId: string,
   ): Promise<OwnershipResponseDto> {
     const userId = request.user.id;
     return this.libraryService.checkGameOwnership(userId, gameId);

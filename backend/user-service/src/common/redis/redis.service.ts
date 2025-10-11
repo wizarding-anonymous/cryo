@@ -36,7 +36,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error(`❌ Redis connection failed: ${error.message}`);
       // Don't throw error to prevent service startup failure
-      // Redis is used for JWT blacklisting which is not critical for basic functionality
+      // Redis is used for caching which is not critical for basic functionality
     }
   }
 
@@ -47,42 +47,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * Add JWT token to blacklist
-   * @param token JWT token to blacklist
-   * @param ttl Time to live in milliseconds
-   */
-  async blacklistToken(token: string, ttl: number): Promise<void> {
-    try {
-      if (ttl > 0) {
-        await this.redisClient.setex(
-          `blacklist:${token}`,
-          Math.ceil(ttl / 1000),
-          'true',
-        );
-        this.logger.debug(`Token blacklisted with TTL: ${ttl}ms`);
-      }
-    } catch (error) {
-      this.logger.error(`Failed to blacklist token: ${error.message}`);
-      // Don't throw error - JWT blacklisting is not critical for MVP
-    }
-  }
 
-  /**
-   * Check if JWT token is blacklisted
-   * @param token JWT token to check
-   * @returns true if token is blacklisted
-   */
-  async isTokenBlacklisted(token: string): Promise<boolean> {
-    try {
-      const result = await this.redisClient.get(`blacklist:${token}`);
-      return result === 'true';
-    } catch (error) {
-      this.logger.error(`Failed to check token blacklist: ${error.message}`);
-      // Return false on error - allow access if Redis is down
-      return false;
-    }
-  }
 
   /**
    * Cache user session data

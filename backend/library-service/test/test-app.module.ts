@@ -1,82 +1,88 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { CacheModule } from '@nestjs/cache-manager';
-import {
-  ConfigModule as NestConfigModule,
-  ConfigService,
-} from '@nestjs/config';
-import { AppController } from '../src/app.controller';
-import { AppService } from '../src/app.service';
-import { MetricsController } from '../src/metrics.controller';
-import { LibraryModule } from '../src/library/library.module';
-import { HistoryModule } from '../src/history/history.module';
-import { HealthModule } from '../src/health/health.module';
-import { ConfigModule } from '../src/config/config.module';
-import { AuthModule } from '../src/auth/auth.module';
-import { ClientsModule } from '../src/clients/clients.module';
-import { AppCacheModule } from '../src/cache/cache.module';
-import { EventsModule } from '../src/events/events.module';
-import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { HttpModule } from '@nestjs/axios';
+import { PassportModule } from '@nestjs/passport';
+import { LibraryGame } from '../src/entities/library-game.entity';
+import { PurchaseHistory } from '../src/entities/purchase-history.entity';
+import { LibraryService } from '../src/library/library.service';
+import { SearchService } from '../src/library/search.service';
+import { LibraryController } from '../src/library/library.controller';
+import { LibraryRepository } from '../src/library/repositories/library.repository';
+import { HistoryService } from '../src/history/history.service';
+import { HistoryController } from '../src/history/history.controller';
+import { PurchaseHistoryRepository } from '../src/history/repositories/purchase-history.repository';
+import { GameCatalogClient } from '../src/clients/game-catalog.client';
+import { UserServiceClient } from '../src/clients/user.client';
+import { PaymentServiceClient } from '../src/clients/payment-service.client';
 import { JwtAuthGuard } from '../src/auth/guards/jwt-auth.guard';
-import { RoleGuard } from '../src/auth/guards/role.guard';
-import { InternalAuthGuard } from '../src/auth/guards/internal-auth.guard';
+import { TestJwtStrategy } from './auth/test-jwt.strategy';
+import { CacheService } from '../src/cache/cache.service';
+import { BenchmarkService } from '../src/performance/benchmark.service';
+import { PerformanceMonitorService } from '../src/performance/performance-monitor.service';
+import { EventEmitterService } from '../src/events/event.emitter.service';
+import { TestHealthController } from './controllers/test-health.controller';
 
 @Module({
   imports: [
-    PrometheusModule.register(),
-    AuthModule,
-    ConfigModule,
-    ClientsModule,
-    AppCacheModule,
-    EventsModule,
-    // Test database configuration - uses PostgreSQL like production
-    // Read DB options from env set in test-setup.ts or defaults for docker-compose.test.yml
-    (() => {
-      const dbOptions = {
-        type: 'postgres' as const,
-        host: process.env.DATABASE_HOST || '127.0.0.1',
-        port: parseInt(process.env.DATABASE_PORT || '5433', 10),
-        username: process.env.DATABASE_USERNAME || 'postgres',
-        password: process.env.DATABASE_PASSWORD || 'test_password',
-        database: process.env.DATABASE_NAME || 'library_service_test',
-        entities: [__dirname + '/../src/**/*.entity{.ts,.js}'],
-        synchronize: true,
-        logging: false,
-        dropSchema: true,
-      };
-      // Minimal debug to ensure correct values are used during e2e
-
-      console.log('[e2e] TypeORM options', {
-        host: dbOptions.host,
-        port: dbOptions.port,
-        username: dbOptions.username,
-        password: dbOptions.password,
-        database: dbOptions.database,
-      });
-      return TypeOrmModule.forRoot(dbOptions);
-    })(),
-    // Test cache configuration - simple memory cache
-    CacheModule.registerAsync({
-      imports: [NestConfigModule],
-      useFactory: () => ({
-        store: 'memory', // Use memory store for tests instead of Redis
-        ttl: 60, // Short TTL for tests
-        max: 100, // Limit cache size in tests
-      }),
-      inject: [ConfigService],
+    ConfigModule.forRoot({
       isGlobal: true,
     }),
-    LibraryModule,
-    HistoryModule,
-    HealthModule,
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5434'),
+      username: process.env.DATABASE_USERNAME || 'library_service',
+      password: process.env.DATABASE_PASSWORD || 'library_password',
+      database: process.env.DATABASE_NAME || 'library_db',
+      entities: [LibraryGame, PurchaseHistory],
+      synchronize: true, // For tests only
+      logging: false,
+      dropSchema: false,
+    }),
+    TypeOrmModule.forFeature([LibraryGame, PurchaseHistory]),
+    CacheModule.register({
+      isGlobal: true,
+      store: 'memory', // Use in-memory cache for tests
+      max: 100,
+      ttl: 300,
+    }),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'test-secret-key-for-e2e-tests-only',
+      signOptions: { expiresIn: '1h' },
+      global: true,
+    }),
+    HttpModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
-  controllers: [AppController, MetricsController],
+  controllers: [LibraryController, HistoryController, TestHealthController],
   providers: [
-    AppService,
-    // Disable auth/role guards for e2e to allow internal endpoints
-    // Keep JwtAuthGuard active to populate request.user from test JWTs
-    { provide: RoleGuard, useValue: { canActivate: () => true } },
-    { provide: InternalAuthGuard, useValue: { canActivate: () => true } },
+    LibraryService,
+    SearchService,
+    LibraryRepository,
+    HistoryService,
+    PurchaseHistoryRepository,
+    JwtAuthGuard,
+    TestJwtStrategy,
+    CacheService,
+    BenchmarkService,
+    PerformanceMonitorService,
+    EventEmitterService,
+    // External clients will be mocked in tests
+    {
+      provide: GameCatalogClient,
+      useValue: {}, // Will be overridden in tests
+    },
+    {
+      provide: UserServiceClient,
+      useValue: {}, // Will be overridden in tests
+    },
+    {
+      provide: PaymentServiceClient,
+      useValue: {}, // Will be overridden in tests
+    },
   ],
 })
-export class TestAppModule {}
+export class TestAppModule { }

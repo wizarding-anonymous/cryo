@@ -2,6 +2,10 @@
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
+  ServiceUnavailableException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { LibraryGame } from '../entities/library-game.entity';
 import {
@@ -22,6 +26,8 @@ import { LibraryRepository } from './repositories/library.repository';
 
 @Injectable()
 export class LibraryService {
+  private readonly logger = new Logger(LibraryService.name);
+
   constructor(
     private readonly libraryRepository: LibraryRepository,
     private readonly gameCatalogClient: GameCatalogClient,
@@ -74,41 +80,79 @@ export class LibraryService {
   }
 
   async addGameToLibrary(dto: AddGameToLibraryDto): Promise<LibraryGame> {
-    const userExists = await this.userServiceClient.doesUserExist(dto.userId);
-    if (!userExists) {
-      throw new NotFoundException(`User ${dto.userId} not found`);
+    try {
+      // Validate user exists
+      const userExists = await this.userServiceClient.doesUserExist(dto.userId);
+      if (!userExists) {
+        throw new NotFoundException(`User ${dto.userId} not found`);
+      }
+
+      // Validate game exists
+      const gameExists = await this.gameCatalogClient.doesGameExist(dto.gameId);
+      if (!gameExists) {
+        throw new NotFoundException(`Game ${dto.gameId} not found`);
+      }
+
+      const existingEntry = await this.libraryRepository.findOneByUserIdAndGameId(
+        dto.userId,
+        dto.gameId,
+      );
+
+      if (existingEntry) {
+        throw new ConflictException('Game already exists in the library.');
+      }
+
+      const newGame = this.libraryRepository.create({
+        userId: dto.userId,
+        gameId: dto.gameId,
+        purchaseDate: new Date(dto.purchaseDate),
+        purchasePrice: dto.purchasePrice,
+        currency: dto.currency,
+        orderId: dto.orderId,
+        purchaseId: dto.purchaseId,
+      });
+
+      const savedGame = await this.libraryRepository.save(newGame);
+      await this.historyService.createPurchaseRecord(dto);
+      await this.invalidateUserLibraryCache(dto.userId);
+      await this.eventEmitter.emitGameAddedEvent(dto.userId, dto.gameId);
+      return savedGame;
+    } catch (error) {
+      if (error instanceof ConflictException || error instanceof NotFoundException) {
+        throw error;
+      }
+      
+      // Handle external service errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Service unavailable') || 
+          errorMessage.includes('unavailable') ||
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('Circuit breaker is OPEN')) {
+        throw new ServiceUnavailableException(
+          'External service temporarily unavailable',
+        );
+      }
+      
+      throw new InternalServerErrorException(
+        'Failed to add game to library',
+        errorMessage,
+      );
     }
-
-    const existingEntry = await this.libraryRepository.findOneByUserIdAndGameId(
-      dto.userId,
-      dto.gameId,
-    );
-
-    if (existingEntry) {
-      throw new ConflictException('Game already exists in the library.');
-    }
-
-    const newGame = this.libraryRepository.create({
-      userId: dto.userId,
-      gameId: dto.gameId,
-      purchaseDate: new Date(dto.purchaseDate),
-      purchasePrice: dto.purchasePrice,
-      currency: dto.currency,
-      orderId: dto.orderId,
-      purchaseId: dto.purchaseId,
-    });
-
-    const savedGame = await this.libraryRepository.save(newGame);
-    await this.historyService.createPurchaseRecord(dto);
-    await this.invalidateUserLibraryCache(dto.userId);
-    await this.eventEmitter.emitGameAddedEvent(dto.userId, dto.gameId);
-    return savedGame;
   }
 
   async checkGameOwnership(
     userId: string,
     gameId: string,
   ): Promise<OwnershipResponseDto> {
+    // Validate UUID format before any database operations
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(gameId)) {
+      throw new BadRequestException('Invalid UUID format for gameId');
+    }
+    if (!uuidRegex.test(userId)) {
+      throw new BadRequestException('Invalid UUID format for userId');
+    }
+
     const cacheKey = `ownership_${userId}_${gameId}`;
 
     const fetchFn = async (): Promise<OwnershipResponseDto> => {
@@ -177,23 +221,31 @@ export class LibraryService {
       }
     });
 
-    // Fetch uncached game details
+    // Fetch uncached game details with graceful degradation
     if (uncachedGameIds.length > 0) {
-      const gameDetails =
-        await this.gameCatalogClient.getGamesByIds(uncachedGameIds);
+      try {
+        const gameDetails =
+          await this.gameCatalogClient.getGamesByIds(uncachedGameIds);
 
-      // Cache the fetched details and add to map
-      const cacheEntries = gameDetails.map((detail) => ({
-        key: `game_details_${detail.id}`,
-        value: detail,
-        ttl: 1800, // 30 minutes for game details
-      }));
+        // Cache the fetched details and add to map
+        const cacheEntries = gameDetails.map((detail) => ({
+          key: `game_details_${detail.id}`,
+          value: detail,
+          ttl: 1800, // 30 minutes for game details
+        }));
 
-      await this.cacheService.mset(cacheEntries);
+        await this.cacheService.mset(cacheEntries);
 
-      gameDetails.forEach((detail) => {
-        gameDetailsMap.set(detail.id, detail);
-      });
+        gameDetails.forEach((detail) => {
+          gameDetailsMap.set(detail.id, detail);
+        });
+      } catch (error) {
+        // Graceful degradation: log error but continue without enrichment
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.warn(
+          `Failed to enrich games with catalog data: ${errorMessage}. Returning basic library data.`,
+        );
+      }
     }
 
     return libraryGames.map((game) =>

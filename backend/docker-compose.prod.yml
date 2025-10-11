@@ -18,6 +18,19 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  auth-service:
+    environment:
+      - NODE_ENV=production
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
   user-service:
     environment:
       - NODE_ENV=production
@@ -149,6 +162,16 @@ services:
           memory: 256M
 
   # Database production settings
+  postgres-auth:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
   postgres-user:
     deploy:
       resources:

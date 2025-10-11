@@ -131,19 +131,120 @@ app/
 - `LoadingSpinner` - Индикаторы загрузки
 - `ErrorBoundary` - Обработка ошибок
 
-### State Management (Zustand)
+### State Management (Zustand) - Точно под User Service
 
 #### Store Slices
 ```typescript
-// stores/auth.ts
+// stores/auth.ts - Точно под User Service API
 interface AuthStore {
   user: User | null;
-  token: string | null;
+  accessToken: string | null;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => void;
-  register: (data: RegisterData) => Promise<void>;
+  error: string | null;
+  
+  // Actions - точно соответствуют User Service API
+  register: (data: RegisterDto) => Promise<void>;
+  login: (credentials: LoginDto) => Promise<void>;
+  logout: () => Promise<void>;
+  getProfile: () => Promise<void>;
+  updateProfile: (data: UpdateProfileDto) => Promise<void>;
+  deleteProfile: () => Promise<void>;
+  
+  // Helpers
+  setToken: (token: string) => void;
+  clearAuth: () => void;
+  isAuthenticated: () => boolean;
 }
+
+// Реализация store
+const useAuthStore = create<AuthStore>((set, get) => ({
+  user: null,
+  accessToken: localStorage.getItem('accessToken'),
+  isLoading: false,
+  error: null,
+
+  register: async (data: RegisterDto) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authService.register(data);
+      const { user, accessToken } = response.data;
+      
+      set({ user, accessToken, isLoading: false });
+      localStorage.setItem('accessToken', accessToken);
+      apiClient.setToken(accessToken);
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  login: async (credentials: LoginDto) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authService.login(credentials);
+      const { user, accessToken } = response.data;
+      
+      set({ user, accessToken, isLoading: false });
+      localStorage.setItem('accessToken', accessToken);
+      apiClient.setToken(accessToken);
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  logout: async () => {
+    try {
+      await authService.logout(); // Отправляет токен в blacklist
+    } finally {
+      set({ user: null, accessToken: null });
+      localStorage.removeItem('accessToken');
+      apiClient.setToken(null);
+    }
+  },
+
+  getProfile: async () => {
+    try {
+      const response = await profileService.getProfile();
+      set({ user: response.data });
+    } catch (error) {
+      if (error.status === 401) {
+        get().clearAuth();
+      }
+      throw error;
+    }
+  },
+
+  updateProfile: async (data: UpdateProfileDto) => {
+    try {
+      const response = await profileService.updateProfile(data);
+      set({ user: response.data });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  deleteProfile: async () => {
+    await profileService.deleteProfile();
+    get().clearAuth();
+  },
+
+  setToken: (token: string) => {
+    set({ accessToken: token });
+    localStorage.setItem('accessToken', token);
+    apiClient.setToken(token);
+  },
+
+  clearAuth: () => {
+    set({ user: null, accessToken: null });
+    localStorage.removeItem('accessToken');
+    apiClient.setToken(null);
+  },
+
+  isAuthenticated: () => {
+    return !!get().accessToken;
+  },
+}));
 
 // stores/games.ts
 interface GamesStore {
@@ -169,30 +270,52 @@ interface LibraryStore {
 
 ## Data Models
 
-### TypeScript Interfaces (Shared across platforms)
+### TypeScript Interfaces (Точно соответствуют User Service API)
 
 ```typescript
-// types/user.ts
+// types/user.ts - Точные типы из User Service
 interface User {
   id: string;
   email: string;
-  username: string;
-  displayName: string;
-  avatar?: string;
+  name: string;
   createdAt: Date;
-  lastLoginAt: Date;
+  updatedAt: Date;
 }
 
-interface LoginCredentials {
+interface RegisterDto {
+  name: string;
   email: string;
   password: string;
 }
 
-interface RegisterData {
+interface LoginDto {
   email: string;
-  username: string;
   password: string;
-  confirmPassword: string;
+}
+
+interface UpdateProfileDto {
+  name?: string;
+}
+
+// API Response Types - точно как в User Service
+interface StandardResponse<T> {
+  statusCode: number;
+  data: T;
+}
+
+interface AuthResponse {
+  user: User;
+  accessToken: string;
+}
+
+interface ErrorResponse {
+  error: {
+    code: 'VALIDATION_ERROR' | 'UNAUTHENTICATED' | 'CONFLICT' | 'NOT_FOUND' | 'FORBIDDEN' | 'INTERNAL_SERVER_ERROR';
+    message: string;
+    details: {
+      fields?: string[];
+    };
+  };
 }
 
 // types/game.ts
@@ -280,43 +403,83 @@ interface ValidationError {
 
 ## REST API Integration
 
-### API Client Architecture
+### API Client Architecture (Точная интеграция с User Service)
 
 ```typescript
-// lib/api/client.ts
+// lib/api/client.ts - Точно под User Service API
 class ApiClient {
-  private baseURL: string;
+  private baseURL: string = '/api'; // User Service prefix
   private token: string | null = null;
-
-  constructor(baseURL: string) {
-    this.baseURL = baseURL;
-  }
 
   setToken(token: string) {
     this.token = token;
   }
 
-  async request<T>(endpoint: string, options: RequestOptions): Promise<ApiResponse<T>> {
-    // Стандартная обработка HTTP запросов
-    // Автоматическое добавление JWT токена
-    // Обработка ошибок и retry логика
+  async request<T>(endpoint: string, options: RequestOptions): Promise<StandardResponse<T>> {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(this.token && { Authorization: `Bearer ${this.token}` }),
+      ...options.headers,
+    };
+
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData: ErrorResponse = await response.json();
+      throw new ApiError(response.status, errorData.error);
+    }
+
+    return response.json();
   }
 }
 
-// API Services
-class UserService {
-  async login(credentials: LoginCredentials): Promise<ApiResponse<{ user: User; token: string }>> {
-    return apiClient.request('/auth/login', {
+// services/auth.service.ts - Точные методы User Service
+class AuthService {
+  async register(data: RegisterDto): Promise<StandardResponse<AuthResponse>> {
+    return apiClient.request('/auth/register', {
       method: 'POST',
-      body: credentials
+      body: JSON.stringify(data)
     });
   }
 
-  async register(data: RegisterData): Promise<ApiResponse<User>> {
-    return apiClient.request('/auth/register', {
+  async login(credentials: LoginDto): Promise<StandardResponse<AuthResponse>> {
+    return apiClient.request('/auth/login', {
       method: 'POST',
-      body: data
+      body: JSON.stringify(credentials)
     });
+  }
+
+  async logout(): Promise<void> {
+    await apiClient.request('/auth/logout', {
+      method: 'POST'
+    });
+    // Ответ 204 No Content
+  }
+}
+
+// services/profile.service.ts - Точные методы User Service
+class ProfileService {
+  async getProfile(): Promise<StandardResponse<User>> {
+    return apiClient.request('/users/profile', {
+      method: 'GET'
+    });
+  }
+
+  async updateProfile(data: UpdateProfileDto): Promise<StandardResponse<User>> {
+    return apiClient.request('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteProfile(): Promise<void> {
+    await apiClient.request('/users/profile', {
+      method: 'DELETE'
+    });
+    // Ответ 204 No Content
   }
 }
 ```

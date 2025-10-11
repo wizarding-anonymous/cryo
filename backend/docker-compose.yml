@@ -11,6 +11,7 @@ services:
     ports:
       - "3000:3000"
     depends_on:
+      - auth-service
       - user-service
       - game-catalog-service
       - library-service
@@ -26,6 +27,25 @@ services:
       - microservices-network
     restart: unless-stopped
 
+  # Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres-auth
+      - redis
+    env_file:
+      - ./auth-service/.env.docker
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
   # User Service
   user-service:
     build:
@@ -33,7 +53,7 @@ services:
       dockerfile: Dockerfile
     container_name: user-service
     ports:
-      - "3001:3001"
+      - "3002:3002"
     depends_on:
       - postgres-user
       - redis
@@ -52,7 +72,7 @@ services:
       dockerfile: Dockerfile
     container_name: game-catalog-service
     ports:
-      - "3002:3002"
+      - "3003:3003"
     depends_on:
       - postgres-catalog
       - redis
@@ -71,7 +91,7 @@ services:
       dockerfile: Dockerfile
     container_name: library-service
     ports:
-      - "3003:3000"
+      - "3004:3000"
     depends_on:
       - postgres-library
       - redis
@@ -90,7 +110,7 @@ services:
       dockerfile: Dockerfile
     container_name: review-service
     ports:
-      - "3004:3004"
+      - "3005:3005"
     depends_on:
       - postgres-review
     env_file:
@@ -106,7 +126,7 @@ services:
       dockerfile: Dockerfile
     container_name: payment-service
     ports:
-      - "3005:3005"
+      - "3006:3006"
     depends_on:
       - postgres-payment
       - redis
@@ -123,7 +143,7 @@ services:
       dockerfile: Dockerfile
     container_name: notification-service
     ports:
-      - "3006:3006"
+      - "3007:3007"
     depends_on:
       - postgres-notification
       - redis
@@ -142,7 +162,7 @@ services:
       dockerfile: Dockerfile
     container_name: social-service
     ports:
-      - "3007:3007"
+      - "3008:3008"
     depends_on:
       - postgres-social
     env_file:
@@ -158,7 +178,7 @@ services:
       dockerfile: Dockerfile
     container_name: achievement-service
     ports:
-      - "3008:3008"
+      - "3009:3009"
     depends_on:
       - postgres-achievement
       - redis
@@ -177,7 +197,7 @@ services:
       dockerfile: Dockerfile
     container_name: security-service
     ports:
-      - "3009:3009"
+      - "3010:3010"
     depends_on:
       - postgres-security
       - redis
@@ -196,7 +216,7 @@ services:
       dockerfile: Dockerfile
     container_name: download-service
     ports:
-      - "3010:8080"
+      - "3011:8080"
     depends_on:
       - postgres-download
       - redis
@@ -209,6 +229,29 @@ services:
     restart: unless-stopped
 
   # Databases
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: cryo-postgres-auth-db
+    environment:
+      POSTGRES_USER: auth_service
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: auth_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+      - ./auth-service/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_service -d auth_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   postgres-user:
     image: postgres:15-alpine
     container_name: cryo-postgres-user-db
@@ -217,7 +260,7 @@ services:
       POSTGRES_PASSWORD: user_password
       POSTGRES_DB: user_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_user_data:/var/lib/postgresql/data
     networks:
@@ -232,7 +275,7 @@ services:
       POSTGRES_PASSWORD: catalog_password
       POSTGRES_DB: catalog_db
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_catalog_data:/var/lib/postgresql/data
     networks:
@@ -247,7 +290,7 @@ services:
       POSTGRES_PASSWORD: library_password
       POSTGRES_DB: library_db
     ports:
-      - "5434:5432"
+      - "5435:5432"
     volumes:
       - postgres_library_data:/var/lib/postgresql/data
     networks:
@@ -262,7 +305,7 @@ services:
       POSTGRES_PASSWORD: review_password
       POSTGRES_DB: review_db
     ports:
-      - "5435:5432"
+      - "5436:5432"
     volumes:
       - postgres_review_data:/var/lib/postgresql/data
     networks:
@@ -277,7 +320,7 @@ services:
       POSTGRES_PASSWORD: payment_password
       POSTGRES_DB: payment_db
     ports:
-      - "5436:5432"
+      - "5437:5432"
     volumes:
       - postgres_payment_data:/var/lib/postgresql/data
     networks:
@@ -292,7 +335,7 @@ services:
       POSTGRES_PASSWORD: notification_password
       POSTGRES_DB: notification_db
     ports:
-      - "5437:5432"
+      - "5438:5432"
     volumes:
       - postgres_notification_data:/var/lib/postgresql/data
     networks:
@@ -307,7 +350,7 @@ services:
       POSTGRES_PASSWORD: social_password
       POSTGRES_DB: social_db
     ports:
-      - "5438:5432"
+      - "5439:5432"
     volumes:
       - postgres_social_data:/var/lib/postgresql/data
     networks:
@@ -322,7 +365,7 @@ services:
       POSTGRES_PASSWORD: achievement_password
       POSTGRES_DB: achievement_db
     ports:
-      - "5439:5432"
+      - "5440:5432"
     volumes:
       - postgres_achievement_data:/var/lib/postgresql/data
     networks:
@@ -337,7 +380,7 @@ services:
       POSTGRES_PASSWORD: security_password
       POSTGRES_DB: security_db
     ports:
-      - "5440:5432"
+      - "5441:5432"
     volumes:
       - postgres_security_data:/var/lib/postgresql/data
     networks:
@@ -352,7 +395,7 @@ services:
       POSTGRES_PASSWORD: download_password
       POSTGRES_DB: download_db
     ports:
-      - "5441:5432"
+      - "5442:5432"
     volumes:
       - postgres_download_data:/var/lib/postgresql/data
     networks:
@@ -371,6 +414,12 @@ services:
       - microservices-network
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Monitoring Services
   prometheus:
@@ -444,6 +493,7 @@ services:
 
 # Volumes for data persistence
 volumes:
+  postgres_auth_data:
   postgres_user_data:
   postgres_catalog_data:
   postgres_library_data:

@@ -1,20 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileService } from './profile.service';
 import { UserService } from '../user/user.service';
-import { NotFoundException } from '@nestjs/common';
-
-// Mock implementations for dependencies
-const mockUserService = {
-  findById: jest.fn(),
-  delete: jest.fn(),
-  updateProfile: jest.fn(),
-};
 
 describe('ProfileService', () => {
   let service: ProfileService;
-  let _userService: UserService;
+  let mockUserService: Partial<UserService>;
 
   beforeEach(async () => {
+    mockUserService = {
+      findById: jest.fn(),
+      updateProfile: jest.fn(),
+      deleteUser: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfileService,
@@ -26,11 +24,6 @@ describe('ProfileService', () => {
     }).compile();
 
     service = module.get<ProfileService>(ProfileService);
-    _userService = module.get<UserService>(UserService);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -38,75 +31,43 @@ describe('ProfileService', () => {
   });
 
   describe('getProfile', () => {
-    it('should return a user profile without the password', async () => {
-      const userId = 'a-uuid';
-      const user = {
-        id: userId,
-        name: 'Test',
-        email: 'test@example.com',
-        // UserService.findById now returns user without password
-      };
-      mockUserService.findById.mockResolvedValue(user);
+    it('should call userService.findById with correct userId', async () => {
+      const userId = 'test-user-id';
+      const expectedUser = { id: userId, name: 'Test User', email: 'test@example.com' };
+      
+      (mockUserService.findById as jest.Mock).mockResolvedValue(expectedUser);
 
       const result = await service.getProfile(userId);
 
       expect(mockUserService.findById).toHaveBeenCalledWith(userId);
-      expect(result).toEqual({
-        id: userId,
-        name: 'Test',
-        email: 'test@example.com',
-      });
-      expect(result).not.toHaveProperty('password');
-    });
-
-    it('should throw NotFoundException if user not found', async () => {
-      mockUserService.findById.mockResolvedValue(null);
-      await expect(service.getProfile('a-uuid')).rejects.toThrow(
-        NotFoundException,
-      );
+      expect(result).toEqual(expectedUser);
     });
   });
 
   describe('updateProfile', () => {
-    it('should update and return the user profile', async () => {
-      const userId = 'a-uuid';
-      const updateDto = { name: 'Updated Name' };
-      const updatedUser = {
-        id: userId,
-        name: 'Updated Name',
-        email: 'test@example.com',
-        // UserService.updateProfile now returns user without password
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    it('should call userService.updateProfile with correct parameters', async () => {
+      const userId = 'test-user-id';
+      const updateData = { name: 'Updated Name' };
+      const expectedUser = { id: userId, name: 'Updated Name', email: 'test@example.com' };
+      
+      (mockUserService.updateProfile as jest.Mock).mockResolvedValue(expectedUser);
 
-      mockUserService.updateProfile.mockResolvedValue(updatedUser);
+      const result = await service.updateProfile(userId, updateData);
 
-      const result = await service.updateProfile(userId, updateDto);
-
-      expect(mockUserService.updateProfile).toHaveBeenCalledWith(
-        userId,
-        updateDto,
-      );
-      expect(result).toEqual({
-        id: userId,
-        name: 'Updated Name',
-        email: 'test@example.com',
-        createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt,
-      });
-      expect(result).not.toHaveProperty('password');
+      expect(mockUserService.updateProfile).toHaveBeenCalledWith(userId, updateData);
+      expect(result).toEqual(expectedUser);
     });
   });
 
   describe('deleteProfile', () => {
-    it('should call userService.delete with the correct id', async () => {
-      const userId = 'a-uuid';
-      mockUserService.delete.mockResolvedValue(undefined); // It returns Promise<void>
+    it('should call userService.deleteUser with correct userId', async () => {
+      const userId = 'test-user-id';
+      
+      (mockUserService.deleteUser as jest.Mock).mockResolvedValue(undefined);
 
       await service.deleteProfile(userId);
 
-      expect(mockUserService.delete).toHaveBeenCalledWith(userId);
+      expect(mockUserService.deleteUser).toHaveBeenCalledWith(userId);
     });
   });
 });

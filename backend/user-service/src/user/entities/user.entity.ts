@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
@@ -36,6 +37,13 @@ export class User {
   })
   name: string;
 
+  @Column({
+    type: 'timestamp with time zone',
+    name: 'last_login_at',
+    nullable: true,
+  })
+  lastLoginAt?: Date;
+
   @CreateDateColumn({
     type: 'timestamp with time zone',
     name: 'created_at',
@@ -49,4 +57,11 @@ export class User {
     default: () => 'CURRENT_TIMESTAMP',
   })
   updatedAt: Date;
+
+  @DeleteDateColumn({
+    type: 'timestamp with time zone',
+    name: 'deleted_at',
+    nullable: true,
+  })
+  deletedAt?: Date;
 }

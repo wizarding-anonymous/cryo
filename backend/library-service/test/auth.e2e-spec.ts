@@ -1,65 +1,42 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { TestAppModule } from './test-app.module';
-import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
+import { E2ETestBase } from './e2e-test-base';
 
 describe('Authentication & Authorization E2E', () => {
-  let app: INestApplication;
-  let jwtService: JwtService;
+  let testBase: E2ETestBase;
 
   beforeAll(async () => {
-    try {
-      const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [TestAppModule],
-      }).compile();
-
-      app = moduleFixture.createNestApplication();
-      app.useGlobalPipes(
-        new ValidationPipe({
-          whitelist: true,
-          forbidNonWhitelisted: true,
-          transform: true,
-        }),
-      );
-      app.setGlobalPrefix('api');
-      await app.init();
-
-      jwtService = app.get(JwtService);
-    } catch (error) {
-      console.error('Failed to initialize test app:', error);
-      throw error;
-    }
+    testBase = new E2ETestBase();
+    await testBase.setup();
   });
 
   afterAll(async () => {
-    if (app) {
-      await app.close();
+    if (testBase) {
+      await testBase.teardown();
     }
   });
 
   describe('JWT Authentication', () => {
     it('should reject requests without Authorization header', async () => {
-      await request(app.getHttpServer()).get('/api/library/my').expect(401);
+      await request(testBase.app.getHttpServer()).get('/api/library/my').expect(401);
     });
 
     it('should reject requests with invalid Bearer token format', async () => {
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', 'InvalidFormat token')
         .expect(401);
     });
 
     it('should reject requests with malformed JWT token', async () => {
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', 'Bearer invalid.jwt.token')
         .expect(401);
     });
 
     it('should reject requests with expired JWT token', async () => {
-      const expiredToken = jwtService.sign(
+      const expiredToken = testBase.jwtService.sign(
         {
           sub: randomUUID(),
           username: 'testuser',
@@ -68,39 +45,39 @@ describe('Authentication & Authorization E2E', () => {
         { expiresIn: '-1h' }, // Expired 1 hour ago
       );
 
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${expiredToken}`)
         .expect(401);
     });
 
     it('should accept requests with valid JWT token', async () => {
-      const validToken = jwtService.sign({
+      const validToken = testBase.jwtService.sign({
         sub: randomUUID(),
         username: 'testuser',
         roles: ['user'],
       });
 
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${validToken}`)
         .expect(200);
     });
 
     it('should reject JWT tokens with missing required claims', async () => {
-      const invalidToken = jwtService.sign({
+      const invalidToken = testBase.jwtService.sign({
         username: 'testuser',
         // Missing 'sub' claim
       });
 
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${invalidToken}`)
         .expect(401);
     });
 
     it('should handle JWT tokens with extra claims gracefully', async () => {
-      const tokenWithExtraClaims = jwtService.sign({
+      const tokenWithExtraClaims = testBase.jwtService.sign({
         sub: randomUUID(),
         username: 'testuser',
         roles: ['user'],
@@ -108,7 +85,7 @@ describe('Authentication & Authorization E2E', () => {
         anotherClaim: 123,
       });
 
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${tokenWithExtraClaims}`)
         .expect(200);
@@ -117,39 +94,39 @@ describe('Authentication & Authorization E2E', () => {
 
   describe('Role-based Authorization', () => {
     it('should allow user role to access user endpoints', async () => {
-      const userToken = jwtService.sign({
+      const userToken = testBase.jwtService.sign({
         sub: randomUUID(),
         username: 'regularuser',
         roles: ['user'],
       });
 
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200);
     });
 
     it('should allow admin role to access user endpoints', async () => {
-      const adminToken = jwtService.sign({
+      const adminToken = testBase.jwtService.sign({
         sub: randomUUID(),
         username: 'adminuser',
         roles: ['admin', 'user'],
       });
 
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
     });
 
     it('should handle tokens with no roles gracefully', async () => {
-      const noRolesToken = jwtService.sign({
+      const noRolesToken = testBase.jwtService.sign({
         sub: randomUUID(),
         username: 'noroleuser',
         roles: [],
       });
 
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${noRolesToken}`)
         .expect(200); // Should still work for basic endpoints
@@ -159,7 +136,7 @@ describe('Authentication & Authorization E2E', () => {
   describe('Internal Authentication', () => {
     it('should allow internal endpoints without JWT for testing', async () => {
       // In test environment, InternalAuthGuard is mocked to always return true
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .post('/api/library/add')
         .send({
           userId: randomUUID(),
@@ -179,14 +156,14 @@ describe('Authentication & Authorization E2E', () => {
       const user1Id = randomUUID();
       const user2Id = randomUUID();
 
-      const user1Token = jwtService.sign({
+      const user1Token = testBase.jwtService.sign({
         sub: user1Id,
         username: 'user1',
         roles: ['user'],
       });
 
       // Add game for user1
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .post('/api/library/add')
         .send({
           userId: user1Id,
@@ -200,7 +177,7 @@ describe('Authentication & Authorization E2E', () => {
         .expect(201);
 
       // Add game for user2
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .post('/api/library/add')
         .send({
           userId: user2Id,
@@ -214,7 +191,7 @@ describe('Authentication & Authorization E2E', () => {
         .expect(201);
 
       // User1 should only see their own library
-      const user1LibraryResponse = await request(app.getHttpServer())
+      const user1LibraryResponse = await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
@@ -226,7 +203,7 @@ describe('Authentication & Authorization E2E', () => {
 
   describe('Token Refresh Scenarios', () => {
     it('should handle tokens close to expiration', async () => {
-      const shortLivedToken = jwtService.sign(
+      const shortLivedToken = testBase.jwtService.sign(
         {
           sub: randomUUID(),
           username: 'testuser',
@@ -236,7 +213,7 @@ describe('Authentication & Authorization E2E', () => {
       );
 
       // Should work immediately
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${shortLivedToken}`)
         .expect(200);
@@ -245,7 +222,7 @@ describe('Authentication & Authorization E2E', () => {
       await new Promise((resolve) => setTimeout(resolve, 6000));
 
       // Should fail after expiration
-      await request(app.getHttpServer())
+      await request(testBase.app.getHttpServer())
         .get('/api/library/my')
         .set('Authorization', `Bearer ${shortLivedToken}`)
         .expect(401);

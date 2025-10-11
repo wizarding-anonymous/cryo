@@ -16,10 +16,6 @@ export const developmentConfig: Partial<EnvironmentVariables> = {
   REDIS_MAX_RETRIES: 3,
   REDIS_RETRY_DELAY: 1000,
 
-  // JWT - longer expiration for development convenience
-  JWT_EXPIRES_IN: '24h',
-  JWT_REFRESH_EXPIRES_IN: '7d',
-
   // Rate limiting - more lenient in development
   THROTTLE_TTL: 60000, // 1 minute
   THROTTLE_LIMIT: 100, // 100 requests per minute

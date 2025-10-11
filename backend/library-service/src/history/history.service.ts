@@ -43,7 +43,7 @@ export class HistoryService {
     const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
 
     return {
-      purchases: items,
+      history: items,
       pagination: {
         total,
         page,
@@ -97,7 +97,7 @@ export class HistoryService {
 
     if (allHistory.length === 0) {
       return {
-        purchases: [],
+        history: [],
         pagination: { total: 0, page, limit, totalPages: 0 },
       };
     }
@@ -142,7 +142,7 @@ export class HistoryService {
     );
 
     return {
-      purchases: items,
+      history: items,
       pagination: {
         total,
         page,

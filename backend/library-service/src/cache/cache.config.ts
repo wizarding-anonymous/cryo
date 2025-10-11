@@ -4,11 +4,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 export const cacheConfig: CacheModuleAsyncOptions = {
   imports: [ConfigModule],
   useFactory: async (configService: ConfigService) => {
-    const ttl = configService.get<number>('redis.ttl', 300);
-    const redisHost = configService.get<string>('redis.host', 'localhost');
-    const redisPort = configService.get<number>('redis.port', 6379);
+    const ttl = configService.get<number>('CACHE_TTL', 300);
+    const redisHost = configService.get<string>('REDIS_HOST', 'localhost');
+    const redisPort = configService.get<number>('REDIS_PORT', 6379);
     const redisPassword = configService.get<string | undefined>(
-      'redis.password',
+      'REDIS_PASSWORD',
     );
 
     try {

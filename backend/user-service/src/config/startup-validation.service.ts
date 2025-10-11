@@ -33,8 +33,6 @@ export class StartupValidationService implements OnModuleInit {
         );
       }
 
-      await this.validateJWTConfiguration();
-
       this.logger.log('✅ All startup validations passed successfully');
     } catch (error) {
       this.logger.error('❌ Startup validation failed:', error.message);
@@ -169,29 +167,7 @@ export class StartupValidationService implements OnModuleInit {
     }
   }
 
-  private async validateJWTConfiguration(): Promise<void> {
-    this.logger.log('Validating JWT configuration...');
 
-    try {
-      const jwtConfig = this.configService.jwtConfig;
-
-      if (!jwtConfig.secret || jwtConfig.secret.length < 32) {
-        throw new Error('JWT secret must be at least 32 characters long');
-      }
-
-      // Validate JWT expiration format
-      const expiresInRegex = /^(\d+[smhd]|\d+)$/;
-      if (!expiresInRegex.test(jwtConfig.expiresIn)) {
-        throw new Error('Invalid JWT expires in format');
-      }
-
-      this.logger.log(
-        `✅ JWT configuration validated (expires: ${jwtConfig.expiresIn})`,
-      );
-    } catch (error) {
-      throw new Error(`JWT validation failed: ${error.message}`);
-    }
-  }
 
   // Health check method for runtime validation
   async performHealthCheck(): Promise<{

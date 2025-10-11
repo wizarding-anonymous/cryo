@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { NotFoundException } from '@nestjs/common';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 
 describe('UserController', () => {
   let controller: UserController;
@@ -18,9 +19,11 @@ describe('UserController', () => {
   };
 
   const mockUserService = {
+    create: jest.fn(),
+    findByEmail: jest.fn(),
     findById: jest.fn(),
-    updateProfile: jest.fn(),
-    deleteUser: jest.fn(),
+    updateLastLogin: jest.fn(),
+    exists: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,7 +36,7 @@ describe('UserController', () => {
         },
       ],
     })
-      .overrideGuard(JwtAuthGuard)
+      .overrideGuard(ThrottlerGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -49,52 +52,88 @@ describe('UserController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getProfile', () => {
-    it('should return user profile', async () => {
-      const req = {
-        user: { userId: mockUser.id, email: mockUser.email },
-      } as any;
+  describe('createUser', () => {
+    it('should create a new user', async () => {
+      const createUserDto: CreateUserDto = {
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'hashedPassword123',
+      };
 
-      mockUserService.findById.mockResolvedValue(mockUser);
+      mockUserService.create.mockResolvedValue(mockUser);
 
-      const result = await controller.getProfile(req);
+      const result = await controller.createUser(createUserDto);
 
-      expect(userService.findById).toHaveBeenCalledWith(mockUser.id);
+      expect(userService.create).toHaveBeenCalledWith(createUserDto);
       expect(result).toEqual(mockUser);
     });
   });
 
-  describe('updateProfile', () => {
-    it('should update user profile', async () => {
-      const req = {
-        user: { userId: mockUser.id, email: mockUser.email },
-      } as any;
-      const updateDto: UpdateProfileDto = { name: 'Updated Name' };
-      const updatedUser = { ...mockUser, name: 'Updated Name' };
+  describe('findByEmail', () => {
+    it('should return user when found', async () => {
+      const email = 'test@example.com';
+      mockUserService.findByEmail.mockResolvedValue(mockUser);
 
-      mockUserService.updateProfile.mockResolvedValue(updatedUser);
+      const result = await controller.findByEmail(email);
 
-      const result = await controller.updateProfile(req, updateDto);
+      expect(userService.findByEmail).toHaveBeenCalledWith(email);
+      expect(result).toEqual(mockUser);
+    });
 
-      expect(userService.updateProfile).toHaveBeenCalledWith(
-        mockUser.id,
-        updateDto,
-      );
-      expect(result).toEqual(updatedUser);
+    it('should throw NotFoundException when user not found', async () => {
+      const email = 'notfound@example.com';
+      mockUserService.findByEmail.mockResolvedValue(null);
+
+      await expect(controller.findByEmail(email)).rejects.toThrow(NotFoundException);
+      expect(userService.findByEmail).toHaveBeenCalledWith(email);
     });
   });
 
-  describe('deleteProfile', () => {
-    it('should delete user profile', async () => {
-      const req = {
-        user: { userId: mockUser.id, email: mockUser.email },
-      } as any;
+  describe('findById', () => {
+    it('should return user when found', async () => {
+      const userId = mockUser.id;
+      const params = { id: userId };
+      mockUserService.findById.mockResolvedValue(mockUser);
 
-      mockUserService.deleteUser.mockResolvedValue(undefined);
+      const result = await controller.findById(params);
 
-      await controller.deleteProfile(req);
+      expect(userService.findById).toHaveBeenCalledWith(userId);
+      expect(result).toEqual(mockUser);
+    });
 
-      expect(userService.deleteUser).toHaveBeenCalledWith(mockUser.id);
+    it('should throw NotFoundException when user not found', async () => {
+      const userId = 'nonexistent-id';
+      const params = { id: userId };
+      mockUserService.findById.mockResolvedValue(null);
+
+      await expect(controller.findById(params)).rejects.toThrow(NotFoundException);
+      expect(userService.findById).toHaveBeenCalledWith(userId);
+    });
+  });
+
+  describe('updateLastLogin', () => {
+    it('should update last login timestamp', async () => {
+      const userId = mockUser.id;
+      const params = { id: userId };
+      mockUserService.updateLastLogin.mockResolvedValue(undefined);
+
+      const result = await controller.updateLastLogin(params);
+
+      expect(userService.updateLastLogin).toHaveBeenCalledWith(userId);
+      expect(result).toEqual({ message: 'Last login updated successfully' });
+    });
+  });
+
+  describe('checkUserExists', () => {
+    it('should check if user exists', async () => {
+      const userId = mockUser.id;
+      const params = { id: userId };
+      mockUserService.exists.mockResolvedValue(true);
+
+      const result = await controller.checkUserExists(params);
+
+      expect(userService.exists).toHaveBeenCalledWith(userId);
+      expect(result).toEqual({ exists: true });
     });
   });
 });

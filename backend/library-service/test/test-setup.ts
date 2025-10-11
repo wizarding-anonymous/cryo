@@ -6,18 +6,19 @@
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_HOST = '127.0.0.1';
-process.env.DATABASE_PORT = '5433';
-process.env.DATABASE_USERNAME = 'postgres';
-process.env.DATABASE_PASSWORD = 'password';
-process.env.DATABASE_NAME = 'library_service_test';
+process.env.DATABASE_PORT = '5434';
+process.env.DATABASE_USERNAME = 'library_service';
+process.env.DATABASE_PASSWORD = 'library_password';
+process.env.DATABASE_NAME = 'library_db';
 process.env.REDIS_HOST = '127.0.0.1';
-process.env.REDIS_PORT = '6380';
+process.env.REDIS_PORT = '6379';
+process.env.REDIS_PASSWORD = 'redis_password';
 process.env.JWT_SECRET = 'test-secret-key-for-e2e-tests-only';
 
-// Mock external services for testing - match configuration.ts env names
-process.env.GAMES_CATALOG_SERVICE_URL = 'http://localhost:3011';
-process.env.USER_SERVICE_URL = 'http://localhost:3012';
-process.env.PAYMENT_SERVICE_URL = 'http://localhost:3013';
+// External services for testing - use running services
+process.env.GAMES_CATALOG_SERVICE_URL = 'http://localhost:3002';
+process.env.USER_SERVICE_URL = 'http://localhost:3001';
+process.env.PAYMENT_SERVICE_URL = 'http://localhost:3005';
 
 // Disable Kafka for tests
 process.env.KAFKA_ENABLED = 'false';

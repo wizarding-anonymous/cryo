@@ -33,7 +33,7 @@ export class GameCatalogClient {
     private readonly configService: ConfigService,
   ) {
     const configuredBaseUrl = this.configService.get<string>(
-      'services.gamesCatalog.url',
+      'GAMES_CATALOG_SERVICE_URL',
     );
     if (!configuredBaseUrl) {
       throw new Error('Game Catalog service URL is not configured');

@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import * as dotenv from 'dotenv';
-import { join } from 'path';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -9,8 +8,7 @@ dotenv.config();
 /**
  * This configuration is used by the TypeORM CLI to generate and run migrations.
  * It reads the database connection details from the .env file.
- * It points to the TypeScript source files for entities and migrations,
- * which is convenient for development workflows.
+ * Simplified configuration similar to user-service for better compatibility.
  */
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
@@ -36,13 +34,6 @@ export const dataSourceOptions: DataSourceOptions = {
   logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
   // SSL configuration - disabled for Docker containers
   ssl: false,
-  // Connection pooling configuration
-  extra: {
-    max: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '20', 10),
-    min: parseInt(process.env.DATABASE_MIN_CONNECTIONS || '5', 10),
-    acquireTimeoutMillis: parseInt(process.env.DATABASE_ACQUIRE_TIMEOUT || '60000', 10),
-    idleTimeoutMillis: parseInt(process.env.DATABASE_IDLE_TIMEOUT || '600000', 10),
-  },
 };
 
 const AppDataSource = new DataSource(dataSourceOptions);

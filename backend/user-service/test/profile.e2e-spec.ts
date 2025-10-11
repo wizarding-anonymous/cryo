@@ -84,7 +84,7 @@ describe('Profile and Auth Flow (e2e)', () => {
     const user = {
       name: 'E2E Test User',
       email: `e2e-${Date.now()}@test.com`,
-      password: 'password123',
+      password: 'StrongPass123!',
     };
     let accessToken: string;
 
@@ -96,7 +96,7 @@ describe('Profile and Auth Flow (e2e)', () => {
         .then((res) => {
           expect(res.body.data).toBeDefined();
           expect(res.body.data.user.email).toEqual(user.email);
-          expect(res.body.data).toHaveProperty('accessToken');
+          expect(res.body.data).toHaveProperty('access_token');
         });
     });
 
@@ -106,8 +106,8 @@ describe('Profile and Auth Flow (e2e)', () => {
         .send({ email: user.email, password: user.password })
         .expect(200)
         .then((res) => {
-          expect(res.body.data).toHaveProperty('accessToken');
-          accessToken = res.body.data.accessToken as string;
+          expect(res.body.data).toHaveProperty('access_token');
+          accessToken = res.body.data.access_token as string;
         });
     });
 
@@ -147,7 +147,7 @@ describe('Profile and Auth Flow (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(401)
         .then((res) => {
-          expect(res.body.error.code).toEqual('UNAUTHENTICATED');
+          expect(res.body.message).toContain('Токен недействителен');
         });
     });
 
@@ -161,7 +161,7 @@ describe('Profile and Auth Flow (e2e)', () => {
       const deleteUser = {
         name: 'Delete Test User',
         email: `delete-${Date.now()}@test.com`,
-        password: 'password123',
+        password: 'StrongPass123!',
       };
 
       // Register the new user
@@ -175,7 +175,7 @@ describe('Profile and Auth Flow (e2e)', () => {
         .post('/api/auth/login')
         .send({ email: deleteUser.email, password: deleteUser.password });
 
-      const freshToken = loginRes.body.data.accessToken as string;
+      const freshToken = loginRes.body.data.access_token as string;
 
       // Delete the account
       await request(app.getHttpServer())

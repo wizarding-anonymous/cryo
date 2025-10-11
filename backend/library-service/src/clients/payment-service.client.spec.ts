@@ -16,7 +16,7 @@ describe('PaymentServiceClient', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: unknown) => {
-      if (key === 'services.payment.url') {
+      if (key === 'PAYMENT_SERVICE_URL') {
         return 'http://payment-service';
       }
       return defaultValue;

@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
 import { SecurityClient } from '../integrations/security/security.client';
@@ -13,6 +12,10 @@ const mockUserRepository = {
   save: jest.fn(),
   findOne: jest.fn(),
   delete: jest.fn(),
+  softDelete: jest.fn(),
+  preload: jest.fn(),
+  count: jest.fn(),
+  update: jest.fn(),
 };
 
 const mockSecurityClient = {
@@ -51,26 +54,26 @@ describe('UserService', () => {
   });
 
   describe('create', () => {
-    it('should hash the password and create a new user', async () => {
+    it('should create a new user with pre-hashed password from auth-service', async () => {
       const createUserDto = {
         name: 'Test',
         email: 'test@example.com',
-        password: 'password',
+        password: '$2b$10$hashedPasswordFromAuthService', // Already hashed by auth-service
       };
-      const hashedPassword = 'hashed_password';
-      const userEntity = { ...createUserDto, password: hashedPassword };
+      const userEntity = { ...createUserDto };
       const savedUser = { id: 'a-uuid', ...userEntity };
 
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue(hashedPassword as never);
       mockUserRepository.create.mockReturnValue(userEntity);
       mockUserRepository.save.mockResolvedValue(savedUser);
 
       const result = await service.create(createUserDto);
 
-      expect(bcrypt.hash).toHaveBeenCalledWith(createUserDto.password, 10);
-      expect(mockUserRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ password: hashedPassword }),
-      );
+      // Password should NOT be hashed again since it comes pre-hashed from auth-service
+      expect(mockUserRepository.create).toHaveBeenCalledWith({
+        name: createUserDto.name,
+        email: createUserDto.email,
+        password: createUserDto.password, // Should use the already hashed password
+      });
       expect(mockUserRepository.save).toHaveBeenCalledWith(userEntity);
       expect(mockSecurityClient.logSecurityEvent).toHaveBeenCalled();
       expect(result).toEqual(savedUser);
@@ -101,16 +104,20 @@ describe('UserService', () => {
   describe('delete', () => {
     it('should delete a user successfully', async () => {
       const userId = 'a-uuid';
-      mockUserRepository.delete.mockResolvedValue({ affected: 1 });
+      const mockUser = { id: userId, name: 'Test', email: 'test@example.com' };
+      
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.softDelete.mockResolvedValue({ affected: 1 });
 
       await service.delete(userId);
 
-      expect(mockUserRepository.delete).toHaveBeenCalledWith(userId);
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({ where: { id: userId } });
+      expect(mockUserRepository.softDelete).toHaveBeenCalledWith(userId);
     });
 
     it('should throw NotFoundException if user to delete is not found', async () => {
       const userId = 'a-uuid';
-      mockUserRepository.delete.mockResolvedValue({ affected: 0 });
+      mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(service.delete(userId)).rejects.toThrow(NotFoundException);
     });

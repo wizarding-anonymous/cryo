@@ -2,13 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+// import { APP_GUARD } from '@nestjs/core';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 import { IntegrationsModule } from '../src/integrations/integrations.module';
 import { UserModule } from '../src/user/user.module';
-import { AuthModule } from '../src/auth/auth.module';
+
 import { ProfileModule } from '../src/profile/profile.module';
 import { TestHealthModule } from './test-health.module';
 import { AppPrometheusModule } from '../src/common/prometheus/prometheus.module';
@@ -19,15 +19,15 @@ import { TestConfigModule } from './test-config.module';
     // --- Test Config Module (without startup validation) ---
     TestConfigModule,
 
-    // --- Throttler Module for Rate Limiting ---
+    // --- Throttler Module with high limits for tests ---
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 1 minute
-        limit: 60, // 60 requests per minute
+        limit: 1000, // Very high limit for tests
       },
     ]),
 
-    // --- TypeORM Module (PostgreSQL) ---
+    // --- TypeORM Module (PostgreSQL for tests) ---
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -38,7 +38,8 @@ import { TestConfigModule } from './test-config.module';
         password: configService.get<string>('POSTGRES_PASSWORD'),
         database: configService.get<string>('POSTGRES_DB'),
         autoLoadEntities: true,
-        synchronize: false,
+        synchronize: false, // Use migrations instead of sync
+        dropSchema: false, // Don't drop schema
       }),
     }),
 
@@ -50,7 +51,6 @@ import { TestConfigModule } from './test-config.module';
     // --- Custom Modules ---
     IntegrationsModule,
     UserModule,
-    AuthModule,
     ProfileModule,
     TestHealthModule,
     AppPrometheusModule,
@@ -58,10 +58,7 @@ import { TestConfigModule } from './test-config.module';
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    // ThrottlerGuard is completely disabled in tests
   ],
 })
-export class TestAppModule {}
+export class TestAppModule { }

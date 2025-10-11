@@ -6,8 +6,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { UserModule } from './user/user.module';
-import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
+
 import { HealthModule } from './health/health.module';
 import { AppPrometheusModule } from './common/prometheus/prometheus.module';
 import { AppConfigModule } from './config/config.module';
@@ -24,7 +24,7 @@ import { EnvironmentVariables } from './config/env.validation';
     // --- Database Module (PostgreSQL with TypeORM) ---
     DatabaseModule,
 
-    // --- Redis Module for JWT blacklisting and caching ---
+    // --- Redis Module for caching ---
     RedisModule,
 
     // --- Throttler Module for Rate Limiting ---
@@ -42,7 +42,6 @@ import { EnvironmentVariables } from './config/env.validation';
     // --- Custom Modules ---
     IntegrationsModule,
     UserModule,
-    AuthModule,
     ProfileModule,
     HealthModule,
     AppPrometheusModule,
@@ -57,4 +56,4 @@ import { EnvironmentVariables } from './config/env.validation';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

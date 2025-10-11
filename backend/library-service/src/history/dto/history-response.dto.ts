@@ -34,7 +34,7 @@ export class HistoryResponseDto {
       },
     ],
   })
-  purchases!: PurchaseHistoryDto[];
+  history!: PurchaseHistoryDto[];
 
   @ApiProperty({
     description: 'Pagination metadata for purchase history',

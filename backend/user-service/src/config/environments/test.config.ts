@@ -16,10 +16,6 @@ export const testConfig: Partial<EnvironmentVariables> = {
   REDIS_MAX_RETRIES: 1,
   REDIS_RETRY_DELAY: 500,
 
-  // JWT - test-friendly settings
-  JWT_EXPIRES_IN: '1h',
-  JWT_REFRESH_EXPIRES_IN: '24h',
-
   // Rate limiting - disabled for testing
   THROTTLE_TTL: 60000,
   THROTTLE_LIMIT: 1000, // Very high limit for tests

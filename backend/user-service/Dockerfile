@@ -31,7 +31,7 @@ RUN npm install --only=production --legacy-peer-deps
 COPY --from=builder /usr/src/app/dist ./dist
 
 # Expose the port the app runs on (as defined in .env)
-EXPOSE 3001
+EXPOSE 3002
 
 # Command to run the application
 CMD ["node", "dist/src/main.js"]

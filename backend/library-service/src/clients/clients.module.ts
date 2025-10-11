@@ -10,7 +10,7 @@ import { PaymentServiceClient } from './payment-service.client';
     HttpModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        timeout: configService.get('services.timeout', 5000),
+        timeout: 5000,
         maxRedirects: 5,
         retries: 0, // We handle retries in our clients
         headers: {
@@ -19,11 +19,8 @@ import { PaymentServiceClient } from './payment-service.client';
           'Content-Type': 'application/json',
         },
         // Connection pooling for better performance
-        maxSockets: configService.get<number>('services.maxSockets', 100),
-        maxFreeSockets: configService.get<number>(
-          'services.maxFreeSockets',
-          10,
-        ),
+        maxSockets: 100,
+        maxFreeSockets: 10,
         // Keep-alive settings
         keepAlive: true,
         keepAliveMsecs: 30000,
@@ -34,4 +31,4 @@ import { PaymentServiceClient } from './payment-service.client';
   providers: [GameCatalogClient, UserServiceClient, PaymentServiceClient],
   exports: [GameCatalogClient, UserServiceClient, PaymentServiceClient],
 })
-export class ClientsModule {}
+export class ClientsModule { }

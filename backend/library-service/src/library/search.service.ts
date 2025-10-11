@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { LibraryRepository } from './repositories/library.repository';
 import {
   SearchLibraryDto,
@@ -11,6 +11,8 @@ import { CacheService } from '../cache/cache.service';
 
 @Injectable()
 export class SearchService {
+  private readonly logger = new Logger(SearchService.name);
+
   constructor(
     private readonly libraryRepository: LibraryRepository,
     private readonly gameCatalogClient: GameCatalogClient,
@@ -18,8 +20,8 @@ export class SearchService {
   ) {}
 
   /**
-   * Enhanced search with full-text capabilities, fuzzy matching, and optimized caching
-   * Supports search by title, developer, publisher, and tags with advanced scoring
+   * Simplified search with basic text matching and caching
+   * Searches by title, developer, publisher, and tags
    */
   async searchUserLibrary(
     userId: string,
@@ -27,32 +29,59 @@ export class SearchService {
   ): Promise<LibraryResponseDto> {
     const page = searchDto.page ?? 1;
     const limit = searchDto.limit ?? 20;
-    const query = normalize(searchDto.query);
+    const query = searchDto.query?.toLowerCase().trim();
 
-    // Enhanced cache key with query normalization
-    const cacheKey = `search_library_v2_${userId}_page_${page}_limit_${limit}_q_${createSearchHash(query)}`;
+    if (!query) {
+      // If no query, get all games directly from repository
+      const [allGames, total] = await this.libraryRepository.findAndCount({
+        where: { userId },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+      
+      if (allGames.length === 0) {
+        return {
+          games: [],
+          pagination: { total: 0, page, limit, totalPages: 0 },
+        };
+      }
+      
+      // Enrich with game details
+      const gameIds = allGames.map((game) => game.gameId);
+      let gameDetails: GameDetailsDto[] = [];
+      
+      try {
+        gameDetails = await this.gameCatalogClient.getGamesByIds(gameIds);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Failed to get game details: ${errorMessage}`);
+      }
+      
+      const gameDetailsMap = new Map<string, GameDetailsDto>();
+      gameDetails.forEach((detail) => gameDetailsMap.set(detail.id, detail));
+      
+      const enrichedGames = allGames.map((game) =>
+        LibraryGameDto.fromEntity(game, gameDetailsMap.get(game.gameId)),
+      );
+      
+      const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
+      
+      return {
+        games: enrichedGames,
+        pagination: { total, page, limit, totalPages },
+      };
+    }
+
+    // Simple cache key
+    const cacheKey = `search_${userId}_${query}_${page}_${limit}`;
 
     const fetchFn = async (): Promise<LibraryResponseDto> => {
-      // First try database-level full-text search for better performance
-      const [dbResults, dbTotal] =
-        await this.libraryRepository.fullTextSearchLibrary(userId, query, {
-          page,
-          limit,
-          sortBy: searchDto.sortBy,
-          sortOrder: searchDto.sortOrder,
-        });
+      // Get all user games
+      const allGames = await this.libraryRepository.find({
+        where: { userId },
+      });
 
-      // If database search returns results, use them as base
-      let libraryGames = dbResults;
-
-      // If no database results or we want comprehensive search, get all user games
-      if (libraryGames.length === 0) {
-        libraryGames = await this.libraryRepository.find({
-          where: { userId },
-        });
-      }
-
-      if (libraryGames.length === 0) {
+      if (allGames.length === 0) {
         return {
           games: [],
           pagination: { total: 0, page, limit, totalPages: 0 },
@@ -60,35 +89,46 @@ export class SearchService {
       }
 
       // Get game details for enrichment
-      const gameIds = libraryGames.map((game) => game.gameId);
-      const gameDetails = await this.gameCatalogClient.getGamesByIds(gameIds);
+      const gameIds = allGames.map((game) => game.gameId);
+      let gameDetails: GameDetailsDto[] = [];
+      
+      try {
+        gameDetails = await this.gameCatalogClient.getGamesByIds(gameIds);
+      } catch (error) {
+        // Graceful degradation: continue without enrichment
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Failed to get game details for search: ${errorMessage}`);
+      }
+      
       const gameDetailsMap = new Map<string, GameDetailsDto>();
       gameDetails.forEach((detail) => gameDetailsMap.set(detail.id, detail));
 
-      // Enrich games with details
-      const enrichedLibraryGames = libraryGames.map((game) =>
+      // Simple text search in game details
+      const filteredGames = allGames.filter((game) => {
+        const details = gameDetailsMap.get(game.gameId);
+        if (!details) return false;
+        
+        return (
+          details.title?.toLowerCase().includes(query) ||
+          details.developer?.toLowerCase().includes(query) ||
+          details.publisher?.toLowerCase().includes(query) ||
+          details.tags?.some(tag => tag.toLowerCase().includes(query))
+        );
+      });
+
+      // Apply pagination
+      const total = filteredGames.length;
+      const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
+      const startIndex = (page - 1) * limit;
+      const paginatedGames = filteredGames.slice(startIndex, startIndex + limit);
+      
+      // Enrich paginated games
+      const enrichedGames = paginatedGames.map((game) =>
         LibraryGameDto.fromEntity(game, gameDetailsMap.get(game.gameId)),
       );
 
-      // Apply advanced search scoring with fuzzy matching
-      const scoredGames = enrichedLibraryGames
-        .map((game) => ({
-          game,
-          score: this.computeAdvancedMatchScore(query, game.gameDetails),
-        }))
-        .filter((entry) => entry.score >= 0.3) // Lower threshold for fuzzy matching
-        .sort((a, b) => b.score - a.score);
-
-      // Apply pagination to scored results
-      const total = scoredGames.length;
-      const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
-      const startIndex = (page - 1) * limit;
-      const paginatedGames = scoredGames
-        .slice(startIndex, startIndex + limit)
-        .map((entry) => entry.game);
-
       return {
-        games: paginatedGames,
+        games: enrichedGames,
         pagination: {
           total,
           page,
@@ -98,10 +138,10 @@ export class SearchService {
       };
     };
 
-    return await this.cacheService.getCachedSearchResults<LibraryResponseDto>(
-      userId,
+    return await this.cacheService.getOrSet<LibraryResponseDto>(
       cacheKey,
       fetchFn,
+      300, // 5 minutes cache for search results
     );
   }
 
@@ -173,10 +213,10 @@ export class SearchService {
       };
     };
 
-    return await this.cacheService.getCachedSearchResults<LibraryResponseDto>(
-      userId,
+    return await this.cacheService.getOrSet<LibraryResponseDto>(
       cacheKey,
       fetchFn,
+      300, // 5 minutes cache for search results
     );
   }
 

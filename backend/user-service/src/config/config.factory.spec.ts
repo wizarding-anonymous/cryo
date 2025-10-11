@@ -189,26 +189,7 @@ describe('ConfigFactory', () => {
     });
   });
 
-  describe('createJwtConfig', () => {
-    it('should create JWT configuration', () => {
-      mockConfigService.get.mockImplementation((key: string) => {
-        const config = {
-          JWT_SECRET: 'test-secret-key-32-characters-long',
-          JWT_EXPIRES_IN: '1h',
-        };
-        return config[key];
-      });
 
-      const jwtConfig = configFactory.createJwtConfig();
-
-      expect(jwtConfig).toEqual({
-        secret: 'test-secret-key-32-characters-long',
-        signOptions: {
-          expiresIn: '1h',
-        },
-      });
-    });
-  });
 
   describe('createCorsConfig', () => {
     it('should create CORS configuration with wildcard origin', () => {
@@ -298,7 +279,6 @@ describe('ConfigFactory', () => {
           POSTGRES_PASSWORD: 'password',
           POSTGRES_DB: 'db',
           REDIS_HOST: 'localhost',
-          JWT_SECRET: 'test-secret-key-32-characters-long',
           NODE_ENV: 'development',
         };
         return config[key];
@@ -321,25 +301,6 @@ describe('ConfigFactory', () => {
       );
     });
 
-    it('should throw error for short JWT secret', () => {
-      mockConfigService.get.mockImplementation((key: string) => {
-        const config = {
-          POSTGRES_HOST: 'localhost',
-          POSTGRES_USER: 'user',
-          POSTGRES_PASSWORD: 'password',
-          POSTGRES_DB: 'db',
-          REDIS_HOST: 'localhost',
-          JWT_SECRET: 'short', // Too short
-          NODE_ENV: 'development',
-        };
-        return config[key];
-      });
-
-      expect(() => configFactory.validateConfiguration()).toThrow(
-        'JWT_SECRET must be at least 32 characters long',
-      );
-    });
-
     it('should validate production-specific configuration', () => {
       mockConfigService.get.mockImplementation((key: string) => {
         const config = {
@@ -348,15 +309,13 @@ describe('ConfigFactory', () => {
           POSTGRES_PASSWORD: 'CHANGE_ME_IN_PRODUCTION', // Default value
           POSTGRES_DB: 'db',
           REDIS_HOST: 'localhost',
-          JWT_SECRET:
-            'CHANGE_ME_IN_PRODUCTION_MUST_BE_AT_LEAST_32_CHARACTERS_LONG', // Default value
           NODE_ENV: 'production',
         };
         return config[key];
       });
 
       expect(() => configFactory.validateConfiguration()).toThrow(
-        'JWT_SECRET must be changed from default value in production',
+        'POSTGRES_PASSWORD must be changed from default value in production',
       );
     });
   });

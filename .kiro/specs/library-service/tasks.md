@@ -61,6 +61,11 @@
 
 
 
+
+
+
+
+
   - Установить и настроить TypeORM с PostgreSQL 14+ (@nestjs/typeorm)
   - Создать database configuration с валидацией переменных окружения
   - Настроить миграции и синхронизацию схемы для production

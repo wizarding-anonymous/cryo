@@ -13,6 +13,14 @@ services:
       - NODE_ENV=development
     command: npm run start:dev
 
+  auth-service:
+    volumes:
+      - ./auth-service/src:/usr/src/app/src
+      - ./auth-service/test:/usr/src/app/test
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
   user-service:
     build:
       context: ./user-service

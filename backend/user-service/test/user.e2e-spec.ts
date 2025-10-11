@@ -77,7 +77,7 @@ describe('User Endpoints (e2e)', () => {
     const testUser = {
       name: 'User Test User',
       email: `user-test-${Date.now()}@example.com`,
-      password: 'password123',
+      password: 'StrongPass123!',
     };
     let accessToken: string;
 
@@ -94,7 +94,7 @@ describe('User Endpoints (e2e)', () => {
           password: testUser.password,
         });
 
-      accessToken = loginRes.body.data.accessToken;
+      accessToken = loginRes.body.data.access_token;
     });
 
     describe('GET /users/profile', () => {
@@ -118,7 +118,7 @@ describe('User Endpoints (e2e)', () => {
           .get('/api/users/profile')
           .expect(401)
           .then((res) => {
-            expect(res.body.error.code).toEqual('UNAUTHENTICATED');
+            expect(res.body.message).toContain('Unauthorized');
           });
       });
 
@@ -128,7 +128,7 @@ describe('User Endpoints (e2e)', () => {
           .set('Authorization', 'Bearer invalid-token')
           .expect(401)
           .then((res) => {
-            expect(res.body.error.code).toEqual('UNAUTHENTICATED');
+            expect(res.body.message).toContain('Unauthorized');
           });
       });
     });
@@ -155,7 +155,7 @@ describe('User Endpoints (e2e)', () => {
           .send({ name: '' })
           .expect(400)
           .then((res) => {
-            expect(res.body.error.code).toEqual('VALIDATION_ERROR');
+            expect(res.body.message).toContain('Имя не может быть пустым');
           });
       });
 
@@ -167,7 +167,7 @@ describe('User Endpoints (e2e)', () => {
           .send({ name: longName })
           .expect(400)
           .then((res) => {
-            expect(res.body.error.code).toEqual('VALIDATION_ERROR');
+            expect(res.body.message).toContain('Имя не может быть длиннее 100 символов');
           });
       });
 
@@ -181,7 +181,7 @@ describe('User Endpoints (e2e)', () => {
           })
           .expect(400)
           .then((res) => {
-            expect(res.body.error.code).toEqual('VALIDATION_ERROR');
+            expect(res.body.message).toContain('property extraField should not exist');
           });
       });
 
@@ -191,7 +191,7 @@ describe('User Endpoints (e2e)', () => {
           .send({ name: 'New Name' })
           .expect(401)
           .then((res) => {
-            expect(res.body.error.code).toEqual('UNAUTHENTICATED');
+            expect(res.body.message).toContain('Unauthorized');
           });
       });
 
@@ -215,7 +215,7 @@ describe('User Endpoints (e2e)', () => {
         const deleteTestUser = {
           name: 'Delete Test User',
           email: `delete-test-${Date.now()}-${Math.random()}@example.com`,
-          password: 'password123',
+          password: 'StrongPass123!',
         };
 
         await request(app.getHttpServer())
@@ -229,7 +229,7 @@ describe('User Endpoints (e2e)', () => {
             password: deleteTestUser.password,
           });
 
-        deleteTestToken = loginRes.body.data.accessToken;
+        deleteTestToken = loginRes.body.data.access_token;
       });
 
       it('should delete user profile successfully', () => {
@@ -244,7 +244,7 @@ describe('User Endpoints (e2e)', () => {
           .delete('/api/users/profile')
           .expect(401)
           .then((res) => {
-            expect(res.body.error.code).toEqual('UNAUTHENTICATED');
+            expect(res.body.message).toContain('Unauthorized');
           });
       });
 
@@ -254,7 +254,7 @@ describe('User Endpoints (e2e)', () => {
           .set('Authorization', 'Bearer invalid-token')
           .expect(401)
           .then((res) => {
-            expect(res.body.error.code).toEqual('UNAUTHENTICATED');
+            expect(res.body.message).toContain('Unauthorized');
           });
       });
 
@@ -262,7 +262,7 @@ describe('User Endpoints (e2e)', () => {
         const deleteTestUser = {
           name: 'Delete Test User 2',
           email: `delete-test-2-${Date.now()}@example.com`,
-          password: 'password123',
+          password: 'StrongPass123!',
         };
 
         // Register user
@@ -278,7 +278,7 @@ describe('User Endpoints (e2e)', () => {
             password: deleteTestUser.password,
           });
 
-        const token = loginRes.body.data.accessToken;
+        const token = loginRes.body.data.access_token;
 
         // Delete account
         await request(app.getHttpServer())

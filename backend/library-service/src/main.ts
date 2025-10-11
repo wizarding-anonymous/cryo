@@ -62,14 +62,15 @@ async function bootstrap(): Promise<void> {
 
   // Register shutdown handlers
   try {
-    const dataSource = app.get('DataSource');
+    const { DataSource } = await import('typeorm');
+    const dataSource = app.get(DataSource);
     if (dataSource) {
       gracefulShutdown.registerShutdownHandler(
         GracefulShutdownService.createDatabaseShutdownHandler(dataSource),
       );
     }
   } catch (error) {
-    logger.warn('Failed to get DataSource for graceful shutdown');
+    logger.warn('Failed to get DataSource for graceful shutdown:', error instanceof Error ? error.message : 'Unknown error');
   }
 
   // Hybrid application setup (for future Kafka integration)
@@ -158,7 +159,7 @@ async function bootstrap(): Promise<void> {
     )
     .setDescription(
       configService.get<string>('swagger.description') ??
-        `# Library Service API
+      `# Library Service API
 
 API for managing user game libraries in the Russian Gaming Platform.
 
@@ -228,9 +229,9 @@ Service health and metrics are available at:
     .setLicense('MIT', 'https://opensource.org/licenses/MIT')
     .addServer(
       configService.get<string>('swagger.server.url') ??
-        'http://localhost:3000',
+      'http://localhost:3000',
       configService.get<string>('swagger.server.description') ??
-        'Development server',
+      'Development server',
     )
     .addServer('https://api.yourgamingplatform.ru', 'Production server')
     .addBearerAuth(
@@ -311,8 +312,7 @@ Service health and metrics are available at:
 
   logger.log(`🚀 Library Service is running on: http://localhost:${port}`);
   logger.log(
-    `📚 Swagger documentation: http://localhost:${port}/${
-      configService.get<string>('swagger.path') ?? 'api/docs'
+    `📚 Swagger documentation: http://localhost:${port}/${configService.get<string>('swagger.path') ?? 'api/docs'
     }`,
   );
 }

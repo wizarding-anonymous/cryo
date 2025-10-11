@@ -43,7 +43,7 @@ export class PaymentServiceClient {
     private readonly configService: ConfigService,
   ) {
     const configuredBaseUrl = this.configService.get<string>(
-      'services.payment.url',
+      'PAYMENT_SERVICE_URL',
     );
     if (!configuredBaseUrl) {
       throw new Error('Payment service URL is not configured');

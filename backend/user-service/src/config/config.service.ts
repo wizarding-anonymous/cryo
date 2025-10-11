@@ -64,19 +64,7 @@ export class AppConfigService {
     };
   }
 
-  // JWT
-  get jwtConfig() {
-    return {
-      secret: this.configService.get('JWT_SECRET', { infer: true }),
-      expiresIn: this.configService.get('JWT_EXPIRES_IN', { infer: true }),
-      refreshSecret: this.configService.get('JWT_REFRESH_SECRET', {
-        infer: true,
-      }),
-      refreshExpiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', {
-        infer: true,
-      }),
-    };
-  }
+
 
   // Rate Limiting
   get throttleConfig() {
@@ -159,7 +147,6 @@ export class AppConfigService {
       'POSTGRES_PASSWORD',
       'POSTGRES_DB',
       'REDIS_HOST',
-      'JWT_SECRET',
     ];
 
     const missingVars = requiredVars.filter(
