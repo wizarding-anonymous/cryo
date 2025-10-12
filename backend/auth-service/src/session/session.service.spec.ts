@@ -1,100 +1,153 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
 import { SessionService, CreateSessionDto } from './session.service';
 import { SessionRepository } from '../repositories/session.repository';
+import { RedisLockService } from '../common/redis/redis-lock.service';
+import { TokenService } from '../token/token.service';
 import { Session } from '../entities/session.entity';
+import { RaceConditionMetricsService } from '../common/metrics/race-condition-metrics.service';
+import { createMockSession } from '../test/mocks';
+import { createHash } from 'crypto';
 
 describe('SessionService', () => {
   let service: SessionService;
   let sessionRepository: jest.Mocked<SessionRepository>;
+  let redisLockService: jest.Mocked<RedisLockService>;
+  let metricsService: jest.Mocked<RaceConditionMetricsService>;
+  let tokenService: jest.Mocked<TokenService>;
 
-  const mockSession: Session = {
-    id: 'session-123',
-    userId: 'user-123',
-    accessToken: 'access-token-123',
-    refreshToken: 'refresh-token-123',
-    ipAddress: '192.168.1.1',
-    userAgent: 'Mozilla/5.0',
-    isActive: true,
-    expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
-    lastAccessedAt: new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const mockCreateSessionDto: CreateSessionDto = {
-    userId: 'user-123',
-    accessToken: 'access-token-123',
-    refreshToken: 'refresh-token-123',
-    ipAddress: '192.168.1.1',
-    userAgent: 'Mozilla/5.0',
-    expiresAt: new Date(Date.now() + 3600000),
-  };
-
-  beforeEach(async () => {
-    const mockSessionRepository = {
+  beforeEach(() => {
+    // Создаем моки напрямую
+    sessionRepository = {
       create: jest.fn(),
       findById: jest.fn(),
-      findByAccessToken: jest.fn(),
-      findByRefreshToken: jest.fn(),
       findByUserId: jest.fn(),
+      findByAccessTokenHash: jest.fn(),
+      findByRefreshTokenHash: jest.fn(),
       updateLastAccessed: jest.fn(),
       deactivateSession: jest.fn(),
       deactivateAllUserSessions: jest.fn(),
       cleanupExpiredSessions: jest.fn(),
+      countActiveSessionsByUserId: jest.fn(),
       getSessionStats: jest.fn(),
       findSessionsByIpAddress: jest.fn(),
       findStaleSessionsOlderThan: jest.fn(),
       updateSessionMetadata: jest.fn(),
-    };
+    } as any;
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SessionService,
-        {
-          provide: SessionRepository,
-          useValue: mockSessionRepository,
-        },
-      ],
-    }).compile();
+    redisLockService = {
+      withLock: jest.fn(),
+      isLocked: jest.fn(),
+      getLockTTL: jest.fn(),
+    } as any;
 
-    service = module.get<SessionService>(SessionService);
-    sessionRepository = module.get(SessionRepository);
+    tokenService = {
+      hashToken: jest.fn(),
+    } as any;
+
+    metricsService = {
+      recordLockAttempt: jest.fn(),
+      recordConcurrentSessionCreation: jest.fn(),
+      getMetrics: jest.fn(),
+      getPrometheusMetrics: jest.fn(),
+      resetMetrics: jest.fn(),
+      getLockSuccessRate: jest.fn(),
+      getLockConflictRate: jest.fn(),
+      getHealthStatus: jest.fn(),
+    } as any;
+
+    // Создаем сервис с моками
+    service = new SessionService(
+      sessionRepository,
+      redisLockService,
+      metricsService,
+      tokenService,
+    );
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('createSession', () => {
-    it('should create a session with metadata tracking', async () => {
+    it('should create session with hashed tokens', async () => {
+      // Requirement 15.2: Secure token storage with SHA-256 hashes
+      const sessionData: CreateSessionDto = {
+        userId: 'user-123',
+        accessToken: 'access-token-123',
+        refreshToken: 'refresh-token-123',
+        ipAddress: '192.168.1.1',
+        userAgent: 'Mozilla/5.0',
+        expiresAt: new Date(),
+      };
+
+      const accessTokenHash = createHash('sha256').update(sessionData.accessToken).digest('hex');
+      const refreshTokenHash = createHash('sha256').update(sessionData.refreshToken).digest('hex');
+
+      tokenService.hashToken
+        .mockReturnValueOnce(accessTokenHash)
+        .mockReturnValueOnce(refreshTokenHash);
+
+      const mockSession = {
+        id: 'session-123',
+        userId: sessionData.userId,
+        accessTokenHash,
+        refreshTokenHash,
+        ipAddress: sessionData.ipAddress,
+        userAgent: sessionData.userAgent,
+        isActive: true,
+        expiresAt: sessionData.expiresAt,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Session;
+
       sessionRepository.create.mockResolvedValue(mockSession);
 
-      const result = await service.createSession(mockCreateSessionDto);
+      const result = await service.createSession(sessionData);
 
+      expect(tokenService.hashToken).toHaveBeenCalledWith(sessionData.accessToken);
+      expect(tokenService.hashToken).toHaveBeenCalledWith(sessionData.refreshToken);
       expect(sessionRepository.create).toHaveBeenCalledWith({
-        userId: mockCreateSessionDto.userId,
-        accessToken: mockCreateSessionDto.accessToken,
-        refreshToken: mockCreateSessionDto.refreshToken,
-        ipAddress: mockCreateSessionDto.ipAddress,
-        userAgent: mockCreateSessionDto.userAgent,
-        expiresAt: mockCreateSessionDto.expiresAt,
+        userId: sessionData.userId,
+        accessTokenHash,
+        refreshTokenHash,
+        ipAddress: sessionData.ipAddress,
+        userAgent: sessionData.userAgent,
+        expiresAt: sessionData.expiresAt,
         isActive: true,
         lastAccessedAt: expect.any(Date),
       });
-      expect(result).toEqual(mockSession);
+      expect(result).toBe(mockSession);
     });
   });
 
-  describe('getSession', () => {
-    it('should retrieve session and update last accessed timestamp', async () => {
-      sessionRepository.findById.mockResolvedValue(mockSession);
-      sessionRepository.updateLastAccessed.mockResolvedValue();
+  describe('getSessionByAccessToken', () => {
+    it('should find session by access token hash', async () => {
+      // Requirement 15.2: Secure token lookup using SHA-256 hash
+      const accessToken = 'access-token-123';
+      const accessTokenHash = createHash('sha256').update(accessToken).digest('hex');
+      
+      const mockSession = {
+        id: 'session-123',
+        userId: 'user-123',
+        accessTokenHash,
+        refreshTokenHash: 'refresh-hash',
+        ipAddress: '192.168.1.1',
+        userAgent: 'Mozilla/5.0',
+        isActive: true,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastAccessedAt: new Date(),
+      } as Session;
 
-      const result = await service.getSession('session-123');
+      tokenService.hashToken.mockReturnValue(accessTokenHash);
+      sessionRepository.findByAccessTokenHash.mockResolvedValue(mockSession);
+      sessionRepository.updateLastAccessed.mockResolvedValue(undefined);
 
-      expect(sessionRepository.findById).toHaveBeenCalledWith('session-123');
-      expect(sessionRepository.updateLastAccessed).toHaveBeenCalledWith('session-123');
+      const result = await service.getSessionByAccessToken(accessToken);
+
+      expect(tokenService.hashToken).toHaveBeenCalledWith(accessToken);
+      expect(sessionRepository.findByAccessTokenHash).toHaveBeenCalledWith(accessTokenHash);
+      expect(sessionRepository.updateLastAccessed).toHaveBeenCalledWith(mockSession.id);
       expect(result).toEqual({
         id: mockSession.id,
         userId: mockSession.userId,
@@ -108,316 +161,240 @@ describe('SessionService', () => {
     });
 
     it('should return null if session not found', async () => {
-      sessionRepository.findById.mockResolvedValue(null);
+      const accessToken = 'non-existent-token';
+      const accessTokenHash = createHash('sha256').update(accessToken).digest('hex');
 
-      const result = await service.getSession('non-existent');
+      tokenService.hashToken.mockReturnValue(accessTokenHash);
+      sessionRepository.findByAccessTokenHash.mockResolvedValue(null);
+
+      const result = await service.getSessionByAccessToken(accessToken);
 
       expect(result).toBeNull();
       expect(sessionRepository.updateLastAccessed).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getSessionByAccessToken', () => {
-    it('should retrieve session by access token and update last accessed', async () => {
-      sessionRepository.findByAccessToken.mockResolvedValue(mockSession);
-      sessionRepository.updateLastAccessed.mockResolvedValue();
-
-      const result = await service.getSessionByAccessToken('access-token-123');
-
-      expect(sessionRepository.findByAccessToken).toHaveBeenCalledWith('access-token-123');
-      expect(sessionRepository.updateLastAccessed).toHaveBeenCalledWith(mockSession.id);
-      expect(result).toBeDefined();
-      expect(result?.userId).toBe(mockSession.userId);
-    });
-
-    it('should return null if session not found by access token', async () => {
-      sessionRepository.findByAccessToken.mockResolvedValue(null);
-
-      const result = await service.getSessionByAccessToken('invalid-token');
-
-      expect(result).toBeNull();
     });
   });
 
   describe('getSessionByRefreshToken', () => {
-    it('should retrieve session by refresh token and update last accessed', async () => {
-      sessionRepository.findByRefreshToken.mockResolvedValue(mockSession);
-      sessionRepository.updateLastAccessed.mockResolvedValue();
+    it('should find session by refresh token hash', async () => {
+      // Requirement 15.2: Secure token lookup using SHA-256 hash
+      const refreshToken = 'refresh-token-123';
+      const refreshTokenHash = createHash('sha256').update(refreshToken).digest('hex');
+      
+      const mockSession = {
+        id: 'session-123',
+        userId: 'user-123',
+        accessTokenHash: 'access-hash',
+        refreshTokenHash,
+        ipAddress: '192.168.1.1',
+        userAgent: 'Mozilla/5.0',
+        isActive: true,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastAccessedAt: new Date(),
+      } as Session;
 
-      const result = await service.getSessionByRefreshToken('refresh-token-123');
+      tokenService.hashToken.mockReturnValue(refreshTokenHash);
+      sessionRepository.findByRefreshTokenHash.mockResolvedValue(mockSession);
+      sessionRepository.updateLastAccessed.mockResolvedValue(undefined);
 
-      expect(sessionRepository.findByRefreshToken).toHaveBeenCalledWith('refresh-token-123');
+      const result = await service.getSessionByRefreshToken(refreshToken);
+
+      expect(tokenService.hashToken).toHaveBeenCalledWith(refreshToken);
+      expect(sessionRepository.findByRefreshTokenHash).toHaveBeenCalledWith(refreshTokenHash);
       expect(sessionRepository.updateLastAccessed).toHaveBeenCalledWith(mockSession.id);
-      expect(result).toBeDefined();
-      expect(result?.userId).toBe(mockSession.userId);
+      expect(result).toEqual({
+        id: mockSession.id,
+        userId: mockSession.userId,
+        ipAddress: mockSession.ipAddress,
+        userAgent: mockSession.userAgent,
+        isActive: mockSession.isActive,
+        createdAt: mockSession.createdAt,
+        expiresAt: mockSession.expiresAt,
+        lastAccessedAt: expect.any(Date),
+      });
     });
   });
 
-  describe('validateSession', () => {
-    it('should return true for valid active session', async () => {
-      sessionRepository.findById.mockResolvedValue(mockSession);
-      sessionRepository.updateLastAccessed.mockResolvedValue();
-
-      const result = await service.validateSession('session-123');
-
-      expect(result).toBe(true);
-      expect(sessionRepository.updateLastAccessed).toHaveBeenCalledWith('session-123');
-    });
-
-    it('should return false for expired session', async () => {
-      const expiredSession = {
-        ...mockSession,
-        expiresAt: new Date(Date.now() - 3600000), // 1 hour ago
+  describe('createSessionWithLimit', () => {
+    it('should use distributed lock to prevent race conditions', async () => {
+      // Requirement 15.1: Race condition protection using Redis locks
+      const sessionData: CreateSessionDto = {
+        userId: 'user-123',
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        ipAddress: '192.168.1.1',
+        userAgent: 'Mozilla/5.0',
+        expiresAt: new Date(),
       };
-      sessionRepository.findById.mockResolvedValue(expiredSession);
 
-      const result = await service.validateSession('session-123');
+      const mockSession = {
+        id: 'session-123',
+        userId: sessionData.userId,
+      } as Session;
 
-      expect(result).toBe(false);
-      expect(sessionRepository.updateLastAccessed).not.toHaveBeenCalled();
-    });
 
-    it('should return false for inactive session', async () => {
-      const inactiveSession = {
-        ...mockSession,
-        isActive: false,
-      };
-      sessionRepository.findById.mockResolvedValue(inactiveSession);
 
-      const result = await service.validateSession('session-123');
+      redisLockService.withLock.mockImplementation(async (lockKey: string, callback: () => any) => {
+        expect(lockKey).toBe(`session_limit:${sessionData.userId}`);
+        return callback();
+      });
 
-      expect(result).toBe(false);
-    });
+      // Mock the internal methods that would be called within the lock
+      sessionRepository.findByUserId.mockResolvedValue([]);
+      sessionRepository.create.mockResolvedValue(mockSession);
+      tokenService.hashToken.mockReturnValue('hashed-token');
 
-    it('should return false for non-existent session', async () => {
-      sessionRepository.findById.mockResolvedValue(null);
+      const result = await service.createSessionWithLimit(sessionData, 5);
 
-      const result = await service.validateSession('non-existent');
-
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('invalidateSession', () => {
-    it('should invalidate existing session', async () => {
-      sessionRepository.findById.mockResolvedValue(mockSession);
-      sessionRepository.deactivateSession.mockResolvedValue();
-
-      await service.invalidateSession('session-123');
-
-      expect(sessionRepository.findById).toHaveBeenCalledWith('session-123');
-      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('session-123');
-    });
-
-    it('should throw NotFoundException for non-existent session', async () => {
-      sessionRepository.findById.mockResolvedValue(null);
-
-      await expect(service.invalidateSession('non-existent')).rejects.toThrow(
-        NotFoundException,
+      expect(metricsService.recordConcurrentSessionCreation).toHaveBeenCalled();
+      expect(redisLockService.withLock).toHaveBeenCalledWith(
+        `session_limit:${sessionData.userId}`,
+        expect.any(Function),
+        {
+          ttlSeconds: 5,
+          retryDelayMs: 50,
+          maxRetries: 3,
+        }
       );
+      expect(result.session).toBe(mockSession);
+      expect(result.removedSessionsCount).toBe(0);
     });
   });
 
-  describe('getUserSessions', () => {
-    it('should return all user sessions', async () => {
-      const userSessions = [mockSession, { ...mockSession, id: 'session-456' }];
-      sessionRepository.findByUserId.mockResolvedValue(userSessions);
+  describe('enforceSessionLimit', () => {
+    it('should remove oldest sessions when limit is exceeded', async () => {
+      const userId = 'user-123';
+      const maxSessions = 3;
+      
+      const mockSessions = [
+        {
+          id: 'session-1',
+          lastAccessedAt: new Date('2023-01-01'),
+          createdAt: new Date('2023-01-01'),
+        },
+        {
+          id: 'session-2',
+          lastAccessedAt: new Date('2023-01-02'),
+          createdAt: new Date('2023-01-02'),
+        },
+        {
+          id: 'session-3',
+          lastAccessedAt: new Date('2023-01-03'),
+          createdAt: new Date('2023-01-03'),
+        },
+        {
+          id: 'session-4',
+          lastAccessedAt: null, // Should use createdAt
+          createdAt: new Date('2023-01-04'),
+        },
+      ] as Session[];
 
-      const result = await service.getUserSessions('user-123');
+      sessionRepository.findByUserId.mockResolvedValue(mockSessions);
+      sessionRepository.deactivateSession.mockResolvedValue(undefined);
 
-      expect(sessionRepository.findByUserId).toHaveBeenCalledWith('user-123');
-      expect(result).toHaveLength(2);
-      expect(result[0].userId).toBe('user-123');
+      const result = await service.enforceSessionLimit(userId, maxSessions);
+
+      expect(result).toBe(2); // Should remove 2 sessions (4 - 3 + 1)
+      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('session-1');
+      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('session-2');
+      expect(sessionRepository.deactivateSession).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not remove sessions if under limit', async () => {
+      const userId = 'user-123';
+      const maxSessions = 5;
+      
+      const mockSessions = [
+        { id: 'session-1' },
+        { id: 'session-2' },
+      ] as Session[];
+
+      sessionRepository.findByUserId.mockResolvedValue(mockSessions);
+
+      const result = await service.enforceSessionLimit(userId, maxSessions);
+
+      expect(result).toBe(0);
+      expect(sessionRepository.deactivateSession).not.toHaveBeenCalled();
     });
   });
 
   describe('invalidateAllUserSessions', () => {
     it('should invalidate all sessions for a user', async () => {
-      sessionRepository.deactivateAllUserSessions.mockResolvedValue();
+      const userId = 'user-123';
+      const mockSessions = [
+        { id: 'session-1' },
+        { id: 'session-2' },
+        { id: 'session-3' },
+      ] as Session[];
 
-      await service.invalidateAllUserSessions('user-123');
+      sessionRepository.findByUserId.mockResolvedValue(mockSessions);
+      sessionRepository.deactivateAllUserSessions.mockResolvedValue(undefined);
 
-      expect(sessionRepository.deactivateAllUserSessions).toHaveBeenCalledWith('user-123');
-    });
-  });
-
-  describe('enforceSessionLimit', () => {
-    it('should deactivate oldest sessions when limit exceeded', async () => {
-      const oldSession = {
-        ...mockSession,
-        id: 'old-session',
-        createdAt: new Date(Date.now() - 7200000), // 2 hours ago
-      };
-      const newSession = {
-        ...mockSession,
-        id: 'new-session',
-        createdAt: new Date(), // now
-      };
-      
-      sessionRepository.findByUserId.mockResolvedValue([oldSession, newSession]);
-      sessionRepository.deactivateSession.mockResolvedValue();
-
-      await service.enforceSessionLimit('user-123', 1);
-
-      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('old-session');
-    });
-
-    it('should not deactivate sessions when under limit', async () => {
-      sessionRepository.findByUserId.mockResolvedValue([mockSession]);
-      sessionRepository.deactivateSession.mockResolvedValue();
-
-      await service.enforceSessionLimit('user-123', 5);
-
-      expect(sessionRepository.deactivateSession).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('cleanupExpiredSessions', () => {
-    it('should cleanup expired sessions', async () => {
-      sessionRepository.cleanupExpiredSessions.mockResolvedValue(5);
-
-      await service.cleanupExpiredSessions();
-
-      expect(sessionRepository.cleanupExpiredSessions).toHaveBeenCalled();
-    });
-
-    it('should handle cleanup errors gracefully', async () => {
-      sessionRepository.cleanupExpiredSessions.mockRejectedValue(new Error('DB Error'));
-
-      // Should not throw
-      await service.cleanupExpiredSessions();
-
-      expect(sessionRepository.cleanupExpiredSessions).toHaveBeenCalled();
-    });
-  });
-
-  describe('performSessionCleanup', () => {
-    it('should perform manual cleanup and return count', async () => {
-      sessionRepository.cleanupExpiredSessions.mockResolvedValue(3);
-
-      const result = await service.performSessionCleanup();
+      const result = await service.invalidateAllUserSessions(userId, 'security_event');
 
       expect(result).toBe(3);
-      expect(sessionRepository.cleanupExpiredSessions).toHaveBeenCalled();
-    });
-
-    it('should throw error on cleanup failure', async () => {
-      sessionRepository.cleanupExpiredSessions.mockRejectedValue(new Error('DB Error'));
-
-      await expect(service.performSessionCleanup()).rejects.toThrow('DB Error');
+      expect(sessionRepository.deactivateAllUserSessions).toHaveBeenCalledWith(userId);
     });
   });
 
-  describe('getSessionStats', () => {
-    it('should return session statistics', async () => {
-      const mockStats = {
-        totalActiveSessions: 10,
-        totalExpiredSessions: 2,
-        sessionsPerUser: { 'user-123': 3, 'user-456': 2 },
-      };
-      sessionRepository.getSessionStats.mockResolvedValue(mockStats);
+  describe('validateSession', () => {
+    it('should validate active and non-expired session', async () => {
+      const sessionId = 'session-123';
+      const mockSession = {
+        id: sessionId,
+        isActive: true,
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+      } as Session;
 
-      const result = await service.getSessionStats();
-
-      expect(sessionRepository.getSessionStats).toHaveBeenCalled();
-      expect(result).toEqual(mockStats);
-    });
-
-    it('should handle stats retrieval errors', async () => {
-      sessionRepository.getSessionStats.mockRejectedValue(new Error('Stats Error'));
-
-      await expect(service.getSessionStats()).rejects.toThrow('Stats Error');
-    });
-  });
-
-  describe('getSessionsByIpAddress', () => {
-    it('should return sessions for specific IP address', async () => {
-      const ipSessions = [mockSession, { ...mockSession, id: 'session-456' }];
-      sessionRepository.findSessionsByIpAddress.mockResolvedValue(ipSessions);
-
-      const result = await service.getSessionsByIpAddress('192.168.1.1');
-
-      expect(sessionRepository.findSessionsByIpAddress).toHaveBeenCalledWith('192.168.1.1');
-      expect(result).toHaveLength(2);
-      expect(result[0].ipAddress).toBe('192.168.1.1');
-    });
-  });
-
-  describe('findStaleSessionsOlderThan', () => {
-    it('should return stale sessions older than specified hours', async () => {
-      const staleSessions = [mockSession];
-      sessionRepository.findStaleSessionsOlderThan.mockResolvedValue(staleSessions);
-
-      const result = await service.findStaleSessionsOlderThan(24);
-
-      expect(sessionRepository.findStaleSessionsOlderThan).toHaveBeenCalledWith(24);
-      expect(result).toHaveLength(1);
-    });
-  });
-
-  describe('updateSessionMetadata', () => {
-    it('should update session metadata', async () => {
       sessionRepository.findById.mockResolvedValue(mockSession);
-      sessionRepository.updateSessionMetadata.mockResolvedValue();
+      sessionRepository.updateLastAccessed.mockResolvedValue(undefined);
 
-      await service.updateSessionMetadata('session-123', '192.168.1.2', 'New User Agent');
+      const result = await service.validateSession(sessionId);
 
-      expect(sessionRepository.findById).toHaveBeenCalledWith('session-123');
-      expect(sessionRepository.updateSessionMetadata).toHaveBeenCalledWith(
-        'session-123',
-        '192.168.1.2',
-        'New User Agent'
-      );
+      expect(result).toBe(true);
+      expect(sessionRepository.updateLastAccessed).toHaveBeenCalledWith(sessionId);
     });
 
-    it('should throw NotFoundException for non-existent session', async () => {
+    it('should invalidate expired session', async () => {
+      const sessionId = 'session-123';
+      const mockSession = {
+        id: sessionId,
+        isActive: true,
+        expiresAt: new Date(Date.now() - 3600000), // 1 hour ago
+      } as Session;
+
+      sessionRepository.findById.mockResolvedValue(mockSession);
+
+      const result = await service.validateSession(sessionId);
+
+      expect(result).toBe(false);
+      expect(sessionRepository.updateLastAccessed).not.toHaveBeenCalled();
+    });
+
+    it('should invalidate inactive session', async () => {
+      const sessionId = 'session-123';
+      const mockSession = {
+        id: sessionId,
+        isActive: false,
+        expiresAt: new Date(Date.now() + 3600000),
+      } as Session;
+
+      sessionRepository.findById.mockResolvedValue(mockSession);
+
+      const result = await service.validateSession(sessionId);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false for non-existent session', async () => {
+      const sessionId = 'non-existent';
+
       sessionRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        service.updateSessionMetadata('non-existent', '192.168.1.2', 'New User Agent')
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
+      const result = await service.validateSession(sessionId);
 
-  describe('cleanupStaleSessions', () => {
-    it('should cleanup stale sessions and return count', async () => {
-      const staleSessions = [mockSession, { ...mockSession, id: 'session-456' }];
-      sessionRepository.findStaleSessionsOlderThan.mockResolvedValue(staleSessions);
-      sessionRepository.deactivateSession.mockResolvedValue();
-
-      const result = await service.cleanupStaleSessions(72);
-
-      expect(sessionRepository.findStaleSessionsOlderThan).toHaveBeenCalledWith(72);
-      expect(sessionRepository.deactivateSession).toHaveBeenCalledTimes(2);
-      expect(result).toBe(2);
-    });
-
-    it('should handle cleanup errors', async () => {
-      sessionRepository.findStaleSessionsOlderThan.mockRejectedValue(new Error('Cleanup Error'));
-
-      await expect(service.cleanupStaleSessions(72)).rejects.toThrow('Cleanup Error');
-    });
-  });
-
-  describe('cleanupStaleSessionsScheduled', () => {
-    it('should cleanup stale sessions on schedule', async () => {
-      const staleSessions = [mockSession];
-      sessionRepository.findStaleSessionsOlderThan.mockResolvedValue(staleSessions);
-      sessionRepository.deactivateSession.mockResolvedValue();
-
-      await service.cleanupStaleSessionsScheduled();
-
-      expect(sessionRepository.findStaleSessionsOlderThan).toHaveBeenCalledWith(72);
-      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith(mockSession.id);
-    });
-
-    it('should handle scheduled cleanup errors gracefully', async () => {
-      sessionRepository.findStaleSessionsOlderThan.mockRejectedValue(new Error('Scheduled Error'));
-
-      // Should not throw
-      await service.cleanupStaleSessionsScheduled();
-
-      expect(sessionRepository.findStaleSessionsOlderThan).toHaveBeenCalled();
+      expect(result).toBe(false);
     });
   });
 });

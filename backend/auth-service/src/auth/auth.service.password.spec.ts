@@ -1,7 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { TokenService } from '../token/token.service';
 import { SessionService } from '../session/session.service';
@@ -12,7 +8,19 @@ import { EventBusService } from '../events/services/event-bus.service';
 
 describe('AuthService - Password Hashing and Validation', () => {
   let authService: AuthService;
+  let jwtService: jest.Mocked<any>;
+  let tokenService: jest.Mocked<TokenService>;
+  let sessionService: jest.Mocked<SessionService>;
   let userServiceClient: jest.Mocked<UserServiceClient>;
+  let securityServiceClient: jest.Mocked<SecurityServiceClient>;
+  let notificationServiceClient: jest.Mocked<NotificationServiceClient>;
+  let eventBusService: jest.Mocked<EventBusService>;
+  let configService: jest.Mocked<any>;
+  let authSagaService: jest.Mocked<any>;
+  let sagaService: jest.Mocked<any>;
+  let asyncOperations: jest.Mocked<any>;
+  let metricsService: jest.Mocked<any>;
+  let workerProcess: jest.Mocked<any>;
 
   const mockUser = {
     id: 'user-123',
@@ -24,83 +32,122 @@ describe('AuthService - Password Hashing and Validation', () => {
     updatedAt: new Date(),
   };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        {
-          provide: JwtService,
-          useValue: {
-            signAsync: jest.fn(),
-            verify: jest.fn(),
-          },
-        },
-        {
-          provide: TokenService,
-          useValue: {
-            generateTokens: jest.fn(),
-            blacklistToken: jest.fn(),
-          },
-        },
-        {
-          provide: SessionService,
-          useValue: {
-            createSession: jest.fn().mockResolvedValue({
-              id: 'session-123',
-              userId: 'user-123',
-              accessToken: 'mock-access-token',
-              refreshToken: 'mock-refresh-token',
-              ipAddress: '127.0.0.1',
-              userAgent: 'Test Agent',
-              isActive: true,
-              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              lastAccessedAt: new Date(),
-            }),
-            getSessionByAccessToken: jest.fn(),
-            enforceSessionLimit: jest.fn().mockResolvedValue(0),
-          },
-        },
-        {
-          provide: UserServiceClient,
-          useValue: {
-            findByEmail: jest.fn(),
-            createUser: jest.fn(),
-          },
-        },
-        {
-          provide: SecurityServiceClient,
-          useValue: {
-            logSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: NotificationServiceClient,
-          useValue: {
-            sendWelcomeNotification: jest.fn(),
-          },
-        },
-        {
-          provide: EventBusService,
-          useValue: {
-            publishUserRegisteredEvent: jest.fn(),
-            publishUserLoggedInEvent: jest.fn(),
-            publishUserLoggedOutEvent: jest.fn(),
-            publishSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue(5), // MAX_SESSIONS_PER_USER
-          },
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    // Создаем моки напрямую
+    jwtService = {
+      signAsync: jest.fn(),
+      verify: jest.fn(),
+    } as any;
 
-    authService = module.get<AuthService>(AuthService);
-    userServiceClient = module.get(UserServiceClient);
+    tokenService = {
+      generateTokens: jest.fn(),
+      blacklistToken: jest.fn(),
+      hashToken: jest.fn(),
+    } as any;
+
+    sessionService = {
+      createSession: jest.fn().mockResolvedValue({
+        id: 'session-123',
+        userId: 'user-123',
+        accessTokenHash: 'mock-access-token-hash',
+        refreshTokenHash: 'mock-refresh-token-hash',
+        ipAddress: '127.0.0.1',
+        userAgent: 'Test Agent',
+        isActive: true,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastAccessedAt: new Date(),
+      }),
+      createSessionWithLimit: jest.fn(),
+      getSessionByAccessToken: jest.fn(),
+      enforceSessionLimit: jest.fn().mockResolvedValue(0),
+    } as any;
+
+    userServiceClient = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
+      createUser: jest.fn(),
+      updateLastLogin: jest.fn(),
+    } as any;
+
+    securityServiceClient = {
+      logSecurityEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    notificationServiceClient = {
+      sendWelcomeNotification: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    eventBusService = {
+      publishUserRegisteredEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserLoggedInEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserLoggedOutEvent: jest.fn().mockResolvedValue(undefined),
+      publishSecurityEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    configService = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'MAX_SESSIONS_PER_USER') return 5;
+        if (key === 'USE_SAGA_PATTERN') return false;
+        return defaultValue;
+      }),
+    } as any;
+
+    authSagaService = {
+      executeRegistrationSaga: jest.fn(),
+      waitForSagaCompletion: jest.fn(),
+    } as any;
+
+    sagaService = {
+      executeSaga: jest.fn(),
+    } as any;
+
+    asyncOperations = {
+      executeAsync: jest.fn(),
+      executeCriticalPath: jest.fn(),
+    } as any;
+
+    metricsService = {
+      recordAuthFlowMetric: jest.fn(),
+    } as any;
+
+    workerProcess = {
+      executeInWorker: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
+    authService = new AuthService(
+      jwtService,
+      tokenService,
+      sessionService,
+      userServiceClient,
+      securityServiceClient,
+      notificationServiceClient,
+      eventBusService,
+      configService,
+      authSagaService,
+      sagaService,
+      asyncOperations,
+      metricsService,
+      workerProcess,
+    );
+
+    // Mock executeCriticalPath to execute the callback function
+    asyncOperations.executeCriticalPath.mockImplementation(async (callback: () => any) => {
+      return await callback();
+    });
+
+    // Mock password hashing and comparison through worker process
+    workerProcess.executeInWorker.mockImplementation(async (operation: string, data: any) => {
+      if (operation === 'hash-password') {
+        return '$2b$10$hashedPasswordExample123456789';
+      }
+      if (operation === 'compare-password') {
+        return true; // Default to true, tests can override
+      }
+      return undefined;
+    });
   });
 
   afterEach(() => {
@@ -116,8 +163,8 @@ describe('AuthService - Password Hashing and Validation', () => {
       userServiceClient.findByEmail.mockResolvedValue(null);
       userServiceClient.createUser.mockResolvedValue(mockUser);
       
-      // Mock bcrypt.hash to return a known hash
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue(hashedPassword as never);
+      // Mock worker process to return a known hash
+      workerProcess.executeInWorker.mockResolvedValue(hashedPassword);
 
       // Act
       await authService.register({
@@ -126,8 +173,14 @@ describe('AuthService - Password Hashing and Validation', () => {
         password: plainPassword,
       });
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert - Requirement 4.1: Auth Service SHALL hash passwords using bcrypt with salt rounds
-      expect(bcrypt.hash).toHaveBeenCalledWith(plainPassword, 10);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('hash-password', {
+        password: plainPassword,
+        saltRounds: 10
+      });
       expect(userServiceClient.createUser).toHaveBeenCalledWith({
         name: 'John Doe',
         email: 'john@example.com',
@@ -141,7 +194,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       userServiceClient.findByEmail.mockResolvedValue(null);
       userServiceClient.createUser.mockResolvedValue(mockUser);
       
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
+      workerProcess.executeInWorker.mockResolvedValue('hashed');
 
       // Act
       await authService.register({
@@ -150,8 +203,14 @@ describe('AuthService - Password Hashing and Validation', () => {
         password: plainPassword,
       });
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert - Verify salt rounds parameter
-      expect(bcrypt.hash).toHaveBeenCalledWith(plainPassword, 10);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('hash-password', {
+        password: plainPassword,
+        saltRounds: 10
+      });
     });
 
     it('should handle bcrypt hashing errors during registration', async () => {
@@ -159,7 +218,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       const plainPassword = 'TestPassword123!';
       userServiceClient.findByEmail.mockResolvedValue(null);
       
-      jest.spyOn(bcrypt, 'hash').mockRejectedValue(new Error('Hashing failed') as never);
+      workerProcess.executeInWorker.mockRejectedValue(new Error('Hashing failed'));
 
       // Act & Assert
       await expect(authService.register({
@@ -168,7 +227,10 @@ describe('AuthService - Password Hashing and Validation', () => {
         password: plainPassword,
       })).rejects.toThrow('Hashing failed');
 
-      expect(bcrypt.hash).toHaveBeenCalledWith(plainPassword, 10);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('hash-password', {
+        password: plainPassword,
+        saltRounds: 10
+      });
       expect(userServiceClient.createUser).not.toHaveBeenCalled();
     });
   });
@@ -182,14 +244,17 @@ describe('AuthService - Password Hashing and Validation', () => {
       const userWithPassword = { ...mockUser, password: hashedPassword };
       userServiceClient.findByEmail.mockResolvedValue(userWithPassword);
       
-      // Mock bcrypt.compare to return true for correct password
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      // Mock worker process to return true for correct password
+      workerProcess.executeInWorker.mockResolvedValue(true);
 
       // Act
       const result = await authService.validateUser('john@example.com', plainPassword);
 
       // Assert - Requirement 4.2: Auth Service SHALL verify password against stored hash
-      expect(bcrypt.compare).toHaveBeenCalledWith(plainPassword, hashedPassword);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: plainPassword,
+        hash: hashedPassword
+      });
       expect(result).toEqual({
         id: mockUser.id,
         name: mockUser.name,
@@ -209,14 +274,17 @@ describe('AuthService - Password Hashing and Validation', () => {
       const userWithPassword = { ...mockUser, password: hashedPassword };
       userServiceClient.findByEmail.mockResolvedValue(userWithPassword);
       
-      // Mock bcrypt.compare to return false for incorrect password
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      // Mock worker process to return false for incorrect password
+      workerProcess.executeInWorker.mockResolvedValue(false);
 
       // Act
       const result = await authService.validateUser('john@example.com', plainPassword);
 
       // Assert
-      expect(bcrypt.compare).toHaveBeenCalledWith(plainPassword, hashedPassword);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: plainPassword,
+        hash: hashedPassword
+      });
       expect(result).toBeNull();
     });
 
@@ -228,13 +296,16 @@ describe('AuthService - Password Hashing and Validation', () => {
       const userWithPassword = { ...mockUser, password: hashedPassword };
       userServiceClient.findByEmail.mockResolvedValue(userWithPassword);
       
-      jest.spyOn(bcrypt, 'compare').mockRejectedValue(new Error('Comparison failed') as never);
+      workerProcess.executeInWorker.mockRejectedValue(new Error('Comparison failed'));
 
       // Act
       const result = await authService.validateUser('john@example.com', plainPassword);
 
       // Assert - Should return null on error to prevent authentication
-      expect(bcrypt.compare).toHaveBeenCalledWith(plainPassword, hashedPassword);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: plainPassword,
+        hash: hashedPassword
+      });
       expect(result).toBeNull();
     });
 
@@ -250,13 +321,16 @@ describe('AuthService - Password Hashing and Validation', () => {
       for (const hashedPassword of differentHashFormats) {
         const userWithPassword = { ...mockUser, password: hashedPassword };
         userServiceClient.findByEmail.mockResolvedValue(userWithPassword);
-        jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+        workerProcess.executeInWorker.mockResolvedValue(true);
 
         // Act
         const result = await authService.validateUser('john@example.com', plainPassword);
 
         // Assert
-        expect(bcrypt.compare).toHaveBeenCalledWith(plainPassword, hashedPassword);
+        expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+          password: plainPassword,
+          hash: hashedPassword
+        });
         expect(result).not.toBeNull();
         expect(result?.email).toBe('john@example.com');
 
@@ -269,27 +343,33 @@ describe('AuthService - Password Hashing and Validation', () => {
       // Arrange
       const emptyPassword = '';
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      workerProcess.executeInWorker.mockResolvedValue(false);
 
       // Act
       const result = await authService.validateUser('john@example.com', emptyPassword);
 
-      // Assert - Should call bcrypt.compare for empty password and return null
-      expect(bcrypt.compare).toHaveBeenCalledWith(emptyPassword, mockUser.password);
-      expect(result).toBeNull(); // bcrypt.compare will handle empty password appropriately
+      // Assert - Should call worker process for empty password and return null
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: emptyPassword,
+        hash: mockUser.password
+      });
+      expect(result).toBeNull(); // Worker process will handle empty password appropriately
     });
 
     it('should handle null password validation', async () => {
       // Arrange
       const nullPassword = null as any;
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      workerProcess.executeInWorker.mockResolvedValue(false);
 
       // Act
       const result = await authService.validateUser('john@example.com', nullPassword);
 
       // Assert - Should handle null password gracefully and return null
-      expect(bcrypt.compare).toHaveBeenCalledWith(nullPassword, mockUser.password);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: nullPassword,
+        hash: mockUser.password
+      });
       expect(result).toBeNull();
     });
   });
@@ -301,7 +381,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       userServiceClient.findByEmail.mockResolvedValue(null);
       userServiceClient.createUser.mockResolvedValue(mockUser);
       
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('$2b$10$hashedPassword' as never);
+      workerProcess.executeInWorker.mockResolvedValue('$2b$10$hashedPassword');
 
       // Act
       await authService.register({
@@ -309,6 +389,9 @@ describe('AuthService - Password Hashing and Validation', () => {
         email: 'test@example.com',
         password: plainPassword,
       });
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Verify plain text password is never passed to User Service
       expect(userServiceClient.createUser).toHaveBeenCalledWith({
@@ -329,7 +412,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       userServiceClient.findByEmail.mockResolvedValue(null);
       userServiceClient.createUser.mockResolvedValue(mockUser);
       
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
+      workerProcess.executeInWorker.mockResolvedValue('hashed');
 
       // Act - Register multiple users
       for (let i = 0; i < passwords.length; i++) {
@@ -338,12 +421,17 @@ describe('AuthService - Password Hashing and Validation', () => {
           email: `user${i}@example.com`,
           password: passwords[i],
         });
+        // Wait for setImmediate events to complete
+        await new Promise(resolve => setImmediate(resolve));
       }
 
       // Assert - All passwords should use same salt rounds (10)
-      expect(bcrypt.hash).toHaveBeenCalledTimes(passwords.length);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledTimes(passwords.length);
       for (let i = 0; i < passwords.length; i++) {
-        expect(bcrypt.hash).toHaveBeenNthCalledWith(i + 1, passwords[i], 10);
+        expect(workerProcess.executeInWorker).toHaveBeenNthCalledWith(i + 1, 'hash-password', {
+          password: passwords[i],
+          saltRounds: 10
+        });
       }
     });
 
@@ -353,7 +441,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       
       // Test with existing user
       userServiceClient.findByEmail.mockResolvedValueOnce(mockUser);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(false as never);
+      workerProcess.executeInWorker.mockResolvedValueOnce(false);
       
       const startTime1 = Date.now();
       const result1 = await authService.validateUser('existing@example.com', plainPassword);

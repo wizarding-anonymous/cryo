@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationEventProcessor } from './notification-event.processor';
 import { NotificationEventDto } from '../dto';
 import { NotificationServiceClient } from '../../common/http-client/notification-service.client';
@@ -7,25 +6,14 @@ describe('NotificationEventProcessor', () => {
   let processor: NotificationEventProcessor;
   let notificationServiceClient: jest.Mocked<NotificationServiceClient>;
 
-  beforeEach(async () => {
-    const mockNotificationServiceClient = {
+  beforeEach(() => {
+    notificationServiceClient = {
       sendWelcomeNotification: jest.fn().mockResolvedValue(undefined),
       sendSecurityAlert: jest.fn().mockResolvedValue(undefined),
       sendLoginAlert: jest.fn().mockResolvedValue(undefined),
-    };
+    } as any;
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        NotificationEventProcessor,
-        {
-          provide: NotificationServiceClient,
-          useValue: mockNotificationServiceClient,
-        },
-      ],
-    }).compile();
-
-    processor = module.get<NotificationEventProcessor>(NotificationEventProcessor);
-    notificationServiceClient = module.get(NotificationServiceClient);
+    processor = new NotificationEventProcessor(notificationServiceClient);
   });
 
   it('should be defined', () => {

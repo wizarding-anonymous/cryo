@@ -1,16 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
 import { AxiosResponse } from 'axios';
 import { NotificationServiceClient, WelcomeNotificationRequest, SecurityAlertNotificationRequest } from './notification-service.client';
-import { CircuitBreakerService } from '../circuit-breaker/circuit-breaker.service';
-import { CircuitBreakerConfig } from '../circuit-breaker/circuit-breaker.config';
 import { ServiceUnavailableError } from '../circuit-breaker/base-circuit-breaker.client';
 
 describe('NotificationServiceClient', () => {
     let client: NotificationServiceClient;
-    let configService: jest.Mocked<ConfigService>;
-    let circuitBreakerConfig: jest.Mocked<CircuitBreakerConfig>;
+    let httpService: jest.Mocked<HttpService>;
 
     const mockCircuitBreaker = {
         fire: jest.fn(),
@@ -27,12 +22,25 @@ describe('NotificationServiceClient', () => {
         };
 
         const mockConfigService = {
-            get: jest.fn(),
+            get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+                if (key === 'NOTIFICATION_SERVICE_URL') {
+                    return 'http://localhost:3007';
+                }
+                return defaultValue;
+            }),
         };
 
         const mockCircuitBreakerService = {
             createCircuitBreaker: jest.fn().mockReturnValue(mockCircuitBreaker),
-            getCircuitBreakerStats: jest.fn(),
+            getCircuitBreakerStats: jest.fn().mockReturnValue({
+                requests: 0,
+                successes: 0,
+                failures: 0,
+                rejects: 0,
+                timeouts: 0,
+                fallbacks: 0,
+                state: 'CLOSED'
+            }),
         };
 
         const mockCircuitBreakerConfig = {
@@ -46,32 +54,38 @@ describe('NotificationServiceClient', () => {
             }),
         };
 
-        const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                NotificationServiceClient,
-                { provide: HttpService, useValue: mockHttpService },
-                { provide: ConfigService, useValue: mockConfigService },
-                { provide: CircuitBreakerService, useValue: mockCircuitBreakerService },
-                { provide: CircuitBreakerConfig, useValue: mockCircuitBreakerConfig },
-            ],
-        }).compile();
+        const mockLocalNotificationQueue = {
+            queueWelcomeNotification: jest.fn().mockResolvedValue(undefined),
+            queueSecurityAlert: jest.fn().mockResolvedValue(undefined),
+            getNotificationsReadyForRetry: jest.fn().mockResolvedValue([]),
+            markNotificationAsSent: jest.fn().mockResolvedValue(undefined),
+            markNotificationAsFailed: jest.fn().mockResolvedValue(undefined),
+            getQueueStats: jest.fn().mockReturnValue({
+                queueSize: 0,
+                maxQueueSize: 500,
+                pendingNotifications: 0,
+                failedNotifications: 0,
+            }),
+        };
 
-        client = module.get<NotificationServiceClient>(NotificationServiceClient);
-        configService = module.get(ConfigService);
-        circuitBreakerConfig = module.get(CircuitBreakerConfig);
-
-        // Setup default config mock
-        configService.get.mockImplementation((key: string, defaultValue?: any) => {
-            if (key === 'NOTIFICATION_SERVICE_URL') {
-                return 'http://localhost:3007';
-            }
-            return defaultValue;
-        });
+        httpService = mockHttpService as any;
+        
+        client = new NotificationServiceClient(
+            httpService,
+            mockConfigService as any,
+            mockCircuitBreakerService as any,
+            mockCircuitBreakerConfig as any,
+            mockLocalNotificationQueue as any
+        );
     });
 
     afterEach(() => {
         jest.clearAllMocks();
         client.clearQueue();
+        // Очищаем ресурсы для предотвращения утечек памяти
+        if (client && typeof client.onModuleDestroy === 'function') {
+            client.onModuleDestroy();
+        }
     });
 
     describe('sendWelcomeNotification', () => {
@@ -383,7 +397,21 @@ describe('NotificationServiceClient', () => {
                 queueSize: 0,
                 maxQueueSize: 500,
                 circuitBreakerState: 'CLOSED',
-                circuitBreakerStats: undefined,
+                circuitBreakerStats: {
+                    requests: 0,
+                    successes: 0,
+                    failures: 0,
+                    rejects: 0,
+                    timeouts: 0,
+                    fallbacks: 0,
+                    state: 'CLOSED'
+                },
+                localQueue: {
+                    queueSize: 0,
+                    maxQueueSize: 500,
+                    pendingNotifications: 0,
+                    failedNotifications: 0,
+                },
             });
         });
 

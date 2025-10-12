@@ -1,18 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { of, throwError } from 'rxjs';
 import { AxiosResponse } from 'axios';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { UserServiceClient, CreateUserDto, User } from './user-service.client';
-import { CircuitBreakerService } from '../circuit-breaker/circuit-breaker.service';
-import { CircuitBreakerConfig } from '../circuit-breaker/circuit-breaker.config';
 import { ServiceUnavailableError } from '../circuit-breaker/base-circuit-breaker.client';
 
 describe('UserServiceClient', () => {
   let client: UserServiceClient;
   let httpService: jest.Mocked<HttpService>;
-  let circuitBreakerService: jest.Mocked<CircuitBreakerService>;
   let mockCircuitBreaker: any;
 
   const mockUser: User = {
@@ -50,7 +44,15 @@ describe('UserServiceClient', () => {
 
     const mockCircuitBreakerService = {
       createCircuitBreaker: jest.fn().mockReturnValue(mockCircuitBreaker),
-      getCircuitBreakerStats: jest.fn(),
+      getCircuitBreakerStats: jest.fn().mockReturnValue({
+        requests: 0,
+        successes: 0,
+        failures: 0,
+        rejects: 0,
+        timeouts: 0,
+        fallbacks: 0,
+        state: 'CLOSED'
+      }),
     };
 
     const mockCircuitBreakerConfig = {
@@ -65,34 +67,49 @@ describe('UserServiceClient', () => {
       }),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UserServiceClient,
-        {
-          provide: HttpService,
-          useValue: mockHttpService,
-        },
-        {
-          provide: ConfigService,
-          useValue: mockConfigService,
-        },
-        {
-          provide: CircuitBreakerService,
-          useValue: mockCircuitBreakerService,
-        },
-        {
-          provide: CircuitBreakerConfig,
-          useValue: mockCircuitBreakerConfig,
-        },
-      ],
-    }).compile();
+    const mockUserCacheService = {
+      getCachedUserByEmail: jest.fn().mockResolvedValue(undefined),
+      getCachedUserById: jest.fn().mockResolvedValue(undefined),
+      setCachedUserByEmail: jest.fn().mockResolvedValue(undefined),
+      setCachedUserById: jest.fn().mockResolvedValue(undefined),
+      setCachedUser: jest.fn().mockResolvedValue(undefined),
+      invalidateUser: jest.fn().mockResolvedValue(undefined),
+      getExpiredCacheByEmail: jest.fn().mockResolvedValue(null),
+      getExpiredCacheById: jest.fn().mockResolvedValue(null),
+      clear: jest.fn().mockResolvedValue(undefined),
+      getUserCacheStats: jest.fn().mockReturnValue({
+        localSize: 0,
+        maxSize: 10000,
+        hitRatio: 0,
+        missRatio: 0,
+      }),
+      getMetrics: jest.fn().mockReturnValue({
+        hits: 0,
+        misses: 0,
+        sets: 0,
+        deletes: 0,
+      }),
+      getCacheInfo: jest.fn().mockReturnValue({
+        isHealthy: true,
+        memoryPressure: false,
+        performance: true,
+        uptime: 0,
+        redisEnabled: false,
+      }),
+    };
 
-    client = module.get<UserServiceClient>(UserServiceClient);
-    httpService = module.get(HttpService);
-    circuitBreakerService = module.get(CircuitBreakerService);
+    httpService = mockHttpService as any;
+    
+    client = new UserServiceClient(
+      httpService,
+      mockConfigService as any,
+      mockCircuitBreakerService as any,
+      mockCircuitBreakerConfig as any,
+      mockUserCacheService as any
+    );
 
     // Set up default circuit breaker behavior to resolve successfully
-    mockCircuitBreaker.fire.mockImplementation(async (method, url, data, config) => {
+    mockCircuitBreaker.fire.mockImplementation(async () => {
       const response: AxiosResponse = {
         data: mockUser,
         status: 200,
@@ -100,21 +117,12 @@ describe('UserServiceClient', () => {
         headers: {},
         config: {} as any,
       };
-
-      switch (method) {
-        case 'GET':
-          return Promise.resolve(response);
-        case 'POST':
-          return Promise.resolve(response);
-        case 'PATCH':
-          return Promise.resolve(response);
-        default:
-          throw new Error(`Unsupported method: ${method}`);
-      }
+      return Promise.resolve(response);
     });
   });
 
   afterEach(() => {
+    jest.clearAllMocks();
     client.clearCache();
   });
 
@@ -145,6 +153,12 @@ describe('UserServiceClient', () => {
     });
 
     it('should use cached result on subsequent calls', async () => {
+      // Setup cache mock to return undefined first, then return cached user
+      const mockUserCacheService = (client as any).userCacheService;
+      mockUserCacheService.getCachedUserByEmail
+        .mockResolvedValueOnce(undefined) // First call - cache miss
+        .mockResolvedValueOnce(mockUser); // Second call - cache hit
+
       // First call
       const result1 = await client.findByEmail('test@example.com');
       // Second call should use cache
@@ -305,11 +319,11 @@ describe('UserServiceClient', () => {
     });
 
     it('should use cache fallback when service is unavailable', async () => {
-      // First, cache a user
-      await client.findById(mockUser.id); // This will cache the user
+      // Setup cache mock to return cached user when service is unavailable
+      const mockUserCacheService = (client as any).userCacheService;
+      mockUserCacheService.getCachedUserById.mockResolvedValue(mockUser);
 
-      // Reset mock and make it fail for userExists
-      mockCircuitBreaker.fire.mockReset();
+      // Make circuit breaker fail
       mockCircuitBreaker.fire.mockRejectedValue(
         new ServiceUnavailableError('UserService is currently unavailable'),
       );
@@ -334,15 +348,15 @@ describe('UserServiceClient', () => {
     it('should clear cache', () => {
       client.clearCache();
       const stats = client.getCacheStats();
-      expect(stats.size).toBe(0);
+      expect(stats.localSize).toBe(0);
     });
 
     it('should return cache statistics', () => {
       const stats = client.getCacheStats();
-      expect(stats).toHaveProperty('size');
-      expect(stats).toHaveProperty('timeout');
-      expect(typeof stats.size).toBe('number');
-      expect(typeof stats.timeout).toBe('number');
+      expect(stats).toHaveProperty('localSize');
+      expect(stats).toHaveProperty('maxSize');
+      expect(typeof stats.localSize).toBe('number');
+      expect(typeof stats.maxSize).toBe('number');
     });
   });
 

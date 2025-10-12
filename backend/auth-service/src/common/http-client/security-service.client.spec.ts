@@ -1,9 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
 import { SecurityServiceClient, SecurityEvent } from './security-service.client';
-import { CircuitBreakerService } from '../circuit-breaker/circuit-breaker.service';
-import { CircuitBreakerConfig } from '../circuit-breaker/circuit-breaker.config';
 
 describe('SecurityServiceClient', () => {
     let client: SecurityServiceClient;
@@ -61,18 +57,34 @@ describe('SecurityServiceClient', () => {
             }),
         };
 
-        const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                SecurityServiceClient,
-                { provide: HttpService, useValue: mockHttpService },
-                { provide: ConfigService, useValue: mockConfigService },
-                { provide: CircuitBreakerService, useValue: mockCircuitBreakerService },
-                { provide: CircuitBreakerConfig, useValue: mockCircuitBreakerConfig },
-            ],
-        }).compile();
+        const mockLocalSecurityLogger = {
+            logEventLocally: jest.fn().mockResolvedValue(undefined),
+            checkSuspiciousActivityLocally: jest.fn().mockResolvedValue({ suspicious: false, reasons: [] }),
+            getLocalEventsForUser: jest.fn().mockResolvedValue([]),
+            getLocalSecurityStats: jest.fn().mockResolvedValue({
+                totalEvents: 0,
+                eventsByType: {},
+                uniqueUsers: 0,
+                uniqueIPs: 0,
+                suspiciousActivities: 0,
+                unprocessedEvents: 0,
+            }),
+            getQueueStats: jest.fn().mockReturnValue({
+                queueSize: 0,
+                maxQueueSize: 1000,
+                unprocessedEvents: 0,
+            }),
+        };
 
-        client = module.get<SecurityServiceClient>(SecurityServiceClient);
-        httpService = module.get(HttpService);
+        httpService = mockHttpService as any;
+        
+        client = new SecurityServiceClient(
+            httpService,
+            mockConfigService as any,
+            mockCircuitBreakerService as any,
+            mockCircuitBreakerConfig as any,
+            mockLocalSecurityLogger as any
+        );
 
         // Очищаем очередь событий после каждого теста
         client.clearQueue();
@@ -81,6 +93,10 @@ describe('SecurityServiceClient', () => {
     afterEach(() => {
         jest.clearAllMocks();
         client.clearQueue();
+        // Очищаем ресурсы для предотвращения утечек памяти
+        if (client && typeof client.onModuleDestroy === 'function') {
+            client.onModuleDestroy();
+        }
     });
 
     describe('logSecurityEvent', () => {

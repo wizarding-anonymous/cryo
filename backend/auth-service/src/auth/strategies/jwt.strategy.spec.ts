@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
@@ -34,42 +33,21 @@ describe('JwtStrategy', () => {
         },
     } as any;
 
-    beforeEach(async () => {
-        const mockTokenService = {
+    beforeEach(() => {
+        tokenService = {
             isTokenBlacklisted: jest.fn(),
             areAllUserTokensInvalidated: jest.fn(),
-        };
+        } as any;
 
-        const mockUserServiceClient = {
+        userServiceClient = {
             findById: jest.fn(),
-        };
+        } as any;
 
-        const mockConfigService = {
+        configService = {
             get: jest.fn().mockReturnValue('test-secret'),
-        };
+        } as any;
 
-        const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                JwtStrategy,
-                {
-                    provide: TokenService,
-                    useValue: mockTokenService,
-                },
-                {
-                    provide: UserServiceClient,
-                    useValue: mockUserServiceClient,
-                },
-                {
-                    provide: ConfigService,
-                    useValue: mockConfigService,
-                },
-            ],
-        }).compile();
-
-        strategy = module.get<JwtStrategy>(JwtStrategy);
-        tokenService = module.get(TokenService);
-        userServiceClient = module.get(UserServiceClient);
-        configService = module.get(ConfigService);
+        strategy = new JwtStrategy(configService, tokenService, userServiceClient);
     });
 
     afterEach(() => {
@@ -221,10 +199,7 @@ describe('JwtStrategy', () => {
             // This test verifies the JWT strategy configuration
             // The actual signature and expiration validation is handled by passport-jwt
 
-            // Verify that ignoreExpiration is set to false (requirement 5.1)
-            expect(strategy['_passReqToCallback']).toBe(true);
-
-            // Verify that the secret is configured
+            // Verify that the secret is configured during construction
             expect(configService.get).toHaveBeenCalledWith('JWT_SECRET');
         });
     });

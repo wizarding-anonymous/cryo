@@ -1,31 +1,28 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { RedisLockService } from './redis-lock.service';
 import { RedisService } from './redis.service';
+import { RaceConditionMetricsService } from '../metrics/race-condition-metrics.service';
 
 describe('RedisLockService', () => {
   let service: RedisLockService;
   let redisService: jest.Mocked<RedisService>;
+  let raceConditionMetricsService: jest.Mocked<RaceConditionMetricsService>;
 
-  beforeEach(async () => {
-    const mockRedisService = {
+  beforeEach(() => {
+    redisService = {
       setNX: jest.fn(),
       delete: jest.fn(),
       get: jest.fn(),
       getTTL: jest.fn(),
-    };
+    } as any;
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        RedisLockService,
-        {
-          provide: RedisService,
-          useValue: mockRedisService,
-        },
-      ],
-    }).compile();
+    raceConditionMetricsService = {
+      recordLockAttempt: jest.fn(),
+      recordConcurrentSessionCreation: jest.fn(),
+      getMetrics: jest.fn(),
+      resetMetrics: jest.fn(),
+    } as any;
 
-    service = module.get<RedisLockService>(RedisLockService);
-    redisService = module.get(RedisService);
+    service = new RedisLockService(redisService, raceConditionMetricsService);
   });
 
   describe('acquireLock', () => {

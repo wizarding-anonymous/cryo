@@ -12,6 +12,7 @@ import { DatabaseModule } from '../database/database.module';
 import { SessionModule } from '../session/session.module';
 import { ValidationModule } from '../common/validators/validation.module';
 import { EventsModule } from '../events/events.module';
+import { SagaModule } from '../saga/saga.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { EventsModule } from '../events/events.module';
     SessionModule,
     ValidationModule,
     EventsModule,
+    SagaModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -36,6 +38,6 @@ import { EventsModule } from '../events/events.module';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  exports: [AuthService, TokenModule, SessionModule],
 })
 export class AuthModule {}

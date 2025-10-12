@@ -104,6 +104,12 @@ export class AuthController {
       - Automatic JWT token generation
       - Session creation with metadata tracking
       
+      **Idempotency Support:**
+      - Include 'Idempotency-Key' header to make request idempotent
+      - Duplicate requests return cached result for 24 hours
+      - Concurrent requests with same key return 409 Conflict
+      - Example: Idempotency-Key: user-reg-2024-01-15-abc123
+      
       **Process:**
       1. Validates input data and password strength
       2. Checks email uniqueness via User Service
@@ -166,6 +172,12 @@ export class AuthController {
       - Failed login attempt tracking
       - Concurrent session management (max 5 sessions per user)
       - IP address and user agent tracking
+      
+      **Idempotency Support:**
+      - Include 'Idempotency-Key' header to make request idempotent
+      - Duplicate requests return same tokens for 24 hours
+      - Useful for handling network retries safely
+      - Example: Idempotency-Key: user-login-2024-01-15-xyz789
       
       **Process:**
       1. Validates email and password format
@@ -242,6 +254,12 @@ export class AuthController {
       - Session invalidation with metadata tracking
       - Optional refresh token blacklisting
       - Security event logging
+      
+      **Idempotency Support:**
+      - Include 'Idempotency-Key' header to make request idempotent
+      - Duplicate logout requests are safe and return 204
+      - Prevents issues with network retries
+      - Example: Idempotency-Key: user-logout-2024-01-15-def456
       
       **Process:**
       1. Extracts access token from Authorization header

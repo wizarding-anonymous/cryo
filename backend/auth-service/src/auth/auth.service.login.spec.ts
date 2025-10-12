@@ -1,8 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { TokenService } from '../token/token.service';
 import { SessionService } from '../session/session.service';
@@ -13,13 +8,19 @@ import { EventBusService } from '../events/services/event-bus.service';
 
 describe('AuthService - Login Functionality', () => {
   let authService: AuthService;
-  let userServiceClient: jest.Mocked<UserServiceClient>;
+  let jwtService: jest.Mocked<any>;
   let tokenService: jest.Mocked<TokenService>;
   let sessionService: jest.Mocked<SessionService>;
+  let userServiceClient: jest.Mocked<UserServiceClient>;
   let securityServiceClient: jest.Mocked<SecurityServiceClient>;
   let notificationServiceClient: jest.Mocked<NotificationServiceClient>;
   let eventBusService: jest.Mocked<EventBusService>;
-  let jwtService: jest.Mocked<JwtService>;
+  let configService: jest.Mocked<any>;
+  let authSagaService: jest.Mocked<any>;
+  let sagaService: jest.Mocked<any>;
+  let asyncOperations: jest.Mocked<any>;
+  let metricsService: jest.Mocked<any>;
+  let workerProcess: jest.Mocked<any>;
 
   const mockUser = {
     id: 'user-123',
@@ -49,87 +50,127 @@ describe('AuthService - Login Functionality', () => {
   const mockSession = {
     id: 'session-123',
     userId: 'user-123',
-    accessToken: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
+    accessTokenHash: 'hashed-access-token',
+    refreshTokenHash: 'hashed-refresh-token',
     ipAddress: '127.0.0.1',
     userAgent: 'Test Agent',
     isActive: true,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     createdAt: new Date(),
     updatedAt: new Date(),
+    lastAccessedAt: new Date(),
   };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        {
-          provide: JwtService,
-          useValue: {
-            signAsync: jest.fn(),
-          },
-        },
-        {
-          provide: TokenService,
-          useValue: {
-            generateTokens: jest.fn(),
-          },
-        },
-        {
-          provide: SessionService,
-          useValue: {
-            createSession: jest.fn(),
-            enforceSessionLimit: jest.fn(),
-          },
-        },
-        {
-          provide: UserServiceClient,
-          useValue: {
-            findByEmail: jest.fn(),
-            findById: jest.fn(),
-            updateLastLogin: jest.fn(),
-          },
-        },
-        {
-          provide: SecurityServiceClient,
-          useValue: {
-            logSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: NotificationServiceClient,
-          useValue: {
-            sendWelcomeNotification: jest.fn(),
-          },
-        },
-        {
-          provide: EventBusService,
-          useValue: {
-            publishUserRegisteredEvent: jest.fn(),
-            publishUserLoggedInEvent: jest.fn(),
-            publishSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue(5), // MAX_SESSIONS_PER_USER
-          },
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    // Создаем моки напрямую
+    jwtService = {
+      signAsync: jest.fn(),
+    } as any;
 
-    authService = module.get<AuthService>(AuthService);
-    userServiceClient = module.get(UserServiceClient);
-    tokenService = module.get(TokenService);
-    sessionService = module.get(SessionService);
-    securityServiceClient = module.get(SecurityServiceClient);
-    notificationServiceClient = module.get(NotificationServiceClient);
-    eventBusService = module.get(EventBusService);
-    jwtService = module.get(JwtService);
+    tokenService = {
+      generateTokens: jest.fn(),
+      hashToken: jest.fn(),
+    } as any;
 
-    // Mock bcrypt.compare
-    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+    sessionService = {
+      createSession: jest.fn(),
+      createSessionWithLimit: jest.fn().mockResolvedValue({
+        session: mockSession,
+        removedSessionsCount: 0,
+      }),
+      enforceSessionLimit: jest.fn(),
+    } as any;
+
+    userServiceClient = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
+      updateLastLogin: jest.fn(),
+    } as any;
+
+    securityServiceClient = {
+      logSecurityEvent: jest.fn(),
+    } as any;
+
+    notificationServiceClient = {
+      sendWelcomeNotification: jest.fn(),
+    } as any;
+
+    eventBusService = {
+      publishUserRegisteredEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserLoggedInEvent: jest.fn().mockResolvedValue(undefined),
+      publishSecurityEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    configService = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'MAX_SESSIONS_PER_USER') return 5;
+        if (key === 'USE_SAGA_PATTERN') return false; // Отключаем saga для простоты тестов
+        return defaultValue;
+      }),
+    } as any;
+
+    authSagaService = {
+      executeLoginSaga: jest.fn(),
+      waitForSagaCompletion: jest.fn(),
+    } as any;
+
+    sagaService = {
+      executeSaga: jest.fn(),
+    } as any;
+
+    asyncOperations = {
+      executeAsync: jest.fn(),
+      executeCriticalPath: jest.fn(),
+    } as any;
+
+    metricsService = {
+      recordOperation: jest.fn(),
+      recordAuthFlowMetric: jest.fn(),
+    } as any;
+
+    workerProcess = {
+      processTask: jest.fn(),
+      executeInWorker: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
+    authService = new AuthService(
+      jwtService,
+      tokenService,
+      sessionService,
+      userServiceClient,
+      securityServiceClient,
+      notificationServiceClient,
+      eventBusService,
+      configService,
+      authSagaService,
+      sagaService,
+      asyncOperations,
+      metricsService,
+      workerProcess,
+    );
+
+    // Mock password comparison through worker process
+    workerProcess.executeInWorker.mockResolvedValue(true);
+
+    // Mock executeCriticalPath to execute the callback function
+    asyncOperations.executeCriticalPath.mockImplementation(async (callback: () => any) => {
+      return await callback();
+    });
+
+    // Mock saga pattern to return successful result
+    authSagaService.executeLoginSaga.mockResolvedValue('saga-123');
+    authSagaService.waitForSagaCompletion.mockResolvedValue({
+      completed: true,
+      status: 'completed',
+      result: {
+        user: mockUserWithoutPassword,
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+        session_id: 'session-123',
+        expires_in: 3600,
+      }
+    });
   });
 
   afterEach(() => {
@@ -140,7 +181,7 @@ describe('AuthService - Login Functionality', () => {
     it('should return user without password for valid credentials', async () => {
       // Arrange
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      workerProcess.executeInWorker.mockResolvedValue(true);
 
       // Act
       const result = await authService.validateUser('john@example.com', 'correctPassword');
@@ -149,7 +190,10 @@ describe('AuthService - Login Functionality', () => {
       expect(result).toEqual(mockUserWithoutPassword);
       expect(result).not.toHaveProperty('password');
       expect(userServiceClient.findByEmail).toHaveBeenCalledWith('john@example.com');
-      expect(bcrypt.compare).toHaveBeenCalledWith('correctPassword', 'hashedPassword123');
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: 'correctPassword',
+        hash: 'hashedPassword123'
+      });
     });
 
     it('should return null for non-existent user', async () => {
@@ -162,13 +206,13 @@ describe('AuthService - Login Functionality', () => {
       // Assert
       expect(result).toBeNull();
       expect(userServiceClient.findByEmail).toHaveBeenCalledWith('nonexistent@example.com');
-      expect(bcrypt.compare).not.toHaveBeenCalled();
+      expect(workerProcess.executeInWorker).not.toHaveBeenCalled();
     });
 
     it('should return null for invalid password', async () => {
       // Arrange
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      workerProcess.executeInWorker.mockResolvedValue(false);
 
       // Act
       const result = await authService.validateUser('john@example.com', 'wrongPassword');
@@ -176,7 +220,10 @@ describe('AuthService - Login Functionality', () => {
       // Assert - Requirement 4.2: Auth Service SHALL verify password against stored hash
       expect(result).toBeNull();
       expect(userServiceClient.findByEmail).toHaveBeenCalledWith('john@example.com');
-      expect(bcrypt.compare).toHaveBeenCalledWith('wrongPassword', 'hashedPassword123');
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: 'wrongPassword',
+        hash: 'hashedPassword123'
+      });
     });
 
     it('should return null when User Service throws error', async () => {
@@ -194,7 +241,7 @@ describe('AuthService - Login Functionality', () => {
     it('should return null when bcrypt comparison throws error', async () => {
       // Arrange
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockRejectedValue(new Error('Bcrypt error'));
+      workerProcess.executeInWorker.mockRejectedValue(new Error('Worker error'));
 
       // Act
       const result = await authService.validateUser('john@example.com', 'password');
@@ -202,7 +249,10 @@ describe('AuthService - Login Functionality', () => {
       // Assert
       expect(result).toBeNull();
       expect(userServiceClient.findByEmail).toHaveBeenCalledWith('john@example.com');
-      expect(bcrypt.compare).toHaveBeenCalledWith('password', 'hashedPassword123');
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: 'password',
+        hash: 'hashedPassword123'
+      });
     });
   });
 
@@ -212,7 +262,7 @@ describe('AuthService - Login Functionality', () => {
       jwtService.signAsync
         .mockResolvedValueOnce('mock-access-token')
         .mockResolvedValueOnce('mock-refresh-token');
-      
+
       sessionService.enforceSessionLimit.mockResolvedValue(0);
       sessionService.createSession.mockResolvedValue(mockSession);
       userServiceClient.updateLastLogin.mockResolvedValue(undefined);
@@ -222,6 +272,9 @@ describe('AuthService - Login Functionality', () => {
     it('should successfully login user and create session with metadata tracking', async () => {
       // Act
       const result = await authService.login(mockUserWithoutPassword, '127.0.0.1', 'Test Agent');
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Requirement 1.2: Auth Service SHALL handle all user login operations
       expect(result).toBeDefined();
@@ -245,14 +298,14 @@ describe('AuthService - Login Functionality', () => {
 
       // Requirement 12.2: Create local session with metadata tracking
       // Requirement 13.1: Auth Service SHALL create session record with metadata
-      expect(sessionService.createSession).toHaveBeenCalledWith({
+      expect(sessionService.createSessionWithLimit).toHaveBeenCalledWith({
         userId: mockUserWithoutPassword.id,
         accessToken: 'mock-access-token',
         refreshToken: 'mock-refresh-token',
         ipAddress: '127.0.0.1',
         userAgent: 'Test Agent',
         expiresAt: expect.any(Date),
-      });
+      }, 5);
 
       // Requirement 11.2: Auth Service SHALL publish UserLoggedInEvent for event-driven processing
       expect(eventBusService.publishUserLoggedInEvent).toHaveBeenCalledWith(
@@ -272,13 +325,19 @@ describe('AuthService - Login Functionality', () => {
 
     it('should enforce concurrent session limits before creating new session', async () => {
       // Arrange - Requirement 13.3: Auth Service SHALL limit maximum concurrent sessions
-      sessionService.enforceSessionLimit.mockResolvedValue(2); // 2 sessions removed
+      sessionService.createSessionWithLimit.mockResolvedValue({
+        session: mockSession,
+        removedSessionsCount: 2, // 2 sessions removed
+      });
 
       // Act
       const result = await authService.login(mockUserWithoutPassword, '127.0.0.1', 'Test Agent');
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert
-      expect(sessionService.enforceSessionLimit).toHaveBeenCalledWith(mockUserWithoutPassword.id, 5);
+      expect(sessionService.createSessionWithLimit).toHaveBeenCalledWith(expect.any(Object), 5);
       expect(result).toBeDefined();
 
       // Should publish security event with session limit enforcement info
@@ -292,7 +351,8 @@ describe('AuthService - Login Functionality', () => {
           metadata: {
             sessionLimitEnforced: true,
             removedSessionsCount: 2,
-            maxSessionsAllowed: 5
+            maxSessionsAllowed: 5,
+            raceConditionProtected: true
           }
         })
       );
@@ -302,15 +362,18 @@ describe('AuthService - Login Functionality', () => {
       // Act
       const result = await authService.login(mockUserWithoutPassword);
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert
-      expect(sessionService.createSession).toHaveBeenCalledWith({
+      expect(sessionService.createSessionWithLimit).toHaveBeenCalledWith({
         userId: mockUserWithoutPassword.id,
         accessToken: 'mock-access-token',
         refreshToken: 'mock-refresh-token',
         ipAddress: '::1', // Default IP
         userAgent: 'Unknown', // Default user agent
         expiresAt: expect.any(Date),
-      });
+      }, 5);
 
       expect(eventBusService.publishUserLoggedInEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -334,10 +397,13 @@ describe('AuthService - Login Functionality', () => {
 
       const afterTime = Date.now();
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert
-      const createSessionCall = sessionService.createSession.mock.calls[0][0];
+      const createSessionCall = sessionService.createSessionWithLimit.mock.calls[0][0];
       const expiresAt = createSessionCall.expiresAt.getTime();
-      
+
       // Should be approximately 24 hours from now (within 1 second tolerance)
       const expectedExpiration = 24 * 60 * 60 * 1000; // 24 hours in ms
       expect(expiresAt).toBeGreaterThanOrEqual(beforeTime + expectedExpiration - 1000);
@@ -352,6 +418,9 @@ describe('AuthService - Login Functionality', () => {
       // Act
       const result = await authService.login(mockUserWithoutPassword, '127.0.0.1', 'Test Agent');
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert - Login should succeed despite external service failures
       expect(result).toBeDefined();
       expect(result.user.id).toBe(mockUserWithoutPassword.id);
@@ -365,24 +434,30 @@ describe('AuthService - Login Functionality', () => {
 
     it('should handle session creation failure', async () => {
       // Arrange
-      sessionService.createSession.mockRejectedValue(new Error('Database unavailable'));
+      sessionService.createSessionWithLimit.mockRejectedValue(new Error('Database unavailable'));
 
       // Act & Assert
       await expect(authService.login(mockUserWithoutPassword, '127.0.0.1', 'Test Agent'))
         .rejects
         .toThrow('Database unavailable');
 
-      expect(sessionService.createSession).toHaveBeenCalled();
+      expect(sessionService.createSessionWithLimit).toHaveBeenCalled();
     });
 
 
 
     it('should log session limit enforcement when sessions are removed', async () => {
       // Arrange
-      sessionService.enforceSessionLimit.mockResolvedValue(3); // 3 sessions removed
+      sessionService.createSessionWithLimit.mockResolvedValue({
+        session: mockSession,
+        removedSessionsCount: 3, // 3 sessions removed
+      });
 
       // Act
       await authService.login(mockUserWithoutPassword, '192.168.1.1', 'Mobile App');
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert
       expect(eventBusService.publishSecurityEvent).toHaveBeenCalledWith(
@@ -395,7 +470,8 @@ describe('AuthService - Login Functionality', () => {
           metadata: {
             sessionLimitEnforced: true,
             removedSessionsCount: 3,
-            maxSessionsAllowed: 5
+            maxSessionsAllowed: 5,
+            raceConditionProtected: true
           }
         })
       );
@@ -403,10 +479,16 @@ describe('AuthService - Login Functionality', () => {
 
     it('should not log session limit enforcement when no sessions are removed', async () => {
       // Arrange
-      sessionService.enforceSessionLimit.mockResolvedValue(0); // No sessions removed
+      sessionService.createSessionWithLimit.mockResolvedValue({
+        session: mockSession,
+        removedSessionsCount: 0, // No sessions removed
+      });
 
       // Act
       await authService.login(mockUserWithoutPassword, '192.168.1.1', 'Mobile App');
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Should only publish UserLoggedInEvent, not security event for session limit
       expect(eventBusService.publishUserLoggedInEvent).toHaveBeenCalledWith(
@@ -417,7 +499,7 @@ describe('AuthService - Login Functionality', () => {
           timestamp: expect.any(Date),
         })
       );
-      
+
       // Should not publish security event for session limit enforcement
       expect(eventBusService.publishSecurityEvent).not.toHaveBeenCalled();
     });
@@ -427,7 +509,7 @@ describe('AuthService - Login Functionality', () => {
     it('should complete full login flow with credential validation', async () => {
       // Arrange
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      workerProcess.executeInWorker.mockResolvedValue(true);
       jwtService.signAsync
         .mockResolvedValueOnce('mock-access-token')
         .mockResolvedValueOnce('mock-refresh-token');
@@ -439,8 +521,11 @@ describe('AuthService - Login Functionality', () => {
       // Act - Simulate full login flow
       const validatedUser = await authService.validateUser('john@example.com', 'correctPassword');
       expect(validatedUser).not.toBeNull();
-      
+
       const loginResult = await authService.login(validatedUser!, '127.0.0.1', 'Test Agent');
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Complete login flow requirements
       expect(loginResult).toBeDefined();
@@ -451,9 +536,12 @@ describe('AuthService - Login Functionality', () => {
 
       // Verify all required operations were performed
       expect(userServiceClient.findByEmail).toHaveBeenCalledWith('john@example.com');
-      expect(bcrypt.compare).toHaveBeenCalledWith('correctPassword', 'hashedPassword123');
-      expect(sessionService.createSession).toHaveBeenCalled();
-      
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: 'correctPassword',
+        hash: 'hashedPassword123'
+      });
+      expect(sessionService.createSessionWithLimit).toHaveBeenCalled();
+
       // Verify event publishing instead of direct service calls
       expect(eventBusService.publishUserLoggedInEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -469,7 +557,7 @@ describe('AuthService - Login Functionality', () => {
     it('should fail login flow with invalid credentials', async () => {
       // Arrange
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      workerProcess.executeInWorker.mockResolvedValue(false);
 
       // Act
       const validatedUser = await authService.validateUser('john@example.com', 'wrongPassword');
@@ -477,8 +565,11 @@ describe('AuthService - Login Functionality', () => {
       // Assert
       expect(validatedUser).toBeNull();
       expect(userServiceClient.findByEmail).toHaveBeenCalledWith('john@example.com');
-      expect(bcrypt.compare).toHaveBeenCalledWith('wrongPassword', 'hashedPassword123');
-      
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('compare-password', {
+        password: 'wrongPassword',
+        hash: 'hashedPassword123'
+      });
+
       // Login should not be called with null user
       // This would be handled by the controller throwing UnauthorizedException
     });

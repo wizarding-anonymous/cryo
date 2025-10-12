@@ -4,8 +4,8 @@ import { Session, LoginAttempt, TokenBlacklist, SecurityEvent } from '../entitie
 
 export interface SessionCreationData {
   userId: string;
-  accessToken: string;
-  refreshToken: string;
+  accessTokenHash: string;
+  refreshTokenHash: string;
   ipAddress: string;
   userAgent: string;
   expiresAt: Date;
@@ -73,8 +73,8 @@ export class AuthDatabaseService {
   async createUserSession(sessionData: SessionCreationData): Promise<Session> {
     const result = await this.databaseOperations.createSession({
       userId: sessionData.userId,
-      accessToken: sessionData.accessToken,
-      refreshToken: sessionData.refreshToken,
+      accessTokenHash: sessionData.accessTokenHash,
+      refreshTokenHash: sessionData.refreshTokenHash,
       ipAddress: sessionData.ipAddress,
       userAgent: sessionData.userAgent,
       expiresAt: sessionData.expiresAt,
@@ -197,6 +197,16 @@ export class AuthDatabaseService {
   async cleanupExpiredTokens(): Promise<number> {
     const result = await this.databaseOperations.cleanupExpiredTokens();
     return this.handleDatabaseResult(result, 'cleanupExpiredTokens');
+  }
+
+  async removeTokenFromBlacklist(tokenHash: string): Promise<void> {
+    const result = await this.databaseOperations.removeTokenFromBlacklist(tokenHash);
+    this.handleDatabaseResult(result, 'removeTokenFromBlacklist');
+  }
+
+  async getAllBlacklistedTokens(): Promise<TokenBlacklist[]> {
+    const result = await this.databaseOperations.findAllBlacklistedTokens();
+    return this.handleDatabaseResult(result, 'getAllBlacklistedTokens');
   }
 
   // Security Event Logging

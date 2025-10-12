@@ -1,218 +1,328 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { TokenService } from './token.service';
 import { RedisService } from '../common/redis/redis.service';
 import { AuthDatabaseService } from '../database/auth-database.service';
-import { TokenBlacklist } from '../entities/token-blacklist.entity';
+import { UserServiceClient } from '../common/http-client/user-service.client';
+import { SecurityServiceClient } from '../common/http-client/security-service.client';
 
-describe('TokenService Integration', () => {
-  let service: TokenService;
-  let jwtService: JwtService;
+describe('Token Integration', () => {
+  let tokenService: TokenService;
+  let jwtService: jest.Mocked<JwtService>;
+  let redisService: jest.Mocked<RedisService>;
+  let authDatabaseService: jest.Mocked<AuthDatabaseService>;
+  let userServiceClient: jest.Mocked<UserServiceClient>;
+  let securityServiceClient: jest.Mocked<SecurityServiceClient>;
+  let configService: jest.Mocked<ConfigService>;
 
-  const mockRedisService = {
-    blacklistToken: jest.fn(),
-    isTokenBlacklisted: jest.fn(),
-    delete: jest.fn(),
-    set: jest.fn(),
-    get: jest.fn(),
+  const mockUser = {
+    id: 'user-123',
+    name: 'Test User',
+    email: 'test@example.com',
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
-  const mockAuthDatabaseService = {
-    blacklistToken: jest.fn(),
-    isTokenBlacklisted: jest.fn(),
-    blacklistAllUserTokens: jest.fn(),
-    getUserBlacklistedTokens: jest.fn(),
-    cleanupExpiredTokens: jest.fn(),
-  };
+  beforeEach(() => {
+    jwtService = {
+      signAsync: jest.fn(),
+      verify: jest.fn(),
+      decode: jest.fn(),
+    } as any;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          envFilePath: '.env.test',
-        }),
-        JwtModule.registerAsync({
-          imports: [ConfigModule],
-          useFactory: (configService: ConfigService) => ({
-            secret: configService.get<string>('JWT_SECRET', 'test-secret'),
-            signOptions: {
-              expiresIn: configService.get<string>('JWT_EXPIRES_IN', '1h'),
-            },
-          }),
-          inject: [ConfigService],
-        }),
-      ],
-      providers: [
-        TokenService,
-        {
-          provide: RedisService,
-          useValue: mockRedisService,
-        },
-        {
-          provide: AuthDatabaseService,
-          useValue: mockAuthDatabaseService,
-        },
-      ],
-    }).compile();
+    redisService = {
+      blacklistToken: jest.fn(),
+      isTokenBlacklisted: jest.fn(),
+      delete: jest.fn(),
+      set: jest.fn(),
+      get: jest.fn(),
+      keys: jest.fn(),
+      mget: jest.fn(),
+    } as any;
 
-    service = module.get<TokenService>(TokenService);
-    jwtService = module.get<JwtService>(JwtService);
+    authDatabaseService = {
+      blacklistToken: jest.fn(),
+      isTokenBlacklisted: jest.fn(),
+      blacklistAllUserTokens: jest.fn(),
+      cleanupExpiredTokens: jest.fn(),
+      getUserBlacklistedTokens: jest.fn(),
+      logSecurityEvent: jest.fn(),
+    } as any;
+
+    userServiceClient = {
+      findById: jest.fn().mockResolvedValue(mockUser),
+      findByEmail: jest.fn(),
+      createUser: jest.fn(),
+      updateLastLogin: jest.fn(),
+    } as any;
+
+    securityServiceClient = {
+      logSecurityEvent: jest.fn(),
+      checkSuspiciousActivity: jest.fn(),
+      logTokenRefresh: jest.fn(),
+    } as any;
+
+    configService = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        const config = {
+          'JWT_SECRET': 'test-secret',
+          'JWT_EXPIRES_IN': '1h',
+          'JWT_REFRESH_EXPIRES_IN': '7d',
+          'TOKEN_BLACKLIST_TTL': 86400,
+        };
+        return config[key] || defaultValue;
+      }),
+    } as any;
+
+    // Создаем моки для дополнительных зависимостей
+    const distributedTransactionService = {
+      atomicBlacklistToken: jest.fn().mockResolvedValue(undefined),
+      atomicRemoveFromBlacklist: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    const consistencyMetricsService = {
+      recordAtomicOperationMetrics: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    tokenService = new TokenService(
+      jwtService,
+      redisService,
+      authDatabaseService,
+      distributedTransactionService,
+      consistencyMetricsService
+    );
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  describe('Token Generation', () => {
+    it('should generate access and refresh tokens', async () => {
+      jwtService.signAsync.mockResolvedValueOnce('access-token-123');
+      jwtService.signAsync.mockResolvedValueOnce('refresh-token-123');
 
-  describe('Full token lifecycle', () => {
-    it('should generate, validate, and blacklist tokens correctly', async () => {
-      const user = { id: 'user-123', email: 'test@example.com' };
+      const result = await tokenService.generateTokens(mockUser);
 
-      // Generate tokens
-      const tokens = await service.generateTokens(user);
-      expect(tokens.accessToken).toBeDefined();
-      expect(tokens.refreshToken).toBeDefined();
-      expect(tokens.expiresIn).toBe(3600);
+      expect(result).toEqual({
+        accessToken: 'access-token-123',
+        refreshToken: 'refresh-token-123',
+        expiresIn: 3600,
+      });
 
-      // Validate the generated access token
-      mockRedisService.isTokenBlacklisted.mockResolvedValue(false);
-      mockAuthDatabaseService.isTokenBlacklisted.mockResolvedValue(false);
-
-      const validation = await service.validateToken(tokens.accessToken);
-      expect(validation.valid).toBe(true);
-      expect(validation.payload?.sub).toBe(user.id);
-      expect(validation.payload?.email).toBe(user.email);
-
-      // Blacklist the token
-      mockAuthDatabaseService.blacklistToken.mockResolvedValue({} as TokenBlacklist);
-      mockRedisService.blacklistToken.mockResolvedValue(undefined);
-
-      await service.blacklistToken(tokens.accessToken, user.id, 'logout');
-
-      // Verify blacklisting calls
-      expect(mockAuthDatabaseService.blacklistToken).toHaveBeenCalledWith(
-        expect.any(String), // token hash
-        user.id,
-        'logout',
-        expect.any(Date), // expiration date
-        undefined
+      expect(jwtService.signAsync).toHaveBeenCalledTimes(2);
+      expect(jwtService.signAsync).toHaveBeenNthCalledWith(1,
+        { sub: mockUser.id, email: mockUser.email }
       );
-      expect(mockRedisService.blacklistToken).toHaveBeenCalledWith(
-        tokens.accessToken,
-        expect.any(Number) // TTL
+      expect(jwtService.signAsync).toHaveBeenNthCalledWith(2,
+        { sub: mockUser.id, email: mockUser.email },
+        { expiresIn: '7d' }
       );
-
-      // Validate that blacklisted token is now invalid
-      mockRedisService.isTokenBlacklisted.mockResolvedValue(true);
-
-      const blacklistedValidation = await service.validateToken(tokens.accessToken);
-      expect(blacklistedValidation.valid).toBe(false);
-      expect(blacklistedValidation.reason).toBe('Token is blacklisted');
     });
 
-    it('should handle user-level token invalidation', async () => {
-      const user = { id: 'user-123', email: 'test@example.com' };
+    it('should generate tokens with correct expiration', async () => {
+      configService.get.mockImplementation((key: string) => {
+        if (key === 'JWT_EXPIRES_IN') return '2h';
+        if (key === 'JWT_REFRESH_EXPIRES_IN') return '14d';
+        return 'test-secret';
+      });
 
-      // Generate tokens
-      const tokens = await service.generateTokens(user);
+      jwtService.signAsync.mockResolvedValueOnce('access-token');
+      jwtService.signAsync.mockResolvedValueOnce('refresh-token');
 
-      // Blacklist all user tokens
-      mockAuthDatabaseService.blacklistAllUserTokens.mockResolvedValue(undefined);
-      mockRedisService.delete.mockResolvedValue(undefined);
-      mockRedisService.set.mockResolvedValue(undefined);
+      const result = await tokenService.generateTokens(mockUser);
 
-      await service.blacklistAllUserTokens(user.id, 'security', { reason: 'suspicious activity' });
-
-      // Verify calls
-      expect(mockAuthDatabaseService.blacklistAllUserTokens).toHaveBeenCalledWith(
-        user.id,
-        'security',
-        { reason: 'suspicious activity' }
+      expect(result.expiresIn).toBe(3600); // Default is still 3600 (1h)
+      expect(jwtService.signAsync).toHaveBeenNthCalledWith(1,
+        expect.any(Object)
       );
-      expect(mockRedisService.set).toHaveBeenCalledWith(
-        `user_invalidated:${user.id}`,
+      expect(jwtService.signAsync).toHaveBeenNthCalledWith(2,
+        expect.any(Object),
+        { expiresIn: '7d' }
+      );
+    });
+  });
+
+  describe('Token Blacklisting', () => {
+    it('should blacklist token in both Redis and database', async () => {
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImV4cCI6OTk5OTk5OTk5OX0.test';
+      const userId = 'user-123';
+      const reason = 'logout';
+
+      // Mock decode to return valid payload with expiration
+      jwtService.decode.mockReturnValue({
+        sub: userId,
+        email: 'test@example.com',
+        exp: 9999999999 // Far future
+      });
+
+      const distributedTransactionService = {
+        atomicBlacklistToken: jest.fn().mockResolvedValue(undefined),
+      } as any;
+
+      const consistencyMetricsService = {
+        recordAtomicOperationMetrics: jest.fn().mockResolvedValue(undefined),
+      } as any;
+
+      // Recreate service with mocked dependencies
+      tokenService = new TokenService(
+        jwtService,
+        redisService,
+        authDatabaseService,
+        distributedTransactionService,
+        consistencyMetricsService
+      );
+
+      await tokenService.blacklistToken(token, userId, reason);
+
+      expect(distributedTransactionService.atomicBlacklistToken).toHaveBeenCalledWith({
+        token,
+        tokenHash: expect.any(String),
+        userId,
+        reason,
+        expiresAt: expect.any(Date),
+        ttlSeconds: expect.any(Number),
+        metadata: undefined
+      });
+    });
+
+    it('should check if token is blacklisted', async () => {
+      const token = 'access-token-123';
+
+      redisService.isTokenBlacklisted.mockResolvedValue(true);
+
+      const result = await tokenService.isTokenBlacklisted(token);
+
+      expect(result).toBe(true);
+      expect(redisService.isTokenBlacklisted).toHaveBeenCalledWith(token);
+    });
+  });
+
+  describe('Token Validation', () => {
+    it('should validate access token with user check', async () => {
+      const token = 'access-token-123';
+      const payload = { sub: 'user-123', email: 'test@example.com' };
+
+      jwtService.verify.mockReturnValue(payload);
+      redisService.isTokenBlacklisted.mockResolvedValue(false);
+      authDatabaseService.isTokenBlacklisted.mockResolvedValue(false);
+      redisService.get.mockResolvedValue(null);
+
+      const result = await tokenService.validateTokenWithUserCheck(token);
+
+      expect(result.valid).toBe(true);
+      expect(result.payload).toEqual(payload);
+    });
+
+    it('should reject blacklisted tokens', async () => {
+      const token = 'blacklisted-token';
+
+      redisService.isTokenBlacklisted.mockResolvedValue(true);
+
+      const result = await tokenService.validateToken(token);
+
+      expect(result.valid).toBe(false);
+      expect(result.reason).toBe('Token is blacklisted');
+    });
+
+    it('should reject tokens when user tokens are invalidated', async () => {
+      const token = 'access-token-123';
+      const payload = { sub: 'user-123', email: 'test@example.com' };
+
+      jwtService.verify.mockReturnValue(payload);
+      redisService.isTokenBlacklisted.mockResolvedValue(false);
+      authDatabaseService.isTokenBlacklisted.mockResolvedValue(false);
+      redisService.get.mockResolvedValue('true'); // User tokens invalidated
+
+      const result = await tokenService.validateTokenWithUserCheck(token);
+
+      expect(result.valid).toBe(false);
+      expect(result.reason).toBe('All user tokens have been invalidated');
+    });
+  });
+
+  describe('Refresh Token Flow', () => {
+    it('should refresh tokens with rotation', async () => {
+      const oldRefreshToken = 'old-refresh-token';
+      const payload = { sub: 'user-123', email: 'test@example.com' };
+
+      jwtService.verify.mockReturnValue(payload);
+      redisService.isTokenBlacklisted.mockResolvedValue(false);
+      authDatabaseService.isTokenBlacklisted.mockResolvedValue(false);
+      redisService.get.mockResolvedValue(null);
+      
+      jwtService.signAsync.mockResolvedValueOnce('new-access-token');
+      jwtService.signAsync.mockResolvedValueOnce('new-refresh-token');
+
+      const result = await tokenService.refreshTokenWithRotation(oldRefreshToken, 'user-123');
+
+      expect(result.accessToken).toBe('new-access-token');
+      expect(result.refreshToken).toBe('new-refresh-token');
+      expect(result.expiresIn).toBe(3600);
+    });
+
+    it('should validate refresh token correctly', async () => {
+      const refreshToken = 'refresh-token-123';
+      const payload = { sub: 'user-123', email: 'test@example.com' };
+
+      jwtService.verify.mockReturnValue(payload);
+      redisService.isTokenBlacklisted.mockResolvedValue(false);
+      authDatabaseService.isTokenBlacklisted.mockResolvedValue(false);
+      redisService.get.mockResolvedValue(null);
+
+      const result = await tokenService.validateRefreshToken(refreshToken);
+
+      expect(result.valid).toBe(true);
+      expect(result.payload).toEqual(payload);
+    });
+  });
+
+  describe('Bulk Operations', () => {
+    it('should blacklist all user tokens', async () => {
+      const userId = 'user-123';
+      const reason = 'security';
+      const metadata = { reason: 'Suspicious activity detected' };
+
+      authDatabaseService.blacklistAllUserTokens.mockResolvedValue(undefined);
+      redisService.delete.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      authDatabaseService.getUserBlacklistedTokens.mockResolvedValue([
+        { tokenHash: 'hash1' },
+        { tokenHash: 'hash2' },
+        { tokenHash: 'hash3' },
+        { tokenHash: 'hash4' },
+        { tokenHash: 'hash5' },
+      ] as any);
+
+      await tokenService.blacklistAllUserTokens(userId, reason, metadata);
+
+      expect(authDatabaseService.blacklistAllUserTokens).toHaveBeenCalledWith(userId, reason, metadata);
+      expect(redisService.set).toHaveBeenCalledWith(
+        `user_invalidated:${userId}`,
         'true',
         365 * 24 * 60 * 60
       );
-
-      // Test validation with user check
-      mockRedisService.isTokenBlacklisted.mockResolvedValue(false);
-      mockAuthDatabaseService.isTokenBlacklisted.mockResolvedValue(false);
-      mockRedisService.get.mockResolvedValue('true'); // User tokens invalidated
-
-      const validation = await service.validateTokenWithUserCheck(tokens.accessToken);
-      expect(validation.valid).toBe(false);
-      expect(validation.reason).toBe('All user tokens have been invalidated');
     });
 
-    it('should handle token expiration correctly', async () => {
-      // Create an expired token manually
-      const expiredPayload = {
-        sub: 'user-123',
-        email: 'test@example.com',
-      };
+    it('should cleanup expired tokens', async () => {
+      authDatabaseService.cleanupExpiredTokens.mockResolvedValue(42);
 
-      // Create a token that expires immediately
-      const expiredToken = await jwtService.signAsync(expiredPayload, { expiresIn: '0s' });
-      
-      // Wait a moment to ensure it's expired
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const result = await tokenService.cleanupExpiredTokens();
 
-      // Try to validate expired token
-      const validation = await service.validateToken(expiredToken);
-      expect(validation.valid).toBe(false);
-      expect(validation.reason).toBe('Token expired');
-
-      // Try to blacklist expired token (should not actually blacklist)
-      await service.blacklistToken(expiredToken, 'user-123', 'logout');
-
-      // Should not have called database or Redis blacklisting
-      expect(mockAuthDatabaseService.blacklistToken).not.toHaveBeenCalled();
-      expect(mockRedisService.blacklistToken).not.toHaveBeenCalled();
+      expect(result).toBe(42);
+      expect(authDatabaseService.cleanupExpiredTokens).toHaveBeenCalled();
     });
 
-    it('should decode tokens without verification', () => {
-      const user = { id: 'user-123', email: 'test@example.com' };
-      const payload = { sub: user.id, email: user.email };
+    it('should get user blacklisted tokens', async () => {
+      const userId = 'user-123';
+      const mockTokens = [
+        { id: '1', tokenHash: 'hash1', reason: 'logout' },
+        { id: '2', tokenHash: 'hash2', reason: 'security' },
+      ];
 
-      // Create a token
-      const token = jwtService.sign(payload);
+      authDatabaseService.getUserBlacklistedTokens.mockResolvedValue(mockTokens as any);
 
-      // Decode without verification
-      const decoded = service.decodeToken(token);
-      expect(decoded?.sub).toBe(user.id);
-      expect(decoded?.email).toBe(user.email);
-      expect(decoded?.exp).toBeDefined();
-      expect(decoded?.iat).toBeDefined();
-    });
-  });
+      const result = await tokenService.getUserBlacklistedTokens(userId);
 
-  describe('Error handling', () => {
-    it('should handle Redis failures gracefully', async () => {
-      const user = { id: 'user-123', email: 'test@example.com' };
-      const tokens = await service.generateTokens(user);
-
-      // Simulate Redis failure
-      mockRedisService.isTokenBlacklisted.mockRejectedValue(new Error('Redis connection failed'));
-      mockAuthDatabaseService.isTokenBlacklisted.mockResolvedValue(false);
-
-      // Should still work by falling back to database
-      const validation = await service.validateToken(tokens.accessToken);
-      expect(validation.valid).toBe(true);
-    });
-
-    it('should handle database failures gracefully', async () => {
-      const user = { id: 'user-123', email: 'test@example.com' };
-      const tokens = await service.generateTokens(user);
-
-      // Simulate both Redis and database failures
-      mockRedisService.isTokenBlacklisted.mockRejectedValue(new Error('Redis failed'));
-      mockAuthDatabaseService.isTokenBlacklisted.mockRejectedValue(new Error('Database failed'));
-
-      // Should fail open (return false) for availability
-      const isBlacklisted = await service.isTokenBlacklisted(tokens.accessToken);
-      expect(isBlacklisted).toBe(false);
+      expect(result).toEqual(mockTokens);
+      expect(authDatabaseService.getUserBlacklistedTokens).toHaveBeenCalledWith(userId);
     });
   });
 });

@@ -7,41 +7,32 @@ describe('CircuitBreakerConfig', () => {
   let configService: ConfigService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CircuitBreakerConfig,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string, defaultValue?: any) => {
-              const config = {
-                CIRCUIT_BREAKER_TIMEOUT: 3000,
-                CIRCUIT_BREAKER_ERROR_THRESHOLD: 50,
-                CIRCUIT_BREAKER_RESET_TIMEOUT: 30000,
-                CIRCUIT_BREAKER_ROLLING_TIMEOUT: 10000,
-                CIRCUIT_BREAKER_ROLLING_BUCKETS: 10,
-                CIRCUIT_BREAKER_VOLUME_THRESHOLD: 10,
-                USER_SERVICE_CIRCUIT_BREAKER_TIMEOUT: 3000,
-                USER_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: 50,
-                USER_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: 30000,
-                SECURITY_SERVICE_CIRCUIT_BREAKER_TIMEOUT: 5000,
-                SECURITY_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: 60,
-                SECURITY_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: 60000,
-                SECURITY_SERVICE_CIRCUIT_BREAKER_VOLUME_THRESHOLD: 5,
-                NOTIFICATION_SERVICE_CIRCUIT_BREAKER_TIMEOUT: 5000,
-                NOTIFICATION_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: 70,
-                NOTIFICATION_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: 60000,
-                NOTIFICATION_SERVICE_CIRCUIT_BREAKER_VOLUME_THRESHOLD: 3,
-              };
-              return config[key] || defaultValue;
-            }),
-          },
-        },
-      ],
-    }).compile();
+    configService = {
+      get: jest.fn((key: string, defaultValue?: any) => {
+        const config = {
+          CIRCUIT_BREAKER_TIMEOUT: 3000,
+          CIRCUIT_BREAKER_ERROR_THRESHOLD: 50,
+          CIRCUIT_BREAKER_RESET_TIMEOUT: 30000,
+          CIRCUIT_BREAKER_ROLLING_TIMEOUT: 10000,
+          CIRCUIT_BREAKER_ROLLING_BUCKETS: 10,
+          CIRCUIT_BREAKER_VOLUME_THRESHOLD: 10,
+          USER_SERVICE_CIRCUIT_BREAKER_TIMEOUT: 3000,
+          USER_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: 50,
+          USER_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: 30000,
+          SECURITY_SERVICE_CIRCUIT_BREAKER_TIMEOUT: 5000,
+          SECURITY_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: 60,
+          SECURITY_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: 60000,
+          SECURITY_SERVICE_CIRCUIT_BREAKER_VOLUME_THRESHOLD: 5,
+          NOTIFICATION_SERVICE_CIRCUIT_BREAKER_TIMEOUT: 5000,
+          NOTIFICATION_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: 70,
+          NOTIFICATION_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: 60000,
+          NOTIFICATION_SERVICE_CIRCUIT_BREAKER_VOLUME_THRESHOLD: 3,
+        };
+        return config[key] || defaultValue;
+      }),
+    } as any;
 
-    service = module.get<CircuitBreakerConfig>(CircuitBreakerConfig);
-    configService = module.get<ConfigService>(ConfigService);
+    service = new CircuitBreakerConfig(configService);
   });
 
   it('should be defined', () => {

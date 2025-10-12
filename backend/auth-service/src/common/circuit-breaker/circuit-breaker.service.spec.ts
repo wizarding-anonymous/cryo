@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { CircuitBreakerConfig } from './circuit-breaker.config';
@@ -6,33 +5,25 @@ import { CircuitBreakerConfig } from './circuit-breaker.config';
 describe('CircuitBreakerService', () => {
   let service: CircuitBreakerService;
   let circuitBreakerConfig: CircuitBreakerConfig;
+  let configService: ConfigService;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CircuitBreakerService,
-        CircuitBreakerConfig,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string, defaultValue?: any) => {
-              const config = {
-                CIRCUIT_BREAKER_TIMEOUT: 3000,
-                CIRCUIT_BREAKER_ERROR_THRESHOLD: 50,
-                CIRCUIT_BREAKER_RESET_TIMEOUT: 30000,
-                CIRCUIT_BREAKER_ROLLING_TIMEOUT: 10000,
-                CIRCUIT_BREAKER_ROLLING_BUCKETS: 10,
-                CIRCUIT_BREAKER_VOLUME_THRESHOLD: 10,
-              };
-              return config[key] || defaultValue;
-            }),
-          },
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    configService = {
+      get: jest.fn((key: string, defaultValue?: any) => {
+        const config = {
+          CIRCUIT_BREAKER_TIMEOUT: 3000,
+          CIRCUIT_BREAKER_ERROR_THRESHOLD: 50,
+          CIRCUIT_BREAKER_RESET_TIMEOUT: 30000,
+          CIRCUIT_BREAKER_ROLLING_TIMEOUT: 10000,
+          CIRCUIT_BREAKER_ROLLING_BUCKETS: 10,
+          CIRCUIT_BREAKER_VOLUME_THRESHOLD: 10,
+        };
+        return config[key] || defaultValue;
+      }),
+    } as any;
 
-    service = module.get<CircuitBreakerService>(CircuitBreakerService);
-    circuitBreakerConfig = module.get<CircuitBreakerConfig>(CircuitBreakerConfig);
+    circuitBreakerConfig = new CircuitBreakerConfig(configService);
+    service = new CircuitBreakerService(circuitBreakerConfig);
   });
 
   it('should be defined', () => {

@@ -1,45 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { ThrottlerGuard } from '@nestjs/throttler';
 import { LogoutDto } from './dto/logout.dto';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
 
 describe('AuthController - Logout', () => {
     let controller: AuthController;
-    let authService: AuthService;
+    let authService: jest.Mocked<AuthService>;
 
     const mockAuthService = {
         logout: jest.fn(),
     };
 
-    const mockJwtAuthGuard = {
-        canActivate: jest.fn(() => true),
-    };
-
-    const mockThrottlerGuard = {
-        canActivate: jest.fn(() => true),
-    };
-
     beforeEach(async () => {
-        const module: TestingModule = await Test.createTestingModule({
-            controllers: [AuthController],
-            providers: [
-                {
-                    provide: AuthService,
-                    useValue: mockAuthService,
-                },
-            ],
-        })
-            .overrideGuard(JwtAuthGuard)
-            .useValue(mockJwtAuthGuard)
-            .overrideGuard(ThrottlerGuard)
-            .useValue(mockThrottlerGuard)
-            .compile();
-
-        controller = module.get<AuthController>(AuthController);
-        authService = module.get<AuthService>(AuthService);
+        authService = mockAuthService as any;
+        controller = new AuthController(authService);
     });
 
     afterEach(() => {

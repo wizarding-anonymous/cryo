@@ -9,6 +9,7 @@ import { TokenModule } from './token/token.module';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './common/redis/redis.module';
 import { HttpClientModule } from './common/http-client/http-client.module';
+import { FallbackModule } from './common/fallback/fallback.module';
 import { HealthModule } from './health/health.module';
 import { EventsModule } from './events/events.module';
 import { SessionModule } from './session/session.module';
@@ -16,6 +17,8 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { IdempotencyModule } from './common/idempotency/idempotency.module';
+import { AsyncModule } from './common/async/async.module';
 
 @Module({
   imports: [
@@ -50,9 +53,12 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
     TokenModule,
     RedisModule,
     HttpClientModule,
+    FallbackModule,
     HealthModule,
     EventsModule,
     SessionModule,
+    IdempotencyModule,
+    AsyncModule,
   ],
   controllers: [AppController],
   providers: [

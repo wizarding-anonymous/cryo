@@ -1,50 +1,75 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigModule } from '@nestjs/config';
-import { BullModule } from '@nestjs/bull';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { EventsModule } from './events.module';
 import { EventBusService } from './services/event-bus.service';
 import { SecurityEventDto, NotificationEventDto, UserEventDto } from './dto';
-import { SecurityEvent } from '../entities/security-event.entity';
 
 describe('Events Integration', () => {
-  let module: TestingModule;
   let eventBusService: EventBusService;
+  let mockSecurityQueue: any;
+  let mockNotificationQueue: any;
+  let mockUserQueue: any;
 
-  beforeAll(async () => {
-    module = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          envFilePath: '.env.example',
-        }),
-        // Use in-memory SQLite for testing
-        TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
-          entities: [SecurityEvent],
-          synchronize: true,
-          logging: false,
-        }),
-        // Use in-memory Redis for testing
-        BullModule.forRoot({
-          redis: {
-            host: 'localhost',
-            port: 6379,
-            maxRetriesPerRequest: 1,
-          },
-        }),
-        EventsModule,
-      ],
-    }).compile();
+  beforeAll(() => {
+    // Mock queues for integration testing
+    mockSecurityQueue = {
+      add: jest.fn().mockResolvedValue({}),
+      getWaiting: jest.fn().mockResolvedValue([]),
+      getActive: jest.fn().mockResolvedValue([]),
+      getCompleted: jest.fn().mockResolvedValue([]),
+      getFailed: jest.fn().mockResolvedValue([]),
+      getDelayed: jest.fn().mockResolvedValue([]),
+    };
 
-    eventBusService = module.get<EventBusService>(EventBusService);
-  });
+    mockNotificationQueue = {
+      add: jest.fn().mockResolvedValue({}),
+      getWaiting: jest.fn().mockResolvedValue([]),
+      getActive: jest.fn().mockResolvedValue([]),
+      getCompleted: jest.fn().mockResolvedValue([]),
+      getFailed: jest.fn().mockResolvedValue([]),
+      getDelayed: jest.fn().mockResolvedValue([]),
+    };
 
-  afterAll(async () => {
-    if (module) {
-      await module.close();
-    }
+    mockUserQueue = {
+      add: jest.fn().mockResolvedValue({}),
+      getWaiting: jest.fn().mockResolvedValue([]),
+      getActive: jest.fn().mockResolvedValue([]),
+      getCompleted: jest.fn().mockResolvedValue([]),
+      getFailed: jest.fn().mockResolvedValue([]),
+      getDelayed: jest.fn().mockResolvedValue([]),
+    };
+
+    const mockAsyncOperations = {
+      executeImmediate: jest.fn().mockImplementation(async (fn) => await fn()),
+      executeParallel: jest.fn().mockImplementation(async (operations) => {
+        for (const op of operations) {
+          await op();
+        }
+      }),
+      executeBatch: jest.fn().mockImplementation(async (operations) => {
+        for (const op of operations) {
+          await op();
+        }
+      }),
+      registerOperation: jest.fn(),
+      getMetrics: jest.fn().mockReturnValue({}),
+      shutdown: jest.fn(),
+    };
+
+    const mockMetricsService = {
+      recordEventMetric: jest.fn(),
+      getPerformanceSummary: jest.fn().mockReturnValue({}),
+      getHealthStatus: jest.fn().mockReturnValue({
+        status: 'healthy',
+        issues: [],
+        metrics: {},
+      }),
+    };
+
+    eventBusService = new EventBusService(
+      mockSecurityQueue,
+      mockNotificationQueue,
+      mockUserQueue,
+      mockAsyncOperations as any,
+      mockMetricsService as any
+    );
   });
 
   it('should be defined', () => {

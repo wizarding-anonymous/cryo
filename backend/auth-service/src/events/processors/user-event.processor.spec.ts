@@ -1,27 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { UserEventProcessor } from './user-event.processor';
 import { UserEventDto } from '../dto';
 import { UserServiceClient } from '../../common/http-client/user-service.client';
 
 describe('UserEventProcessor', () => {
   let processor: UserEventProcessor;
+  let userServiceClient: jest.Mocked<UserServiceClient>;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UserEventProcessor,
-        {
-          provide: UserServiceClient,
-          useValue: {
-            updateLastLogin: jest.fn(),
-            updateProfile: jest.fn(),
-            updateAccountStatus: jest.fn(),
-          },
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    userServiceClient = {
+      updateLastLogin: jest.fn(),
+      updateProfile: jest.fn(),
+      updateAccountStatus: jest.fn(),
+    } as any;
 
-    processor = module.get<UserEventProcessor>(UserEventProcessor);
+    processor = new UserEventProcessor(userServiceClient);
   });
 
   it('should be defined', () => {

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { BaseCircuitBreakerClient, ServiceUnavailableError } from '../circuit-breaker/base-circuit-breaker.client';
 import { CircuitBreakerService } from '../circuit-breaker/circuit-breaker.service';
 import { CircuitBreakerConfig } from '../circuit-breaker/circuit-breaker.config';
+import { LocalSecurityLoggerService } from '../fallback/local-security-logger.service';
 
 export interface SecurityEvent {
   userId: string;
@@ -30,6 +31,7 @@ export class SecurityServiceClient extends BaseCircuitBreakerClient {
     configService: ConfigService,
     circuitBreakerService: CircuitBreakerService,
     private readonly circuitBreakerConfig: CircuitBreakerConfig,
+    private readonly localSecurityLogger: LocalSecurityLoggerService,
   ) {
     super(
       httpService,
@@ -46,9 +48,10 @@ export class SecurityServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
-   * Log security event with Circuit Breaker protection and retry mechanism
+   * Log security event with Circuit Breaker protection and enhanced fallback
    * Requirements: 6.1, 6.2, 6.3 - Log authentication events to Security Service
    * Requirement: 6.6 - Handle Security Service unavailability gracefully
+   * Task 17.3: Enhanced fallback with local security logging
    */
   async logSecurityEvent(event: SecurityEvent): Promise<void> {
     try {
@@ -56,7 +59,10 @@ export class SecurityServiceClient extends BaseCircuitBreakerClient {
       this.logger.log(`Security event logged: ${event.type} for user ${event.userId}`);
     } catch (error) {
       if (error instanceof ServiceUnavailableError) {
-        this.logger.warn(`Security Service unavailable, queuing event: ${event.type} for user ${event.userId}`);
+        this.logger.warn(`Security Service unavailable, using local fallback: ${event.type} for user ${event.userId}`);
+        
+        // Use enhanced local fallback
+        await this.localSecurityLogger.logEventLocally(event);
         this.queueEvent(event);
         return; // Don't throw error as this is not critical for auth flow
       }
@@ -68,15 +74,17 @@ export class SecurityServiceClient extends BaseCircuitBreakerClient {
         userId: event.userId,
       });
       
-      // Queue event for retry even on other errors
+      // Use local fallback for any error
+      await this.localSecurityLogger.logEventLocally(event);
       this.queueEvent(event);
       // Don't throw error as this is not critical for auth flow
     }
   }
 
   /**
-   * Check suspicious activity with Circuit Breaker protection
+   * Check suspicious activity with Circuit Breaker protection and local fallback
    * Requirement: 6.6 - Handle Security Service unavailability gracefully
+   * Task 17.3: Enhanced fallback with local suspicious activity detection
    */
   async checkSuspiciousActivity(userId: string, ipAddress: string): Promise<boolean> {
     try {
@@ -88,8 +96,15 @@ export class SecurityServiceClient extends BaseCircuitBreakerClient {
       return response.suspicious;
     } catch (error) {
       if (error instanceof ServiceUnavailableError) {
-        this.logger.warn(`Security Service unavailable for suspicious activity check: ${userId}`);
-        return false; // Fail open for availability
+        this.logger.warn(`Security Service unavailable, using local fallback for suspicious activity check: ${userId}`);
+        
+        // Use local fallback for suspicious activity detection
+        const localResult = await this.localSecurityLogger.checkSuspiciousActivityLocally(userId, ipAddress);
+        this.logger.debug(`Local suspicious activity check for user ${userId}: ${localResult.suspicious}`, {
+          reasons: localResult.reasons,
+        });
+        
+        return localResult.suspicious;
       }
       
       this.logger.error('Failed to check suspicious activity', {
@@ -98,7 +113,16 @@ export class SecurityServiceClient extends BaseCircuitBreakerClient {
         userId,
         ipAddress,
       });
-      return false; // Fail open for availability
+      
+      // Try local fallback even on other errors
+      try {
+        const localResult = await this.localSecurityLogger.checkSuspiciousActivityLocally(userId, ipAddress);
+        this.logger.warn(`Using local fallback due to Security Service error for user ${userId}: ${localResult.suspicious}`);
+        return localResult.suspicious;
+      } catch (localError) {
+        this.logger.error(`Local fallback also failed: ${localError.message}`);
+        return false; // Fail open for availability
+      }
     }
   }
 
@@ -217,14 +241,50 @@ export class SecurityServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
+   * Get local security events for a user (fallback method)
+   * Task 17.3: Локальный доступ к событиям безопасности
+   */
+  async getLocalEventsForUser(userId: string, limit: number = 50): Promise<any[]> {
+    try {
+      return await this.localSecurityLogger.getLocalEventsForUser(userId, limit);
+    } catch (error) {
+      this.logger.error(`Failed to get local events for user ${userId}: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Get local security statistics (fallback method)
+   * Task 17.3: Локальная аналитика безопасности
+   */
+  async getLocalSecurityStats(hours: number = 24): Promise<any> {
+    try {
+      return await this.localSecurityLogger.getLocalSecurityStats(hours);
+    } catch (error) {
+      this.logger.error(`Failed to get local security stats: ${error.message}`);
+      return {
+        totalEvents: 0,
+        eventsByType: {},
+        uniqueUsers: 0,
+        uniqueIPs: 0,
+        suspiciousActivities: 0,
+        unprocessedEvents: 0,
+      };
+    }
+  }
+
+  /**
    * Get queue statistics for monitoring
    */
   getQueueStats() {
+    const localStats = this.localSecurityLogger.getQueueStats();
+    
     return {
       queueSize: this.eventQueue.length,
       maxQueueSize: this.maxQueueSize,
       circuitBreakerState: this.getCircuitBreakerState(),
       circuitBreakerStats: this.getCircuitBreakerStats(),
+      localFallback: localStats,
     };
   }
 

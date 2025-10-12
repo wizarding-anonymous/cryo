@@ -23,6 +23,7 @@ import { DatabaseOperationsService } from '../database/database-operations.servi
 import { CircuitBreakerService } from '../common/circuit-breaker/circuit-breaker.service';
 import { RedisService } from '../common/redis/redis.service';
 import { RaceConditionMetricsService } from '../common/metrics/race-condition-metrics.service';
+import { UserCacheService } from '../common/cache/user-cache.service';
 
 @ApiTags('Health')
 @ApiExtraModels(
@@ -48,6 +49,7 @@ export class HealthController {
     private circuitBreakerService: CircuitBreakerService,
     private redisService: RedisService,
     private raceConditionMetricsService: RaceConditionMetricsService,
+    private userCacheService: UserCacheService,
   ) {}
 
   @Get()
@@ -629,6 +631,218 @@ auth_service_lock_conflicts_total 5`
       warning: 'This operation should only be used in development/testing environments',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Get('cache')
+  @ApiOperation({ 
+    summary: 'Get cache health and statistics',
+    description: `
+      Comprehensive cache monitoring and statistics for memory leak prevention.
+      
+      **Task 17.1 Implementation:**
+      - LRU cache statistics with memory usage monitoring
+      - Hit/miss ratios for both local and Redis cache layers
+      - Memory pressure detection and alerting
+      - Automatic cleanup and eviction monitoring
+      
+      **Information Provided:**
+      - Local LRU cache size and memory usage
+      - Redis distributed cache statistics
+      - Hit/miss ratios and performance metrics
+      - Memory pressure and health status
+      - Recommended actions for optimization
+      
+      **Use Cases:**
+      - Memory leak detection and prevention
+      - Cache performance optimization
+      - Capacity planning and monitoring
+      - System health verification
+    `
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Comprehensive cache health information and statistics',
+  })
+  getCacheHealth() {
+    const stats = this.userCacheService.getUserCacheStats();
+    const info = this.userCacheService.getCacheInfo();
+    const metrics = this.userCacheService.getMetrics();
+    
+    return {
+      status: 'success',
+      cache: {
+        health: {
+          isHealthy: info.isHealthy,
+          memoryPressure: Math.round(info.memoryPressure * 100),
+          recommendedAction: stats.recommendedAction,
+          uptime: Math.floor(info.uptime / 1000), // Convert to seconds
+        },
+        statistics: {
+          localCache: {
+            size: stats.localSize,
+            maxSize: stats.maxSize,
+            memoryUsage: `${Math.round(stats.memoryUsage / 1024)}KB`,
+            hitRatio: `${stats.localHitRatio}%`,
+            hits: stats.localHits,
+            misses: stats.localMisses,
+          },
+          redisCache: {
+            enabled: stats.redisEnabled,
+            hitRatio: `${stats.redisHitRatio}%`,
+            hits: stats.redisHits,
+            misses: stats.redisMisses,
+          },
+          overall: {
+            totalHitRatio: `${stats.hitRatio}%`,
+            totalHits: stats.totalHits,
+            totalMisses: stats.totalMisses,
+            estimatedUsers: stats.estimatedUsers,
+            memoryPerUser: `${stats.memoryPerUser}B`,
+          },
+        },
+        performance: info.performance,
+        alerts: this.getCacheAlerts(stats, info),
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('cache/metrics')
+  @ApiOperation({ 
+    summary: 'Get cache metrics in Prometheus format',
+    description: `
+      Cache metrics formatted for Prometheus monitoring system.
+      
+      **Task 17.1 Metrics:**
+      - cache_hits_total (local and Redis)
+      - cache_misses_total (local and Redis)
+      - cache_size_current and cache_size_max
+      - cache_memory_usage_bytes
+      - cache_memory_pressure_ratio
+      - cache_hit_ratio_percent (local, Redis, and overall)
+      - cache_healthy (0 or 1)
+      
+      **Use Cases:**
+      - Prometheus monitoring integration
+      - Grafana dashboard creation
+      - Automated alerting for memory leaks
+      - Long-term performance tracking
+    `
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Prometheus-formatted cache metrics',
+  })
+  getCacheMetrics() {
+    const metrics = this.userCacheService.getMetrics();
+    
+    return {
+      status: 'success',
+      metrics,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('cache/clear')
+  @ApiOperation({ 
+    summary: 'Clear all cache entries (Development/Testing only)',
+    description: `
+      Clear all cache entries from both local LRU cache and Redis.
+      
+      **Warning:** This endpoint should only be used in development or testing environments.
+      In production, cache clearing should be done carefully to avoid performance impact.
+      
+      **Task 17.1 Implementation:**
+      - Clears local LRU cache (prevents memory leaks)
+      - Clears Redis cache entries with proper namespacing
+      - Resets all hit/miss statistics
+      - Provides detailed clearing results
+      
+      **Use Cases:**
+      - Testing cache functionality
+      - Development environment cleanup
+      - Memory leak testing and verification
+      - Performance testing preparation
+    `
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Cache has been cleared successfully',
+  })
+  async clearCache() {
+    const statsBefore = this.userCacheService.getUserCacheStats();
+    
+    await this.userCacheService.clear();
+    
+    const statsAfter = this.userCacheService.getUserCacheStats();
+    
+    return {
+      status: 'success',
+      message: 'Cache cleared successfully',
+      details: {
+        before: {
+          localSize: statsBefore.localSize,
+          memoryUsage: `${Math.round(statsBefore.memoryUsage / 1024)}KB`,
+          totalHits: statsBefore.totalHits,
+          totalMisses: statsBefore.totalMisses,
+        },
+        after: {
+          localSize: statsAfter.localSize,
+          memoryUsage: `${Math.round(statsAfter.memoryUsage / 1024)}KB`,
+          totalHits: statsAfter.totalHits,
+          totalMisses: statsAfter.totalMisses,
+        },
+        cleared: {
+          entries: statsBefore.localSize,
+          memoryFreed: `${Math.round((statsBefore.memoryUsage - statsAfter.memoryUsage) / 1024)}KB`,
+        },
+      },
+      warning: 'This operation should only be used in development/testing environments',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Generate cache alerts based on statistics and health info
+   */
+  private getCacheAlerts(stats: any, info: any): string[] {
+    const alerts: string[] = [];
+    
+    // Memory pressure alerts
+    if (info.memoryPressure > 0.9) {
+      alerts.push('CRITICAL: Cache memory pressure > 90%. Immediate action required.');
+    } else if (info.memoryPressure > 0.8) {
+      alerts.push('WARNING: Cache memory pressure > 80%. Consider increasing cache size.');
+    }
+    
+    // Hit ratio alerts
+    if (stats.hitRatio < 50 && stats.totalHits + stats.totalMisses > 100) {
+      alerts.push('WARNING: Overall cache hit ratio < 50%. Review cache strategy.');
+    }
+    
+    if (stats.localHitRatio < 30 && stats.localHits + stats.localMisses > 50) {
+      alerts.push('INFO: Local cache hit ratio < 30%. Consider increasing local cache size.');
+    }
+    
+    if (stats.redisEnabled && stats.redisHitRatio < 20 && stats.redisHits + stats.redisMisses > 50) {
+      alerts.push('INFO: Redis cache hit ratio < 20%. Review Redis TTL configuration.');
+    }
+    
+    // Performance alerts
+    if (stats.estimatedUsers > 8000) {
+      alerts.push('INFO: Cache approaching capacity with 8000+ users. Monitor for performance impact.');
+    }
+    
+    // Health status
+    if (!info.isHealthy) {
+      alerts.push('ERROR: Cache is marked as unhealthy. Check memory pressure and performance.');
+    }
+    
+    if (alerts.length === 0) {
+      alerts.push('OK: Cache is performing optimally.');
+    }
+    
+    return alerts;
   }
 
   /**

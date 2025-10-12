@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { BaseCircuitBreakerClient, ServiceUnavailableError } from '../circuit-breaker/base-circuit-breaker.client';
 import { CircuitBreakerService } from '../circuit-breaker/circuit-breaker.service';
 import { CircuitBreakerConfig } from '../circuit-breaker/circuit-breaker.config';
+import { UserCacheService } from '../cache/user-cache.service';
 
 export interface CreateUserDto {
   name: string;
@@ -29,14 +30,12 @@ export interface UserExistsResponse {
 
 @Injectable()
 export class UserServiceClient extends BaseCircuitBreakerClient {
-  private readonly userCache = new Map<string, { user: User | null; timestamp: number }>();
-  private readonly cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
-
   constructor(
     httpService: HttpService,
     configService: ConfigService,
     circuitBreakerService: CircuitBreakerService,
-    private readonly circuitBreakerConfig: CircuitBreakerConfig,
+    circuitBreakerConfig: CircuitBreakerConfig,
+    private readonly userCacheService: UserCacheService,
   ) {
     super(
       httpService,
@@ -50,35 +49,36 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
-   * Find user by email with Circuit Breaker protection and caching
+   * Find user by email with Circuit Breaker protection and LRU caching
    * Requirement 2.2: Verify user existence through User Service
+   * Task 17.1: Uses LRU cache instead of Map to prevent memory leaks
    */
   async findByEmail(email: string): Promise<User | null> {
-    const cacheKey = `email:${email}`;
-    
-    // Check cache first
-    const cached = this.getCachedUser(cacheKey);
+    // Check LRU cache first (local + Redis)
+    const cached = await this.userCacheService.getCachedUserByEmail(email);
     if (cached !== undefined) {
+      this.logger.debug(`Cache hit for user email: ${email}`);
       return cached;
     }
 
     try {
       const user = await this.get<User>(`/users/email/${email}`);
-      this.setCachedUser(cacheKey, user);
+      await this.userCacheService.setCachedUserByEmail(email, user);
+      this.logger.debug(`User found and cached: ${email}`);
       return user;
     } catch (error) {
       if (error.response?.status === 404) {
-        this.setCachedUser(cacheKey, null);
+        await this.userCacheService.setCachedUserByEmail(email, null);
         return null;
       }
       
       if (error instanceof ServiceUnavailableError) {
         this.logger.warn(`User Service unavailable for findByEmail: ${email}`);
-        // Return cached value if available, even if expired
-        const expiredCache = this.userCache.get(cacheKey);
+        // Return expired cache if available as fallback
+        const expiredCache = await this.userCacheService.getExpiredCacheByEmail(email);
         if (expiredCache) {
           this.logger.warn(`Using expired cache for user email: ${email}`);
-          return expiredCache.user;
+          return expiredCache;
         }
         throw new ServiceUnavailableException('User Service is currently unavailable');
       }
@@ -92,35 +92,36 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
-   * Find user by ID with Circuit Breaker protection and caching
+   * Find user by ID with Circuit Breaker protection and LRU caching
    * Requirement 2.4: Verify user existence through User Service
+   * Task 17.1: Uses LRU cache instead of Map to prevent memory leaks
    */
   async findById(id: string): Promise<User | null> {
-    const cacheKey = `id:${id}`;
-    
-    // Check cache first
-    const cached = this.getCachedUser(cacheKey);
+    // Check LRU cache first (local + Redis)
+    const cached = await this.userCacheService.getCachedUserById(id);
     if (cached !== undefined) {
+      this.logger.debug(`Cache hit for user ID: ${id}`);
       return cached;
     }
 
     try {
       const user = await this.get<User>(`/users/${id}`);
-      this.setCachedUser(cacheKey, user);
+      await this.userCacheService.setCachedUserById(id, user);
+      this.logger.debug(`User found and cached: ${id}`);
       return user;
     } catch (error) {
       if (error.response?.status === 404) {
-        this.setCachedUser(cacheKey, null);
+        await this.userCacheService.setCachedUserById(id, null);
         return null;
       }
       
       if (error instanceof ServiceUnavailableError) {
         this.logger.warn(`User Service unavailable for findById: ${id}`);
-        // Return cached value if available, even if expired
-        const expiredCache = this.userCache.get(cacheKey);
+        // Return expired cache if available as fallback
+        const expiredCache = await this.userCacheService.getExpiredCacheById(id);
         if (expiredCache) {
           this.logger.warn(`Using expired cache for user ID: ${id}`);
-          return expiredCache.user;
+          return expiredCache;
         }
         throw new ServiceUnavailableException('User Service is currently unavailable');
       }
@@ -134,19 +135,19 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
-   * Create user with Circuit Breaker protection
+   * Create user with Circuit Breaker protection and LRU caching
    * Requirement 2.1: Call User Service's user creation endpoint
    * Requirement 2.7: Pass already-hashed passwords for user creation
+   * Task 17.1: Uses LRU cache instead of Map to prevent memory leaks
    */
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     try {
       const user = await this.post<User>('/users', createUserDto);
       
-      // Cache the newly created user
-      this.setCachedUser(`id:${user.id}`, user);
-      this.setCachedUser(`email:${user.email}`, user);
+      // Cache the newly created user in both email and ID indexes
+      await this.userCacheService.setCachedUser(user);
       
-      this.logger.log(`Successfully created user: ${user.id}`);
+      this.logger.log(`Successfully created and cached user: ${user.id}`);
       return user;
     } catch (error) {
       if (error instanceof ServiceUnavailableError) {
@@ -169,8 +170,9 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
-   * Update user's last login timestamp
+   * Update user's last login timestamp with LRU cache invalidation
    * Requirement 2.3: Call User Service to update last login timestamp
+   * Task 17.1: Uses LRU cache instead of Map to prevent memory leaks
    */
   async updateLastLogin(userId: string): Promise<void> {
     try {
@@ -178,10 +180,10 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
         lastLoginAt: new Date().toISOString(),
       });
       
-      // Invalidate cache for this user
-      this.invalidateUserCache(userId);
+      // Invalidate LRU cache for this user (both email and ID entries)
+      await this.userCacheService.invalidateUser(userId);
       
-      this.logger.log(`Successfully updated last login for user: ${userId}`);
+      this.logger.log(`Successfully updated last login and invalidated cache for user: ${userId}`);
     } catch (error) {
       if (error instanceof ServiceUnavailableError) {
         this.logger.warn(`User Service unavailable for updating last login: ${userId}`);
@@ -198,8 +200,9 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
-   * Check if user exists by ID
+   * Check if user exists by ID with LRU cache fallback
    * Requirement 2.5: Check user existence through User Service
+   * Task 17.1: Uses LRU cache instead of Map to prevent memory leaks
    */
   async userExists(userId: string): Promise<boolean> {
     try {
@@ -212,12 +215,20 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
       
       if (error instanceof ServiceUnavailableError) {
         this.logger.warn(`User Service unavailable for userExists check: ${userId}`);
-        // Fallback: try to get user from cache
-        const cached = this.getCachedUser(`id:${userId}`);
+        // Fallback: try to get user from LRU cache
+        const cached = await this.userCacheService.getCachedUserById(userId);
         if (cached !== undefined) {
           this.logger.warn(`Using cached data for userExists check: ${userId}`);
           return cached !== null;
         }
+        
+        // Try expired cache as last resort
+        const expiredCache = await this.userCacheService.getExpiredCacheById(userId);
+        if (expiredCache !== null) {
+          this.logger.warn(`Using expired cache for userExists check: ${userId}`);
+          return true;
+        }
+        
         throw new ServiceUnavailableException('User Service is currently unavailable');
       }
       
@@ -230,63 +241,42 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
-   * Get cached user data
+   * Clear all cached user data (delegates to LRU cache service)
+   * Task 17.1: Replaced Map-based cache with LRU cache to prevent memory leaks
    */
-  private getCachedUser(cacheKey: string): User | null | undefined {
-    const cached = this.userCache.get(cacheKey);
-    if (!cached) {
-      return undefined;
-    }
-    
-    const now = Date.now();
-    if (now - cached.timestamp > this.cacheTimeout) {
-      this.userCache.delete(cacheKey);
-      return undefined;
-    }
-    
-    return cached.user;
+  async clearCache(): Promise<void> {
+    await this.userCacheService.clear();
+    this.logger.log('User cache cleared');
   }
 
   /**
-   * Set cached user data
-   */
-  private setCachedUser(cacheKey: string, user: User | null): void {
-    this.userCache.set(cacheKey, {
-      user,
-      timestamp: Date.now(),
-    });
-  }
-
-  /**
-   * Invalidate cache for a specific user
-   */
-  private invalidateUserCache(userId: string): void {
-    // Remove by ID
-    this.userCache.delete(`id:${userId}`);
-    
-    // Find and remove by email (we need to search through cache)
-    for (const [key, value] of this.userCache.entries()) {
-      if (key.startsWith('email:') && value.user?.id === userId) {
-        this.userCache.delete(key);
-        break;
-      }
-    }
-  }
-
-  /**
-   * Clear all cached user data
-   */
-  clearCache(): void {
-    this.userCache.clear();
-  }
-
-  /**
-   * Get cache statistics
+   * Get comprehensive cache statistics with memory leak prevention metrics
+   * Task 17.1: Enhanced statistics including hit/miss ratios and memory usage
    */
   getCacheStats() {
+    return this.userCacheService.getUserCacheStats();
+  }
+
+  /**
+   * Get cache metrics for monitoring and alerting
+   * Task 17.1: Added metrics for Prometheus/monitoring systems
+   */
+  getCacheMetrics() {
+    return this.userCacheService.getMetrics();
+  }
+
+  /**
+   * Get cache health information
+   * Task 17.1: Added health monitoring to detect memory pressure
+   */
+  getCacheHealth() {
+    const info = this.userCacheService.getCacheInfo();
     return {
-      size: this.userCache.size,
-      timeout: this.cacheTimeout,
+      isHealthy: info.isHealthy,
+      memoryPressure: info.memoryPressure,
+      recommendedAction: info.performance ? 'Cache is performing well' : 'Consider reviewing cache configuration',
+      uptime: info.uptime,
+      redisEnabled: info.redisEnabled
     };
   }
 }

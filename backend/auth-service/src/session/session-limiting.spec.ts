@@ -11,8 +11,8 @@ describe('SessionService - Concurrent Session Limiting', () => {
     const createMockSession = (overrides: Partial<Session> = {}): Session => ({
         id: 'session-1',
         userId: 'user-123',
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
+        accessTokenHash: 'hashed-access-token',
+        refreshTokenHash: 'hashed-refresh-token',
         ipAddress: '127.0.0.1',
         userAgent: 'Mozilla/5.0',
         isActive: true,
@@ -33,18 +33,44 @@ describe('SessionService - Concurrent Session Limiting', () => {
             findById: jest.fn(),
         };
 
-        const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                SessionService,
-                {
-                    provide: SessionRepository,
-                    useValue: mockSessionRepository,
-                },
-            ],
-        }).compile();
+        // Создаем моки для зависимостей
+        const mockRedisLockService = {
+            acquireLock: jest.fn().mockResolvedValue(true),
+            releaseLock: jest.fn().mockResolvedValue(true),
+            withLock: jest.fn().mockImplementation(async (_key, fn) => fn()),
+            isLocked: jest.fn().mockResolvedValue(false),
+        };
 
-        service = module.get<SessionService>(SessionService);
-        mockRepository = module.get(SessionRepository);
+        const mockRaceConditionMetricsService = {
+            recordMetric: jest.fn(),
+            getMetrics: jest.fn().mockReturnValue({}),
+        };
+
+        const mockTokenService = {
+            generateTokens: jest.fn(),
+            validateToken: jest.fn(),
+            blacklistToken: jest.fn(),
+            hashToken: jest.fn().mockReturnValue('hashed-token'),
+        };
+
+        mockRepository = {
+            findActiveSessionsByUserId: jest.fn(),
+            findByUserId: jest.fn(),
+            countActiveSessionsByUserId: jest.fn(),
+            deactivateSession: jest.fn(),
+            deactivateAllUserSessions: jest.fn(),
+            remove: jest.fn(),
+            save: jest.fn(),
+            create: jest.fn(),
+            findOne: jest.fn(),
+        } as any;
+
+        service = new SessionService(
+            mockRepository,
+            mockRedisLockService as any,
+            mockRaceConditionMetricsService as any,
+            mockTokenService as any
+        );
     });
 
     describe('enforceSessionLimit', () => {

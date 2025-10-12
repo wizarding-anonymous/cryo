@@ -1,7 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { TokenService } from '../token/token.service';
 import { SessionService } from '../session/session.service';
@@ -11,12 +8,20 @@ import { NotificationServiceClient } from '../common/http-client/notification-se
 import { EventBusService } from '../events/services/event-bus.service';
 
 describe('AuthService - Refresh Token Mechanism', () => {
-  let service: AuthService;
+  let authService: AuthService;
+  let jwtService: jest.Mocked<any>;
   let tokenService: jest.Mocked<TokenService>;
   let sessionService: jest.Mocked<SessionService>;
   let userServiceClient: jest.Mocked<UserServiceClient>;
   let securityServiceClient: jest.Mocked<SecurityServiceClient>;
+  let notificationServiceClient: jest.Mocked<NotificationServiceClient>;
   let eventBusService: jest.Mocked<EventBusService>;
+  let configService: jest.Mocked<any>;
+  let authSagaService: jest.Mocked<any>;
+  let sagaService: jest.Mocked<any>;
+  let asyncOperations: jest.Mocked<any>;
+  let metricsService: jest.Mocked<any>;
+  let workerProcess: jest.Mocked<any>;
 
   const mockUser = {
     id: 'user-123',
@@ -34,99 +39,117 @@ describe('AuthService - Refresh Token Mechanism', () => {
     expiresIn: 3600,
   };
 
-  beforeEach(async () => {
-    const mockTokenService = {
+  beforeEach(() => {
+    // Создаем моки напрямую
+    jwtService = {
+      signAsync: jest.fn(),
+      verify: jest.fn(),
+    } as any;
+
+    tokenService = {
       validateRefreshToken: jest.fn(),
       refreshTokenWithRotation: jest.fn(),
       isTokenBlacklisted: jest.fn(),
       blacklistToken: jest.fn(),
-    };
+      hashToken: jest.fn(),
+    } as any;
 
-    const mockSessionService = {
+    sessionService = {
       createSession: jest.fn(),
+      createSessionWithLimit: jest.fn(),
       getSession: jest.fn(),
       getSessionByAccessToken: jest.fn(),
+      getSessionByRefreshToken: jest.fn(),
       invalidateSession: jest.fn(),
       getUserSessions: jest.fn(),
       enforceSessionLimit: jest.fn(),
-    };
+      updateLastAccessed: jest.fn(),
+    } as any;
 
-    const mockUserServiceClient = {
+    userServiceClient = {
       findById: jest.fn(),
-    };
+      findByEmail: jest.fn(),
+      createUser: jest.fn(),
+      updateLastLogin: jest.fn(),
+    } as any;
 
-    const mockSecurityServiceClient = {
-      logSecurityEvent: jest.fn(),
-      logTokenRefresh: jest.fn(),
-    };
+    securityServiceClient = {
+      logSecurityEvent: jest.fn().mockResolvedValue(undefined),
+      logTokenRefresh: jest.fn().mockResolvedValue(undefined),
+    } as any;
 
-    const mockNotificationServiceClient = {
-      sendWelcomeNotification: jest.fn(),
-    };
+    notificationServiceClient = {
+      sendWelcomeNotification: jest.fn().mockResolvedValue(undefined),
+    } as any;
 
-    const mockConfigService = {
+    eventBusService = {
+      publishUserLoggedOutEvent: jest.fn().mockResolvedValue(undefined),
+      publishSecurityEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserRegisteredEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserLoggedInEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    configService = {
       get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
-        const config = {
-          'MAX_SESSIONS_PER_USER': 5,
-          'JWT_SECRET': 'test-secret',
-          'JWT_EXPIRES_IN': '1h',
-        };
-        return config[key] || defaultValue;
+        if (key === 'MAX_SESSIONS_PER_USER') return 5;
+        if (key === 'USE_SAGA_PATTERN') return false;
+        if (key === 'JWT_SECRET') return 'test-secret';
+        if (key === 'JWT_EXPIRES_IN') return '1h';
+        return defaultValue;
       }),
-    };
+    } as any;
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        {
-          provide: JwtService,
-          useValue: {
-            verify: jest.fn(),
-            signAsync: jest.fn(),
-          },
-        },
-        {
-          provide: TokenService,
-          useValue: mockTokenService,
-        },
-        {
-          provide: SessionService,
-          useValue: mockSessionService,
-        },
-        {
-          provide: UserServiceClient,
-          useValue: mockUserServiceClient,
-        },
-        {
-          provide: SecurityServiceClient,
-          useValue: mockSecurityServiceClient,
-        },
-        {
-          provide: NotificationServiceClient,
-          useValue: mockNotificationServiceClient,
-        },
-        {
-          provide: EventBusService,
-          useValue: {
-            publishUserLoggedOutEvent: jest.fn(),
-            publishSecurityEvent: jest.fn(),
-            publishUserRegisteredEvent: jest.fn(),
-            publishUserLoggedInEvent: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: mockConfigService,
-        },
-      ],
-    }).compile();
+    authSagaService = {
+      executeRegistrationSaga: jest.fn(),
+      executeLoginSaga: jest.fn(),
+      waitForSagaCompletion: jest.fn(),
+    } as any;
 
-    service = module.get<AuthService>(AuthService);
-    tokenService = module.get(TokenService);
-    sessionService = module.get(SessionService);
-    userServiceClient = module.get(UserServiceClient);
-    securityServiceClient = module.get(SecurityServiceClient);
-    eventBusService = module.get(EventBusService);
+    sagaService = {
+      createSaga: jest.fn(),
+      executeSaga: jest.fn(),
+      getSagaStatus: jest.fn(),
+    } as any;
+
+    asyncOperations = {
+      executeAsync: jest.fn(),
+      executeCriticalPath: jest.fn(),
+      getOperationStatus: jest.fn(),
+    } as any;
+
+    metricsService = {
+      recordMetric: jest.fn(),
+      recordAuthFlowMetric: jest.fn(),
+      getMetrics: jest.fn(),
+    } as any;
+
+    workerProcess = {
+      executeInWorker: jest.fn(),
+      executeBatchInWorkers: jest.fn(),
+      getWorkerMetrics: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
+    authService = new AuthService(
+      jwtService,
+      tokenService,
+      sessionService,
+      userServiceClient,
+      securityServiceClient,
+      notificationServiceClient,
+      eventBusService,
+      configService,
+      authSagaService,
+      sagaService,
+      asyncOperations,
+      metricsService,
+      workerProcess,
+    );
+
+    // Mock executeCriticalPath to execute the callback function
+    asyncOperations.executeCriticalPath.mockImplementation(async (callback: () => any) => {
+      return await callback();
+    });
   });
 
   describe('refreshToken', () => {
@@ -143,7 +166,10 @@ describe('AuthService - Refresh Token Mechanism', () => {
       tokenService.refreshTokenWithRotation.mockResolvedValue(mockTokens);
 
       // Act
-      const result = await service.refreshToken(validRefreshToken);
+      const result = await authService.refreshToken(validRefreshToken);
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert
       expect(result).toEqual({
@@ -176,7 +202,7 @@ describe('AuthService - Refresh Token Mechanism', () => {
       });
 
       // Act & Assert
-      await expect(service.refreshToken(validRefreshToken)).rejects.toThrow(
+      await expect(authService.refreshToken(validRefreshToken)).rejects.toThrow(
         new UnauthorizedException('Token expired')
       );
 
@@ -193,7 +219,7 @@ describe('AuthService - Refresh Token Mechanism', () => {
       });
 
       // Act & Assert
-      await expect(service.refreshToken(validRefreshToken)).rejects.toThrow(
+      await expect(authService.refreshToken(validRefreshToken)).rejects.toThrow(
         new UnauthorizedException('Refresh token is blacklisted')
       );
     });
@@ -208,7 +234,7 @@ describe('AuthService - Refresh Token Mechanism', () => {
       userServiceClient.findById.mockResolvedValue(null);
 
       // Act & Assert
-      await expect(service.refreshToken(validRefreshToken)).rejects.toThrow(
+      await expect(authService.refreshToken(validRefreshToken)).rejects.toThrow(
         new UnauthorizedException('User not found or deleted')
       );
 
@@ -229,7 +255,7 @@ describe('AuthService - Refresh Token Mechanism', () => {
       );
 
       // Act & Assert
-      await expect(service.refreshToken(validRefreshToken)).rejects.toThrow(
+      await expect(authService.refreshToken(validRefreshToken)).rejects.toThrow(
         new UnauthorizedException('Invalid refresh token: Token user ID mismatch')
       );
     });
@@ -247,7 +273,7 @@ describe('AuthService - Refresh Token Mechanism', () => {
       );
 
       // Act & Assert
-      await expect(service.refreshToken(validRefreshToken)).rejects.toThrow(
+      await expect(authService.refreshToken(validRefreshToken)).rejects.toThrow(
         new UnauthorizedException('Unable to refresh token')
       );
     });
@@ -273,7 +299,10 @@ describe('AuthService - Refresh Token Mechanism', () => {
       sessionService.getSessionByAccessToken.mockResolvedValue(mockSession);
 
       // Act
-      await service.logout(accessToken, userId, refreshToken);
+      await authService.logout(accessToken, userId, refreshToken);
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert
       expect(sessionService.getSessionByAccessToken).toHaveBeenCalledWith(accessToken);
@@ -315,7 +344,10 @@ describe('AuthService - Refresh Token Mechanism', () => {
       sessionService.getSessionByAccessToken.mockResolvedValue(mockSession);
 
       // Act
-      await service.logout(accessToken, userId);
+      await authService.logout(accessToken, userId);
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert
       expect(sessionService.getSessionByAccessToken).toHaveBeenCalledWith(accessToken);

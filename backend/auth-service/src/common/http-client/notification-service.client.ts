@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { BaseCircuitBreakerClient, ServiceUnavailableError } from '../circuit-breaker/base-circuit-breaker.client';
 import { CircuitBreakerService } from '../circuit-breaker/circuit-breaker.service';
 import { CircuitBreakerConfig } from '../circuit-breaker/circuit-breaker.config';
+import { LocalNotificationQueueService } from '../fallback/local-notification-queue.service';
 
 export interface WelcomeNotificationRequest {
   userId: string;
@@ -39,6 +40,7 @@ export class NotificationServiceClient extends BaseCircuitBreakerClient {
     configService: ConfigService,
     circuitBreakerService: CircuitBreakerService,
     circuitBreakerConfig: CircuitBreakerConfig,
+    private readonly localNotificationQueue: LocalNotificationQueueService,
   ) {
     super(
       httpService,
@@ -55,9 +57,10 @@ export class NotificationServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
-   * Send welcome email notification on successful registration
+   * Send welcome email notification with enhanced fallback
    * Requirements: 6.4 - Send welcome notification via Notification Service
    * Requirement: 6.6 - Handle Notification Service unavailability gracefully
+   * Task 17.3: Enhanced fallback with local notification queue
    */
   async sendWelcomeNotification(request: WelcomeNotificationRequest): Promise<void> {
     try {
@@ -72,7 +75,10 @@ export class NotificationServiceClient extends BaseCircuitBreakerClient {
       this.logger.log(`Welcome notification sent successfully: ${request.email} (ID: ${response.notificationId})`);
     } catch (error) {
       if (error instanceof ServiceUnavailableError) {
-        this.logger.warn(`Notification Service unavailable, queuing welcome notification: ${request.email}`);
+        this.logger.warn(`Notification Service unavailable, using enhanced local queue: ${request.email}`);
+        
+        // Use enhanced local notification queue
+        await this.localNotificationQueue.queueWelcomeNotification(request);
         this.queueNotification('welcome', request);
         return; // Don't throw error as this is not critical for auth flow
       }
@@ -84,16 +90,18 @@ export class NotificationServiceClient extends BaseCircuitBreakerClient {
         email: request.email,
       });
       
-      // Queue notification for retry even on other errors
+      // Use local queue for any error
+      await this.localNotificationQueue.queueWelcomeNotification(request);
       this.queueNotification('welcome', request);
       // Don't throw error as this is not critical for auth flow
     }
   }
 
   /**
-   * Send security alert notification for suspicious activities
+   * Send security alert notification with enhanced fallback
    * Requirements: 6.5 - Send security alert notifications for suspicious activities
    * Requirement: 6.6 - Handle Notification Service unavailability gracefully
+   * Task 17.3: Enhanced fallback with prioritized local queue
    */
   private async sendSecurityAlertInternal(request: SecurityAlertNotificationRequest): Promise<void> {
     try {
@@ -110,7 +118,10 @@ export class NotificationServiceClient extends BaseCircuitBreakerClient {
       this.logger.log(`Security alert sent successfully: ${request.email} (Type: ${request.alertType}, ID: ${response.notificationId})`);
     } catch (error) {
       if (error instanceof ServiceUnavailableError) {
-        this.logger.warn(`Notification Service unavailable, queuing security alert: ${request.email} (${request.alertType})`);
+        this.logger.warn(`Notification Service unavailable, using enhanced local queue: ${request.email} (${request.alertType})`);
+        
+        // Use enhanced local notification queue with high priority for security alerts
+        await this.localNotificationQueue.queueSecurityAlert(request);
         this.queueNotification('security_alert', request);
         return; // Don't throw error as this is not critical for auth flow
       }
@@ -123,7 +134,8 @@ export class NotificationServiceClient extends BaseCircuitBreakerClient {
         alertType: request.alertType,
       });
       
-      // Queue notification for retry even on other errors
+      // Use local queue for any error with high priority
+      await this.localNotificationQueue.queueSecurityAlert(request);
       this.queueNotification('security_alert', request);
       // Don't throw error as this is not critical for auth flow
     }
@@ -331,14 +343,86 @@ export class NotificationServiceClient extends BaseCircuitBreakerClient {
   }
 
   /**
+   * Get notifications ready for retry from local queue
+   * Task 17.3: Получение уведомлений готовых для повторной отправки
+   */
+  async getNotificationsReadyForRetry(limit: number = 20): Promise<any[]> {
+    try {
+      return this.localNotificationQueue.getNotificationsReadyForRetry(limit);
+    } catch (error) {
+      this.logger.error(`Failed to get notifications ready for retry: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Process queued notifications (attempt to send them)
+   * Task 17.3: Обработка очереди уведомлений
+   */
+  async processQueuedNotifications(): Promise<{ processed: number; failed: number }> {
+    const notifications = await this.getNotificationsReadyForRetry(10);
+    let processed = 0;
+    let failed = 0;
+
+    for (const notification of notifications) {
+      try {
+        switch (notification.type) {
+          case 'welcome':
+            await this.post<NotificationResponse>('/notifications/welcome', {
+              ...notification.data,
+              timestamp: new Date(),
+            });
+            break;
+          case 'security_alert':
+            await this.post<NotificationResponse>('/notifications/security-alert', {
+              ...notification.data,
+              timestamp: new Date(),
+            });
+            break;
+          default:
+            this.logger.warn(`Unknown notification type for processing: ${notification.type}`);
+            continue;
+        }
+        
+        await this.localNotificationQueue.markNotificationAsSent(notification.id);
+        processed++;
+        
+        this.logger.debug(`Successfully processed queued notification: ${notification.id}`);
+      } catch (error) {
+        await this.localNotificationQueue.markNotificationAsFailed(notification.id, error.message);
+        failed++;
+        
+        this.logger.debug(`Failed to process queued notification: ${notification.id} - ${error.message}`);
+      }
+    }
+
+    if (processed > 0 || failed > 0) {
+      this.logger.log(`Processed queued notifications: ${processed} successful, ${failed} failed`);
+    }
+
+    return { processed, failed };
+  }
+
+  /**
+   * Get local notification queue statistics
+   * Task 17.3: Статистика локальной очереди уведомлений
+   */
+  getLocalQueueStats() {
+    return this.localNotificationQueue.getQueueStats();
+  }
+
+  /**
    * Get queue statistics for monitoring
    */
   getQueueStats() {
+    const localStats = this.getLocalQueueStats();
+    
     return {
       queueSize: this.notificationQueue.length,
       maxQueueSize: this.maxQueueSize,
       circuitBreakerState: this.getCircuitBreakerState(),
       circuitBreakerStats: this.getCircuitBreakerStats(),
+      localQueue: localStats,
     };
   }
 

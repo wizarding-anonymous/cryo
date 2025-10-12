@@ -34,6 +34,105 @@ The API implements rate limiting to prevent abuse:
 | Token Refresh | 10 attempts | 1 minute | Allow reasonable token rotation |
 | Token Validation | 10 requests | 1 second | Support high-frequency service calls |
 
+## Idempotency
+
+The Auth Service supports idempotency for critical operations to ensure safe retries and prevent duplicate operations. Idempotency is supported for the following endpoints:
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/logout`
+
+### Using Idempotency
+
+To make an idempotent request, include the `Idempotency-Key` header with a unique identifier:
+
+```
+Idempotency-Key: user-registration-2024-01-15-12345
+```
+
+**Idempotency Key Requirements:**
+- Must be 8-128 characters long
+- Can contain letters, numbers, hyphens, and underscores
+- Should be unique per operation
+- Recommended format: `{operation}-{date}-{unique-id}`
+
+### Idempotency Behavior
+
+1. **First Request**: Operation is executed normally and result is cached for 24 hours
+2. **Duplicate Request**: Cached result is returned immediately with same status code and response body
+3. **Concurrent Requests**: Returns `409 Conflict` if same key is used simultaneously
+
+### Idempotency Headers
+
+The service returns these headers for idempotent requests:
+
+- `X-Idempotency-Key`: The idempotency key used
+- `X-Idempotency-Cached`: `true` if response was cached, `false` if newly generated
+- `X-Idempotency-Timestamp`: When the original operation was performed
+
+### Example Idempotent Registration
+
+```bash
+curl -X POST https://api.gaming-platform.ru/api/auth/register \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: user-reg-2024-01-15-abc123" \
+  -d '{
+    "name": "Иван Петров",
+    "email": "ivan.petrov@example.com", 
+    "password": "SecurePass123!"
+  }'
+```
+
+**First Request Response:**
+```
+HTTP/1.1 201 Created
+X-Idempotency-Key: user-reg-2024-01-15-abc123
+X-Idempotency-Cached: false
+X-Idempotency-Timestamp: 2024-01-15T10:30:00.000Z
+
+{
+  "user": { ... },
+  "access_token": "...",
+  "refresh_token": "..."
+}
+```
+
+**Duplicate Request Response:**
+```
+HTTP/1.1 201 Created
+X-Idempotency-Key: user-reg-2024-01-15-abc123
+X-Idempotency-Cached: true
+X-Idempotency-Timestamp: 2024-01-15T10:30:00.000Z
+
+{
+  "user": { ... },
+  "access_token": "...",
+  "refresh_token": "..."
+}
+```
+
+### Error Handling with Idempotency
+
+Client errors (4xx) are cached and returned for duplicate requests:
+
+```bash
+# First request with invalid data
+curl -X POST https://api.gaming-platform.ru/api/auth/register \
+  -H "Idempotency-Key: invalid-reg-123" \
+  -d '{"email": "invalid-email"}'
+
+# Returns 400 Bad Request
+
+# Duplicate request returns same error
+curl -X POST https://api.gaming-platform.ru/api/auth/register \
+  -H "Idempotency-Key: invalid-reg-123" \
+  -d '{"email": "invalid-email"}'
+
+# Returns cached 400 Bad Request
+```
+
+Server errors (5xx) are **not** cached to allow retries when the service recovers.
+
 ## API Endpoints
 
 ### Authentication Endpoints

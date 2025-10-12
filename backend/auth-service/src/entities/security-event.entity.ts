@@ -25,6 +25,7 @@ export class SecurityEvent {
       'registration',
       'login',
       'logout',
+      'logout_rollback',
       'failed_login',
       'password_change',
       'token_refresh',
@@ -37,7 +38,7 @@ export class SecurityEvent {
     ]
   })
   @Index()
-  type: 'registration' | 'login' | 'logout' | 'failed_login' | 'password_change' | 'token_refresh' | 'suspicious_activity' | 'account_locked' | 'session_expired' | 'all_sessions_invalidated' | 'security_session_invalidation' | 'brute_force_attack';
+  type: 'registration' | 'login' | 'logout' | 'logout_rollback' | 'failed_login' | 'password_change' | 'token_refresh' | 'suspicious_activity' | 'account_locked' | 'session_expired' | 'all_sessions_invalidated' | 'security_session_invalidation' | 'brute_force_attack';
 
   @Column({ type: 'varchar', length: 45 })
   @Index()

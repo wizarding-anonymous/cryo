@@ -1,8 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { TokenService } from '../token/token.service';
 import { SessionService } from '../session/session.service';
@@ -14,13 +10,19 @@ import { RegisterDto } from './dto/register.dto';
 
 describe('AuthService - Register Functionality', () => {
   let authService: AuthService;
-  let userServiceClient: jest.Mocked<UserServiceClient>;
+  let jwtService: jest.Mocked<any>;
   let tokenService: jest.Mocked<TokenService>;
   let sessionService: jest.Mocked<SessionService>;
+  let userServiceClient: jest.Mocked<UserServiceClient>;
   let securityServiceClient: jest.Mocked<SecurityServiceClient>;
   let notificationServiceClient: jest.Mocked<NotificationServiceClient>;
   let eventBusService: jest.Mocked<EventBusService>;
-  let jwtService: jest.Mocked<JwtService>;
+  let configService: jest.Mocked<any>;
+  let authSagaService: jest.Mocked<any>;
+  let sagaService: jest.Mocked<any>;
+  let asyncOperations: jest.Mocked<any>;
+  let metricsService: jest.Mocked<any>;
+  let workerProcess: jest.Mocked<any>;
 
   const mockUser = {
     id: 'user-123',
@@ -33,91 +35,122 @@ describe('AuthService - Register Functionality', () => {
   };
 
   const mockTokens = {
-    accessToken: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
+    accessTokenHash: 'mock-access-token-hash',
+    refreshTokenHash: 'mock-refresh-token-hash',
     expiresIn: 3600,
   };
 
   const mockSession = {
     id: 'session-123',
     userId: 'user-123',
-    accessToken: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
+    accessTokenHash: 'hashed-access-token',
+    refreshTokenHash: 'hashed-refresh-token',
     ipAddress: '127.0.0.1',
     userAgent: 'Test Agent',
     isActive: true,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     createdAt: new Date(),
     updatedAt: new Date(),
+    lastAccessedAt: new Date(),
   };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        {
-          provide: JwtService,
-          useValue: {
-            signAsync: jest.fn(),
-          },
-        },
-        {
-          provide: TokenService,
-          useValue: {
-            generateTokens: jest.fn(),
-          },
-        },
-        {
-          provide: SessionService,
-          useValue: {
-            createSession: jest.fn(),
-          },
-        },
-        {
-          provide: UserServiceClient,
-          useValue: {
-            findByEmail: jest.fn(),
-            createUser: jest.fn(),
-          },
-        },
-        {
-          provide: SecurityServiceClient,
-          useValue: {
-            logSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: NotificationServiceClient,
-          useValue: {
-            sendWelcomeNotification: jest.fn(),
-          },
-        },
-        {
-          provide: EventBusService,
-          useValue: {
-            publishUserRegisteredEvent: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue(5), // MAX_SESSIONS_PER_USER
-          },
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    // Создаем моки напрямую
+    jwtService = {
+      signAsync: jest.fn(),
+    } as any;
 
-    authService = module.get<AuthService>(AuthService);
-    userServiceClient = module.get(UserServiceClient);
-    tokenService = module.get(TokenService);
-    sessionService = module.get(SessionService);
-    securityServiceClient = module.get(SecurityServiceClient);
-    notificationServiceClient = module.get(NotificationServiceClient);
-    eventBusService = module.get(EventBusService);
-    jwtService = module.get(JwtService);
+    tokenService = {
+      generateTokens: jest.fn(),
+      hashToken: jest.fn(),
+    } as any;
 
-    // Mock bcrypt.hash
-    jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPassword123' as never);
+    sessionService = {
+      createSession: jest.fn().mockResolvedValue(mockSession),
+      createSessionWithLimit: jest.fn().mockResolvedValue({
+        session: mockSession,
+        removedSessionsCount: 0,
+      }),
+      enforceSessionLimit: jest.fn(),
+    } as any;
+
+    userServiceClient = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
+      createUser: jest.fn(),
+      updateLastLogin: jest.fn(),
+    } as any;
+
+    securityServiceClient = {
+      logSecurityEvent: jest.fn(),
+    } as any;
+
+    notificationServiceClient = {
+      sendWelcomeNotification: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    eventBusService = {
+      publishUserRegisteredEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserLoggedInEvent: jest.fn().mockResolvedValue(undefined),
+      publishSecurityEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    configService = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'MAX_SESSIONS_PER_USER') return 5;
+        if (key === 'USE_SAGA_PATTERN') return false; // Отключаем saga для простоты тестов
+        return defaultValue;
+      }),
+    } as any;
+
+    authSagaService = {
+      executeRegistrationSaga: jest.fn(),
+      waitForSagaCompletion: jest.fn(),
+    } as any;
+
+    sagaService = {
+      executeSaga: jest.fn(),
+    } as any;
+
+    asyncOperations = {
+      executeAsync: jest.fn(),
+      executeCriticalPath: jest.fn(),
+    } as any;
+
+    metricsService = {
+      recordOperation: jest.fn(),
+      recordAuthFlowMetric: jest.fn(),
+    } as any;
+
+    workerProcess = {
+      processTask: jest.fn(),
+      executeInWorker: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
+    authService = new AuthService(
+      jwtService,
+      tokenService,
+      sessionService,
+      userServiceClient,
+      securityServiceClient,
+      notificationServiceClient,
+      eventBusService,
+      configService,
+      authSagaService,
+      sagaService,
+      asyncOperations,
+      metricsService,
+      workerProcess,
+    );
+
+    // Mock executeCriticalPath to execute the callback function
+    asyncOperations.executeCriticalPath.mockImplementation(async (callback: () => any) => {
+      return await callback();
+    });
+
+    // Mock password hashing through worker process
+    workerProcess.executeInWorker.mockResolvedValue('hashedPassword123');
   });
 
   afterEach(() => {
@@ -141,12 +174,16 @@ describe('AuthService - Register Functionality', () => {
         .mockResolvedValueOnce('mock-access-token')
         .mockResolvedValueOnce('mock-refresh-token');
       
-      sessionService.createSession.mockResolvedValue(mockSession);
-      securityServiceClient.logSecurityEvent.mockResolvedValue(undefined);
-      notificationServiceClient.sendWelcomeNotification.mockResolvedValue(undefined);
+      sessionService.createSessionWithLimit.mockResolvedValue({
+        session: mockSession,
+        removedSessionsCount: 0,
+      });
 
       // Act
       const result = await authService.register(registerDto, '127.0.0.1', 'Test Agent');
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Requirement 1.1: Auth Service SHALL handle all user registration operations
       expect(result).toBeDefined();
@@ -161,7 +198,10 @@ describe('AuthService - Register Functionality', () => {
       expect(result.user).not.toHaveProperty('password'); // Password should be excluded
 
       // Requirement 4.1: Auth Service SHALL hash passwords using bcrypt with salt rounds
-      expect(bcrypt.hash).toHaveBeenCalledWith('StrongPass123!', 10);
+      expect(workerProcess.executeInWorker).toHaveBeenCalledWith('hash-password', {
+        password: 'StrongPass123!',
+        saltRounds: 10
+      });
 
       // Requirement 2.1: Auth Service SHALL call User Service's user creation endpoint
       expect(userServiceClient.createUser).toHaveBeenCalledWith({
@@ -238,10 +278,16 @@ describe('AuthService - Register Functionality', () => {
       jwtService.signAsync
         .mockResolvedValueOnce('mock-access-token')
         .mockResolvedValueOnce('mock-refresh-token');
-      sessionService.createSession.mockResolvedValue(mockSession);
+      sessionService.createSessionWithLimit.mockResolvedValue({
+        session: mockSession,
+        removedSessionsCount: 0,
+      });
 
       // Act
       const result = await authService.register(registerDto);
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert
       expect(sessionService.createSession).toHaveBeenCalledWith({
@@ -279,6 +325,9 @@ describe('AuthService - Register Functionality', () => {
 
       // Act
       const result = await authService.register(registerDto, '127.0.0.1', 'Test Agent');
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Registration should succeed
       expect(result).toBeDefined();

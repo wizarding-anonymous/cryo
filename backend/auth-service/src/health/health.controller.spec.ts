@@ -28,6 +28,14 @@ describe('HealthController', () => {
     pingCheck: jest.fn(),
   };
 
+  const mockRaceConditionMetricsService = {
+    getMetrics: jest.fn(),
+  };
+
+  const mockUserCacheService = {
+    getCacheStats: jest.fn(),
+  };
+
   const mockDatabaseService = {
     checkHealth: jest.fn(),
     checkMigrations: jest.fn(),
@@ -92,8 +100,20 @@ describe('HealthController', () => {
       ],
     }).compile();
 
-    controller = module.get<HealthController>(HealthController);
-    redisService = module.get<RedisService>(RedisService);
+    redisService = mockRedisService as any;
+    
+    controller = new HealthController(
+      mockHealthCheckService as any,
+      mockHttpHealthIndicator as any,
+      mockMemoryHealthIndicator as any,
+      mockTypeOrmHealthIndicator as any,
+      mockDatabaseService as any,
+      mockDatabaseOperationsService as any,
+      mockCircuitBreakerService as any,
+      redisService,
+      mockRaceConditionMetricsService as any,
+      mockUserCacheService as any
+    );
   });
 
   it('should be defined', () => {

@@ -4,6 +4,7 @@ import { SessionRepository } from '../repositories/session.repository';
 import { Session } from '../entities/session.entity';
 import { RedisLockService } from '../common/redis/redis-lock.service';
 import { RaceConditionMetricsService } from '../common/metrics/race-condition-metrics.service';
+import { TokenService } from '../token/token.service';
 
 export interface CreateSessionDto {
   userId: string;
@@ -33,19 +34,24 @@ export class SessionService {
     private readonly sessionRepository: SessionRepository,
     private readonly redisLockService: RedisLockService,
     private readonly metricsService: RaceConditionMetricsService,
+    private readonly tokenService: TokenService,
   ) {}
 
   /**
    * Create a new session with metadata tracking
-   * Requirements: 13.1, 13.2
+   * Requirements: 13.1, 13.2, 15.2 - Secure token storage with SHA-256 hashes
    */
   async createSession(sessionData: CreateSessionDto): Promise<Session> {
     this.logger.log(`Creating session for user ${sessionData.userId}`);
 
+    // Hash tokens before storing in database for security
+    const accessTokenHash = this.tokenService.hashToken(sessionData.accessToken);
+    const refreshTokenHash = this.tokenService.hashToken(sessionData.refreshToken);
+
     const session = await this.sessionRepository.create({
       userId: sessionData.userId,
-      accessToken: sessionData.accessToken,
-      refreshToken: sessionData.refreshToken,
+      accessTokenHash,
+      refreshTokenHash,
       ipAddress: sessionData.ipAddress,
       userAgent: sessionData.userAgent,
       expiresAt: sessionData.expiresAt,
@@ -53,7 +59,7 @@ export class SessionService {
       lastAccessedAt: new Date(),
     });
 
-    this.logger.log(`Session created with ID: ${session.id}`);
+    this.logger.log(`Session created with ID: ${session.id} (tokens securely hashed)`);
     return session;
   }
 
@@ -87,14 +93,16 @@ export class SessionService {
 
   /**
    * Get session by access token and update last accessed timestamp
-   * Requirements: 13.7
+   * Requirements: 13.7, 15.2 - Secure token lookup using SHA-256 hash
    */
   async getSessionByAccessToken(accessToken: string): Promise<SessionMetadata | null> {
-    this.logger.debug('Retrieving session by access token');
+    this.logger.debug('Retrieving session by access token hash');
 
-    const session = await this.sessionRepository.findByAccessToken(accessToken);
+    // Hash the token to find the session
+    const accessTokenHash = this.tokenService.hashToken(accessToken);
+    const session = await this.sessionRepository.findByAccessTokenHash(accessTokenHash);
     if (!session) {
-      this.logger.debug('Session not found for access token');
+      this.logger.debug('Session not found for access token hash');
       return null;
     }
 
@@ -115,14 +123,16 @@ export class SessionService {
 
   /**
    * Get session by refresh token and update last accessed timestamp
-   * Requirements: 13.7
+   * Requirements: 13.7, 15.2 - Secure token lookup using SHA-256 hash
    */
   async getSessionByRefreshToken(refreshToken: string): Promise<SessionMetadata | null> {
-    this.logger.debug('Retrieving session by refresh token');
+    this.logger.debug('Retrieving session by refresh token hash');
 
-    const session = await this.sessionRepository.findByRefreshToken(refreshToken);
+    // Hash the token to find the session
+    const refreshTokenHash = this.tokenService.hashToken(refreshToken);
+    const session = await this.sessionRepository.findByRefreshTokenHash(refreshTokenHash);
     if (!session) {
-      this.logger.debug('Session not found for refresh token');
+      this.logger.debug('Session not found for refresh token hash');
       return null;
     }
 
@@ -175,6 +185,29 @@ export class SessionService {
 
     await this.sessionRepository.deactivateSession(sessionId);
     this.logger.log(`Session invalidated: ${sessionId}`);
+  }
+
+  /**
+   * Reactivate session (for rollback operations)
+   * Used in compensating transactions when logout operations fail
+   * Requirements: 15.3 - Rollback mechanism for atomic logout operations
+   */
+  async reactivateSession(sessionId: string): Promise<void> {
+    this.logger.log(`Reactivating session for rollback: ${sessionId}`);
+
+    try {
+      const session = await this.sessionRepository.findById(sessionId);
+      if (!session) {
+        this.logger.warn(`Cannot reactivate session - not found: ${sessionId}`);
+        return;
+      }
+
+      await this.sessionRepository.reactivateSession(sessionId);
+      this.logger.log(`Session reactivated for rollback: ${sessionId}`);
+    } catch (error) {
+      this.logger.error('Failed to reactivate session during rollback', error.stack);
+      // Don't throw error to avoid breaking rollback flow
+    }
   }
 
   /**

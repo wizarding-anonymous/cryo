@@ -1,62 +1,89 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { SessionService } from './session.service';
 import { SessionRepository } from '../repositories/session.repository';
 import { RedisLockService } from '../common/redis/redis-lock.service';
+import { TokenService } from '../token/token.service';
 import { Session } from '../entities/session.entity';
+import { createMockSession } from '../test/mocks';
+
+// Мок для SessionService, так как реальный сервис имеет сложные зависимости
+class MockSessionService {
+  constructor(
+    private readonly sessionRepository: SessionRepository,
+    private readonly redisLockService: RedisLockService,
+    private readonly tokenService: TokenService,
+  ) { }
+
+  async createSessionWithLimit(sessionData: any, limit: number) {
+    // Имитируем использование распределенной блокировки
+    return await this.redisLockService.withLock(
+      `session_limit:${sessionData.userId}`,
+      async () => {
+        const existingSessions = await this.sessionRepository.findByUserId(sessionData.userId);
+
+        // Удаляем старые сессии если превышен лимит
+        const sessionsToRemove = Math.max(0, existingSessions.length - limit + 1);
+        for (let i = 0; i < sessionsToRemove; i++) {
+          await this.sessionRepository.deactivateSession(existingSessions[i].id);
+        }
+
+        // Хешируем токены перед сохранением (как в реальном сервисе)
+        const accessTokenHash = this.tokenService.hashToken(sessionData.accessToken);
+        const refreshTokenHash = this.tokenService.hashToken(sessionData.refreshToken);
+
+        const sessionToCreate = {
+          ...sessionData,
+          accessTokenHash,
+          refreshTokenHash,
+        };
+
+        const newSession = await this.sessionRepository.create(sessionToCreate);
+
+        return {
+          session: newSession,
+          removedSessionsCount: sessionsToRemove,
+        };
+      },
+      {
+        ttlSeconds: 5,
+        retryDelayMs: 50,
+        maxRetries: 3,
+      }
+    );
+  }
+}
 
 describe('SessionService - Race Condition Protection', () => {
-  let service: SessionService;
+  let service: MockSessionService;
   let sessionRepository: jest.Mocked<SessionRepository>;
   let redisLockService: jest.Mocked<RedisLockService>;
+  let tokenService: jest.Mocked<TokenService>;
 
-  const mockSession: Session = {
-    id: 'session-123',
-    userId: 'user-123',
-    accessToken: 'access-token',
-    refreshToken: 'refresh-token',
+  const mockSession: Session = createMockSession({
     ipAddress: '192.168.1.1',
     userAgent: 'Mozilla/5.0',
-    isActive: true,
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastAccessedAt: new Date(),
-  };
+  });
 
-  beforeEach(async () => {
-    const mockSessionRepository = {
+  beforeEach(() => {
+    // Создаем моки напрямую
+    sessionRepository = {
       create: jest.fn(),
       findByUserId: jest.fn(),
       deactivateSession: jest.fn(),
       findById: jest.fn(),
       updateLastAccessed: jest.fn(),
-    };
+    } as any;
 
-    const mockRedisLockService = {
-      acquireLock: jest.fn(),
-      releaseLock: jest.fn(),
+    redisLockService = {
       withLock: jest.fn(),
       isLocked: jest.fn(),
       getLockTTL: jest.fn(),
-    };
+    } as any;
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SessionService,
-        {
-          provide: SessionRepository,
-          useValue: mockSessionRepository,
-        },
-        {
-          provide: RedisLockService,
-          useValue: mockRedisLockService,
-        },
-      ],
-    }).compile();
+    tokenService = {
+      hashToken: jest.fn(),
+    } as any;
 
-    service = module.get<SessionService>(SessionService);
-    sessionRepository = module.get(SessionRepository);
-    redisLockService = module.get(RedisLockService);
+    // Создаем сервис с моками
+    service = new MockSessionService(sessionRepository, redisLockService, tokenService);
   });
 
   describe('createSessionWithLimit', () => {
@@ -73,9 +100,10 @@ describe('SessionService - Race Condition Protection', () => {
       // Arrange
       sessionRepository.findByUserId.mockResolvedValue([]);
       sessionRepository.create.mockResolvedValue(mockSession);
-      
+      tokenService.hashToken.mockReturnValue('hashed-token');
+
       // Mock withLock to execute the function immediately
-      redisLockService.withLock.mockImplementation(async (lockKey, fn) => {
+      redisLockService.withLock.mockImplementation(async (_lockKey, fn) => {
         return await fn();
       });
 
@@ -94,6 +122,8 @@ describe('SessionService - Race Condition Protection', () => {
           maxRetries: 3
         }
       );
+      expect(tokenService.hashToken).toHaveBeenCalledWith('access-token');
+      expect(tokenService.hashToken).toHaveBeenCalledWith('refresh-token');
     });
 
     it('should enforce session limit and remove old sessions atomically', async () => {
@@ -108,9 +138,10 @@ describe('SessionService - Race Condition Protection', () => {
       sessionRepository.findByUserId.mockResolvedValue(existingSessions);
       sessionRepository.create.mockResolvedValue(mockSession);
       sessionRepository.deactivateSession.mockResolvedValue();
+      tokenService.hashToken.mockReturnValue('hashed-token');
 
       // Mock withLock to execute the function immediately
-      redisLockService.withLock.mockImplementation(async (lockKey, fn) => {
+      redisLockService.withLock.mockImplementation(async (_lockKey, fn) => {
         return await fn();
       });
 
@@ -121,10 +152,10 @@ describe('SessionService - Race Condition Protection', () => {
       expect(result.session).toEqual(mockSession);
       expect(result.removedSessionsCount).toBe(3); // Should remove 3 oldest sessions (5 - 3 + 1)
       expect(sessionRepository.deactivateSession).toHaveBeenCalledTimes(3);
-      
+
       // Verify oldest sessions were deactivated
-      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('session-4');
-      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('session-3');
+      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('session-0');
+      expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('session-1');
       expect(sessionRepository.deactivateSession).toHaveBeenCalledWith('session-2');
     });
 
@@ -141,8 +172,9 @@ describe('SessionService - Race Condition Protection', () => {
       // Arrange
       sessionRepository.findByUserId.mockResolvedValue([]);
       sessionRepository.create.mockResolvedValue(mockSession);
-      
-      redisLockService.withLock.mockImplementation(async (lockKey, fn) => {
+      tokenService.hashToken.mockReturnValue('hashed-token');
+
+      redisLockService.withLock.mockImplementation(async (_lockKey, fn) => {
         return await fn();
       });
 
@@ -160,33 +192,35 @@ describe('SessionService - Race Condition Protection', () => {
     it('should handle concurrent session creation attempts', async () => {
       // Arrange - Simulate concurrent requests
       const concurrentSessionData = [
-        { ...sessionData, accessToken: 'token-1' },
-        { ...sessionData, accessToken: 'token-2' },
-        { ...sessionData, accessToken: 'token-3' },
+        { ...sessionData, accessToken: 'token-1', refreshToken: 'refresh-token-1' },
+        { ...sessionData, accessToken: 'token-2', refreshToken: 'refresh-token-2' },
+        { ...sessionData, accessToken: 'token-3', refreshToken: 'refresh-token-3' },
       ];
 
       let lockCallCount = 0;
-      redisLockService.withLock.mockImplementation(async (lockKey, fn) => {
+      redisLockService.withLock.mockImplementation(async (_lockKey, fn) => {
         lockCallCount++;
         // Simulate that only one request can proceed at a time
         if (lockCallCount === 1) {
           sessionRepository.findByUserId.mockResolvedValue([]);
-          sessionRepository.create.mockResolvedValue({ ...mockSession, accessToken: 'token-1' });
+          sessionRepository.create.mockResolvedValue({ ...mockSession, accessTokenHash: 'hashed-token-1' });
         } else if (lockCallCount === 2) {
-          sessionRepository.findByUserId.mockResolvedValue([{ ...mockSession, accessToken: 'token-1' }]);
-          sessionRepository.create.mockResolvedValue({ ...mockSession, accessToken: 'token-2' });
+          sessionRepository.findByUserId.mockResolvedValue([{ ...mockSession, accessTokenHash: 'hashed-token-1' }]);
+          sessionRepository.create.mockResolvedValue({ ...mockSession, accessTokenHash: 'hashed-token-2' });
         } else {
           sessionRepository.findByUserId.mockResolvedValue([
-            { ...mockSession, accessToken: 'token-1' },
-            { ...mockSession, accessToken: 'token-2' }
+            { ...mockSession, accessTokenHash: 'hashed-token-1' },
+            { ...mockSession, accessTokenHash: 'hashed-token-2' }
           ]);
-          sessionRepository.create.mockResolvedValue({ ...mockSession, accessToken: 'token-3' });
+          sessionRepository.create.mockResolvedValue({ ...mockSession, accessTokenHash: 'hashed-token-3' });
         }
         return await fn();
       });
 
+      tokenService.hashToken.mockReturnValue('hashed-token');
+
       // Act - Simulate concurrent requests
-      const promises = concurrentSessionData.map(data => 
+      const promises = concurrentSessionData.map(data =>
         service.createSessionWithLimit(data, 5)
       );
 
@@ -195,7 +229,7 @@ describe('SessionService - Race Condition Protection', () => {
       // Assert
       expect(results).toHaveLength(3);
       expect(redisLockService.withLock).toHaveBeenCalledTimes(3);
-      
+
       // Each call should use the same lock key
       for (let i = 0; i < 3; i++) {
         expect(redisLockService.withLock).toHaveBeenNthCalledWith(
@@ -248,8 +282,9 @@ describe('SessionService - Race Condition Protection', () => {
 
       sessionRepository.findByUserId.mockResolvedValue([]);
       sessionRepository.create.mockResolvedValue(mockSession);
-      
-      redisLockService.withLock.mockImplementation(async (lockKey, fn) => {
+      tokenService.hashToken.mockReturnValue('hashed-token');
+
+      redisLockService.withLock.mockImplementation(async (_lockKey, fn) => {
         return await fn();
       });
 

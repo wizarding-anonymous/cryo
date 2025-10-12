@@ -1,5 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getQueueToken } from '@nestjs/bull';
 import { EventBusService } from './services/event-bus.service';
 import { SecurityEventDto, NotificationEventDto, UserEventDto } from './dto';
 
@@ -9,7 +7,8 @@ describe('EventBusService', () => {
   let mockNotificationQueue: any;
   let mockUserQueue: any;
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
     mockSecurityQueue = {
       add: jest.fn().mockResolvedValue({}),
       getWaiting: jest.fn().mockResolvedValue([]),
@@ -37,25 +36,58 @@ describe('EventBusService', () => {
       getDelayed: jest.fn().mockResolvedValue([]),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        EventBusService,
-        {
-          provide: getQueueToken('security-events'),
-          useValue: mockSecurityQueue,
-        },
-        {
-          provide: getQueueToken('notification-events'),
-          useValue: mockNotificationQueue,
-        },
-        {
-          provide: getQueueToken('user-events'),
-          useValue: mockUserQueue,
-        },
-      ],
-    }).compile();
+    const mockAsyncOperations = {
+      executeImmediate: jest.fn().mockImplementation(async (fn) => {
+        try {
+          await fn();
+        } catch (error) {
+          // Swallow errors as the service does
+        }
+      }),
+      executeParallel: jest.fn().mockImplementation(async (operations) => {
+        try {
+          for (const op of operations) {
+            await op();
+          }
+        } catch (error) {
+          // Swallow errors as the service does
+        }
+      }),
+      executeBatch: jest.fn().mockImplementation(async (operations) => {
+        try {
+          for (const op of operations) {
+            await op();
+          }
+        } catch (error) {
+          // Swallow errors as the service does
+        }
+      }),
+      registerOperation: jest.fn(),
+      getMetrics: jest.fn().mockReturnValue({}),
+      shutdown: jest.fn(),
+    };
 
-    service = module.get<EventBusService>(EventBusService);
+    const mockMetricsService = {
+      recordEventMetric: jest.fn(),
+      getPerformanceSummary: jest.fn().mockReturnValue({}),
+      getHealthStatus: jest.fn().mockReturnValue({
+        status: 'healthy',
+        issues: [],
+        metrics: {},
+      }),
+    };
+
+    service = new EventBusService(
+      mockSecurityQueue,
+      mockNotificationQueue,
+      mockUserQueue,
+      mockAsyncOperations as any,
+      mockMetricsService as any
+    );
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should be defined', () => {
@@ -106,14 +138,19 @@ describe('EventBusService', () => {
         timestamp: new Date(),
       });
 
-      await service.publishNotificationEvent(event);
+      const publishPromise = service.publishNotificationEvent(event);
+      
+      // Fast-forward timers to handle the delay
+      jest.advanceTimersByTime(5000);
+      
+      await publishPromise;
 
       expect(mockNotificationQueue.add).toHaveBeenCalledWith(
         'send-notification',
         event,
         expect.objectContaining({
           priority: expect.any(Number),
-          delay: expect.any(Number),
+          delay: 0, // Delay is handled internally now
         }),
       );
     });

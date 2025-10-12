@@ -300,6 +300,21 @@ export class DatabaseOperationsService {
     );
   }
 
+  async removeTokenFromBlacklist(tokenHash: string): Promise<DatabaseOperationResult<void>> {
+    return this.executeWithErrorHandling(
+      () => this.tokenBlacklistRepository.removeFromBlacklist(tokenHash),
+      'removeTokenFromBlacklist',
+      { tokenHash },
+    );
+  }
+
+  async findAllBlacklistedTokens(): Promise<DatabaseOperationResult<TokenBlacklist[]>> {
+    return this.executeWithErrorHandling(
+      () => this.tokenBlacklistRepository.findAllActive(),
+      'findAllBlacklistedTokens',
+    );
+  }
+
   // Security Event Operations
   async createSecurityEvent(eventData: Partial<SecurityEvent>): Promise<DatabaseOperationResult<SecurityEvent>> {
     return this.executeWithErrorHandling(

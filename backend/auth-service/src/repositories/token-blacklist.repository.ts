@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, MoreThan } from 'typeorm';
 import { TokenBlacklist } from '../entities/token-blacklist.entity';
 
 @Injectable()
@@ -90,6 +90,20 @@ export class TokenBlacklistRepository {
   async countBlacklistedTokensByUser(userId: string): Promise<number> {
     return await this.tokenBlacklistRepository.count({
       where: { userId },
+    });
+  }
+
+  async removeFromBlacklist(tokenHash: string): Promise<void> {
+    await this.tokenBlacklistRepository.delete({ tokenHash });
+  }
+
+  async findAllActive(): Promise<TokenBlacklist[]> {
+    return await this.tokenBlacklistRepository.find({
+      where: {
+        // Только активные токены (не истекшие)
+        expiresAt: MoreThan(new Date())
+      },
+      order: { blacklistedAt: 'DESC' },
     });
   }
 }

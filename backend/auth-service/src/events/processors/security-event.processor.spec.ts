@@ -1,5 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SecurityEventProcessor } from './security-event.processor';
 import { SecurityEvent } from '../../entities/security-event.entity';
@@ -7,25 +5,15 @@ import { SecurityEventDto } from '../dto';
 
 describe('SecurityEventProcessor', () => {
   let processor: SecurityEventProcessor;
-  let mockRepository: Partial<Repository<SecurityEvent>>;
+  let mockRepository: jest.Mocked<Repository<SecurityEvent>>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     mockRepository = {
       create: jest.fn().mockImplementation((data) => ({ id: 'test-id', ...data })),
       save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
-    };
+    } as any;
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SecurityEventProcessor,
-        {
-          provide: getRepositoryToken(SecurityEvent),
-          useValue: mockRepository,
-        },
-      ],
-    }).compile();
-
-    processor = module.get<SecurityEventProcessor>(SecurityEventProcessor);
+    processor = new SecurityEventProcessor(mockRepository);
   });
 
   it('should be defined', () => {

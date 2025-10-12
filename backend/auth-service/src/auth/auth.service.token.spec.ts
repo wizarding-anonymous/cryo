@@ -1,6 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { TokenService } from '../token/token.service';
 import { SessionService } from '../session/session.service';
@@ -11,11 +8,19 @@ import { EventBusService } from '../events/services/event-bus.service';
 
 describe('AuthService - JWT Token Generation and Verification', () => {
   let authService: AuthService;
-  let jwtService: jest.Mocked<JwtService>;
+  let jwtService: jest.Mocked<any>;
   let tokenService: jest.Mocked<TokenService>;
-  let userServiceClient: jest.Mocked<UserServiceClient>;
   let sessionService: jest.Mocked<SessionService>;
-  let module: TestingModule;
+  let userServiceClient: jest.Mocked<UserServiceClient>;
+  let securityServiceClient: jest.Mocked<SecurityServiceClient>;
+  let notificationServiceClient: jest.Mocked<NotificationServiceClient>;
+  let eventBusService: jest.Mocked<EventBusService>;
+  let configService: jest.Mocked<any>;
+  let authSagaService: jest.Mocked<any>;
+  let sagaService: jest.Mocked<any>;
+  let asyncOperations: jest.Mocked<any>;
+  let metricsService: jest.Mocked<any>;
+  let workerProcess: jest.Mocked<any>;
 
   const mockUser = {
     id: 'user-123',
@@ -34,75 +39,114 @@ describe('AuthService - JWT Token Generation and Verification', () => {
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
 
-  beforeEach(async () => {
-    module = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        {
-          provide: JwtService,
-          useValue: {
-            signAsync: jest.fn(),
-            verify: jest.fn(),
-          },
-        },
-        {
-          provide: TokenService,
-          useValue: {
-            isTokenBlacklisted: jest.fn(),
-            blacklistToken: jest.fn(),
-          },
-        },
-        {
-          provide: SessionService,
-          useValue: {
-            createSession: jest.fn(),
-            getSessionByAccessToken: jest.fn(),
-            enforceSessionLimit: jest.fn(),
-          },
-        },
-        {
-          provide: UserServiceClient,
-          useValue: {
-            findByEmail: jest.fn(),
-            findById: jest.fn(),
-            createUser: jest.fn(),
-          },
-        },
-        {
-          provide: SecurityServiceClient,
-          useValue: {
-            logSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: NotificationServiceClient,
-          useValue: {
-            sendWelcomeNotification: jest.fn(),
-          },
-        },
-        {
-          provide: EventBusService,
-          useValue: {
-            publishUserRegisteredEvent: jest.fn(),
-            publishUserLoggedInEvent: jest.fn(),
-            publishUserLoggedOutEvent: jest.fn(),
-            publishSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue(5), // MAX_SESSIONS_PER_USER
-          },
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    // Создаем моки напрямую
+    jwtService = {
+      signAsync: jest.fn(),
+      verify: jest.fn(),
+    } as any;
 
-    authService = module.get<AuthService>(AuthService);
-    jwtService = module.get(JwtService);
-    tokenService = module.get(TokenService);
-    userServiceClient = module.get(UserServiceClient);
-    sessionService = module.get(SessionService);
+    tokenService = {
+      isTokenBlacklisted: jest.fn(),
+      blacklistToken: jest.fn().mockResolvedValue(undefined),
+      hashToken: jest.fn(),
+    } as any;
+
+    sessionService = {
+      createSession: jest.fn(),
+      createSessionWithLimit: jest.fn().mockResolvedValue({
+        session: {
+          id: 'session-123',
+          userId: 'user-123',
+          accessTokenHash: 'mock-access-token-hash',
+          refreshTokenHash: 'mock-refresh-token-hash',
+          ipAddress: '::1',
+          userAgent: 'Unknown',
+          isActive: true,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastAccessedAt: new Date(),
+        },
+        removedSessionsCount: 0,
+      }),
+      getSessionByAccessToken: jest.fn(),
+      enforceSessionLimit: jest.fn(),
+    } as any;
+
+    userServiceClient = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
+      createUser: jest.fn(),
+      updateLastLogin: jest.fn(),
+    } as any;
+
+    securityServiceClient = {
+      logSecurityEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    notificationServiceClient = {
+      sendWelcomeNotification: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    eventBusService = {
+      publishUserRegisteredEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserLoggedInEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserLoggedOutEvent: jest.fn().mockResolvedValue(undefined),
+      publishSecurityEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    configService = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'MAX_SESSIONS_PER_USER') return 5;
+        if (key === 'USE_SAGA_PATTERN') return false;
+        return defaultValue;
+      }),
+    } as any;
+
+    authSagaService = {
+      executeRegistrationSaga: jest.fn(),
+      waitForSagaCompletion: jest.fn(),
+    } as any;
+
+    sagaService = {
+      executeSaga: jest.fn(),
+    } as any;
+
+    asyncOperations = {
+      executeAsync: jest.fn(),
+      executeCriticalPath: jest.fn(),
+    } as any;
+
+    metricsService = {
+      recordAuthFlowMetric: jest.fn(),
+    } as any;
+
+    workerProcess = {
+      executeInWorker: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
+    authService = new AuthService(
+      jwtService,
+      tokenService,
+      sessionService,
+      userServiceClient,
+      securityServiceClient,
+      notificationServiceClient,
+      eventBusService,
+      configService,
+      authSagaService,
+      sagaService,
+      asyncOperations,
+      metricsService,
+      workerProcess,
+    );
+
+    // Mock executeCriticalPath to execute the callback function
+    asyncOperations.executeCriticalPath.mockImplementation(async (callback: () => any) => {
+      return await callback();
+    });
   });
 
   afterEach(() => {
@@ -114,27 +158,29 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       // Arrange
       const mockAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.access';
       const mockRefreshToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh';
-      
+
       jwtService.signAsync
         .mockResolvedValueOnce(mockAccessToken)
         .mockResolvedValueOnce(mockRefreshToken);
 
       // Act - Call private method through public interface (login)
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      sessionService.createSession.mockResolvedValue({
-        id: 'session-123',
-        userId: mockUser.id,
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-        ipAddress: '127.0.0.1',
-        userAgent: 'Test Agent',
-        isActive: true,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastAccessedAt: new Date(),
+      sessionService.createSessionWithLimit.mockResolvedValue({
+        session: {
+          id: 'session-123',
+          userId: mockUser.id,
+          accessTokenHash: 'mock-access-token-hash',
+          refreshTokenHash: 'mock-refresh-token-hash',
+          ipAddress: '127.0.0.1',
+          userAgent: 'Test Agent',
+          isActive: true,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastAccessedAt: new Date(),
+        },
+        removedSessionsCount: 0,
       });
-      sessionService.enforceSessionLimit.mockResolvedValue(0);
 
       const result = await authService.login({
         id: mockUser.id,
@@ -145,15 +191,18 @@ describe('AuthService - JWT Token Generation and Verification', () => {
         updatedAt: mockUser.updatedAt,
       });
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert - Requirement 4.3: Auth Service SHALL generate JWT access tokens with expiration
       expect(jwtService.signAsync).toHaveBeenCalledTimes(2);
-      
+
       // Verify access token generation
       expect(jwtService.signAsync).toHaveBeenNthCalledWith(1, {
         sub: mockUser.id,
         email: mockUser.email,
       });
-      
+
       // Verify refresh token generation - Requirement 4.4: Auth Service SHALL generate refresh tokens with longer expiration
       expect(jwtService.signAsync).toHaveBeenNthCalledWith(2, {
         sub: mockUser.id,
@@ -169,12 +218,12 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       // Arrange
       jwtService.signAsync.mockResolvedValue('mock-token');
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      
+
       sessionService.createSession.mockResolvedValue({
         id: 'session-123',
         userId: mockUser.id,
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
+        accessTokenHash: 'mock-access-token-hash',
+        refreshTokenHash: 'mock-refresh-token-hash',
         ipAddress: '127.0.0.1',
         userAgent: 'Test Agent',
         isActive: true,
@@ -195,6 +244,9 @@ describe('AuthService - JWT Token Generation and Verification', () => {
         updatedAt: mockUser.updatedAt,
       });
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert - Verify payload structure
       const expectedPayload = {
         sub: mockUser.id,
@@ -209,7 +261,7 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       // Arrange
       jwtService.signAsync.mockRejectedValue(new Error('JWT signing failed'));
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      
+
       sessionService.enforceSessionLimit.mockResolvedValue(0);
 
       // Act & Assert
@@ -229,7 +281,7 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       // Arrange
       const user1 = { ...mockUser, id: 'user-1', email: 'user1@example.com' };
       const user2 = { ...mockUser, id: 'user-2', email: 'user2@example.com' };
-      
+
       jwtService.signAsync
         .mockResolvedValueOnce('token-user1-access')
         .mockResolvedValueOnce('token-user1-refresh')
@@ -239,8 +291,8 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       sessionService.createSession.mockResolvedValue({
         id: 'session-123',
         userId: mockUser.id,
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
+        accessTokenHash: 'mock-access-token-hash',
+        refreshTokenHash: 'mock-refresh-token-hash',
         ipAddress: '127.0.0.1',
         userAgent: 'Test Agent',
         isActive: true,
@@ -270,6 +322,9 @@ describe('AuthService - JWT Token Generation and Verification', () => {
         updatedAt: user2.updatedAt,
       });
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert - Different users should get different tokens
       expect(result1.access_token).toBe('token-user1-access');
       expect(result1.refresh_token).toBe('token-user1-refresh');
@@ -298,10 +353,10 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       expect(jwtService.verify).toHaveBeenCalledWith(validToken);
       expect(result.valid).toBe(true);
       expect(result.payload).toEqual(mockJwtPayload);
-      
+
       // Requirement 5.7: Auth Service SHALL check token blacklist status
       expect(tokenService.isTokenBlacklisted).toHaveBeenCalledWith(validToken);
-      
+
       // Requirement 5.4: Auth Service SHALL verify user still exists and is not deleted
       expect(userServiceClient.findById).toHaveBeenCalledWith(mockJwtPayload.sub);
     });
@@ -462,12 +517,12 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       // Arrange
       jwtService.signAsync.mockResolvedValue('mock-token');
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      
+
       sessionService.createSession.mockResolvedValue({
         id: 'session-123',
         userId: mockUser.id,
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
+        accessTokenHash: 'mock-access-token-hash',
+        refreshTokenHash: 'mock-refresh-token-hash',
         ipAddress: '127.0.0.1',
         userAgent: 'Test Agent',
         isActive: true,
@@ -488,11 +543,14 @@ describe('AuthService - JWT Token Generation and Verification', () => {
         updatedAt: mockUser.updatedAt,
       });
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert - Verify required claims are present
       const tokenPayload = jwtService.signAsync.mock.calls[0][0];
       expect(tokenPayload).toHaveProperty('sub', mockUser.id);
       expect(tokenPayload).toHaveProperty('email', mockUser.email);
-      
+
       // Verify no sensitive information is included
       expect(tokenPayload).not.toHaveProperty('password');
       expect(tokenPayload).not.toHaveProperty('name'); // Name not needed in token
@@ -502,12 +560,12 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       // Arrange
       jwtService.signAsync.mockResolvedValue('mock-token');
       userServiceClient.findByEmail.mockResolvedValue(mockUser);
-      
+
       sessionService.createSession.mockResolvedValue({
         id: 'session-123',
         userId: mockUser.id,
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
+        accessTokenHash: 'mock-access-token-hash',
+        refreshTokenHash: 'mock-refresh-token-hash',
         ipAddress: '127.0.0.1',
         userAgent: 'Test Agent',
         isActive: true,
@@ -527,6 +585,9 @@ describe('AuthService - JWT Token Generation and Verification', () => {
         createdAt: mockUser.createdAt,
         updatedAt: mockUser.updatedAt,
       });
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Verify token expiration configuration
       expect(jwtService.signAsync).toHaveBeenNthCalledWith(1, expect.any(Object)); // Access token (default expiration)

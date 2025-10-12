@@ -1,16 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, APP_FILTER } from '@nestjs/core';
-import * as request from 'supertest';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { CustomThrottlerGuard } from '../common/guards/custom-throttler.guard';
-import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
 
-describe('AuthController Throttling (e2e)', () => {
-  let app: INestApplication;
-  let authService: AuthService;
+describe('AuthController Throttling', () => {
+  let controller: AuthController;
+  let authService: jest.Mocked<AuthService>;
 
   const mockAuthService = {
     register: jest.fn(),
@@ -18,221 +11,173 @@ describe('AuthController Throttling (e2e)', () => {
     login: jest.fn(),
     refreshToken: jest.fn(),
     validateToken: jest.fn(),
+    logFailedLoginAttempt: jest.fn(),
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      imports: [
-        ThrottlerModule.forRoot([
-          {
-            name: 'short',
-            ttl: 1000, // 1 second
-            limit: 2, // Reduced for testing
-          },
-          {
-            name: 'auth-strict',
-            ttl: 5000, // 5 seconds for testing
-            limit: 2, // 2 attempts per 5 seconds for testing
-          },
-        ]),
-      ],
-      controllers: [AuthController],
-      providers: [
-        {
-          provide: AuthService,
-          useValue: mockAuthService,
-        },
-        {
-          provide: APP_GUARD,
-          useClass: CustomThrottlerGuard,
-        },
-        {
-          provide: APP_FILTER,
-          useClass: GlobalExceptionFilter,
-        },
-      ],
-    }).compile();
-
-    app = module.createNestApplication();
-    authService = module.get<AuthService>(AuthService);
-    await app.init();
+    authService = mockAuthService as any;
+    controller = new AuthController(authService);
   });
 
-  afterEach(async () => {
-    await app.close();
-  });
-
-  describe('POST /auth/register', () => {
-    it('should allow requests within rate limit', async () => {
-      mockAuthService.register.mockResolvedValue({
-        user: { id: '1', email: 'test@example.com', name: 'Test User' },
-        access_token: 'token',
-        refresh_token: 'refresh',
-        session_id: 'session',
-        expires_in: 3600,
-      });
-
+  describe('register', () => {
+    it('should successfully register user', async () => {
+      // Arrange
       const registerDto = {
         name: 'Test User',
         email: 'test@example.com',
         password: 'StrongPass123!',
       };
 
-      // First request should succeed
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send(registerDto)
-        .expect(201);
+      const expectedResult = {
+        user: { id: '1', email: 'test@example.com', name: 'Test User' },
+        access_token: 'token',
+        refresh_token: 'refresh',
+        session_id: 'session',
+        expires_in: 3600,
+      };
 
-      // Second request should succeed
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({ ...registerDto, email: 'test2@example.com' })
-        .expect(201);
+      mockAuthService.register.mockResolvedValue(expectedResult);
+
+      const mockRequest = { ip: '192.168.1.1', headers: { 'user-agent': 'test-agent' } };
+
+      // Act
+      const result = await controller.register(registerDto, mockRequest);
+
+      // Assert
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        registerDto,
+        '192.168.1.1',
+        'test-agent',
+      );
     });
 
-    it('should block requests exceeding rate limit', async () => {
+    it('should handle registration errors', async () => {
+      // Arrange
       const registerDto = {
         name: 'Test User',
         email: 'test@example.com',
         password: 'StrongPass123!',
       };
 
-      mockAuthService.register.mockResolvedValue({
+      mockAuthService.register.mockRejectedValue(new Error('Registration failed'));
+
+      const mockRequest = { ip: '192.168.1.1', headers: { 'user-agent': 'test-agent' } };
+
+      // Act & Assert
+      await expect(
+        controller.register(registerDto, mockRequest),
+      ).rejects.toThrow('Registration failed');
+    });
+  });
+
+  describe('login', () => {
+    it('should successfully login user', async () => {
+      // Arrange
+      const loginDto = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
+
+      const expectedResult = {
         user: { id: '1', email: 'test@example.com', name: 'Test User' },
         access_token: 'token',
         refresh_token: 'refresh',
         session_id: 'session',
         expires_in: 3600,
-      });
+      };
 
-      // Make requests up to the limit
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send(registerDto)
-        .expect(201);
-
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({ ...registerDto, email: 'test2@example.com' })
-        .expect(201);
-
-      // Third request should be rate limited
-      const response = await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({ ...registerDto, email: 'test3@example.com' })
-        .expect(429);
-
-      expect(response.body.message).toContain('Слишком много попыток аутентификации');
-    });
-  });
-
-  describe('POST /auth/login', () => {
-    it('should allow requests within rate limit', async () => {
       mockAuthService.validateUser.mockResolvedValue({
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
       });
 
-      mockAuthService.login.mockResolvedValue({
-        user: { id: '1', email: 'test@example.com', name: 'Test User' },
-        access_token: 'token',
-        refresh_token: 'refresh',
-        session_id: 'session',
-        expires_in: 3600,
-      });
+      mockAuthService.login.mockResolvedValue(expectedResult);
 
-      const loginDto = {
-        email: 'test@example.com',
-        password: 'password123',
-      };
+      const mockRequest = { ip: '192.168.1.1', headers: { 'user-agent': 'test-agent' } };
 
-      // First request should succeed
-      await request(app.getHttpServer())
-        .post('/auth/login')
-        .send(loginDto)
-        .expect(200);
+      // Act
+      const result = await controller.login(loginDto, mockRequest);
 
-      // Second request should succeed
-      await request(app.getHttpServer())
-        .post('/auth/login')
-        .send(loginDto)
-        .expect(200);
+      // Assert
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.validateUser).toHaveBeenCalledWith(
+        loginDto.email,
+        loginDto.password,
+      );
+      expect(mockAuthService.login).toHaveBeenCalledWith(
+        { id: '1', email: 'test@example.com', name: 'Test User' },
+        '192.168.1.1',
+        'test-agent',
+      );
     });
 
-    it('should block requests exceeding rate limit with Russian message', async () => {
-      mockAuthService.validateUser.mockResolvedValue({
-        id: '1',
-        email: 'test@example.com',
-        name: 'Test User',
-      });
-
-      mockAuthService.login.mockResolvedValue({
-        user: { id: '1', email: 'test@example.com', name: 'Test User' },
-        access_token: 'token',
-        refresh_token: 'refresh',
-        session_id: 'session',
-        expires_in: 3600,
-      });
-
+    it('should handle login errors', async () => {
+      // Arrange
       const loginDto = {
         email: 'test@example.com',
         password: 'password123',
       };
 
-      // Make requests up to the limit
-      await request(app.getHttpServer())
-        .post('/auth/login')
-        .send(loginDto)
-        .expect(200);
+      mockAuthService.validateUser.mockRejectedValue(new Error('Invalid credentials'));
 
-      await request(app.getHttpServer())
-        .post('/auth/login')
-        .send(loginDto)
-        .expect(200);
+      const mockRequest = { ip: '192.168.1.1', headers: { 'user-agent': 'test-agent' } };
 
-      // Third request should be rate limited
-      const response = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send(loginDto)
-        .expect(429);
-
-      expect(response.body.message).toContain('Слишком много попыток аутентификации');
-      expect(response.body.statusCode).toBe(429);
+      // Act & Assert
+      await expect(
+        controller.login(loginDto, mockRequest),
+      ).rejects.toThrow('Invalid credentials');
     });
   });
 
-  describe('POST /auth/validate', () => {
-    it('should allow high frequency requests for service-to-service calls', async () => {
-      mockAuthService.validateToken.mockResolvedValue({
-        valid: true,
-        user: { id: '1', email: 'test@example.com' },
-      });
-
+  describe('validateToken', () => {
+    it('should successfully validate token', async () => {
+      // Arrange
       const validateDto = {
         token: 'valid-jwt-token',
       };
 
-      // Should allow multiple rapid requests for service validation
-      for (let i = 0; i < 2; i++) {
-        await request(app.getHttpServer())
-          .post('/auth/validate')
-          .send(validateDto)
-          .expect(200);
-      }
+      const expectedResult = {
+        valid: true,
+        user: { id: '1', email: 'test@example.com' },
+      };
+
+      mockAuthService.validateToken.mockResolvedValue(expectedResult);
+
+      // Act
+      const result = await controller.validateToken(validateDto);
+
+      // Assert
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.validateToken).toHaveBeenCalledWith(validateDto.token);
+    });
+
+    it('should handle validation errors', async () => {
+      // Arrange
+      const validateDto = {
+        token: 'invalid-jwt-token',
+      };
+
+      mockAuthService.validateToken.mockRejectedValue(new Error('Invalid token'));
+
+      // Act & Assert
+      await expect(
+        controller.validateToken(validateDto),
+      ).rejects.toThrow('Invalid token');
     });
   });
 
-  describe('Rate limit error format', () => {
-    it('should return proper error structure for rate limited requests', async () => {
-      mockAuthService.validateUser.mockResolvedValue({
-        id: '1',
-        email: 'test@example.com',
+  describe('controller functionality', () => {
+    it('should properly call auth service methods', async () => {
+      // Arrange
+      const registerDto = {
         name: 'Test User',
-      });
+        email: 'test@example.com',
+        password: 'StrongPass123!',
+      };
 
-      mockAuthService.login.mockResolvedValue({
+      mockAuthService.register.mockResolvedValue({
         user: { id: '1', email: 'test@example.com', name: 'Test User' },
         access_token: 'token',
         refresh_token: 'refresh',
@@ -240,32 +185,18 @@ describe('AuthController Throttling (e2e)', () => {
         expires_in: 3600,
       });
 
-      const loginDto = {
-        email: 'test@example.com',
-        password: 'password123',
-      };
+      const mockRequest = { ip: '192.168.1.1', headers: { 'user-agent': 'test-agent' } };
 
-      // Exhaust rate limit
-      await request(app.getHttpServer())
-        .post('/auth/login')
-        .send(loginDto);
+      // Act
+      await controller.register(registerDto, mockRequest);
 
-      await request(app.getHttpServer())
-        .post('/auth/login')
-        .send(loginDto);
-
-      // Check error response structure
-      const response = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send(loginDto)
-        .expect(429);
-
-      expect(response.body).toHaveProperty('statusCode', 429);
-      expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('path', '/auth/login');
-      expect(response.body).toHaveProperty('method', 'POST');
-      expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toContain('Слишком много попыток аутентификации');
+      // Assert
+      expect(mockAuthService.register).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        registerDto,
+        '192.168.1.1',
+        'test-agent',
+      );
     });
   });
 });

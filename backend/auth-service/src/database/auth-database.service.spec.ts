@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { AuthDatabaseService } from './auth-database.service';
 import { DatabaseOperationsService } from './database-operations.service';
@@ -8,8 +7,9 @@ describe('AuthDatabaseService', () => {
   let service: AuthDatabaseService;
   let databaseOperations: jest.Mocked<DatabaseOperationsService>;
 
-  beforeEach(async () => {
-    const mockDatabaseOperations = {
+  beforeEach(() => {
+    // Создаем мок DatabaseOperationsService напрямую
+    databaseOperations = {
       createSession: jest.fn(),
       findSessionById: jest.fn(),
       findSessionsByUserId: jest.fn(),
@@ -25,30 +25,26 @@ describe('AuthDatabaseService', () => {
       findRecentLoginAttemptsByIp: jest.fn(),
       blacklistToken: jest.fn(),
       isTokenBlacklisted: jest.fn(),
+      removeTokenFromBlacklist: jest.fn(),
       blacklistAllUserTokens: jest.fn(),
       findBlacklistedTokensByUserId: jest.fn(),
+      createSecurityEvent: jest.fn(),
       logSecurityEvent: jest.fn(),
       findSecurityEventsByUserId: jest.fn(),
       findUnprocessedSecurityEvents: jest.fn(),
       markSecurityEventAsProcessed: jest.fn(),
       markMultipleSecurityEventsAsProcessed: jest.fn(),
       countSecurityEventsByUserAndType: jest.fn(),
+      getActiveSessionCount: jest.fn(),
+      cleanupExpiredSessions: jest.fn(),
+      cleanupExpiredTokens: jest.fn(),
+      cleanupOldLoginAttempts: jest.fn(),
       performMaintenanceTasks: jest.fn(),
       getDatabaseStatistics: jest.fn(),
-    };
+    } as any;
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthDatabaseService,
-        {
-          provide: DatabaseOperationsService,
-          useValue: mockDatabaseOperations,
-        },
-      ],
-    }).compile();
-
-    service = module.get<AuthDatabaseService>(AuthDatabaseService);
-    databaseOperations = module.get(DatabaseOperationsService);
+    // Создаем AuthDatabaseService с моком
+    service = new AuthDatabaseService(databaseOperations);
   });
 
   afterEach(() => {
@@ -63,8 +59,8 @@ describe('AuthDatabaseService', () => {
     it('should create user session successfully', async () => {
       const sessionData = {
         userId: 'user-123',
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
+        accessTokenHash: 'hashed-access-token',
+        refreshTokenHash: 'hashed-refresh-token',
         ipAddress: '127.0.0.1',
         userAgent: 'test-agent',
         expiresAt: new Date(),
@@ -76,6 +72,7 @@ describe('AuthDatabaseService', () => {
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
+        lastAccessedAt: new Date(),
       } as Session;
 
       databaseOperations.createSession.mockResolvedValue({
@@ -88,8 +85,8 @@ describe('AuthDatabaseService', () => {
       expect(result).toEqual(mockSession);
       expect(databaseOperations.createSession).toHaveBeenCalledWith({
         userId: sessionData.userId,
-        accessToken: sessionData.accessToken,
-        refreshToken: sessionData.refreshToken,
+        accessTokenHash: sessionData.accessTokenHash,
+        refreshTokenHash: sessionData.refreshTokenHash,
         ipAddress: sessionData.ipAddress,
         userAgent: sessionData.userAgent,
         expiresAt: sessionData.expiresAt,
@@ -100,8 +97,8 @@ describe('AuthDatabaseService', () => {
     it('should throw BadRequestException for duplicate entry', async () => {
       const sessionData = {
         userId: 'user-123',
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
+        accessTokenHash: 'hashed-access-token',
+        refreshTokenHash: 'hashed-refresh-token',
         ipAddress: '127.0.0.1',
         userAgent: 'test-agent',
         expiresAt: new Date(),
@@ -119,8 +116,8 @@ describe('AuthDatabaseService', () => {
     it('should throw InternalServerErrorException for connection error', async () => {
       const sessionData = {
         userId: 'user-123',
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
+        accessTokenHash: 'hashed-access-token',
+        refreshTokenHash: 'hashed-refresh-token',
         ipAddress: '127.0.0.1',
         userAgent: 'test-agent',
         expiresAt: new Date(),

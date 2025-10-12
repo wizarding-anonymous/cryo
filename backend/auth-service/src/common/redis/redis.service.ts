@@ -51,6 +51,21 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async removeFromBlacklist(token: string): Promise<void> {
+    try {
+      const key = `blacklist:${token}`;
+      const result = await this.client.del(key);
+      if (result > 0) {
+        this.logger.log(`Token removed from Redis blacklist: ${key}`);
+      } else {
+        this.logger.warn(`Token was not found in Redis blacklist: ${key}`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to remove token from blacklist', error.stack);
+      throw error;
+    }
+  }
+
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
     try {
       if (ttlSeconds) {
@@ -100,6 +115,24 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return await this.client.ttl(key);
     } catch (error) {
       this.logger.error('Failed to get TTL for Redis key', error.stack);
+      throw error;
+    }
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    try {
+      return await this.client.keys(pattern);
+    } catch (error) {
+      this.logger.error('Failed to get Redis keys', error.stack);
+      throw error;
+    }
+  }
+
+  async mget(...keys: string[]): Promise<(string | null)[]> {
+    try {
+      return await this.client.mGet(keys);
+    } catch (error) {
+      this.logger.error('Failed to execute MGET operation', error.stack);
       throw error;
     }
   }

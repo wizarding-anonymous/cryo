@@ -1,7 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { TokenService } from '../token/token.service';
 import { SessionService } from '../session/session.service';
@@ -12,15 +9,25 @@ import { EventBusService } from '../events/services/event-bus.service';
 
 describe('AuthService - Logout Functionality', () => {
   let authService: AuthService;
+  let jwtService: jest.Mocked<any>;
   let tokenService: jest.Mocked<TokenService>;
   let sessionService: jest.Mocked<SessionService>;
+  let userServiceClient: jest.Mocked<UserServiceClient>;
+  let securityServiceClient: jest.Mocked<SecurityServiceClient>;
+  let notificationServiceClient: jest.Mocked<NotificationServiceClient>;
   let eventBusService: jest.Mocked<EventBusService>;
+  let configService: jest.Mocked<any>;
+  let authSagaService: jest.Mocked<any>;
+  let sagaService: jest.Mocked<any>;
+  let asyncOperations: jest.Mocked<any>;
+  let metricsService: jest.Mocked<any>;
+  let workerProcess: jest.Mocked<any>;
 
   const mockSession = {
     id: 'session-123',
     userId: 'user-123',
-    accessToken: 'access-token-123',
-    refreshToken: 'refresh-token-123',
+    accessTokenHash: 'hashed-access-token-123',
+    refreshTokenHash: 'hashed-refresh-token-123',
     ipAddress: '127.0.0.1',
     userAgent: 'Test Agent',
     isActive: true,
@@ -30,74 +37,108 @@ describe('AuthService - Logout Functionality', () => {
     lastAccessedAt: new Date(),
   };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        {
-          provide: JwtService,
-          useValue: {
-            signAsync: jest.fn(),
-            verify: jest.fn(),
-          },
-        },
-        {
-          provide: TokenService,
-          useValue: {
-            blacklistToken: jest.fn(),
-            blacklistAllUserTokens: jest.fn(),
-          },
-        },
-        {
-          provide: SessionService,
-          useValue: {
-            getSessionByAccessToken: jest.fn(),
-            invalidateSession: jest.fn(),
-            invalidateAllUserSessions: jest.fn(),
-            invalidateSessionsForSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: UserServiceClient,
-          useValue: {
-            findByEmail: jest.fn(),
-            createUser: jest.fn(),
-          },
-        },
-        {
-          provide: SecurityServiceClient,
-          useValue: {
-            logSecurityEvent: jest.fn(),
-          },
-        },
-        {
-          provide: NotificationServiceClient,
-          useValue: {
-            sendWelcomeNotification: jest.fn(),
-          },
-        },
-        {
-          provide: EventBusService,
-          useValue: {
-            publishUserLoggedOutEvent: jest.fn(),
-            publishSecurityEvent: jest.fn(),
-            publishUserRegisteredEvent: jest.fn(),
-            publishUserLoggedInEvent: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue(5), // MAX_SESSIONS_PER_USER
-          },
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    // Создаем моки напрямую
+    jwtService = {
+      signAsync: jest.fn(),
+      verify: jest.fn(),
+    } as any;
 
-    authService = module.get<AuthService>(AuthService);
-    tokenService = module.get(TokenService);
-    sessionService = module.get(SessionService);
-    eventBusService = module.get(EventBusService);
+    tokenService = {
+      blacklistToken: jest.fn().mockResolvedValue(undefined),
+      blacklistAllUserTokens: jest.fn().mockResolvedValue(undefined),
+      removeFromBlacklist: jest.fn().mockResolvedValue(undefined),
+      hashToken: jest.fn(),
+    } as any;
+
+    sessionService = {
+      getSessionByAccessToken: jest.fn(),
+      invalidateSession: jest.fn().mockResolvedValue(undefined),
+      invalidateAllUserSessions: jest.fn().mockResolvedValue(undefined),
+      invalidateSessionsForSecurityEvent: jest.fn().mockResolvedValue(undefined),
+      createSession: jest.fn(),
+      createSessionWithLimit: jest.fn(),
+    } as any;
+
+    userServiceClient = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
+      createUser: jest.fn(),
+      updateLastLogin: jest.fn(),
+    } as any;
+
+    securityServiceClient = {
+      logSecurityEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    notificationServiceClient = {
+      sendWelcomeNotification: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    eventBusService = {
+      publishUserLoggedOutEvent: jest.fn().mockResolvedValue(undefined),
+      publishSecurityEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserRegisteredEvent: jest.fn().mockResolvedValue(undefined),
+      publishUserLoggedInEvent: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    configService = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'MAX_SESSIONS_PER_USER') return 5;
+        if (key === 'USE_SAGA_PATTERN') return false;
+        return defaultValue;
+      }),
+    } as any;
+
+    authSagaService = {
+      executeRegistrationSaga: jest.fn(),
+      waitForSagaCompletion: jest.fn(),
+    } as any;
+
+    sagaService = {
+      executeSaga: jest.fn(),
+    } as any;
+
+    asyncOperations = {
+      executeAsync: jest.fn(),
+      executeCriticalPath: jest.fn(),
+      executeParallel: jest.fn(),
+    } as any;
+
+    metricsService = {
+      recordAuthFlowMetric: jest.fn(),
+    } as any;
+
+    workerProcess = {
+      executeInWorker: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
+    authService = new AuthService(
+      jwtService,
+      tokenService,
+      sessionService,
+      userServiceClient,
+      securityServiceClient,
+      notificationServiceClient,
+      eventBusService,
+      configService,
+      authSagaService,
+      sagaService,
+      asyncOperations,
+      metricsService,
+      workerProcess,
+    );
+
+    // Mock executeCriticalPath to execute the callback function
+    asyncOperations.executeCriticalPath.mockImplementation(async (callback: () => any) => {
+      return await callback();
+    });
+
+    // Mock executeParallel to execute all functions in parallel
+    asyncOperations.executeParallel.mockImplementation(async (functions: (() => Promise<any>)[], concurrency?: number) => {
+      return Promise.all(functions.map(fn => fn()));
+    });
   });
 
   afterEach(() => {
@@ -119,10 +160,13 @@ describe('AuthService - Logout Functionality', () => {
       // Act
       await authService.logout(accessToken, userId, undefined, ipAddress);
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert - Requirement 1.3: Auth Service SHALL handle all user logout operations
       expect(sessionService.getSessionByAccessToken).toHaveBeenCalledWith(accessToken);
       expect(sessionService.invalidateSession).toHaveBeenCalledWith(mockSession.id);
-      
+
       // Requirement 4.5: Auth Service SHALL blacklist the JWT token in Redis
       expect(tokenService.blacklistToken).toHaveBeenCalledWith(accessToken, userId, 'logout');
       expect(tokenService.blacklistToken).toHaveBeenCalledTimes(1);
@@ -148,10 +192,13 @@ describe('AuthService - Logout Functionality', () => {
       // Act
       await authService.logout(accessToken, userId, refreshToken, ipAddress);
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert
       expect(sessionService.getSessionByAccessToken).toHaveBeenCalledWith(accessToken);
       expect(sessionService.invalidateSession).toHaveBeenCalledWith(mockSession.id);
-      
+
       // Both tokens should be blacklisted
       expect(tokenService.blacklistToken).toHaveBeenCalledWith(accessToken, userId, 'logout');
       expect(tokenService.blacklistToken).toHaveBeenCalledWith(refreshToken, userId, 'logout');
@@ -177,6 +224,9 @@ describe('AuthService - Logout Functionality', () => {
       // Act
       await authService.logout(accessToken, userId);
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert
       expect(eventBusService.publishUserLoggedOutEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -197,10 +247,13 @@ describe('AuthService - Logout Functionality', () => {
       // Act
       await authService.logout(accessToken, userId, refreshToken, ipAddress);
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert
       expect(sessionService.getSessionByAccessToken).toHaveBeenCalledWith(accessToken);
       expect(sessionService.invalidateSession).not.toHaveBeenCalled();
-      
+
       // Tokens should still be blacklisted
       expect(tokenService.blacklistToken).toHaveBeenCalledWith(accessToken, userId, 'logout');
       expect(tokenService.blacklistToken).toHaveBeenCalledWith(refreshToken, userId, 'logout');
@@ -241,11 +294,14 @@ describe('AuthService - Logout Functionality', () => {
       // Act - Should not throw error
       await authService.logout(accessToken, userId, refreshToken, ipAddress);
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert
       expect(sessionService.getSessionByAccessToken).toHaveBeenCalledWith(accessToken);
       expect(sessionService.invalidateSession).toHaveBeenCalledWith(mockSession.id);
       expect(tokenService.blacklistToken).toHaveBeenCalledTimes(2);
-      
+
       // Event should still be published
       expect(eventBusService.publishUserLoggedOutEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -267,12 +323,14 @@ describe('AuthService - Logout Functionality', () => {
       // Act & Assert - Should throw error since session invalidation is not wrapped in try-catch
       await expect(authService.logout(accessToken, userId, refreshToken, ipAddress))
         .rejects
-        .toThrow('Database error');
+        .toThrow('Logout failed: Unable to invalidate session. Please try again.');
 
       expect(sessionService.getSessionByAccessToken).toHaveBeenCalledWith(accessToken);
       expect(sessionService.invalidateSession).toHaveBeenCalledWith(mockSession.id);
-      // Token blacklisting should not be called if session invalidation fails
-      expect(tokenService.blacklistToken).not.toHaveBeenCalled();
+      // Tokens are blacklisted first, then session invalidation is attempted
+      // If session invalidation fails, tokens are removed from blacklist (rollback)
+      expect(tokenService.blacklistToken).toHaveBeenCalledTimes(2);
+      expect(tokenService.removeFromBlacklist).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -289,6 +347,9 @@ describe('AuthService - Logout Functionality', () => {
 
       // Act
       await authService.invalidateAllUserSessions(userId, reason, ipAddress);
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Requirement 13.6: Auth Service SHALL invalidate all user sessions for security events
       expect(sessionService.invalidateAllUserSessions).toHaveBeenCalledWith(userId, reason);
@@ -330,6 +391,9 @@ describe('AuthService - Logout Functionality', () => {
       // Act
       await authService.invalidateAllUserSessions(userId);
 
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
+
       // Assert
       expect(sessionService.invalidateAllUserSessions).toHaveBeenCalledWith(userId, 'security_event');
       expect(eventBusService.publishUserLoggedOutEvent).toHaveBeenCalledWith(
@@ -363,6 +427,9 @@ describe('AuthService - Logout Functionality', () => {
         ipAddress,
         excludeCurrentSession
       );
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert - Requirement 13.5, 13.6: Auth Service SHALL invalidate sessions for security events
       expect(sessionService.invalidateSessionsForSecurityEvent).toHaveBeenCalledWith(
@@ -411,6 +478,9 @@ describe('AuthService - Logout Functionality', () => {
         'suspicious_activity',
         ipAddress
       );
+
+      // Wait for setImmediate events to complete
+      await new Promise(resolve => setImmediate(resolve));
 
       // Assert
       expect(sessionService.invalidateSessionsForSecurityEvent).toHaveBeenCalledWith(

@@ -3,6 +3,8 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +17,11 @@ import { SecurityServiceClient } from '../common/http-client/security-service.cl
 import { NotificationServiceClient } from '../common/http-client/notification-service.client';
 import { EventBusService } from '../events/services/event-bus.service';
 import { UserRegisteredEvent, UserLoggedInEvent, UserLoggedOutEvent, SecurityEventDto } from '../events/dto';
+import { AuthSagaService } from '../saga/auth-saga.service';
+import { SagaService } from '../saga/saga.service';
+import { AsyncOperationsService } from '../common/async/async-operations.service';
+import { AsyncMetricsService } from '../common/async/async-metrics.service';
+import { WorkerProcessService } from '../common/async/worker-process.service';
 
 export interface JwtPayload {
   sub: string;
@@ -43,7 +50,9 @@ export interface AuthResponse {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly maxSessionsPerUser: number;
+  private readonly useSagaPattern: boolean;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -54,22 +63,184 @@ export class AuthService {
     private readonly notificationServiceClient: NotificationServiceClient,
     private readonly eventBusService: EventBusService,
     private readonly configService: ConfigService,
+    private readonly authSagaService: AuthSagaService,
+    private readonly sagaService: SagaService,
+    private readonly asyncOperations: AsyncOperationsService,
+    private readonly metricsService: AsyncMetricsService,
+    private readonly workerProcess: WorkerProcessService,
   ) {
     this.maxSessionsPerUser = this.configService.get<number>('MAX_SESSIONS_PER_USER', 5);
+    this.useSagaPattern = this.configService.get<boolean>('USE_SAGA_PATTERN', true);
   }
 
   /**
-   * Registers a new user.
+   * Registers a new user using Saga pattern for transactional consistency.
+   * ARCHITECTURAL FIX: Implements distributed transactions with compensation
+   * 
    * @param registerDto - The registration data.
    * @param ipAddress - Client IP address for session tracking.
    * @param userAgent - Client user agent for session tracking.
-   * @returns The newly created user and JWT tokens.
+   * @returns The newly created user and JWT tokens or saga ID for async processing.
    * @throws ConflictException if the email is already in use.
    */
   async register(
     registerDto: RegisterDto, 
     ipAddress: string = '::1', 
     userAgent: string = 'Unknown'
+  ): Promise<AuthResponse> {
+    const startTime = Date.now();
+    
+    try {
+      // Execute critical path with optimized async operations
+      const result = await this.asyncOperations.executeCriticalPath(
+        async () => {
+          if (this.useSagaPattern) {
+            return await this.registerWithSaga(registerDto, ipAddress, userAgent);
+          } else {
+            return await this.registerLegacy(registerDto, ipAddress, userAgent);
+          }
+        },
+        // Fallback to legacy method if saga fails
+        async () => {
+          this.logger.warn('Falling back to legacy registration method');
+          return await this.registerLegacy(registerDto, ipAddress, userAgent);
+        }
+      );
+
+      const duration = Date.now() - startTime;
+      this.metricsService.recordAuthFlowMetric('register', duration, true, {
+        useSaga: this.useSagaPattern,
+        ipAddress,
+        userAgent,
+      });
+
+      return result;
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.metricsService.recordAuthFlowMetric('register', duration, false, {
+        error: error.message,
+        useSaga: this.useSagaPattern,
+        ipAddress,
+        userAgent,
+      });
+
+      this.logger.error('Registration failed', {
+        email: registerDto.email,
+        error: error.message,
+        duration,
+        ipAddress,
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Registers a new user using Saga pattern for distributed transactions
+   * Steps: validateUser → hashPassword → createUser → generateTokens → createSession → publishEvents
+   * Each step has compensation logic to maintain consistency on failure
+   */
+  private async registerWithSaga(
+    registerDto: RegisterDto,
+    ipAddress: string,
+    userAgent: string
+  ): Promise<AuthResponse> {
+    this.logger.log('Starting registration with Saga pattern', {
+      email: registerDto.email,
+      ipAddress,
+      sagaEnabled: true
+    });
+
+    // Start the registration saga
+    const sagaId = await this.authSagaService.executeRegistrationSaga(
+      registerDto,
+      ipAddress,
+      userAgent
+    );
+
+    // Wait for saga completion (with timeout)
+    const sagaResult = await this.authSagaService.waitForSagaCompletion(sagaId, 30000);
+
+    if (!sagaResult.completed) {
+      this.logger.error('Registration saga failed or timed out', {
+        sagaId,
+        status: sagaResult.status,
+        error: sagaResult.error,
+        email: registerDto.email
+      });
+
+      if (sagaResult.status === 'failed') {
+        throw new InternalServerErrorException(
+          sagaResult.error || 'Registration failed due to system error'
+        );
+      } else if (sagaResult.status === 'timeout') {
+        throw new InternalServerErrorException(
+          'Registration is taking longer than expected. Please try again.'
+        );
+      } else {
+        throw new InternalServerErrorException('Registration failed');
+      }
+    }
+
+    // Get the saga to extract results
+    const saga = await this.sagaService.getSaga(sagaId);
+    if (!saga || !saga.metadata) {
+      throw new InternalServerErrorException('Unable to retrieve registration results');
+    }
+
+    // Since saga completed successfully, we need to get the actual results
+    // In a production system, we'd store intermediate results in Redis
+    // For now, we'll perform a final lookup to get the created user
+    try {
+      const createdUser = await this.userServiceClient.findByEmail(registerDto.email);
+      if (!createdUser) {
+        throw new InternalServerErrorException('User was created but cannot be found');
+      }
+
+      // Generate fresh tokens (saga tokens might be compensated)
+      const tokens = await this.generateTokens(createdUser);
+
+      // Get the most recent session for this user
+      const sessions = await this.sessionService.getUserSessions(createdUser.id);
+      const latestSession = sessions[0]; // Assuming sessions are ordered by creation time
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...userWithoutPassword } = createdUser;
+
+      this.logger.log('Registration saga completed successfully', {
+        sagaId,
+        userId: createdUser.id,
+        email: createdUser.email,
+        sessionId: latestSession?.id
+      });
+
+      return {
+        user: userWithoutPassword,
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+        session_id: latestSession?.id || 'unknown',
+        expires_in: 3600, // 1 hour in seconds
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to retrieve registration results after saga completion', {
+        sagaId,
+        error: error.message,
+        email: registerDto.email
+      });
+      throw new InternalServerErrorException('Registration completed but results unavailable');
+    }
+  }
+
+  /**
+   * Legacy registration method (without Saga pattern)
+   * Kept for backward compatibility and gradual migration
+   */
+  private async registerLegacy(
+    registerDto: RegisterDto,
+    ipAddress: string,
+    userAgent: string
   ): Promise<AuthResponse> {
     const { name, email, password } = registerDto;
 
@@ -79,8 +250,12 @@ export class AuthService {
       throw new ConflictException('Пользователь с таким email уже существует');
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password using worker process for CPU-intensive operation
+    // PERFORMANCE FIX: Offload CPU-intensive hashing to worker process
+    const hashedPassword = await this.workerProcess.executeInWorker<string>(
+      'hash-password',
+      { password, saltRounds: 10 }
+    );
 
     // Create user via User Service
     const newUser = await this.userServiceClient.createUser({
@@ -103,16 +278,24 @@ export class AuthService {
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     });
 
-    // Publish UserRegisteredEvent for event-driven processing
+    // Publish UserRegisteredEvent for event-driven processing using setImmediate for non-blocking execution
     // This will trigger security event logging and welcome email sending via event handlers
-    // Requirements: 11.1, 11.4
-    void this.eventBusService.publishUserRegisteredEvent(new UserRegisteredEvent({
-      userId: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
-      ipAddress,
-      timestamp: new Date(),
-    }));
+    // Requirements: 11.1, 11.4 - PERFORMANCE FIX: Use setImmediate instead of void calls
+    setImmediate(() => {
+      this.eventBusService.publishUserRegisteredEvent(new UserRegisteredEvent({
+        userId: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        ipAddress,
+        timestamp: new Date(),
+      })).catch(error => {
+        this.logger.error('Failed to publish user registered event', {
+          userId: newUser.id,
+          email: newUser.email,
+          error: error.message,
+        });
+      });
+    });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = newUser;
@@ -156,7 +339,9 @@ export class AuthService {
   }
 
   /**
-   * Logs a user in and returns JWT tokens and user info.
+   * Logs a user in using Saga pattern for transactional consistency.
+   * ARCHITECTURAL FIX: Implements distributed transactions with compensation
+   * 
    * @param user - The user object (typically from validateUser).
    * @param ipAddress - Client IP address for session tracking.
    * @param userAgent - Client user agent for session tracking.
@@ -166,6 +351,158 @@ export class AuthService {
     user: Omit<User, 'password'>, 
     ipAddress: string = '::1', 
     userAgent: string = 'Unknown'
+  ): Promise<AuthResponse> {
+    const startTime = Date.now();
+    
+    try {
+      // Execute critical path with optimized async operations
+      const result = await this.asyncOperations.executeCriticalPath(
+        async () => {
+          if (this.useSagaPattern) {
+            return await this.loginWithSaga(user, ipAddress, userAgent);
+          } else {
+            return await this.loginLegacy(user, ipAddress, userAgent);
+          }
+        },
+        // Fallback to legacy method if saga fails
+        async () => {
+          this.logger.warn('Falling back to legacy login method', { userId: user.id });
+          return await this.loginLegacy(user, ipAddress, userAgent);
+        }
+      );
+
+      const duration = Date.now() - startTime;
+      this.metricsService.recordAuthFlowMetric('login', duration, true, {
+        userId: user.id,
+        useSaga: this.useSagaPattern,
+        ipAddress,
+        userAgent,
+      });
+
+      return result;
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.metricsService.recordAuthFlowMetric('login', duration, false, {
+        userId: user.id,
+        error: error.message,
+        useSaga: this.useSagaPattern,
+        ipAddress,
+        userAgent,
+      });
+
+      this.logger.error('Login failed', {
+        userId: user.id,
+        email: user.email,
+        error: error.message,
+        duration,
+        ipAddress,
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Logs a user in using Saga pattern for distributed transactions
+   * Steps: generateTokens → enforceSessionLimit → createSession → publishEvents
+   * Each step has compensation logic to maintain consistency on failure
+   */
+  private async loginWithSaga(
+    user: Omit<User, 'password'>,
+    ipAddress: string,
+    userAgent: string
+  ): Promise<AuthResponse> {
+    this.logger.log('Starting login with Saga pattern', {
+      userId: user.id,
+      email: user.email,
+      ipAddress,
+      sagaEnabled: true
+    });
+
+    // Start the login saga
+    const sagaId = await this.authSagaService.executeLoginSaga(
+      user,
+      ipAddress,
+      userAgent,
+      this.maxSessionsPerUser
+    );
+
+    // Wait for saga completion (with timeout)
+    const sagaResult = await this.authSagaService.waitForSagaCompletion(sagaId, 30000);
+
+    if (!sagaResult.completed) {
+      this.logger.error('Login saga failed or timed out', {
+        sagaId,
+        status: sagaResult.status,
+        error: sagaResult.error,
+        userId: user.id
+      });
+
+      if (sagaResult.status === 'failed') {
+        throw new InternalServerErrorException(
+          sagaResult.error || 'Login failed due to system error'
+        );
+      } else if (sagaResult.status === 'timeout') {
+        throw new InternalServerErrorException(
+          'Login is taking longer than expected. Please try again.'
+        );
+      } else {
+        throw new InternalServerErrorException('Login failed');
+      }
+    }
+
+    // Get the saga to extract results
+    const saga = await this.sagaService.getSaga(sagaId);
+    if (!saga || !saga.metadata) {
+      throw new InternalServerErrorException('Unable to retrieve login results');
+    }
+
+    // Since saga completed successfully, get the most recent session
+    try {
+      const sessions = await this.sessionService.getUserSessions(user.id);
+      const latestSession = sessions[0]; // Assuming sessions are ordered by creation time
+
+      if (!latestSession) {
+        throw new InternalServerErrorException('Session was created but cannot be found');
+      }
+
+      // Generate fresh tokens (saga tokens might be compensated)
+      const tokens = await this.generateTokens(user as User);
+
+      this.logger.log('Login saga completed successfully', {
+        sagaId,
+        userId: user.id,
+        sessionId: latestSession.id,
+        transactionalLogin: true
+      });
+
+      return {
+        user,
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+        session_id: latestSession.id,
+        expires_in: 3600, // 1 hour in seconds
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to retrieve login results after saga completion', {
+        sagaId,
+        error: error.message,
+        userId: user.id
+      });
+      throw new InternalServerErrorException('Login completed but results unavailable');
+    }
+  }
+
+  /**
+   * Legacy login method (without Saga pattern)
+   * Kept for backward compatibility and gradual migration
+   */
+  private async loginLegacy(
+    user: Omit<User, 'password'>,
+    ipAddress: string,
+    userAgent: string
   ): Promise<AuthResponse> {
     // Generate tokens first
     const tokens = await this.generateTokens(user as User);
@@ -182,33 +519,48 @@ export class AuthService {
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     }, this.maxSessionsPerUser);
 
-    // Log when old sessions are removed due to limit via event bus
+    // Log when old sessions are removed due to limit via event bus using setImmediate
     if (removedSessionsCount > 0) {
-      void this.eventBusService.publishSecurityEvent(new SecurityEventDto({
+      setImmediate(() => {
+        this.eventBusService.publishSecurityEvent(new SecurityEventDto({
+          userId: user.id,
+          type: 'login',
+          ipAddress,
+          userAgent,
+          timestamp: new Date(),
+          metadata: { 
+            sessionLimitEnforced: true,
+            removedSessionsCount,
+            maxSessionsAllowed: this.maxSessionsPerUser,
+            raceConditionProtected: true // Indicate that distributed locking was used
+          }
+        })).catch(error => {
+          this.logger.error('Failed to publish session limit security event', {
+            userId: user.id,
+            error: error.message,
+          });
+        });
+      });
+    }
+
+    // Publish UserLoggedInEvent for event-driven processing using setImmediate
+    // This will trigger last login update and security event logging via event handlers
+    // Requirements: 11.2, 11.4 - PERFORMANCE FIX: Use setImmediate instead of void calls
+    setImmediate(() => {
+      this.eventBusService.publishUserLoggedInEvent(new UserLoggedInEvent({
         userId: user.id,
-        type: 'login',
+        sessionId: session.id,
         ipAddress,
         userAgent,
         timestamp: new Date(),
-        metadata: { 
-          sessionLimitEnforced: true,
-          removedSessionsCount,
-          maxSessionsAllowed: this.maxSessionsPerUser,
-          raceConditionProtected: true // Indicate that distributed locking was used
-        }
-      }));
-    }
-
-    // Publish UserLoggedInEvent for event-driven processing
-    // This will trigger last login update and security event logging via event handlers
-    // Requirements: 11.2, 11.4
-    void this.eventBusService.publishUserLoggedInEvent(new UserLoggedInEvent({
-      userId: user.id,
-      sessionId: session.id,
-      ipAddress,
-      userAgent,
-      timestamp: new Date(),
-    }));
+      })).catch(error => {
+        this.logger.error('Failed to publish user logged in event', {
+          userId: user.id,
+          sessionId: session.id,
+          error: error.message,
+        });
+      });
+    });
 
     return {
       user,
@@ -221,8 +573,12 @@ export class AuthService {
 
   /**
    * Logs a user out by blacklisting their JWT tokens and invalidating session.
-   * Enhanced to support blacklisting both access and refresh tokens.
+   * Enhanced with atomic operations and compensating transactions for consistency.
    * Updated to use event-driven architecture for security logging.
+   * 
+   * CRITICAL SECURITY FIX: Implements atomic logout with rollback mechanism
+   * Order: blacklistToken first, then invalidateSession with compensation
+   * 
    * @param accessToken The access token to blacklist.
    * @param userId The user ID for logging.
    * @param refreshToken Optional refresh token to blacklist.
@@ -238,31 +594,160 @@ export class AuthService {
       throw new BadRequestException('Access token is required');
     }
 
-    // Find and invalidate session by access token
+    // Find session by access token first (before any modifications)
     // Requirements: 13.5
     const session = await this.sessionService.getSessionByAccessToken(accessToken);
-    if (session) {
-      await this.sessionService.invalidateSession(session.id);
+    
+    // Track blacklisted tokens for potential rollback
+    const blacklistedTokens: string[] = [];
+    
+    try {
+      // STEP 1: Blacklist access token first (critical security operation)
+      // This ensures token is immediately invalid even if session invalidation fails
+      await this.tokenService.blacklistToken(accessToken, userId, 'logout');
+      blacklistedTokens.push(accessToken);
+      
+      // STEP 2: Blacklist refresh token if provided
+      if (refreshToken) {
+        await this.tokenService.blacklistToken(refreshToken, userId, 'logout');
+        blacklistedTokens.push(refreshToken);
+      }
+      
+      // STEP 3: Invalidate session (may fail, triggering compensation)
+      if (session) {
+        try {
+          await this.sessionService.invalidateSession(session.id);
+        } catch (sessionError) {
+          this.logger.error('Session invalidation failed, performing rollback', {
+            sessionId: session.id,
+            userId,
+            error: sessionError.message,
+            blacklistedTokensCount: blacklistedTokens.length
+          });
+          
+          // COMPENSATION: Remove tokens from blacklist to maintain consistency
+          // If we can't invalidate the session, we shouldn't keep tokens blacklisted
+          // as this creates inconsistent state where session is active but tokens are blocked
+          await this.performLogoutRollback(blacklistedTokens, userId, session.id);
+          
+          // Re-throw the session error after compensation
+          throw new InternalServerErrorException(
+            'Logout failed: Unable to invalidate session. Please try again.'
+          );
+        }
+      }
+      
+      // STEP 4: Publish success event only after all operations complete using setImmediate
+      // Requirements: 11.3, 11.4 - PERFORMANCE FIX: Use setImmediate instead of void calls
+      setImmediate(() => {
+        this.eventBusService.publishUserLoggedOutEvent(new UserLoggedOutEvent({
+          userId,
+          sessionId: session?.id || 'unknown',
+          ipAddress,
+          reason: 'manual',
+          timestamp: new Date(),
+        })).catch(error => {
+          this.logger.error('Failed to publish user logged out event', {
+            userId,
+            sessionId: session?.id,
+            error: error.message,
+          });
+        });
+      });
+      
+      this.logger.log('Atomic logout completed successfully', {
+        userId,
+        sessionId: session?.id,
+        tokensBlacklisted: blacklistedTokens.length,
+        atomicOperation: true
+      });
+      
+    } catch (error) {
+      // If error occurred after blacklisting but before session invalidation,
+      // the rollback was already performed in the session invalidation catch block
+      
+      // Log the atomic operation failure
+      this.logger.error('Atomic logout operation failed', {
+        userId,
+        sessionId: session?.id,
+        error: error.message,
+        blacklistedTokensCount: blacklistedTokens.length,
+        atomicOperationFailed: true
+      });
+      
+      // Re-throw the error (rollback already performed if needed)
+      throw error;
     }
+  }
 
-    // Blacklist the access token
-    await this.tokenService.blacklistToken(accessToken, userId, 'logout');
-
-    // Blacklist refresh token if provided
-    if (refreshToken) {
-      await this.tokenService.blacklistToken(refreshToken, userId, 'logout');
+  /**
+   * Performs compensating rollback actions when logout fails
+   * Removes tokens from blacklist to maintain consistency
+   * 
+   * @param blacklistedTokens List of tokens that were blacklisted
+   * @param userId User ID for logging
+   * @param sessionId Session ID for logging
+   */
+  private async performLogoutRollback(
+    blacklistedTokens: string[], 
+    userId: string, 
+    sessionId: string
+  ): Promise<void> {
+    const rollbackErrors: string[] = [];
+    
+    // Attempt to remove each blacklisted token
+    for (const token of blacklistedTokens) {
+      try {
+        await this.tokenService.removeFromBlacklist(token, userId);
+        this.logger.log('Token removed from blacklist during rollback', {
+          userId,
+          sessionId,
+          tokenType: token.length > 200 ? 'refresh' : 'access' // Rough heuristic
+        });
+      } catch (rollbackError) {
+        const errorMsg = `Failed to remove token from blacklist during rollback: ${rollbackError.message}`;
+        rollbackErrors.push(errorMsg);
+        this.logger.error(errorMsg, {
+          userId,
+          sessionId,
+          rollbackError: rollbackError.message
+        });
+      }
     }
-
-    // Publish UserLoggedOutEvent for event-driven processing
-    // This will trigger security event logging via event handlers
-    // Requirements: 11.3, 11.4
-    void this.eventBusService.publishUserLoggedOutEvent(new UserLoggedOutEvent({
-      userId,
-      sessionId: session?.id || 'unknown',
-      ipAddress,
-      reason: 'manual',
-      timestamp: new Date(),
-    }));
+    
+    // Publish security event about the rollback using setImmediate
+    setImmediate(() => {
+      this.eventBusService.publishSecurityEvent(new SecurityEventDto({
+        userId,
+        type: 'logout_rollback',
+        ipAddress: '::1', // Default since we don't have it in rollback context
+        metadata: {
+          sessionId,
+          rollbackReason: 'session_invalidation_failed',
+          tokensRolledBack: blacklistedTokens.length,
+          rollbackErrors: rollbackErrors.length,
+          rollbackErrorMessages: rollbackErrors,
+          compensatingTransactionExecuted: true,
+          consistencyMaintained: rollbackErrors.length === 0
+        },
+        timestamp: new Date(),
+      })).catch(error => {
+        this.logger.error('Failed to publish logout rollback security event', {
+          userId,
+          sessionId,
+          error: error.message,
+        });
+      });
+    });
+    
+    if (rollbackErrors.length > 0) {
+      this.logger.error('Partial rollback failure - manual intervention may be required', {
+        userId,
+        sessionId,
+        rollbackErrors,
+        criticalInconsistency: true
+      });
+    }
   }
 
   /**
@@ -296,16 +781,23 @@ export class AuthService {
         user.id
       );
 
-      // Log security event for token refresh (async)
+      // Log security event for token refresh (async) - PERFORMANCE FIX: Use setImmediate instead of void calls
       // Requirements: 6.1, 6.2, 6.3 - Log authentication events to Security Service
-      void this.securityServiceClient.logTokenRefresh(
-        user.id,
-        '::1', // TODO: Get real IP from request context
-        { 
-          tokenRotated: true,
-          oldTokenBlacklisted: true
-        }
-      );
+      setImmediate(() => {
+        this.securityServiceClient.logTokenRefresh(
+          user.id,
+          '::1', // TODO: Get real IP from request context
+          { 
+            tokenRotated: true,
+            oldTokenBlacklisted: true
+          }
+        ).catch(error => {
+          this.logger.error('Failed to log token refresh security event', {
+            userId: user.id,
+            error: error.message,
+          });
+        });
+      });
 
       return { 
         access_token: newTokens.accessToken,
@@ -404,28 +896,39 @@ export class AuthService {
     // Blacklist all tokens for the user
     await this.tokenService.blacklistAllUserTokens(userId);
 
-    // Publish UserLoggedOutEvent for event-driven security logging
-    // Requirements: 11.3, 11.4
-    void this.eventBusService.publishUserLoggedOutEvent(new UserLoggedOutEvent({
-      userId,
-      sessionId: 'all_sessions',
-      ipAddress,
-      reason: 'security',
-      timestamp: new Date(),
-    }));
+    // Publish events for all sessions invalidation using setImmediate for parallel execution
+    // Requirements: 11.3, 11.4 - PERFORMANCE FIX: Use setImmediate instead of void calls
+    setImmediate(() => {
+      // Execute both events in parallel for better performance
+      const events = [
+        () => this.eventBusService.publishUserLoggedOutEvent(new UserLoggedOutEvent({
+          userId,
+          sessionId: 'all_sessions',
+          ipAddress,
+          reason: 'security',
+          timestamp: new Date(),
+        })),
+        () => this.eventBusService.publishSecurityEvent(new SecurityEventDto({
+          userId,
+          type: 'all_sessions_invalidated',
+          ipAddress,
+          metadata: { 
+            reason,
+            sessionsInvalidated: invalidatedCount,
+            allSessionsInvalidated: true
+          },
+          timestamp: new Date(),
+        })),
+      ];
 
-    // Publish additional security event for all sessions invalidation
-    void this.eventBusService.publishSecurityEvent(new SecurityEventDto({
-      userId,
-      type: 'all_sessions_invalidated',
-      ipAddress,
-      metadata: { 
-        reason,
-        sessionsInvalidated: invalidatedCount,
-        allSessionsInvalidated: true
-      },
-      timestamp: new Date(),
-    }));
+      this.asyncOperations.executeParallel(events, 2).catch(error => {
+        this.logger.error('Failed to publish all sessions invalidation events', {
+          userId,
+          reason,
+          error: error.message,
+        });
+      });
+    });
   }
 
   /**
@@ -458,30 +961,41 @@ export class AuthService {
       await this.tokenService.blacklistAllUserTokens(userId);
     }
 
-    // Publish UserLoggedOutEvent for event-driven security logging
-    // Requirements: 11.3, 11.4
-    void this.eventBusService.publishUserLoggedOutEvent(new UserLoggedOutEvent({
-      userId,
-      sessionId: excludeCurrentSession || 'multiple_sessions',
-      ipAddress,
-      reason: 'security',
-      timestamp: new Date(),
-    }));
+    // Publish events for security session invalidation using setImmediate for parallel execution
+    // Requirements: 11.3, 11.4 - PERFORMANCE FIX: Use setImmediate instead of void calls
+    setImmediate(() => {
+      // Execute both events in parallel for better performance
+      const events = [
+        () => this.eventBusService.publishUserLoggedOutEvent(new UserLoggedOutEvent({
+          userId,
+          sessionId: excludeCurrentSession || 'multiple_sessions',
+          ipAddress,
+          reason: 'security',
+          timestamp: new Date(),
+        })),
+        () => this.eventBusService.publishSecurityEvent(new SecurityEventDto({
+          userId,
+          type: 'security_session_invalidation',
+          ipAddress,
+          metadata: { 
+            securityEventType,
+            invalidatedCount: result.invalidatedCount,
+            remainingCount: result.remainingCount,
+            excludedCurrentSession: !!excludeCurrentSession,
+            securityEventTriggered: true
+          },
+          timestamp: new Date(),
+        })),
+      ];
 
-    // Publish additional security event for security-triggered session invalidation
-    void this.eventBusService.publishSecurityEvent(new SecurityEventDto({
-      userId,
-      type: 'security_session_invalidation',
-      ipAddress,
-      metadata: { 
-        securityEventType,
-        invalidatedCount: result.invalidatedCount,
-        remainingCount: result.remainingCount,
-        excludedCurrentSession: !!excludeCurrentSession,
-        securityEventTriggered: true
-      },
-      timestamp: new Date(),
-    }));
+      this.asyncOperations.executeParallel(events, 2).catch(error => {
+        this.logger.error('Failed to publish security session invalidation events', {
+          userId,
+          securityEventType,
+          error: error.message,
+        });
+      });
+    });
   }
 
   /**
@@ -566,31 +1080,48 @@ export class AuthService {
       // Continue without user ID if user service is unavailable
     }
 
-    // Publish security event for failed login attempt
-    void this.eventBusService.publishSecurityEvent(new SecurityEventDto({
-      userId: userId || 'unknown',
-      type: 'failed_login',
-      ipAddress,
-      metadata: {
-        email,
-        reason,
-        userAgent: metadata?.userAgent,
-        ...metadata
-      },
-      timestamp: new Date(),
-    }));
+    // Publish security event for failed login attempt using setImmediate
+    setImmediate(() => {
+      this.eventBusService.publishSecurityEvent(new SecurityEventDto({
+        userId: userId || 'unknown',
+        type: 'failed_login',
+        ipAddress,
+        metadata: {
+          email,
+          reason,
+          userAgent: metadata?.userAgent,
+          ...metadata
+        },
+        timestamp: new Date(),
+      })).catch(error => {
+        this.logger.error('Failed to publish failed login security event', {
+          email,
+          userId,
+          error: error.message,
+        });
+      });
+    });
 
     // Check for suspicious activity patterns
     await this.detectSuspiciousActivity(email, userId, ipAddress, metadata);
 
-    // Send security alert for failed login attempts (async)
+    // Send security alert for failed login attempts using setImmediate
     // This helps notify users of potential unauthorized access attempts
     if (userId) {
-      void this.notificationServiceClient.sendMultipleFailedAttemptsAlert(
-        email,
-        1, // Single attempt for now - could be enhanced to track multiple attempts
-        ipAddress
-      );
+      setImmediate(() => {
+        this.notificationServiceClient.sendMultipleFailedAttemptsAlert(
+          email,
+          1, // Single attempt for now - could be enhanced to track multiple attempts
+          ipAddress
+        ).catch(error => {
+          this.logger.error('Failed to send multiple failed attempts alert', {
+            userId,
+            email,
+            ipAddress,
+            error: error.message,
+          });
+        });
+      });
     }
   }
 
@@ -613,20 +1144,29 @@ export class AuthService {
       const suspiciousPatterns = await this.analyzeSuspiciousPatterns(email, ipAddress, metadata);
 
       if (suspiciousPatterns.length > 0) {
-        // Publish suspicious activity event
-        void this.eventBusService.publishSecurityEvent(new SecurityEventDto({
-          userId: userId || 'unknown',
-          type: 'suspicious_activity',
-          ipAddress,
-          metadata: {
-            email,
-            patterns: suspiciousPatterns,
-            detectionTimestamp: new Date(),
-            userAgent: metadata?.userAgent,
-            ...metadata
-          },
-          timestamp: new Date(),
-        }));
+        // Publish suspicious activity event using setImmediate
+        setImmediate(() => {
+          this.eventBusService.publishSecurityEvent(new SecurityEventDto({
+            userId: userId || 'unknown',
+            type: 'suspicious_activity',
+            ipAddress,
+            metadata: {
+              email,
+              patterns: suspiciousPatterns,
+              detectionTimestamp: new Date(),
+              userAgent: metadata?.userAgent,
+              ...metadata
+            },
+            timestamp: new Date(),
+          })).catch(error => {
+            this.logger.error('Failed to publish suspicious activity security event', {
+              email,
+              userId,
+              ipAddress,
+              error: error.message,
+            });
+          });
+        });
 
         // If we have a user ID and activity is severe, invalidate sessions
         if (userId && suspiciousPatterns.some(p => p.severity === 'high')) {
@@ -637,18 +1177,27 @@ export class AuthService {
           );
         }
 
-        // Send security alert notification
+        // Send security alert notification using setImmediate
         if (userId) {
-          void this.notificationServiceClient.sendSecurityAlert(
-            userId,
-            email,
-            'suspicious_login_activity',
-            {
-              ipAddress,
-              patterns: suspiciousPatterns,
-              timestamp: new Date(),
-            }
-          );
+          setImmediate(() => {
+            this.notificationServiceClient.sendSecurityAlert(
+              userId,
+              email,
+              'suspicious_login_activity',
+              {
+                ipAddress,
+                patterns: suspiciousPatterns,
+                timestamp: new Date(),
+              }
+            ).catch(error => {
+              this.logger.error('Failed to send suspicious activity security alert', {
+                userId,
+                email,
+                ipAddress,
+                error: error.message,
+              });
+            });
+          });
         }
       }
     } catch (error) {
@@ -773,12 +1322,16 @@ export class AuthService {
   }
 
   /**
-   * Compares a plain text password with a hash to see if they match.
+   * Compares a plain text password with a hash to see if they match using worker process.
+   * PERFORMANCE FIX: Offload CPU-intensive comparison to worker process
    * @param password The plain text password.
    * @param hash The hashed password to compare against.
    * @returns A promise that resolves to true if they match, false otherwise.
    */
   private async comparePassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
+    return this.workerProcess.executeInWorker<boolean>(
+      'compare-password',
+      { password, hash }
+    );
   }
 }

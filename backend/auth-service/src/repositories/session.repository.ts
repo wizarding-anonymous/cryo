@@ -47,16 +47,37 @@ export class SessionRepository {
     });
   }
 
-  async findByAccessToken(accessToken: string): Promise<Session | null> {
+  /**
+   * Find session by access token hash
+   * Requirements: 15.2 - Secure token lookup using SHA-256 hash
+   */
+  async findByAccessTokenHash(accessTokenHash: string): Promise<Session | null> {
     return await this.sessionRepository.findOne({
-      where: { accessToken, isActive: true },
+      where: { accessTokenHash, isActive: true },
     });
   }
 
-  async findByRefreshToken(refreshToken: string): Promise<Session | null> {
+  /**
+   * Find session by refresh token hash
+   * Requirements: 15.2 - Secure token lookup using SHA-256 hash
+   */
+  async findByRefreshTokenHash(refreshTokenHash: string): Promise<Session | null> {
     return await this.sessionRepository.findOne({
-      where: { refreshToken, isActive: true },
+      where: { refreshTokenHash, isActive: true },
     });
+  }
+
+  // Legacy methods for backward compatibility during migration
+  async findByAccessToken(accessToken: string): Promise<Session | null> {
+    // This method is deprecated and should not be used with new hashed tokens
+    // Kept for backward compatibility during migration
+    return null;
+  }
+
+  async findByRefreshToken(refreshToken: string): Promise<Session | null> {
+    // This method is deprecated and should not be used with new hashed tokens
+    // Kept for backward compatibility during migration
+    return null;
   }
 
   async updateLastAccessed(id: string): Promise<void> {
@@ -68,6 +89,12 @@ export class SessionRepository {
   async deactivateSession(id: string): Promise<void> {
     await this.sessionRepository.update(id, {
       isActive: false,
+    });
+  }
+
+  async reactivateSession(id: string): Promise<void> {
+    await this.sessionRepository.update(id, {
+      isActive: true,
     });
   }
 

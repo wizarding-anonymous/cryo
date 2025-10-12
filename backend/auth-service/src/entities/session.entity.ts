@@ -9,8 +9,8 @@ import {
 
 @Entity('sessions')
 @Index(['userId', 'isActive'])
-@Index(['accessToken'])
-@Index(['refreshToken'])
+@Index(['accessTokenHash'])
+@Index(['refreshTokenHash'])
 export class Session {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,10 +20,10 @@ export class Session {
   userId: string;
 
   @Column({ type: 'text' })
-  accessToken: string;
+  accessTokenHash: string;
 
   @Column({ type: 'text' })
-  refreshToken: string;
+  refreshTokenHash: string;
 
   @Column({ type: 'varchar', length: 45 })
   ipAddress: string;
