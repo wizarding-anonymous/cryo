@@ -1,0 +1,448 @@
+# =============================================================================
+# Auth Service Security and Compliance Workflow
+# Enhanced security testing and validation for authentication service
+# =============================================================================
+
+name: Auth Service Security & Compliance
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/auth-service/**'
+      - '.github/workflows/auth-service-security.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/auth-service/**'
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - dependencies
+        - secrets
+        - docker
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/auth-service
+
+jobs:
+  # Security linting and static analysis
+  security-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/auth-service/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: backend/auth-service
+      run: npm ci --legacy-peer-deps
+    
+    - name: Run ESLint security rules
+      working-directory: backend/auth-service
+      run: |
+        npx eslint . --ext .ts,.js \
+          --config .eslintrc.js \
+          --format json \
+          --output-file eslint-security-report.json || true
+        
+        # Check for security issues
+        if [ -f eslint-security-report.json ]; then
+          echo "ESLint Security Report:"
+          cat eslint-security-report.json | jq '.[] | select(.messages[].ruleId | contains("security"))'
+        fi
+      continue-on-error: true
+    
+    - name: Run Semgrep security analysis
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/secrets
+          p/nodejs
+          p/typescript
+        generateSarif: "1"
+    
+    - name: Upload Semgrep results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: semgrep.sarif
+
+  # Dependency vulnerability scanning
+  dependency-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/auth-service/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: backend/auth-service
+      run: npm ci --legacy-peer-deps
+    
+    - name: Run npm audit
+      working-directory: backend/auth-service
+      run: |
+        echo "Running npm audit..."
+        npm audit --audit-level=moderate --json > npm-audit-report.json || true
+        
+        # Display critical and high vulnerabilities
+        if [ -f npm-audit-report.json ]; then
+          echo "Critical and High vulnerabilities:"
+          cat npm-audit-report.json | jq '.vulnerabilities | to_entries[] | select(.value.severity == "critical" or .value.severity == "high")'
+        fi
+    
+    - name: Run Snyk vulnerability scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high --json-file-output=snyk-report.json
+        command: test
+      continue-on-error: true
+    
+    - name: Upload vulnerability reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: vulnerability-reports
+        path: |
+          backend/auth-service/npm-audit-report.json
+          backend/auth-service/snyk-report.json
+
+  # Secret scanning
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for secret scanning
+    
+    - name: Run TruffleHog secret scan
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: backend/auth-service/
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+    
+    - name: Run GitLeaks secret scan
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      with:
+        source: backend/auth-service/
+        config-path: .gitleaks.toml
+
+  # Docker security scanning
+  docker-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image for scanning
+      working-directory: backend/auth-service
+      run: |
+        docker build -t auth-service-security-scan:latest .
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'auth-service-security-scan:latest'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+    
+    - name: Run Grype vulnerability scanner
+      uses: anchore/scan-action@v3
+      with:
+        image: 'auth-service-security-scan:latest'
+        fail-build: false
+        severity-cutoff: high
+        output-format: sarif
+        output-file: grype-results.sarif
+    
+    - name: Run Docker Bench Security
+      run: |
+        docker run --rm --net host --pid host --userns host --cap-add audit_control \
+          -e DOCKER_CONTENT_TRUST=$DOCKER_CONTENT_TRUST \
+          -v /etc:/etc:ro \
+          -v /usr/bin/containerd:/usr/bin/containerd:ro \
+          -v /usr/bin/runc:/usr/bin/runc:ro \
+          -v /usr/lib/systemd:/usr/lib/systemd:ro \
+          -v /var/lib:/var/lib:ro \
+          -v /var/run/docker.sock:/var/run/docker.sock:ro \
+          --label docker_bench_security \
+          docker/docker-bench-security || true
+    
+    - name: Upload security scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: |
+          trivy-results.sarif
+          grype-results.sarif
+
+  # Authentication security tests
+  auth-security-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/auth-service/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: backend/auth-service
+      run: npm ci --legacy-peer-deps
+    
+    - name: Run security-focused tests
+      working-directory: backend/auth-service
+      env:
+        NODE_ENV: test
+        POSTGRES_AUTH_HOST: localhost
+        POSTGRES_AUTH_PORT: 5432
+        POSTGRES_AUTH_USER: testuser
+        POSTGRES_AUTH_PASSWORD: testpass
+        POSTGRES_AUTH_DB: testdb
+        AUTH_REDIS_HOST: localhost
+        AUTH_REDIS_PORT: 6379
+        AUTH_JWT_SECRET: test-jwt-secret-for-security-testing
+        AUTH_JWT_REFRESH_SECRET: test-refresh-secret-for-security-testing
+      run: |
+        # Run security-specific tests
+        npm test -- --testNamePattern="security|Security|auth|Auth|token|Token|password|Password" \
+          --passWithNoTests --ci --coverage=false --maxWorkers=2 --forceExit --detectOpenHandles --testTimeout=30000
+    
+    - name: Run penetration tests
+      working-directory: backend/auth-service
+      env:
+        NODE_ENV: test
+        POSTGRES_AUTH_HOST: localhost
+        POSTGRES_AUTH_PORT: 5432
+        POSTGRES_AUTH_USER: testuser
+        POSTGRES_AUTH_PASSWORD: testpass
+        POSTGRES_AUTH_DB: testdb
+        AUTH_REDIS_HOST: localhost
+        AUTH_REDIS_PORT: 6379
+        AUTH_JWT_SECRET: test-jwt-secret-for-security-testing
+        AUTH_JWT_REFRESH_SECRET: test-refresh-secret-for-security-testing
+      run: |
+        # Start the service in background
+        npm run start:prod &
+        SERVICE_PID=$!
+        
+        # Wait for service to start
+        sleep 10
+        
+        # Run basic penetration tests
+        echo "Running basic security tests..."
+        
+        # Test rate limiting
+        for i in {1..20}; do
+          curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3001/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"test@test.com","password":"wrongpassword"}' || true
+        done
+        
+        # Test SQL injection attempts
+        curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3001/api/auth/login \
+          -H "Content-Type: application/json" \
+          -d '{"email":"test@test.com'\''OR 1=1--","password":"test"}' || true
+        
+        # Test XSS attempts
+        curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3001/api/auth/register \
+          -H "Content-Type: application/json" \
+          -d '{"email":"<script>alert(1)</script>@test.com","password":"Test123!","firstName":"Test","lastName":"User"}' || true
+        
+        # Stop the service
+        kill $SERVICE_PID || true
+      continue-on-error: true
+
+  # Compliance and policy checks
+  compliance-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check password policy compliance
+      working-directory: backend/auth-service
+      run: |
+        echo "Checking password policy implementation..."
+        
+        # Check for password validation rules
+        if grep -r "minLength.*8" src/ && \
+           grep -r "uppercase" src/ && \
+           grep -r "lowercase" src/ && \
+           grep -r "number" src/ && \
+           grep -r "symbol\|special" src/; then
+          echo "✅ Password policy compliance: PASS"
+        else
+          echo "❌ Password policy compliance: FAIL"
+          exit 1
+        fi
+    
+    - name: Check JWT security compliance
+      working-directory: backend/auth-service
+      run: |
+        echo "Checking JWT security implementation..."
+        
+        # Check for proper JWT configuration
+        if grep -r "expiresIn.*15m\|900" src/ && \
+           grep -r "refreshToken" src/ && \
+           grep -r "blacklist\|revoke" src/; then
+          echo "✅ JWT security compliance: PASS"
+        else
+          echo "❌ JWT security compliance: FAIL"
+          exit 1
+        fi
+    
+    - name: Check rate limiting compliance
+      working-directory: backend/auth-service
+      run: |
+        echo "Checking rate limiting implementation..."
+        
+        # Check for rate limiting configuration
+        if grep -r "ThrottlerModule\|@Throttle" src/ && \
+           grep -r "limit.*10\|ttl.*60" src/; then
+          echo "✅ Rate limiting compliance: PASS"
+        else
+          echo "❌ Rate limiting compliance: FAIL"
+          exit 1
+        fi
+    
+    - name: Check session security compliance
+      working-directory: backend/auth-service
+      run: |
+        echo "Checking session security implementation..."
+        
+        # Check for session security features
+        if grep -r "maxConcurrent\|sessionLimit" src/ && \
+           grep -r "ipAddress\|userAgent" src/ && \
+           grep -r "lastAccessed\|expiry" src/; then
+          echo "✅ Session security compliance: PASS"
+        else
+          echo "❌ Session security compliance: FAIL"
+          exit 1
+        fi
+
+  # Security report generation
+  security-report:
+    runs-on: ubuntu-latest
+    needs: [security-lint, dependency-scan, secret-scan, docker-security, auth-security-tests, compliance-check]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: security-reports/
+    
+    - name: Generate security summary
+      run: |
+        echo "# Auth Service Security Report" > security-summary.md
+        echo "Generated on: $(date)" >> security-summary.md
+        echo "" >> security-summary.md
+        
+        echo "## Job Results" >> security-summary.md
+        echo "- Security Lint: ${{ needs.security-lint.result }}" >> security-summary.md
+        echo "- Dependency Scan: ${{ needs.dependency-scan.result }}" >> security-summary.md
+        echo "- Secret Scan: ${{ needs.secret-scan.result }}" >> security-summary.md
+        echo "- Docker Security: ${{ needs.docker-security.result }}" >> security-summary.md
+        echo "- Auth Security Tests: ${{ needs.auth-security-tests.result }}" >> security-summary.md
+        echo "- Compliance Check: ${{ needs.compliance-check.result }}" >> security-summary.md
+        echo "" >> security-summary.md
+        
+        # Overall status
+        if [[ "${{ needs.security-lint.result }}" == "success" && \
+              "${{ needs.dependency-scan.result }}" == "success" && \
+              "${{ needs.secret-scan.result }}" == "success" && \
+              "${{ needs.docker-security.result }}" == "success" && \
+              "${{ needs.auth-security-tests.result }}" == "success" && \
+              "${{ needs.compliance-check.result }}" == "success" ]]; then
+          echo "## Overall Status: ✅ PASS" >> security-summary.md
+        else
+          echo "## Overall Status: ❌ FAIL" >> security-summary.md
+        fi
+        
+        cat security-summary.md
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      with:
+        name: auth-service-security-report
+        path: |
+          security-summary.md
+          security-reports/

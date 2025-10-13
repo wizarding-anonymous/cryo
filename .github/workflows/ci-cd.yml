@@ -51,6 +51,7 @@ jobs:
       matrix:
         service: [
           'api-gateway',
+          'auth-service',
           'user-service',
           'game-catalog-service',
           'library-service',
@@ -300,6 +301,7 @@ jobs:
       matrix:
         service: [
           'api-gateway',
+          'auth-service',
           'user-service',
           'game-catalog-service',
           'library-service',
@@ -379,7 +381,7 @@ jobs:
         kubectl apply -f backend/k8s/ingress.yaml
         
         # Deploy all services
-        for service in api-gateway user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
+        for service in api-gateway auth-service user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
           echo "Deploying $service to staging..."
           
           # Apply service-specific k8s files if they exist
@@ -396,7 +398,7 @@ jobs:
         done
         
         # Wait for rollout
-        for service in api-gateway user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
+        for service in api-gateway auth-service user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
           kubectl rollout status deployment/${service}-deployment -n microservices --timeout=300s
         done
 
@@ -432,7 +434,7 @@ jobs:
         kubectl apply -f backend/k8s/ingress.yaml
         
         # Deploy all services
-        for service in api-gateway user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
+        for service in api-gateway auth-service user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
           echo "Deploying $service to production..."
           
           # Apply service-specific k8s files if they exist
@@ -449,7 +451,7 @@ jobs:
         done
         
         # Wait for rollout
-        for service in api-gateway user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
+        for service in api-gateway auth-service user-service game-catalog-service library-service review-service payment-service notification-service social-service achievement-service security-service download-service; do
           kubectl rollout status deployment/${service}-deployment -n microservices --timeout=600s
         done
     

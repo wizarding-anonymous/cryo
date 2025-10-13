@@ -13,6 +13,7 @@ import { SessionModule } from '../session/session.module';
 import { ValidationModule } from '../common/validators/validation.module';
 import { EventsModule } from '../events/events.module';
 import { SagaModule } from '../saga/saga.module';
+import { MonitoringModule } from '../monitoring/monitoring.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SagaModule } from '../saga/saga.module';
     ValidationModule,
     EventsModule,
     SagaModule,
+    MonitoringModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

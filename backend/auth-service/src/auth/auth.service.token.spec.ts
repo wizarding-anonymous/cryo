@@ -127,8 +127,31 @@ describe('AuthService - JWT Token Generation and Verification', () => {
     } as any;
 
     // Создаем AuthService с моками
+    
+    
+    // Создаем AuthService с моками
+    
+    const authMetrics = {
+      incrementAuthOperation: jest.fn(),
+      recordAuthOperationDuration: jest.fn(),
+      incrementActiveSessions: jest.fn(),
+      decrementActiveSessions: jest.fn(),
+      incrementAuthFailure: jest.fn(),
+      incrementBlacklistedTokens: jest.fn(),
+    } as any;
+
+    const structuredLogger = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      logAuth: jest.fn(),
+      logSecurity: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
     authService = new AuthService(
-      jwtService,
+jwtService,
       tokenService,
       sessionService,
       userServiceClient,
@@ -141,6 +164,8 @@ describe('AuthService - JWT Token Generation and Verification', () => {
       asyncOperations,
       metricsService,
       workerProcess,
+      authMetrics,
+      structuredLogger
     );
 
     // Mock executeCriticalPath to execute the callback function

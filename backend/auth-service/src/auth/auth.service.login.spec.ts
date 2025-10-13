@@ -134,8 +134,31 @@ describe('AuthService - Login Functionality', () => {
     } as any;
 
     // Создаем AuthService с моками
+    
+    
+    // Создаем AuthService с моками
+    
+    const authMetrics = {
+      incrementAuthOperation: jest.fn(),
+      recordAuthOperationDuration: jest.fn(),
+      incrementActiveSessions: jest.fn(),
+      decrementActiveSessions: jest.fn(),
+      incrementAuthFailure: jest.fn(),
+      incrementBlacklistedTokens: jest.fn(),
+    } as any;
+
+    const structuredLogger = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      logAuth: jest.fn(),
+      logSecurity: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
     authService = new AuthService(
-      jwtService,
+jwtService,
       tokenService,
       sessionService,
       userServiceClient,
@@ -148,6 +171,8 @@ describe('AuthService - Login Functionality', () => {
       asyncOperations,
       metricsService,
       workerProcess,
+      authMetrics,
+      structuredLogger
     );
 
     // Mock password comparison through worker process

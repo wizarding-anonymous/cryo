@@ -42,9 +42,26 @@ services:
       - ./auth-service/.env.docker
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-auth-service-super-secret-jwt-key-change-in-production}
+      - AUTH_JWT_REFRESH_SECRET=${AUTH_JWT_REFRESH_SECRET:-auth-service-super-secret-refresh-key-change-in-production}
+      - POSTGRES_AUTH_HOST=postgres-auth
+      - POSTGRES_AUTH_DB=auth_db
+      - POSTGRES_AUTH_USER=auth_service
+      - POSTGRES_AUTH_PASSWORD=auth_password
+      - AUTH_REDIS_HOST=redis
+      - AUTH_REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      - USER_SERVICE_URL=http://user-service:3002
+      - SECURITY_SERVICE_URL=http://security-service:3010
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3007
     networks:
       - microservices-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # User Service
   user-service:

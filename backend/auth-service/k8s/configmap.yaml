@@ -1,0 +1,77 @@
+# =============================================================================
+# Kubernetes ConfigMap for Auth Service
+# Non-sensitive configuration data
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: gaming-platform
+  labels:
+    app: auth-service
+    tier: backend
+    component: authentication
+data:
+  # Application configuration
+  NODE_ENV: "production"
+  PORT: "3001"
+  
+  # Service URLs (internal cluster communication)
+  USER_SERVICE_URL: "http://user-service.gaming-platform.svc.cluster.local:3002"
+  SECURITY_SERVICE_URL: "http://security-service.gaming-platform.svc.cluster.local:3010"
+  NOTIFICATION_SERVICE_URL: "http://notification-service.gaming-platform.svc.cluster.local:3007"
+  
+  # Database configuration (non-sensitive)
+  POSTGRES_AUTH_HOST: "postgres-auth.gaming-platform.svc.cluster.local"
+  POSTGRES_AUTH_DB: "auth_db"
+  POSTGRES_AUTH_USER: "auth_service"
+  POSTGRES_AUTH_PORT: "5432"
+  
+  # Redis configuration (non-sensitive)
+  AUTH_REDIS_HOST: "redis.gaming-platform.svc.cluster.local"
+  AUTH_REDIS_PORT: "6379"
+  AUTH_REDIS_DB: "0"
+  
+  # JWT configuration (non-sensitive settings)
+  AUTH_JWT_EXPIRES_IN: "15m"
+  AUTH_JWT_REFRESH_EXPIRES_IN: "7d"
+  
+  # Rate limiting configuration
+  THROTTLE_TTL: "60"
+  THROTTLE_LIMIT: "100"
+  THROTTLE_STRICT_LIMIT: "10"
+  
+  # Session configuration
+  SESSION_MAX_CONCURRENT: "5"
+  SESSION_CLEANUP_INTERVAL: "3600000"
+  
+  # Health check configuration
+  HEALTH_CHECK_TIMEOUT: "5000"
+  HEALTH_CHECK_RETRIES: "2"
+  HEALTH_CHECK_SILENT: "true"
+  
+  # Logging configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  
+  # Circuit breaker configuration
+  CIRCUIT_BREAKER_TIMEOUT: "5000"
+  CIRCUIT_BREAKER_ERROR_THRESHOLD: "50"
+  CIRCUIT_BREAKER_RESET_TIMEOUT: "30000"
+  
+  # Event bus configuration
+  EVENT_QUEUE_CONCURRENCY: "5"
+  EVENT_QUEUE_MAX_RETRIES: "3"
+  
+  # Performance tuning
+  NODE_OPTIONS: "--max-old-space-size=768"
+  UV_THREADPOOL_SIZE: "4"
+  
+  # Security headers
+  CORS_ORIGIN: "https://gaming-platform.com"
+  CORS_CREDENTIALS: "true"
+  
+  # Monitoring configuration
+  METRICS_ENABLED: "true"
+  METRICS_PATH: "/api/metrics"

@@ -127,6 +127,24 @@ describe('AuthService - Register Functionality', () => {
       executeInWorker: jest.fn(),
     } as any;
 
+    const authMetrics = {
+      incrementAuthOperation: jest.fn(),
+      recordAuthOperationDuration: jest.fn(),
+      incrementActiveSessions: jest.fn(),
+      decrementActiveSessions: jest.fn(),
+      incrementAuthFailure: jest.fn(),
+      incrementBlacklistedTokens: jest.fn(),
+    } as any;
+
+    const structuredLogger = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      logAuth: jest.fn(),
+      logSecurity: jest.fn(),
+    } as any;
+
     // Создаем AuthService с моками
     authService = new AuthService(
       jwtService,
@@ -142,6 +160,8 @@ describe('AuthService - Register Functionality', () => {
       asyncOperations,
       metricsService,
       workerProcess,
+      authMetrics,
+      structuredLogger,
     );
 
     // Mock executeCriticalPath to execute the callback function

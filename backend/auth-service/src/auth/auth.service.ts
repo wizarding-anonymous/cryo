@@ -22,6 +22,8 @@ import { SagaService } from '../saga/saga.service';
 import { AsyncOperationsService } from '../common/async/async-operations.service';
 import { AsyncMetricsService } from '../common/async/async-metrics.service';
 import { WorkerProcessService } from '../common/async/worker-process.service';
+import { AuthMetricsService } from '../monitoring/prometheus/auth-metrics.service';
+import { StructuredLoggerService } from '../monitoring/logging/structured-logger.service';
 
 export interface JwtPayload {
   sub: string;
@@ -68,6 +70,8 @@ export class AuthService {
     private readonly asyncOperations: AsyncOperationsService,
     private readonly metricsService: AsyncMetricsService,
     private readonly workerProcess: WorkerProcessService,
+    private readonly authMetrics: AuthMetricsService,
+    private readonly structuredLogger: StructuredLoggerService,
   ) {
     this.maxSessionsPerUser = this.configService.get<number>('MAX_SESSIONS_PER_USER', 5);
     this.useSagaPattern = this.configService.get<boolean>('USE_SAGA_PATTERN', true);
@@ -91,6 +95,17 @@ export class AuthService {
     const startTime = Date.now();
     
     try {
+      // Log registration attempt
+      this.structuredLogger.logAuth('User registration attempt', {
+        authOperation: 'register',
+        success: false, // Will be updated on success
+        metadata: {
+          email: registerDto.email,
+          ipAddress,
+          userAgent,
+        },
+      });
+
       // Execute critical path with optimized async operations
       const result = await this.asyncOperations.executeCriticalPath(
         async () => {
@@ -108,21 +123,56 @@ export class AuthService {
       );
 
       const duration = Date.now() - startTime;
+      
+      // Record metrics
+      this.authMetrics.incrementAuthOperation('register', 'success', 'email');
+      this.authMetrics.recordAuthOperationDuration('register', 'success', duration / 1000);
       this.metricsService.recordAuthFlowMetric('register', duration, true, {
         useSaga: this.useSagaPattern,
         ipAddress,
         userAgent,
       });
 
+      // Log successful registration
+      this.structuredLogger.logAuth('User registration successful', {
+        authOperation: 'register',
+        success: true,
+        userId: result.user.id,
+        duration,
+        metadata: {
+          email: registerDto.email,
+          ipAddress,
+          userAgent,
+        },
+      });
+
       return result;
 
     } catch (error) {
       const duration = Date.now() - startTime;
+      
+      // Record failure metrics
+      this.authMetrics.incrementAuthOperation('register', 'failure', 'email');
+      this.authMetrics.recordAuthOperationDuration('register', 'failure', duration / 1000);
+      this.authMetrics.incrementAuthFailure(error.message, '/auth/register');
       this.metricsService.recordAuthFlowMetric('register', duration, false, {
         error: error.message,
         useSaga: this.useSagaPattern,
         ipAddress,
         userAgent,
+      });
+
+      // Log registration failure
+      this.structuredLogger.logAuth('User registration failed', {
+        authOperation: 'register',
+        success: false,
+        failureReason: error.message,
+        duration,
+        metadata: {
+          email: registerDto.email,
+          ipAddress,
+          userAgent,
+        },
       });
 
       this.logger.error('Registration failed', {
@@ -328,6 +378,18 @@ export class AuthService {
     const startTime = Date.now();
     
     try {
+      // Log login attempt
+      this.structuredLogger.logAuth('User login attempt', {
+        authOperation: 'login',
+        success: false, // Will be updated on success
+        userId: user.id,
+        metadata: {
+          email: user.email,
+          ipAddress,
+          userAgent,
+        },
+      });
+
       // Execute critical path with optimized async operations
       const result = await this.asyncOperations.executeCriticalPath(
         async () => {
@@ -345,6 +407,11 @@ export class AuthService {
       );
 
       const duration = Date.now() - startTime;
+      
+      // Record success metrics
+      this.authMetrics.incrementAuthOperation('login', 'success', 'email');
+      this.authMetrics.recordAuthOperationDuration('login', 'success', duration / 1000);
+      this.authMetrics.incrementActiveSessions();
       this.metricsService.recordAuthFlowMetric('login', duration, true, {
         userId: user.id,
         useSaga: this.useSagaPattern,
@@ -352,16 +419,49 @@ export class AuthService {
         userAgent,
       });
 
+      // Log successful login
+      this.structuredLogger.logAuth('User login successful', {
+        authOperation: 'login',
+        success: true,
+        userId: user.id,
+        sessionId: result.session_id,
+        duration,
+        metadata: {
+          email: user.email,
+          ipAddress,
+          userAgent,
+        },
+      });
+
       return result;
 
     } catch (error) {
       const duration = Date.now() - startTime;
+      
+      // Record failure metrics
+      this.authMetrics.incrementAuthOperation('login', 'failure', 'email');
+      this.authMetrics.recordAuthOperationDuration('login', 'failure', duration / 1000);
+      this.authMetrics.incrementAuthFailure(error.message, '/auth/login');
       this.metricsService.recordAuthFlowMetric('login', duration, false, {
         userId: user.id,
         error: error.message,
         useSaga: this.useSagaPattern,
         ipAddress,
         userAgent,
+      });
+
+      // Log login failure
+      this.structuredLogger.logAuth('User login failed', {
+        authOperation: 'login',
+        success: false,
+        userId: user.id,
+        failureReason: error.message,
+        duration,
+        metadata: {
+          email: user.email,
+          ipAddress,
+          userAgent,
+        },
       });
 
       this.logger.error('Login failed', {
@@ -563,9 +663,22 @@ export class AuthService {
     refreshToken?: string,
     ipAddress: string = '::1'
   ): Promise<void> {
+    const startTime = Date.now();
+    
     if (!accessToken) {
       throw new BadRequestException('Access token is required');
     }
+
+    // Log logout attempt
+    this.structuredLogger.logAuth('User logout attempt', {
+      authOperation: 'logout',
+      success: false, // Will be updated on success
+      userId,
+      metadata: {
+        ipAddress,
+        hasRefreshToken: !!refreshToken,
+      },
+    });
 
     // Find session by access token first (before any modifications)
     // Requirements: 13.5
@@ -628,6 +741,27 @@ export class AuthService {
         });
       });
       
+      const duration = Date.now() - startTime;
+      
+      // Record success metrics
+      this.authMetrics.incrementAuthOperation('logout', 'success');
+      this.authMetrics.recordAuthOperationDuration('logout', 'success', duration / 1000);
+      this.authMetrics.decrementActiveSessions();
+      this.authMetrics.incrementBlacklistedTokens();
+      
+      // Log successful logout
+      this.structuredLogger.logAuth('User logout successful', {
+        authOperation: 'logout',
+        success: true,
+        userId,
+        sessionId: session?.id,
+        duration,
+        metadata: {
+          ipAddress,
+          tokensBlacklisted: blacklistedTokens.length,
+        },
+      });
+      
       this.logger.log('Atomic logout completed successfully', {
         userId,
         sessionId: session?.id,
@@ -636,8 +770,25 @@ export class AuthService {
       });
       
     } catch (error) {
-      // If error occurred after blacklisting but before session invalidation,
-      // the rollback was already performed in the session invalidation catch block
+      const duration = Date.now() - startTime;
+      
+      // Record failure metrics
+      this.authMetrics.incrementAuthOperation('logout', 'failure');
+      this.authMetrics.recordAuthOperationDuration('logout', 'failure', duration / 1000);
+      this.authMetrics.incrementAuthFailure(error.message, '/auth/logout');
+      
+      // Log logout failure
+      this.structuredLogger.logAuth('User logout failed', {
+        authOperation: 'logout',
+        success: false,
+        userId,
+        failureReason: error.message,
+        duration,
+        metadata: {
+          ipAddress,
+          sessionId: session?.id,
+        },
+      });
       
       // Log the atomic operation failure
       this.logger.error('Atomic logout operation failed', {

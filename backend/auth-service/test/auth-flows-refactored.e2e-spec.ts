@@ -45,6 +45,7 @@ import { SagaService } from '../src/saga/saga.service';
 import { AsyncOperationsService } from '../src/common/async/async-operations.service';
 import { AsyncMetricsService } from '../src/common/async/async-metrics.service';
 import { WorkerProcessService } from '../src/common/async/worker-process.service';
+import { MonitoringModule } from '../src/monitoring/monitoring.module';
 
 // Локальные моки для этого теста
 jest.mock('bcrypt', () => ({
@@ -152,6 +153,9 @@ describe('Auth Service E2E - Refactored Authentication Flows', () => {
           }),
           inject: [ConfigService],
         }),
+
+        // Monitoring module
+        MonitoringModule,
       ],
       controllers: [AuthController],
       providers: [

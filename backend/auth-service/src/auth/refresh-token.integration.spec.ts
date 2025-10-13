@@ -134,8 +134,31 @@ describe('Refresh Token Integration', () => {
             getStatus: jest.fn(),
         } as any;
 
-        authService = new AuthService(
-            mockJwtService,
+        
+    
+    // Создаем AuthService с моками
+    
+    const authMetrics = {
+      incrementAuthOperation: jest.fn(),
+      recordAuthOperationDuration: jest.fn(),
+      incrementActiveSessions: jest.fn(),
+      decrementActiveSessions: jest.fn(),
+      incrementAuthFailure: jest.fn(),
+      incrementBlacklistedTokens: jest.fn(),
+    } as any;
+
+    const structuredLogger = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      logAuth: jest.fn(),
+      logSecurity: jest.fn(),
+    } as any;
+
+    // Создаем AuthService с моками
+    authService = new AuthService(
+mockJwtService,
             tokenService,
             sessionService,
             userServiceClient,
@@ -147,8 +170,10 @@ describe('Refresh Token Integration', () => {
             mockSagaService,
             mockAsyncOperations,
             mockMetricsService,
-            mockWorkerProcess
-        );
+            mockWorkerProcess,
+      authMetrics,
+      structuredLogger
+    );
     });
 
     afterEach(() => {

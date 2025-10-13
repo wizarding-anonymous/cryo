@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
@@ -19,6 +19,8 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { AsyncModule } from './common/async/async.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { CorrelationMiddleware } from './monitoring/middleware/correlation.middleware';
 
 @Module({
   imports: [
@@ -59,6 +61,7 @@ import { AsyncModule } from './common/async/async.module';
     SessionModule,
     IdempotencyModule,
     AsyncModule,
+    MonitoringModule,
   ],
   controllers: [AppController],
   providers: [
@@ -81,4 +84,10 @@ import { AsyncModule } from './common/async/async.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(CorrelationMiddleware)
+      .forRoutes('*');
+  }
+}

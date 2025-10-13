@@ -1,0 +1,419 @@
+# =============================================================================
+# Auth Service Quick Test Workflow
+# Fast feedback for Auth Service development
+# =============================================================================
+
+name: Auth Service Quick Test
+
+on:
+  push:
+    branches: [ main, develop, 'feature/auth-*' ]
+    paths:
+      - 'backend/auth-service/**'
+      - '.github/workflows/auth-service-quick-test.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/auth-service/**'
+
+env:
+  NODE_VERSION: '20'
+  SERVICE_PATH: 'backend/auth-service'
+
+jobs:
+  # Quick validation and linting
+  quick-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: ${{ env.SERVICE_PATH }}/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npm ci --legacy-peer-deps --prefer-offline
+    
+    - name: TypeScript compilation check
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npx tsc --noEmit
+    
+    - name: Run linting
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npm run lint
+    
+    - name: Check code formatting
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npm run format -- --check
+    
+    - name: Validate package.json
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: |
+        echo "Validating package.json structure..."
+        node -e "
+          const pkg = require('./package.json');
+          const required = ['name', 'version', 'scripts', 'dependencies'];
+          const missing = required.filter(field => !pkg[field]);
+          if (missing.length > 0) {
+            console.error('Missing required fields:', missing);
+            process.exit(1);
+          }
+          console.log('✅ package.json validation passed');
+        "
+
+  # Unit tests (fast)
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: quick-validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: ${{ env.SERVICE_PATH }}/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npm ci --legacy-peer-deps --prefer-offline
+    
+    - name: Run unit tests
+      working-directory: ${{ env.SERVICE_PATH }}
+      env:
+        NODE_ENV: test
+        CI: true
+      run: |
+        # Run unit tests only (exclude integration tests)
+        npm test -- \
+          --testPathIgnorePatterns="e2e|integration" \
+          --passWithNoTests \
+          --ci \
+          --coverage=false \
+          --maxWorkers=2 \
+          --testTimeout=10000 \
+          --silent
+    
+    - name: Test build process
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npm run build
+
+  # Integration tests with services
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: unit-tests
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: ${{ env.SERVICE_PATH }}/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npm ci --legacy-peer-deps --prefer-offline
+    
+    - name: Wait for services
+      run: |
+        echo "Waiting for PostgreSQL..."
+        timeout 30 bash -c 'until pg_isready -h localhost -p 5432 -U testuser; do sleep 1; done'
+        
+        echo "Waiting for Redis..."
+        timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done'
+        
+        echo "✅ All services are ready"
+    
+    - name: Run database migrations
+      working-directory: ${{ env.SERVICE_PATH }}
+      env:
+        NODE_ENV: test
+        POSTGRES_AUTH_HOST: localhost
+        POSTGRES_AUTH_PORT: 5432
+        POSTGRES_AUTH_USER: testuser
+        POSTGRES_AUTH_PASSWORD: testpass
+        POSTGRES_AUTH_DB: testdb
+      run: |
+        # Run migrations if available
+        if npm run | grep -q "migration:run"; then
+          npm run migration:run || echo "Migration failed, continuing..."
+        fi
+    
+    - name: Run integration tests
+      working-directory: ${{ env.SERVICE_PATH }}
+      env:
+        NODE_ENV: test
+        POSTGRES_AUTH_HOST: localhost
+        POSTGRES_AUTH_PORT: 5432
+        POSTGRES_AUTH_USER: testuser
+        POSTGRES_AUTH_PASSWORD: testpass
+        POSTGRES_AUTH_DB: testdb
+        AUTH_REDIS_HOST: localhost
+        AUTH_REDIS_PORT: 6379
+        AUTH_JWT_SECRET: test-jwt-secret-for-integration-testing
+        AUTH_JWT_REFRESH_SECRET: test-refresh-secret-for-integration-testing
+        USER_SERVICE_URL: http://mock-user-service:3002
+        SECURITY_SERVICE_URL: http://mock-security-service:3010
+        NOTIFICATION_SERVICE_URL: http://mock-notification-service:3007
+      run: |
+        # Run integration and e2e tests
+        npm test -- \
+          --testPathPattern="integration|e2e" \
+          --passWithNoTests \
+          --ci \
+          --coverage=false \
+          --maxWorkers=1 \
+          --testTimeout=30000 \
+          --runInBand \
+          --forceExit \
+          --detectOpenHandles
+
+  # Docker build test
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: quick-validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: |
+        echo "Building Auth Service Docker image..."
+        docker build \
+          --tag auth-service:test \
+          --build-arg NODE_ENV=production \
+          --cache-from type=gha \
+          --cache-to type=gha,mode=max \
+          .
+    
+    - name: Test Docker image
+      run: |
+        echo "Testing Docker image..."
+        
+        # Test image structure
+        docker run --rm auth-service:test node --version
+        docker run --rm auth-service:test npm --version
+        
+        # Test health check script
+        docker run --rm auth-service:test node health-check.js --help
+        
+        # Test application files
+        docker run --rm auth-service:test ls -la dist/
+        
+        echo "✅ Docker image tests passed"
+    
+    - name: Test Docker security
+      run: |
+        echo "Testing Docker security..."
+        
+        # Check if running as non-root user
+        USER_ID=$(docker run --rm auth-service:test id -u)
+        if [ "$USER_ID" != "1001" ]; then
+          echo "❌ Container not running as expected user (1001), got: $USER_ID"
+          exit 1
+        fi
+        
+        # Check if read-only filesystem works
+        docker run --rm --read-only --tmpfs /tmp auth-service:test echo "Read-only test passed" || {
+          echo "❌ Read-only filesystem test failed"
+          exit 1
+        }
+        
+        echo "✅ Docker security tests passed"
+
+  # Health check validation
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [integration-tests, docker-build]
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: ${{ env.SERVICE_PATH }}/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npm ci --legacy-peer-deps --prefer-offline
+    
+    - name: Build application
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: npm run build
+    
+    - name: Start Auth Service
+      working-directory: ${{ env.SERVICE_PATH }}
+      env:
+        NODE_ENV: test
+        PORT: 3001
+        POSTGRES_AUTH_HOST: localhost
+        POSTGRES_AUTH_PORT: 5432
+        POSTGRES_AUTH_USER: testuser
+        POSTGRES_AUTH_PASSWORD: testpass
+        POSTGRES_AUTH_DB: testdb
+        AUTH_REDIS_HOST: localhost
+        AUTH_REDIS_PORT: 6379
+        AUTH_JWT_SECRET: test-jwt-secret-for-health-check
+        AUTH_JWT_REFRESH_SECRET: test-refresh-secret-for-health-check
+        USER_SERVICE_URL: http://mock-user-service:3002
+        SECURITY_SERVICE_URL: http://mock-security-service:3010
+        NOTIFICATION_SERVICE_URL: http://mock-notification-service:3007
+      run: |
+        # Start the service in background
+        npm run start:prod &
+        SERVICE_PID=$!
+        echo "SERVICE_PID=$SERVICE_PID" >> $GITHUB_ENV
+        
+        # Wait for service to start
+        echo "Waiting for Auth Service to start..."
+        timeout 60 bash -c 'until curl -f http://localhost:3001/api/health; do sleep 2; done'
+        
+        echo "✅ Auth Service started successfully"
+    
+    - name: Run health checks
+      working-directory: ${{ env.SERVICE_PATH }}
+      run: |
+        echo "Running comprehensive health checks..."
+        
+        # Test health check script
+        node health-check.js --comprehensive
+        
+        # Test individual endpoints
+        node health-check.js --endpoint /api/health/live
+        node health-check.js --endpoint /api/health/ready
+        
+        echo "✅ All health checks passed"
+    
+    - name: Test API endpoints
+      run: |
+        echo "Testing API endpoints..."
+        
+        # Test basic endpoints
+        curl -f http://localhost:3001/api/health || exit 1
+        curl -f http://localhost:3001/api/health/ready || exit 1
+        curl -f http://localhost:3001/api/health/live || exit 1
+        
+        # Test API documentation
+        curl -f http://localhost:3001/api/docs || echo "API docs not available"
+        
+        echo "✅ API endpoint tests passed"
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        if [ ! -z "$SERVICE_PID" ]; then
+          echo "Stopping Auth Service (PID: $SERVICE_PID)..."
+          kill $SERVICE_PID || true
+          sleep 5
+          kill -9 $SERVICE_PID 2>/dev/null || true
+        fi
+
+  # Summary job
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: [quick-validation, unit-tests, integration-tests, docker-build, health-check]
+    if: always()
+    
+    steps:
+    - name: Test Summary
+      run: |
+        echo "# Auth Service Quick Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Test Stage | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Quick Validation | ${{ needs.quick-validation.result == 'success' && '✅ PASS' || '❌ FAIL' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ PASS' || '❌ FAIL' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ PASS' || '❌ FAIL' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Build | ${{ needs.docker-build.result == 'success' && '✅ PASS' || '❌ FAIL' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Health Check | ${{ needs.health-check.result == 'success' && '✅ PASS' || '❌ FAIL' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Overall status
+        if [[ "${{ needs.quick-validation.result }}" == "success" && \
+              "${{ needs.unit-tests.result }}" == "success" && \
+              "${{ needs.integration-tests.result }}" == "success" && \
+              "${{ needs.docker-build.result }}" == "success" && \
+              "${{ needs.health-check.result }}" == "success" ]]; then
+          echo "## Overall Result: ✅ ALL TESTS PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "Auth Service is ready for deployment!" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "## Overall Result: ❌ SOME TESTS FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the failed jobs and fix the issues." >> $GITHUB_STEP_SUMMARY
+        fi

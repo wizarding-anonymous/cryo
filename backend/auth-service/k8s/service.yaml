@@ -1,0 +1,76 @@
+# =============================================================================
+# Kubernetes Service for Auth Service
+# Load balancing and service discovery configuration
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: gaming-platform
+  labels:
+    app: auth-service
+    tier: backend
+    component: authentication
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3001
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: auth-service
+  sessionAffinity: None
+
+---
+# =============================================================================
+# Headless Service for StatefulSet (if needed for clustering)
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service-headless
+  namespace: gaming-platform
+  labels:
+    app: auth-service
+    tier: backend
+    component: authentication
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http
+    port: 3001
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: auth-service
+
+---
+# =============================================================================
+# Service Monitor for Prometheus (if using Prometheus Operator)
+# =============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: auth-service
+  namespace: gaming-platform
+  labels:
+    app: auth-service
+    tier: backend
+    component: authentication
+spec:
+  selector:
+    matchLabels:
+      app: auth-service
+  endpoints:
+  - port: http
+    path: /api/metrics
+    interval: 30s
+    scrapeTimeout: 10s

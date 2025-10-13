@@ -33,12 +33,34 @@ This directory contains GitHub Actions workflows for the CRYO microservices plat
   - Docker Compose integration test
   - Optimized for developer feedback
 
-### 4. `build-only.yml` - Build Without Tests
+### 4. `auth-service-quick-test.yml` - Auth Service Fast Feedback
+- **Triggers**: Changes to Auth Service code, PRs
+- **Purpose**: Quick validation and testing of Auth Service changes
+- **Features**:
+  - Fast unit tests and linting
+  - Integration tests with PostgreSQL and Redis
+  - Docker build validation
+  - Health check validation
+  - Comprehensive test summary
+
+### 5. `auth-service-security.yml` - Auth Service Security & Compliance
+- **Triggers**: Push to main/develop, PRs, scheduled daily scans
+- **Purpose**: Enhanced security testing for authentication service
+- **Features**:
+  - Static security analysis with Semgrep
+  - Dependency vulnerability scanning
+  - Secret scanning with TruffleHog and GitLeaks
+  - Docker security scanning with Trivy and Grype
+  - Authentication-specific security tests
+  - Compliance checks for password policy, JWT, rate limiting
+  - Security report generation
+
+### 6. `build-only.yml` - Build Without Tests
 - **Triggers**: Manual dispatch, specific file changes
 - **Purpose**: Build and push Docker images without running tests
 - **Use case**: Emergency deployments or when tests are known to be failing
 
-### 5. `syntax-check.yml` - Code Syntax Validation
+### 7. `syntax-check.yml` - Code Syntax Validation
 - **Triggers**: PRs to main/develop
 - **Purpose**: Fast syntax and formatting checks
 - **Features**:
@@ -47,6 +69,14 @@ This directory contains GitHub Actions workflows for the CRYO microservices plat
   - JSON validation (package.json)
 
 ## Service-Specific Notes
+
+### Auth Service
+- Has dedicated security-focused workflows
+- Requires PostgreSQL and Redis dependencies
+- Enhanced security testing and compliance checks
+- Docker security scanning and validation
+- Authentication-specific penetration testing
+- Comprehensive health check validation
 
 ### User Service
 - Uses Docker Compose from `backend/` directory

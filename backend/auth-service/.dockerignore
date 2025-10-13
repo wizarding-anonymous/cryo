@@ -1,24 +1,116 @@
+# =============================================================================
+# Docker ignore file for Auth Service
+# Optimized to reduce build context and improve build performance
+# =============================================================================
+
+# Dependencies (will be installed in container)
 node_modules
 npm-debug.log
+
+# Build outputs (will be generated in container)
 dist
+build
+
+# Git and version control
 .git
 .gitignore
+.gitattributes
+
+# Documentation
 README.md
+README-*.md
+*.md
+docs/
+CHANGELOG.md
+LICENSE
+
+# Environment files (use .env.docker instead)
 .env
 .env.local
 .env.development
 .env.test
 .env.production
+.env.staging
+.secrets.*.env
+
+# Test and coverage files
 .nyc_output
 coverage
 .coverage
+test-results.log
+*-test-results.log
+test-summary.md
+
+# Cache directories
 .cache
 .parcel-cache
-.DS_Store
-*.log
-logs
-*.tgz
 .npm
 .eslintcache
+.jest-cache
+
+# IDE and editor files
 .vscode
 .idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Development and testing files
+test/
+*.spec.ts
+*.test.ts
+jest.config.js
+.eslintrc.js
+.prettierrc
+
+# Demo and example files
+demo-*.js
+*-demo.js
+fix-tests.js
+run-refactored-tests.js
+worker-thread.js
+
+# Troubleshooting files
+troubleshooting.md
+TROUBLESHOOTING.md
+
+# Temporary files
+tmp/
+temp/
