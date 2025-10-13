@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { HttpModule } from '@nestjs/axios';
 import { RedisModule } from '../common/redis/redis.module';
 import { SagaService } from './saga.service';
 import { AuthSagaService } from './auth-saga.service';
@@ -11,6 +12,7 @@ import { EventsModule } from '../events/events.module';
 @Module({
   imports: [
     ConfigModule,
+    HttpModule,
     RedisModule,
     TokenModule,
     SessionModule,

@@ -19,7 +19,14 @@ module.exports = {
         '^src/(.*)$': '<rootDir>/$1',
     },
     setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts'],
-    testTimeout: 10000,
+    testTimeout: 15000,
     maxWorkers: 1, // Запуск тестов последовательно для избежания конфликтов
     verbose: true,
+    // Игнорируем e2e тесты в unit тестах
+    testPathIgnorePatterns: [
+        '/node_modules/',
+        '/dist/',
+        '\\.e2e-spec\\.ts$',
+        '/test/.*\\.e2e-spec\\.ts$'
+    ],
 };

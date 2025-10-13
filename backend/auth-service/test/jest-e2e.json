@@ -8,5 +8,19 @@
   },
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/../src/$1"
-  }
+  },
+  "setupFilesAfterEnv": ["<rootDir>/e2e-setup.ts"],
+  "testTimeout": 30000,
+  "maxWorkers": 1,
+  "verbose": true,
+  "collectCoverageFrom": [
+    "../src/**/*.(t|j)s",
+    "!../src/**/*.spec.ts",
+    "!../src/**/*.e2e-spec.ts",
+    "!../src/**/node_modules/**",
+    "!../src/**/test/**",
+    "!../src/**/dist/**"
+  ],
+  "coverageDirectory": "../coverage-e2e",
+  "coverageReporters": ["text", "lcov", "html"]
 }

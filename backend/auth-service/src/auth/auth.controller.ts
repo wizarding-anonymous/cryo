@@ -392,7 +392,11 @@ export class AuthController {
     type: RateLimitErrorResponseDto
   })
   async validateToken(@Body() validateTokenDto: ValidateTokenDto) {
-    return this.authService.validateToken(validateTokenDto.token);
+    const result = await this.authService.validateToken(validateTokenDto.token);
+    if (!result.valid) {
+      throw new UnauthorizedException('Token is invalid, expired, or blacklisted');
+    }
+    return result;
   }
 
   // Session Management Endpoints

@@ -309,34 +309,7 @@ export class AuthService {
     };
   }
 
-  /**
-   * Validates a user based on email and password.
-   * @param email - The user's email.
-   * @param password - The user's plain text password.
-   * @returns The user object (without password) if validation is successful, otherwise null.
-   */
-  async validateUser(email: string, password: string): Promise<Omit<User, 'password'> | null> {
-    try {
-      // Get user from User Service
-      const user = await this.userServiceClient.findByEmail(email);
-      if (!user) {
-        return null;
-      }
 
-      // Validate password
-      const isPasswordValid = await this.comparePassword(password, user.password);
-      if (!isPasswordValid) {
-        return null;
-      }
-
-      // Return user without password
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password: _, ...result } = user;
-      return result;
-    } catch (error) {
-      return null;
-    }
-  }
 
   /**
    * Logs a user in using Saga pattern for transactional consistency.
@@ -847,6 +820,39 @@ export class AuthService {
       return { valid: true, payload };
     } catch (error) {
       return { valid: false };
+    }
+  }
+
+  /**
+   * Validate user credentials
+   * @param email User email
+   * @param password User password
+   * @returns User object (without password) if credentials are valid, null otherwise
+   */
+  async validateUser(email: string, password: string): Promise<Omit<User, 'password'> | null> {
+    try {
+      // Find user by email
+      const user = await this.userServiceClient.findByEmail(email);
+      if (!user) {
+        return null;
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return null;
+      }
+
+      // Return user without password
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...result } = user;
+      return result;
+    } catch (error) {
+      this.logger.error('Error validating user credentials', {
+        email,
+        error: error.message,
+      });
+      return null;
     }
   }
 
