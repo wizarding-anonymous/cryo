@@ -283,8 +283,28 @@ export const createAsyncMetricsServiceMock = () => ({
 export const createWorkerProcessServiceMock = () => ({
   processTask: jest.fn(),
   getWorkerStatus: jest.fn(),
-  executeInWorker: jest.fn().mockImplementation(async (operation) => {
-    // Выполняем операцию напрямую для тестов
+  executeInWorker: jest.fn().mockImplementation(async (operation, data) => {
+    // Обрабатываем специфические операции для тестов
+    if (operation === 'hash-password') {
+      const { password, saltRounds } = data;
+      return `hashed_${password}_${saltRounds}`;
+    }
+    
+    if (operation === 'compare-password') {
+      const { password, hash } = data;
+      // Логика сравнения для тестов: если хеш содержит пароль, то пароли совпадают
+      // Для неправильных паролей возвращаем false
+      if (password === 'wrongpassword' ||
+        password === 'invalid' ||
+        password === 'WrongPass123!' ||
+        password === 'WrongPassword123!') {
+        return false;
+      }
+      // Проверяем, что хеш содержит пароль (простая логика для тестов)
+      return hash.includes(password);
+    }
+    
+    // Выполняем операцию напрямую для других случаев
     if (typeof operation === 'function') {
       return await operation();
     }

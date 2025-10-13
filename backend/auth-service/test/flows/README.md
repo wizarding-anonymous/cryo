@@ -1,72 +1,51 @@
 # Auth Service E2E Tests - Authentication Flows
 
-Этот каталог содержит end-to-end тесты для всех потоков аутентификации Auth Service.
+**ПРИМЕЧАНИЕ:** Все тесты потоков аутентификации были консолидированы в основной файл `../auth-flows-refactored.e2e-spec.ts` для лучшей поддержки и избежания дублирования кода.
 
-## Структура тестов
+## Покрытие тестов
 
-### Основные файлы
-- `test-setup.ts` - Общая настройка и утилиты для всех e2e тестов
-- `index.e2e-spec.ts` - Главный файл для запуска всех тестов потоков
+Основной файл `auth-flows-refactored.e2e-spec.ts` покрывает все критические потоки аутентификации:
 
-### Тесты потоков аутентификации
-
-#### 1. `registration.e2e-spec.ts` - Поток регистрации пользователей
-**Покрытие (Requirement 8.3):**
+### 1. Complete User Registration Flow (Requirement 8.3)
 - ✅ Полный поток регистрации с валидацией
 - ✅ Хеширование токенов в БД (Requirement 15.2)
 - ✅ Интеграция с User Service
 - ✅ Публикация событий для event-driven архитектуры
 - ✅ Валидация силы пароля (Requirement 8.4)
 - ✅ Обработка дублирующихся email
-- ✅ Тестирование race conditions при регистрации
-- ✅ Rate limiting
-- ✅ Валидация входных данных
+- ✅ Graceful handling при сбоях User Service
 
-#### 2. `login.e2e-spec.ts` - Поток входа пользователей
-**Покрытие (Requirement 8.4):**
+### 2. Complete User Login Flow (Requirement 8.4)
 - ✅ Полный поток входа с валидацией
 - ✅ Хеширование токенов в БД (Requirement 15.2)
 - ✅ Управление сессиями с ограничениями
-- ✅ Распределенные блокировки (Requirement 15.1)
 - ✅ Отслеживание метаданных (IP, User Agent)
 - ✅ Публикация событий
 - ✅ Обработка неверных учетных данных
-- ✅ Rate limiting для неудачных попыток
-- ✅ Concurrent login handling
+- ✅ Suspicious activity detection
 
-#### 3. `logout.e2e-spec.ts` - Поток выхода пользователей
-**Покрытие (Requirement 8.5):**
+### 3. Complete Logout Flow (Requirement 8.5)
 - ✅ Полный поток выхода с валидацией
 - ✅ Атомарные операции logout (Requirement 15.3)
 - ✅ Blacklisting токенов в Redis и БД
 - ✅ Инвалидация сессий
-- ✅ Публикация событий
-- ✅ Logout из всех сессий
-- ✅ Обработка concurrent logout
-- ✅ Graceful degradation при сбоях Redis/БД
+- ✅ Graceful handling при invalid токенах
 
-#### 4. `token-refresh.e2e-spec.ts` - Поток обновления токенов
-**Покрытие (Requirement 8.7):**
+### 4. Token Refresh Flow (Requirement 8.7)
 - ✅ Полный поток refresh с валидацией
 - ✅ Атомарная ротация токенов (Requirement 15.4)
 - ✅ Blacklisting старых токенов
 - ✅ Обновление хешей в сессии
-- ✅ Обработка concurrent refresh
 - ✅ Валидация expired/invalid токенов
-- ✅ Поддержка непрерывности сессии
-- ✅ User invalidation handling
+- ✅ Rejection blacklisted refresh токенов
 
-#### 5. `token-validation.e2e-spec.ts` - Поток валидации токенов
-**Покрытие (Requirement 8.7):**
+### 5. Token Validation Flow (Requirement 8.7)
 - ✅ Полная валидация токенов
 - ✅ Проверка blacklist в Redis и БД
 - ✅ Интеграция с User Service
 - ✅ Валидация сессий
 - ✅ Обработка user invalidation
-- ✅ Microservice integration
-- ✅ Performance и caching
-- ✅ Concurrent validation
-- ✅ Graceful degradation
+- ✅ Rejection malformed токенов
 
 ## Требования безопасности
 
@@ -94,40 +73,40 @@ docker-compose up -d postgres-auth redis
 docker-compose up -d
 ```
 
-### Запуск отдельных потоков
+### Запуск основного файла тестов потоков
 ```bash
-# Тесты регистрации
-npm run test:e2e -- --testPathPattern=registration.e2e-spec.ts
-
-# Тесты входа
-npm run test:e2e -- --testPathPattern=login.e2e-spec.ts
-
-# Тесты выхода
-npm run test:e2e -- --testPathPattern=logout.e2e-spec.ts
-
-# Тесты refresh токенов
-npm run test:e2e -- --testPathPattern=token-refresh.e2e-spec.ts
-
-# Тесты валидации токенов
-npm run test:e2e -- --testPathPattern=token-validation.e2e-spec.ts
-```
-
-### Запуск всех тестов потоков
-```bash
-# Все тесты потоков аутентификации
-npm run test:e2e -- --testPathPattern=flows/
+# Все тесты потоков аутентификации (16 тестов)
+npm run test:e2e -- --testPathPattern=auth-flows-refactored.e2e-spec.ts
 
 # С покрытием кода
-npm run test:e2e:cov -- --testPathPattern=flows/
+npm run test:e2e:cov -- --testPathPattern=auth-flows-refactored.e2e-spec.ts
 
 # В watch режиме для разработки
-npm run test:e2e:watch -- --testPathPattern=flows/
+npm run test:e2e:watch -- --testPathPattern=auth-flows-refactored.e2e-spec.ts
+```
+
+### Запуск отдельных групп тестов
+```bash
+# Только тесты регистрации
+npm run test:e2e -- --testPathPattern=auth-flows-refactored.e2e-spec.ts --testNamePattern="Complete User Registration Flow"
+
+# Только тесты входа
+npm run test:e2e -- --testPathPattern=auth-flows-refactored.e2e-spec.ts --testNamePattern="Complete User Login Flow"
+
+# Только тесты выхода
+npm run test:e2e -- --testPathPattern=auth-flows-refactored.e2e-spec.ts --testNamePattern="Complete Logout Flow"
+
+# Только тесты refresh токенов
+npm run test:e2e -- --testPathPattern=auth-flows-refactored.e2e-spec.ts --testNamePattern="Token Refresh Flow"
+
+# Только тесты валидации токенов
+npm run test:e2e -- --testPathPattern=auth-flows-refactored.e2e-spec.ts --testNamePattern="Token Validation Flow"
 ```
 
 ### Запуск в CI/CD
 ```bash
 # Для CI окружения
-npm run test:e2e:ci -- --testPathPattern=flows/
+npm run test:e2e:ci -- --testPathPattern=auth-flows-refactored.e2e-spec.ts
 ```
 
 ## Переменные окружения

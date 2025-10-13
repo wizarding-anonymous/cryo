@@ -22,14 +22,15 @@ describe('AuthService - Password Hashing and Validation', () => {
   let metricsService: jest.Mocked<any>;
   let workerProcess: jest.Mocked<any>;
 
+  const fixedDate = new Date('2025-10-13T09:16:45.358Z');
   const mockUser = {
     id: 'user-123',
     name: 'John Doe',
     email: 'john@example.com',
     password: '$2b$10$hashedPasswordExample123456789',
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: fixedDate,
+    updatedAt: fixedDate,
   };
 
   beforeEach(() => {
@@ -159,10 +160,10 @@ describe('AuthService - Password Hashing and Validation', () => {
       // Arrange
       const plainPassword = 'StrongPassword123!';
       const hashedPassword = '$2b$10$hashedPasswordExample123456789';
-      
+
       userServiceClient.findByEmail.mockResolvedValue(null);
       userServiceClient.createUser.mockResolvedValue(mockUser);
-      
+
       // Mock worker process to return a known hash
       workerProcess.executeInWorker.mockResolvedValue(hashedPassword);
 
@@ -193,7 +194,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       const plainPassword = 'TestPassword123!';
       userServiceClient.findByEmail.mockResolvedValue(null);
       userServiceClient.createUser.mockResolvedValue(mockUser);
-      
+
       workerProcess.executeInWorker.mockResolvedValue('hashed');
 
       // Act
@@ -217,7 +218,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       // Arrange
       const plainPassword = 'TestPassword123!';
       userServiceClient.findByEmail.mockResolvedValue(null);
-      
+
       workerProcess.executeInWorker.mockRejectedValue(new Error('Hashing failed'));
 
       // Act & Assert
@@ -240,10 +241,10 @@ describe('AuthService - Password Hashing and Validation', () => {
       // Arrange
       const plainPassword = 'CorrectPassword123!';
       const hashedPassword = '$2b$10$hashedPasswordExample123456789';
-      
+
       const userWithPassword = { ...mockUser, password: hashedPassword };
       userServiceClient.findByEmail.mockResolvedValue(userWithPassword);
-      
+
       // Mock worker process to return true for correct password
       workerProcess.executeInWorker.mockResolvedValue(true);
 
@@ -270,10 +271,10 @@ describe('AuthService - Password Hashing and Validation', () => {
       // Arrange
       const plainPassword = 'WrongPassword123!';
       const hashedPassword = '$2b$10$hashedPasswordExample123456789';
-      
+
       const userWithPassword = { ...mockUser, password: hashedPassword };
       userServiceClient.findByEmail.mockResolvedValue(userWithPassword);
-      
+
       // Mock worker process to return false for incorrect password
       workerProcess.executeInWorker.mockResolvedValue(false);
 
@@ -292,10 +293,10 @@ describe('AuthService - Password Hashing and Validation', () => {
       // Arrange
       const plainPassword = 'TestPassword123!';
       const hashedPassword = '$2b$10$hashedPasswordExample123456789';
-      
+
       const userWithPassword = { ...mockUser, password: hashedPassword };
       userServiceClient.findByEmail.mockResolvedValue(userWithPassword);
-      
+
       workerProcess.executeInWorker.mockRejectedValue(new Error('Comparison failed'));
 
       // Act
@@ -380,7 +381,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       const plainPassword = 'PlainTextPassword123!';
       userServiceClient.findByEmail.mockResolvedValue(null);
       userServiceClient.createUser.mockResolvedValue(mockUser);
-      
+
       workerProcess.executeInWorker.mockResolvedValue('$2b$10$hashedPassword');
 
       // Act
@@ -399,7 +400,7 @@ describe('AuthService - Password Hashing and Validation', () => {
         email: 'test@example.com',
         password: '$2b$10$hashedPassword', // Hashed password
       });
-      
+
       // Verify the call does not contain plain text password
       const createUserCall = userServiceClient.createUser.mock.calls[0][0];
       expect(createUserCall.password).not.toBe(plainPassword);
@@ -411,7 +412,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       const passwords = ['Password1!', 'AnotherPass2@', 'ThirdPassword3#'];
       userServiceClient.findByEmail.mockResolvedValue(null);
       userServiceClient.createUser.mockResolvedValue(mockUser);
-      
+
       workerProcess.executeInWorker.mockResolvedValue('hashed');
 
       // Act - Register multiple users
@@ -438,18 +439,18 @@ describe('AuthService - Password Hashing and Validation', () => {
     it('should handle password validation timing attacks consistently', async () => {
       // Arrange
       const plainPassword = 'TestPassword123!';
-      
-      // Test with existing user
+
+      // Test with existing user but wrong password
       userServiceClient.findByEmail.mockResolvedValueOnce(mockUser);
-      workerProcess.executeInWorker.mockResolvedValueOnce(false);
-      
+      workerProcess.executeInWorker.mockResolvedValueOnce(false); // Wrong password
+
       const startTime1 = Date.now();
       const result1 = await authService.validateUser('existing@example.com', plainPassword);
       const endTime1 = Date.now();
-      
+
       // Test with non-existing user
       userServiceClient.findByEmail.mockResolvedValueOnce(null);
-      
+
       const startTime2 = Date.now();
       const result2 = await authService.validateUser('nonexistent@example.com', plainPassword);
       const endTime2 = Date.now();
@@ -457,7 +458,7 @@ describe('AuthService - Password Hashing and Validation', () => {
       // Assert - Both should return null
       expect(result1).toBeNull();
       expect(result2).toBeNull();
-      
+
       // Timing should be reasonably similar (within 100ms difference)
       // This is a basic check - in production, more sophisticated timing attack prevention might be needed
       const timeDiff1 = endTime1 - startTime1;

@@ -837,8 +837,8 @@ export class AuthService {
         return null;
       }
 
-      // Verify password
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      // Verify password using worker process for CPU-intensive operation
+      const isPasswordValid = await this.comparePassword(password, user.password);
       if (!isPasswordValid) {
         return null;
       }

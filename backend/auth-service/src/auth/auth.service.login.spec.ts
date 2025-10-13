@@ -22,23 +22,23 @@ describe('AuthService - Login Functionality', () => {
   let metricsService: jest.Mocked<any>;
   let workerProcess: jest.Mocked<any>;
 
+  const fixedDate = new Date('2025-10-13T09:16:45.358Z');
   const mockUser = {
     id: 'user-123',
     name: 'John Doe',
     email: 'john@example.com',
     password: 'hashedPassword123',
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: fixedDate,
+    updatedAt: fixedDate,
   };
-
   const mockUserWithoutPassword = {
     id: 'user-123',
     name: 'John Doe',
     email: 'john@example.com',
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: fixedDate,
+    updatedAt: fixedDate,
   };
 
   const mockTokens = {

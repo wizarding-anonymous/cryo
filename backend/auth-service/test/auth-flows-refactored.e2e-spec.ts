@@ -611,7 +611,7 @@ describe('Auth Service E2E - Refactored Authentication Flows', () => {
         id: 'user-123',
         name: 'Test User',
         email: testEmail,
-        password: 'hashed_TestPass123!_10', // Правильный хеш пароля
+        password: 'hashed_CorrectPassword123!_10', // Хеш для правильного пароля
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -620,7 +620,7 @@ describe('Auth Service E2E - Refactored Authentication Flows', () => {
 
       const loginData = {
         email: testEmail,
-        password: 'WrongPassword123!',
+        password: 'WrongPassword123!', // Неправильный пароль
       };
 
       await request(app.getHttpServer())
