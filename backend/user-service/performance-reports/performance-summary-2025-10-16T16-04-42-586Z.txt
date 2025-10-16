@@ -1,0 +1,91 @@
+🚀 COMPREHENSIVE PERFORMANCE TEST SUMMARY
+============================================================
+
+📅 Test Date: 2025-10-16T16:04:42.584Z
+⏱️ Total Duration: 0.0 minutes
+🖥️ Environment: Node.js v22.20.0 on win32
+💾 System Memory: 32GB
+🔧 CPU Cores: 6
+
+TEST RESULTS
+------------------------------
+📊 Total Tests: 6
+✅ Successful: 0
+❌ Failed: 6
+📈 Success Rate: 0.0%
+
+RESOURCE USAGE
+------------------------------
+📊 Memory Usage:
+   Initial: 174MB
+   Peak: 178MB
+   Final: 174MB
+   Growth: 0MB
+
+⚡ CPU Usage:
+   User: 4093ms
+   System: 1046ms
+
+INDIVIDUAL TEST RESULTS
+------------------------------
+1. ❌ Batch Operations Performance (1.1s)
+   Error: testPathPattern:
+
+  Option "testPathPattern" was replaced by "--testPathPatterns". "--testPathPatterns" is only available as a command-line option.
+  
+  Please update your configuration.
+
+  CLI Options Documentation:
+  https://jestjs.io/docs/cli
+
+
+2. ❌ Concurrent Users Load Test (1.1s)
+   Error: testPathPattern:
+
+  Option "testPathPattern" was replaced by "--testPathPatterns". "--testPathPatterns" is only available as a command-line option.
+  
+  Please update your configuration.
+
+  CLI Options Documentation:
+  https://jestjs.io/docs/cli
+
+
+3. ❌ Cache & Database Performance (1.2s)
+   Error: testPathPattern:
+
+  Option "testPathPattern" was replaced by "--testPathPatterns". "--testPathPatterns" is only available as a command-line option.
+  
+  Please update your configuration.
+
+  CLI Options Documentation:
+  https://jestjs.io/docs/cli
+
+
+4. ❌ Memory & Resource Usage (1.1s)
+   Error: testPathPattern:
+
+  Option "testPathPattern" was replaced by "--testPathPatterns". "--testPathPatterns" is only available as a command-line option.
+  
+  Please update your configuration.
+
+  CLI Options Documentation:
+  https://jestjs.io/docs/cli
+
+
+5. ❌ Advanced Load Test (8.8s)
+   Error:     ❌ Batch size 1000 failed: Batch creation failed: 500
+    ❌ Batch size 5000 failed: Batch creation failed: 500
+    ❌ Batch size 10000 failed: Batch creation failed: 500
+    ❌ Batch size 15000 failed: Batch creation failed: 500
+❌ Failed to create initial test data: Failed to create initial test data: 500
+❌ Test suite failed: Failed to create initial test data: 500
+
+6. ❌ k6 Load Test (0.0s)
+   Error: "k6" �� ���� ����७��� ��� ���譥�
+��������, �ᯮ��塞�� �ணࠬ��� ��� ������ 䠩���.
+
+
+RECOMMENDATIONS
+------------------------------
+1. 6 test(s) failed - investigate and fix issues before production deployment
+2. Not all performance tests passed - address failures before production deployment

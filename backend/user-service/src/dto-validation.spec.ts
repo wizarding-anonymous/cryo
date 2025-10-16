@@ -3,7 +3,6 @@ import { UpdateProfileDto } from './user/dto/update-profile.dto';
 import { CreateUserDto } from './user/dto/create-user.dto';
 
 describe('DTO Validation', () => {
-
   describe('UpdateProfileDto', () => {
     it('should pass validation with valid name', async () => {
       const dto = new UpdateProfileDto();
@@ -44,7 +43,8 @@ describe('DTO Validation', () => {
       const dto = new CreateUserDto();
       dto.name = 'John Doe';
       dto.email = 'john@example.com';
-      dto.password = '$2b$10$hashedPasswordFromAuthService'; // Pre-hashed password
+      dto.password =
+        '$2b$10$hashedPasswordFromCallingServiceWithProperLength123456'; // Pre-hashed password
 
       const errors = await validate(dto);
       expect(errors.length).toBe(0);
@@ -54,7 +54,8 @@ describe('DTO Validation', () => {
       const dto = new CreateUserDto();
       dto.name = '';
       dto.email = 'john@example.com';
-      dto.password = '$2b$10$hashedPasswordFromAuthService';
+      dto.password =
+        '$2b$10$hashedPasswordFromCallingServiceWithProperLength123456';
 
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
@@ -65,7 +66,8 @@ describe('DTO Validation', () => {
       const dto = new CreateUserDto();
       dto.name = 'John Doe';
       dto.email = 'invalid-email';
-      dto.password = '$2b$10$hashedPasswordFromAuthService';
+      dto.password =
+        '$2b$10$hashedPasswordFromCallingServiceWithProperLength123456';
 
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);

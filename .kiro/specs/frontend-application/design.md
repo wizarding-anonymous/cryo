@@ -2,7 +2,21 @@
 
 ## Overview
 
-Frontend Application - кросс-платформенное веб-приложение для MVP российской игровой платформы, построенное на Next.js 14 с 85-90% переиспользования кода между платформами. Обеспечивает современный пользовательский интерфейс для всех основных функций платформы.
+Frontend Application - кросс-платформенное веб-приложение для MVP российской игровой платформы, построенное на Next.js 14 с интеграцией **11 микросервисов через API Gateway**. Обеспечивает современный пользовательский интерфейс для всех функций платформы с 85-90% переиспользования кода между платформами.
+
+### Микросервисная архитектура
+Frontend интегрируется с полной экосистемой микросервисов:
+- **User Service** - аутентификация и профили пользователей
+- **Game Catalog Service** - каталог и информация об играх  
+- **Payment Service** - заказы и платежи
+- **Library Service** - библиотека пользователя
+- **Download Service** - загрузки игр
+- **Security Service** - безопасность и мониторинг
+- **Social Service** - друзья и сообщения
+- **Review Service** - отзывы и рейтинги
+- **Notification Service** - уведомления в реальном времени
+- **Achievement Service** - система достижений
+- **API Gateway** - единая точка входа для всех запросов
 
 ## Technology Stack
 
@@ -48,14 +62,17 @@ graph TB
         Gateway[NestJS API Gateway]
     end
     
-    subgraph "Backend Services (NestJS)"
-        UserService[User Service]
-        GameService[Game Catalog Service]
-        PaymentService[Payment Service]
-        LibraryService[Library Service]
-        SocialService[Social Service]
-        SecurityService[Security Service]
-        NotificationService[Notification Service]
+    subgraph "Backend Microservices"
+        UserService[User Service - NestJS]
+        GameService[Game Catalog Service - NestJS]
+        PaymentService[Payment Service - NestJS]
+        LibraryService[Library Service - NestJS]
+        DownloadService[Download Service - Go]
+        SecurityService[Security Service - NestJS]
+        SocialService[Social Service - NestJS]
+        ReviewService[Review Service - NestJS]
+        NotificationService[Notification Service - NestJS]
+        AchievementService[Achievement Service - NestJS]
     end
     
     NextApp --> Pages
@@ -70,9 +87,12 @@ graph TB
     Gateway --> GameService
     Gateway --> PaymentService
     Gateway --> LibraryService
-    Gateway --> SocialService
+    Gateway --> DownloadService
     Gateway --> SecurityService
+    Gateway --> SocialService
+    Gateway --> ReviewService
     Gateway --> NotificationService
+    Gateway --> AchievementService
 ```
 
 ## Components and Interfaces
@@ -86,12 +106,21 @@ app/
 │   ├── login/page.tsx
 │   └── register/page.tsx
 ├── (dashboard)/
-│   ├── library/page.tsx
-│   ├── profile/page.tsx
-│   └── friends/page.tsx
+│   ├── library/page.tsx           // Library Service
+│   ├── downloads/page.tsx         // Download Service
+│   ├── profile/page.tsx           // User Service
+│   ├── friends/page.tsx           // Social Service
+│   ├── messages/page.tsx          // Social Service
+│   ├── notifications/page.tsx     // Notification Service
+│   ├── achievements/page.tsx      // Achievement Service
+│   └── security/page.tsx          // Security Service (admin)
 ├── games/
-│   ├── page.tsx (catalog)
-│   └── [id]/page.tsx (details)
+│   ├── page.tsx                   // Game Catalog Service
+│   └── [id]/
+│       ├── page.tsx              // Game details
+│       └── reviews/page.tsx      // Review Service
+├── orders/
+│   └── page.tsx                  // Payment Service
 ├── layout.tsx (root layout)
 ├── page.tsx (home)
 ├── loading.tsx
@@ -133,9 +162,9 @@ app/
 
 ### State Management (Zustand) - Точно под User Service
 
-#### Store Slices
+#### Store Slices (по одному на каждый микросервис)
 ```typescript
-// stores/auth.ts - Точно под User Service API
+// stores/auth.ts - User Service интеграция
 interface AuthStore {
   user: User | null;
   accessToken: string | null;
@@ -246,7 +275,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   },
 }));
 
-// stores/games.ts
+// stores/games.ts - Game Catalog Service интеграция
 interface GamesStore {
   catalog: Game[];
   currentGame: Game | null;
@@ -254,17 +283,92 @@ interface GamesStore {
   searchQuery: string;
   isLoading: boolean;
   fetchGames: () => Promise<void>;
+  fetchGame: (id: string) => Promise<void>;
+  searchGames: (query: string) => Promise<void>;
   setFilters: (filters: GameFilters) => void;
-  searchGames: (query: string) => void;
 }
 
-// stores/library.ts
+// stores/library.ts - Library Service интеграция
 interface LibraryStore {
   games: LibraryGame[];
-  downloads: DownloadStatus[];
   isLoading: boolean;
   fetchLibrary: () => Promise<void>;
+  checkOwnership: (gameId: string) => Promise<boolean>;
+  searchLibrary: (query: string) => Promise<void>;
+}
+
+// stores/downloads.ts - Download Service интеграция
+interface DownloadsStore {
+  downloads: DownloadStatus[];
+  isLoading: boolean;
+  fetchDownloads: () => Promise<void>;
   startDownload: (gameId: string) => Promise<void>;
+  pauseDownload: (downloadId: string) => Promise<void>;
+  resumeDownload: (downloadId: string) => Promise<void>;
+}
+
+// stores/payments.ts - Payment Service интеграция
+interface PaymentsStore {
+  orders: Order[];
+  currentOrder: Order | null;
+  isLoading: boolean;
+  createOrder: (gameId: string) => Promise<void>;
+  createPayment: (orderId: string, paymentData: PaymentData) => Promise<void>;
+  fetchOrders: () => Promise<void>;
+}
+
+// stores/social.ts - Social Service интеграция
+interface SocialStore {
+  friends: Friend[];
+  conversations: Conversation[];
+  onlineStatus: Record<string, boolean>;
+  isLoading: boolean;
+  sendFriendRequest: (userId: string) => Promise<void>;
+  acceptFriendRequest: (requestId: string) => Promise<void>;
+  sendMessage: (friendId: string, message: string) => Promise<void>;
+  fetchConversations: () => Promise<void>;
+  setOnlineStatus: (status: boolean) => Promise<void>;
+}
+
+// stores/reviews.ts - Review Service интеграция
+interface ReviewsStore {
+  reviews: Review[];
+  gameRatings: Record<string, GameRating>;
+  isLoading: boolean;
+  createReview: (gameId: string, review: CreateReviewDto) => Promise<void>;
+  fetchGameReviews: (gameId: string) => Promise<void>;
+  fetchGameRating: (gameId: string) => Promise<void>;
+}
+
+// stores/notifications.ts - Notification Service интеграция
+interface NotificationsStore {
+  notifications: Notification[];
+  unreadCount: number;
+  settings: NotificationSettings;
+  isLoading: boolean;
+  fetchNotifications: () => Promise<void>;
+  markAsRead: (notificationId: string) => Promise<void>;
+  updateSettings: (settings: NotificationSettings) => Promise<void>;
+}
+
+// stores/achievements.ts - Achievement Service интеграция
+interface AchievementsStore {
+  achievements: Achievement[];
+  userProgress: UserAchievementProgress[];
+  isLoading: boolean;
+  fetchAchievements: () => Promise<void>;
+  fetchUserProgress: () => Promise<void>;
+  unlockAchievement: (achievementId: string) => Promise<void>;
+}
+
+// stores/security.ts - Security Service интеграция (admin)
+interface SecurityStore {
+  logs: SecurityLog[];
+  alerts: SecurityAlert[];
+  isLoading: boolean;
+  fetchLogs: () => Promise<void>;
+  fetchAlerts: () => Promise<void>;
+  resolveAlert: (alertId: string) => Promise<void>;
 }
 ```
 
@@ -403,12 +507,12 @@ interface ValidationError {
 
 ## REST API Integration
 
-### API Client Architecture (Точная интеграция с User Service)
+### API Client Architecture (Интеграция со всеми микросервисами через API Gateway)
 
 ```typescript
-// lib/api/client.ts - Точно под User Service API
+// lib/api/client.ts - API Gateway интеграция для всех микросервисов
 class ApiClient {
-  private baseURL: string = '/api'; // User Service prefix
+  private baseURL: string = '/api'; // API Gateway prefix
   private token: string | null = null;
 
   setToken(token: string) {
@@ -433,6 +537,11 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  // Health check для мониторинга микросервисов
+  async checkHealth(): Promise<Record<string, boolean>> {
+    return this.request('/health/all', { method: 'GET' });
   }
 }
 

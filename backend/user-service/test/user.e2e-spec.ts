@@ -167,7 +167,9 @@ describe('User Endpoints (e2e)', () => {
           .send({ name: longName })
           .expect(400)
           .then((res) => {
-            expect(res.body.message).toContain('Имя не может быть длиннее 100 символов');
+            expect(res.body.message).toContain(
+              'Имя не может быть длиннее 100 символов',
+            );
           });
       });
 
@@ -181,7 +183,9 @@ describe('User Endpoints (e2e)', () => {
           })
           .expect(400)
           .then((res) => {
-            expect(res.body.message).toContain('property extraField should not exist');
+            expect(res.body.message).toContain(
+              'property extraField should not exist',
+            );
           });
       });
 

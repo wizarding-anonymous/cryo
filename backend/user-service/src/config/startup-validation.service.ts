@@ -167,8 +167,6 @@ export class StartupValidationService implements OnModuleInit {
     }
   }
 
-
-
   // Health check method for runtime validation
   async performHealthCheck(): Promise<{
     status: 'healthy' | 'unhealthy';

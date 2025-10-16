@@ -56,8 +56,8 @@ describe('ConfigFactory', () => {
         password: 'test_password',
         database: 'test_db',
         synchronize: false,
-        ssl: false,
       });
+      expect(typeOrmConfig.extra.ssl).toBe(false);
       expect(typeOrmConfig.extra.max).toBe(5);
     });
 
@@ -81,7 +81,10 @@ describe('ConfigFactory', () => {
       expect(typeOrmConfig).toMatchObject({
         type: 'postgres',
         host: 'prod-host',
-        ssl: { rejectUnauthorized: false },
+      });
+      expect(typeOrmConfig.extra.ssl).toEqual({
+        rejectUnauthorized: false,
+        sslmode: 'require',
       });
       expect(typeOrmConfig.extra.max).toBe(20);
     });
@@ -188,8 +191,6 @@ describe('ConfigFactory', () => {
       });
     });
   });
-
-
 
   describe('createCorsConfig', () => {
     it('should create CORS configuration with wildcard origin', () => {

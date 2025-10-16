@@ -6,8 +6,16 @@ metadata:
   labels:
     app: user-service
     version: v1
+    component: microservice
+  annotations:
+    deployment.kubernetes.io/revision: "1"
 spec:
   replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: user-service
@@ -16,24 +24,67 @@ spec:
       labels:
         app: user-service
         version: v1
+        component: microservice
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3002"
+        prometheus.io/path: "/api/metrics"
     spec:
+      # Security context for the pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Service account for RBAC
+      serviceAccountName: user-service-sa
+      
+      # Termination grace period for graceful shutdown
+      terminationGracePeriodSeconds: 30
+      
       containers:
       - name: user-service
         image: ghcr.io/your-org/cryo/user-service:latest
+        imagePullPolicy: Always
+        
+        # Security context for the container
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # Set to false due to uploads directory
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          capabilities:
+            drop:
+              - ALL
+        
         ports:
-        - containerPort: 3001
+        - containerPort: 3002
           name: http
+          protocol: TCP
+        
         env:
+        # Application configuration
         - name: NODE_ENV
           valueFrom:
             configMapKeyRef:
               name: user-service-config
               key: NODE_ENV
         - name: PORT
-          valueFrom:
-            configMapKeyRef:
-              name: user-service-config
-              key: PORT
+          value: "3002"
+        - name: SERVICE_NAME
+          value: "user-service"
+        - name: SERVICE_VERSION
+          value: "2.0.0"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: LOG_FORMAT
+          value: "json"
+        
+        # Database configuration
         - name: POSTGRES_HOST
           valueFrom:
             configMapKeyRef:
@@ -53,6 +104,8 @@ spec:
             secretKeyRef:
               name: microservices-secrets
               key: POSTGRES_USER_PASSWORD
+        
+        # Redis configuration
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
@@ -68,51 +121,118 @@ spec:
             secretKeyRef:
               name: microservices-secrets
               key: REDIS_PASSWORD
-        - name: JWT_SECRET
+        
+        # Security configuration
+        - name: ENCRYPTION_KEY
           valueFrom:
             secretKeyRef:
               name: microservices-secrets
-              key: JWT_SECRET
-        - name: JWT_REFRESH_SECRET
+              key: ENCRYPTION_KEY
+        - name: INTERNAL_API_KEY
           valueFrom:
             secretKeyRef:
               name: microservices-secrets
-              key: JWT_REFRESH_SECRET
-        - name: JWT_EXPIRES_IN
-          valueFrom:
-            configMapKeyRef:
-              name: user-service-config
-              key: JWT_EXPIRES_IN
+              key: INTERNAL_API_KEY
+        
+        # Rate limiting configuration
+        - name: RATE_LIMIT_TTL
+          value: "60"
+        - name: RATE_LIMIT_MAX
+          value: "100"
+        - name: RATE_LIMIT_BATCH_TTL
+          value: "300"
+        - name: RATE_LIMIT_BATCH_MAX
+          value: "10"
+        
+        # Resource limits and requests
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "256Mi"
+            cpu: "200m"
+            ephemeral-storage: "1Gi"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "1Gi"
+            cpu: "1000m"
+            ephemeral-storage: "2Gi"
+        
+        # Liveness probe - checks if the application is alive
         livenessProbe:
           httpGet:
-            path: /api/health
-            port: 3001
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
+            path: /api/health/live
+            port: 3002
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
           failureThreshold: 3
+          successThreshold: 1
+        
+        # Readiness probe - checks if the application is ready to serve traffic
         readinessProbe:
           httpGet:
-            path: /api/health
-            port: 3001
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
-        startupProbe:
-          httpGet:
-            path: /api/health
-            port: 3001
+            path: /api/health/ready
+            port: 3002
+            scheme: HTTP
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        
+        # Startup probe - gives the application time to start up
+        startupProbe:
+          httpGet:
+            path: /api/health/live
+            port: 3002
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
           failureThreshold: 30
-      restartPolicy: Always
-      imagePullPolicy: Always
+          successThreshold: 1
+        
+        # Volume mounts for uploads
+        volumeMounts:
+        - name: uploads-volume
+          mountPath: /usr/src/app/uploads
+        - name: tmp-volume
+          mountPath: /tmp
+        
+        # Lifecycle hooks for graceful shutdown
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - sleep 15
+      
+      # Volumes
+      volumes:
+      - name: uploads-volume
+        emptyDir:
+          sizeLimit: 10Gi
+      - name: tmp-volume
+        emptyDir:
+          sizeLimit: 1Gi
+      
+      # Node affinity for better distribution
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - user-service
+              topologyKey: kubernetes.io/hostname
+      
+      # Tolerations for node taints
+      tolerations:
+      - key: "microservices"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"

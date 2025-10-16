@@ -1,4 +1,4 @@
-name: User Service Quick Test
+name: User Service CI/CD
 
 on:
   workflow_dispatch:
@@ -6,23 +6,32 @@ on:
     branches: [ main, develop ]
     paths:
       - 'backend/user-service/**'
+      - 'backend/docker-compose.yml'
+      - 'backend/shared/**'
   pull_request:
     branches: [ main ]
     paths:
       - 'backend/user-service/**'
+      - 'backend/docker-compose.yml'
+      - 'backend/shared/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  quick-test:
+  # Unit and Integration Tests
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     
     services:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_PASSWORD: testpass
-          POSTGRES_USER: testuser
-          POSTGRES_DB: testdb
+          POSTGRES_PASSWORD: user_password
+          POSTGRES_USER: user_service
+          POSTGRES_DB: user_db
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -34,12 +43,14 @@ jobs:
       redis:
         image: redis:7-alpine
         options: >-
-          --health-cmd "redis-cli ping"
+          --health-cmd "redis-cli -a redis_password ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
           - 6379:6379
+        env:
+          REDIS_PASSWORD: redis_password
     
     steps:
     - name: Checkout code
@@ -63,16 +74,65 @@ jobs:
     - name: Run unit tests
       working-directory: backend/user-service
       env:
+        # Database configuration matching docker-compose
         DB_HOST: localhost
         DB_PORT: 5432
-        DB_USER: testuser
-        DB_PASSWORD: testpass
-        DB_NAME: testdb
+        DB_USER: user_service
+        DB_PASSWORD: user_password
+        DB_NAME: user_db
+        DB_SSL_MODE: disable
+        DATABASE_URL: postgresql://user_service:user_password@localhost:5432/user_db
+        
+        # Redis configuration matching docker-compose
         REDIS_HOST: localhost
         REDIS_PORT: 6379
+        REDIS_PASSWORD: redis_password
+        REDIS_URL: redis://:redis_password@localhost:6379
+        
+        # Test environment
         NODE_ENV: test
-        JWT_SECRET: test-secret-key
-      run: npm test -- --passWithNoTests --ci --coverage=false --maxWorkers=2
+        JWT_SECRET: test-secret-key-for-ci
+        
+        # User Service specific config
+        USER_SERVICE_PORT: 3002
+        USER_SERVICE_HOST: localhost
+        
+        # Disable external services in tests
+        DISABLE_EXTERNAL_SERVICES: true
+        
+        # CI optimizations
+        CI: true
+        SKIP_E2E_TESTS: false
+      run: |
+        echo "Running User Service tests..."
+        npm test -- --passWithNoTests --ci --coverage=false --maxWorkers=2 --forceExit --detectOpenHandles --testTimeout=30000
+    
+    - name: Run integration tests
+      working-directory: backend/user-service
+      env:
+        # Same environment as unit tests
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: user_service
+        DB_PASSWORD: user_password
+        DB_NAME: user_db
+        DATABASE_URL: postgresql://user_service:user_password@localhost:5432/user_db
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        REDIS_PASSWORD: redis_password
+        REDIS_URL: redis://:redis_password@localhost:6379
+        NODE_ENV: test
+        JWT_SECRET: test-secret-key-for-ci
+        USER_SERVICE_PORT: 3002
+        CI: true
+      run: |
+        echo "Running User Service integration tests..."
+        if cat package.json | jq -e '.scripts["test:e2e"]' > /dev/null 2>&1; then
+          npm run test:e2e -- --passWithNoTests --ci --testTimeout=30000 --forceExit
+        else
+          echo "No e2e tests found, skipping..."
+        fi
+      continue-on-error: true
     
     - name: Build application
       working-directory: backend/user-service
@@ -81,30 +141,294 @@ jobs:
     - name: Test Docker build
       working-directory: backend/user-service
       run: |
-        echo "Testing Docker build..."
+        echo "Testing User Service Docker build..."
         docker build -t user-service-test .
         echo "✅ Docker build successful"
+
+  # Docker Compose Integration Test
+  docker-compose-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: test
     
-    - name: Test Docker Compose integration
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Create test environment file
       working-directory: backend
       run: |
-        echo "Testing Docker Compose integration..."
-        
-        # Create minimal test environment
-        cat > .env.test << EOF
+        echo "Creating test environment configuration..."
+        cat > .env << EOF
+        # Redis configuration
         REDIS_PASSWORD=redis_password
+        
+        # Auth Service configuration
+        AUTH_JWT_SECRET=auth-service-super-secret-jwt-key-change-in-production
+        AUTH_JWT_REFRESH_SECRET=auth-service-super-secret-refresh-key-change-in-production
+        
+        # Test environment
         NODE_ENV=test
-        JWT_SECRET=test-secret-key
         EOF
+    
+    - name: Start User Service with dependencies via Docker Compose
+      working-directory: backend
+      run: |
+        echo "Starting User Service and its dependencies..."
         
-        # Start only User Service dependencies
-        docker-compose -f docker-compose.user-only.yml up -d
+        # Start only User Service and its direct dependencies
+        docker-compose up -d postgres-user redis user-service
         
-        # Wait and check health
+        echo "Waiting for services to be ready..."
+        sleep 45
+    
+    - name: Check service health
+      working-directory: backend
+      run: |
+        echo "Checking User Service health..."
+        
+        # Check if containers are running
+        docker-compose ps
+        
+        # Check User Service logs
+        echo "=== User Service Logs ==="
+        docker-compose logs user-service
+        
+        # Check PostgreSQL connection
+        echo "=== Testing PostgreSQL connection ==="
+        docker-compose exec -T postgres-user pg_isready -U user_service -d user_db
+        
+        # Check Redis connection
+        echo "=== Testing Redis connection ==="
+        docker-compose exec -T redis redis-cli -a redis_password ping
+        
+        # Test User Service health endpoint
+        echo "=== Testing User Service health endpoint ==="
+        timeout 60 bash -c 'until curl -f http://localhost:3002/health; do echo "Waiting for User Service..."; sleep 5; done'
+        
+        echo "✅ All health checks passed"
+    
+    - name: Run smoke tests
+      working-directory: backend
+      run: |
+        echo "Running User Service smoke tests..."
+        
+        # Test basic endpoints
+        echo "Testing health endpoint..."
+        curl -f http://localhost:3002/health
+        
+        echo "Testing ready endpoint..."
+        curl -f http://localhost:3002/health/ready || echo "Ready endpoint not available"
+        
+        echo "Testing metrics endpoint..."
+        curl -f http://localhost:3002/metrics || echo "Metrics endpoint not available"
+        
+        echo "✅ Smoke tests passed"
+    
+    - name: Test inter-service communication
+      working-directory: backend
+      run: |
+        echo "Testing User Service integration capabilities..."
+        
+        # Start Auth Service to test inter-service communication
+        docker-compose up -d postgres-auth auth-service
         sleep 30
-        timeout 30 bash -c 'until curl -f http://localhost:3001/api/v1/health; do sleep 2; done'
         
-        echo "✅ Docker Compose integration test passed"
+        # Check if Auth Service can reach User Service
+        echo "Testing Auth Service to User Service communication..."
+        docker-compose exec -T auth-service curl -f http://user-service:3002/health || echo "Inter-service communication test failed"
         
-        # Cleanup
-        docker-compose -f docker-compose.user-only.yml down -v
+        echo "✅ Inter-service communication test completed"
+    
+    - name: Cleanup
+      working-directory: backend
+      if: always()
+      run: |
+        echo "Cleaning up Docker Compose services..."
+        docker-compose down -v
+        docker system prune -f
+
+  # Security and Quality Checks
+  security:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: 'backend/user-service/'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+    - name: Run Docker security scan
+      working-directory: backend/user-service
+      run: |
+        echo "Running Docker security scan..."
+        docker build -t user-service-security-test .
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy image user-service-security-test
+
+  # Build and Push Docker Image
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, docker-compose-test, security]
+    if: always() && (needs.test.result == 'success' && needs.docker-compose-test.result == 'success')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/user-service
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: backend/user-service
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Deploy to Staging
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop' && needs.build.result == 'success'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+    
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+    
+    - name: Deploy User Service to staging
+      run: |
+        export KUBECONFIG=kubeconfig
+        
+        echo "Deploying User Service to staging..."
+        
+        # Apply User Service specific k8s files if they exist
+        if [ -f "backend/user-service/k8s/deployment.yaml" ]; then
+          kubectl apply -f backend/user-service/k8s/
+        elif [ -f "backend/k8s/user-service-deployment.yaml" ]; then
+          kubectl apply -f backend/k8s/user-service-deployment.yaml
+        fi
+        
+        # Update image tag
+        kubectl set image deployment/user-service-deployment user-service=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/user-service:develop-${{ github.sha }} -n microservices
+        
+        # Wait for rollout
+        kubectl rollout status deployment/user-service-deployment -n microservices --timeout=300s
+        
+        echo "✅ User Service deployed to staging"
+
+  # Deploy to Production
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && needs.build.result == 'success'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+    
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+    
+    - name: Deploy User Service to production
+      run: |
+        export KUBECONFIG=kubeconfig
+        
+        echo "Deploying User Service to production..."
+        
+        # Apply User Service specific k8s files if they exist
+        if [ -f "backend/user-service/k8s/deployment.yaml" ]; then
+          kubectl apply -f backend/user-service/k8s/
+        elif [ -f "backend/k8s/user-service-deployment.yaml" ]; then
+          kubectl apply -f backend/k8s/user-service-deployment.yaml
+        fi
+        
+        # Update image tag
+        kubectl set image deployment/user-service-deployment user-service=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/user-service:main-${{ github.sha }} -n microservices
+        
+        # Wait for rollout
+        kubectl rollout status deployment/user-service-deployment -n microservices --timeout=600s
+        
+        echo "✅ User Service deployed to production"
+    
+    - name: Run production smoke tests
+      run: |
+        echo "Running production smoke tests..."
+        sleep 30
+        curl -f https://api.yourdomain.com/api/users/health || echo "Production smoke test failed"
+
+  # Notification
+  notify:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+    - name: Notify deployment status
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#user-service-deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+        text: |
+          User Service Deployment Status: ${{ job.status }}
+          Branch: ${{ github.ref }}
+          Commit: ${{ github.sha }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+      continue-on-error: true

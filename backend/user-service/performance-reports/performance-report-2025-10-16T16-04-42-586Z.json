@@ -1,0 +1,79 @@
+{
+  "testSuite": "Comprehensive Performance Test Suite",
+  "timestamp": "2025-10-16T16:04:42.584Z",
+  "duration": 0,
+  "environment": {
+    "nodeVersion": "v22.20.0",
+    "platform": "win32",
+    "arch": "x64",
+    "cpus": 6,
+    "totalMemory": "32GB"
+  },
+  "metrics": {
+    "memoryUsage": {
+      "initial": 174,
+      "peak": 178,
+      "final": 174,
+      "growth": 0
+    },
+    "cpuUsage": {
+      "user": 4093,
+      "system": 1046
+    }
+  },
+  "summary": {
+    "totalTests": 6,
+    "successful": 0,
+    "failed": 6,
+    "successRate": 0,
+    "totalDuration": 13264
+  },
+  "results": [
+    {
+      "name": "Batch Operations Performance",
+      "success": false,
+      "duration": 1113,
+      "output": "\n> user-service@0.0.1 test:e2e\n> jest --config ./test/jest-e2e.json --testPathPattern=test/performance-batch-operations.e2e-spec.ts --testTimeout=600000 --verbose --detectOpenHandles --forceExit\n\n",
+      "error": "testPathPattern:\n\n  Option \"testPathPattern\" was replaced by \"--testPathPatterns\". \"--testPathPatterns\" is only available as a command-line option.\n  \n  Please update your configuration.\n\n  CLI Options Documentation:\n  https://jestjs.io/docs/cli\n\n"
+    },
+    {
+      "name": "Concurrent Users Load Test",
+      "success": false,
+      "duration": 1077,
+      "output": "\n> user-service@0.0.1 test:e2e\n> jest --config ./test/jest-e2e.json --testPathPattern=test/load-test-concurrent-users.e2e-spec.ts --testTimeout=900000 --verbose --detectOpenHandles --forceExit\n\n",
+      "error": "testPathPattern:\n\n  Option \"testPathPattern\" was replaced by \"--testPathPatterns\". \"--testPathPatterns\" is only available as a command-line option.\n  \n  Please update your configuration.\n\n  CLI Options Documentation:\n  https://jestjs.io/docs/cli\n\n"
+    },
+    {
+      "name": "Cache & Database Performance",
+      "success": false,
+      "duration": 1175,
+      "output": "\n> user-service@0.0.1 test:e2e\n> jest --config ./test/jest-e2e.json --testPathPattern=test/performance-cache-database.e2e-spec.ts --testTimeout=600000 --verbose --detectOpenHandles --forceExit\n\n",
+      "error": "testPathPattern:\n\n  Option \"testPathPattern\" was replaced by \"--testPathPatterns\". \"--testPathPatterns\" is only available as a command-line option.\n  \n  Please update your configuration.\n\n  CLI Options Documentation:\n  https://jestjs.io/docs/cli\n\n"
+    },
+    {
+      "name": "Memory & Resource Usage",
+      "success": false,
+      "duration": 1074,
+      "output": "\n> user-service@0.0.1 test:e2e\n> jest --config ./test/jest-e2e.json --testPathPattern=test/performance-memory-resource.e2e-spec.ts --testTimeout=1200000 --verbose --detectOpenHandles --forceExit\n\n",
+      "error": "testPathPattern:\n\n  Option \"testPathPattern\" was replaced by \"--testPathPatterns\". \"--testPathPatterns\" is only available as a command-line option.\n  \n  Please update your configuration.\n\n  CLI Options Documentation:\n  https://jestjs.io/docs/cli\n\n"
+    },
+    {
+      "name": "Advanced Load Test",
+      "success": false,
+      "duration": 8792,
+      "output": "🚀 Starting Advanced Performance Test Suite\n📊 Target: http://localhost:3001\n👥 Max Concurrent Users: 1500\n⏱️ Test Duration: 600s\n\n🏥 Performing health check...\n✅ Service is healthy\n\n📦 Running Batch Operations Performance Test...\n  📊 Testing batch size: 1000 users\n  📊 Testing batch size: 5000 users\n  📊 Testing batch size: 10000 users\n  📊 Testing batch size: 15000 users\n✅ Batch Operations Test completed\n\n👥 Running Concurrent Users Test...\n📝 Creating 1000 initial test users...\n",
+      "error": "    ❌ Batch size 1000 failed: Batch creation failed: 500\n    ❌ Batch size 5000 failed: Batch creation failed: 500\n    ❌ Batch size 10000 failed: Batch creation failed: 500\n    ❌ Batch size 15000 failed: Batch creation failed: 500\n❌ Failed to create initial test data: Failed to create initial test data: 500\n❌ Test suite failed: Failed to create initial test data: 500\n"
+    },
+    {
+      "name": "k6 Load Test",
+      "success": false,
+      "duration": 33,
+      "output": "",
+      "error": "\"k6\" �� ���� ����७��� ��� ���譥�\r\n��������, �ᯮ��塞�� �ணࠬ��� ��� ������ 䠩���.\r\n"
+    }
+  ],
+  "recommendations": [
+    "6 test(s) failed - investigate and fix issues before production deployment",
+    "Not all performance tests passed - address failures before production deployment"
+  ]
+}

@@ -1,0 +1,125 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: user-service-alerts
+  namespace: microservices
+  labels:
+    app: user-service
+    component: microservice
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: user-service.rules
+    interval: 30s
+    rules:
+    
+    # High CPU Usage
+    - alert: UserServiceHighCPU
+      expr: rate(container_cpu_usage_seconds_total{pod=~"user-service-.*"}[5m]) * 100 > 80
+      for: 5m
+      labels:
+        severity: warning
+        service: user-service
+      annotations:
+        summary: "User Service high CPU usage"
+        description: "User Service CPU usage is above 80% for more than 5 minutes"
+    
+    # High Memory Usage
+    - alert: UserServiceHighMemory
+      expr: container_memory_usage_bytes{pod=~"user-service-.*"} / container_spec_memory_limit_bytes{pod=~"user-service-.*"} * 100 > 85
+      for: 5m
+      labels:
+        severity: warning
+        service: user-service
+      annotations:
+        summary: "User Service high memory usage"
+        description: "User Service memory usage is above 85% for more than 5 minutes"
+    
+    # Pod Restart Rate
+    - alert: UserServiceHighRestartRate
+      expr: rate(kube_pod_container_status_restarts_total{pod=~"user-service-.*"}[15m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        service: user-service
+      annotations:
+        summary: "User Service high restart rate"
+        description: "User Service pods are restarting frequently"
+    
+    # Service Down
+    - alert: UserServiceDown
+      expr: up{job="user-service"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: user-service
+      annotations:
+        summary: "User Service is down"
+        description: "User Service has been down for more than 1 minute"
+    
+    # High Response Time
+    - alert: UserServiceHighResponseTime
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{service="user-service"}[5m])) > 1
+      for: 5m
+      labels:
+        severity: warning
+        service: user-service
+      annotations:
+        summary: "User Service high response time"
+        description: "User Service 95th percentile response time is above 1 second"
+    
+    # High Error Rate
+    - alert: UserServiceHighErrorRate
+      expr: rate(http_requests_total{service="user-service",status=~"5.."}[5m]) / rate(http_requests_total{service="user-service"}[5m]) * 100 > 5
+      for: 5m
+      labels:
+        severity: critical
+        service: user-service
+      annotations:
+        summary: "User Service high error rate"
+        description: "User Service error rate is above 5% for more than 5 minutes"
+    
+    # Database Connection Issues
+    - alert: UserServiceDatabaseConnectionIssues
+      expr: user_database_connections_failed_total > 10
+      for: 2m
+      labels:
+        severity: critical
+        service: user-service
+      annotations:
+        summary: "User Service database connection issues"
+        description: "User Service is experiencing database connection failures"
+    
+    # Redis Connection Issues
+    - alert: UserServiceRedisConnectionIssues
+      expr: user_redis_connections_failed_total > 5
+      for: 2m
+      labels:
+        severity: warning
+        service: user-service
+      annotations:
+        summary: "User Service Redis connection issues"
+        description: "User Service is experiencing Redis connection failures"
+    
+    # Cache Hit Rate Low
+    - alert: UserServiceLowCacheHitRate
+      expr: user_cache_hits_total / (user_cache_hits_total + user_cache_misses_total) * 100 < 70
+      for: 10m
+      labels:
+        severity: warning
+        service: user-service
+      annotations:
+        summary: "User Service low cache hit rate"
+        description: "User Service cache hit rate is below 70%"
+    
+    # Batch Operation Failures
+    - alert: UserServiceBatchOperationFailures
+      expr: rate(user_batch_operations_failed_total[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        service: user-service
+      annotations:
+        summary: "User Service batch operation failures"
+        description: "User Service is experiencing batch operation failures"

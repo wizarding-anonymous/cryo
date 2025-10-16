@@ -9,8 +9,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * This DTO is used internally by the UserService to create a new user.
- * It is separate from RegisterDto to decouple the user domain from the auth domain.
- * The password field should contain an already hashed password from Auth Service.
+ * It is separate from registration DTOs to decouple user management.
+ * The password field should contain an already hashed password.
  */
 export class CreateUserDto {
   @ApiProperty({
@@ -34,12 +34,14 @@ export class CreateUserDto {
   email: string;
 
   @ApiProperty({
-    description: 'Pre-hashed password from Auth Service',
+    description: 'Pre-hashed password from calling service',
     example: '$2b$10$...',
     minLength: 60, // bcrypt hash length
   })
   @IsNotEmpty({ message: 'Password is required' })
   @IsString({ message: 'Password must be a string' })
-  @MinLength(60, { message: 'Password hash must be at least 60 characters (bcrypt format)' })
-  password: string; // Already hashed password from Auth Service
+  @MinLength(60, {
+    message: 'Password hash must be at least 60 characters (bcrypt format)',
+  })
+  password: string; // Already hashed password from calling service
 }

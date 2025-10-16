@@ -7,20 +7,42 @@ resources:
 - namespace.yaml
 - configmap.yaml
 - secret.yaml
+- serviceaccount.yaml
 - deployment.yaml
 - service.yaml
 - postgres-deployment.yaml
 - redis-deployment.yaml
 - hpa.yaml
+- vpa.yaml
+- poddisruptionbudget.yaml
+- networkpolicy.yaml
 - ingress.yaml
 - servicemonitor.yaml
+- prometheusrule.yaml
+- grafana-dashboard.yaml
 
 commonLabels:
   app.kubernetes.io/name: user-service
-  app.kubernetes.io/component: backend
+  app.kubernetes.io/component: microservice
   app.kubernetes.io/part-of: cryo-microservices
-  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/version: "2.0.0"
 
 images:
 - name: ghcr.io/your-org/cryo/user-service
   newTag: latest
+
+# Patches for different environments
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: user-service-deployment
+  spec:
+    template:
+      metadata:
+        annotations:
+          config.linkerd.io/proxy-cpu-request: "0.1"
+          config.linkerd.io/proxy-memory-request: "20Mi"
+          config.linkerd.io/proxy-cpu-limit: "1"
+          config.linkerd.io/proxy-memory-limit: "250Mi"

@@ -8,6 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { UserPreferences, PrivacySettings } from '../interfaces';
 
 @Entity('users')
 export class User {
@@ -64,4 +65,43 @@ export class User {
     nullable: true,
   })
   deletedAt?: Date;
+
+  // Profile fields
+  @Column({
+    type: 'varchar',
+    length: 500,
+    name: 'avatar_url',
+    nullable: true,
+  })
+  avatarUrl?: string;
+
+  // Encrypted sensitive data - stored as encrypted strings in database
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: 'Encrypted user preferences data',
+  })
+  preferences?: UserPreferences;
+
+  @Column({
+    type: 'text',
+    name: 'privacy_settings',
+    nullable: true,
+    comment: 'Encrypted privacy settings data',
+  })
+  privacySettings?: PrivacySettings;
+
+  @Column({
+    type: 'boolean',
+    name: 'is_active',
+    default: true,
+  })
+  @Index('user_is_active_idx')
+  isActive: boolean;
+
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+  })
+  metadata?: Record<string, any>;
 }

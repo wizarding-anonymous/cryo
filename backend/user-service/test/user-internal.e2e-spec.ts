@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  ClassSerializerInterceptor,
+} from '@nestjs/common';
 import * as request from 'supertest';
 import { TestAppModule } from './test-app.module';
 import { GlobalExceptionFilter } from '../src/common/filters/global-exception.filter';
@@ -90,7 +94,7 @@ describe('User Internal API Endpoints (e2e)', () => {
         .post('/api/users')
         .send(testUserData)
         .expect(201);
-      
+
       createdUserId = response.body.data.id;
     });
 
@@ -101,7 +105,7 @@ describe('User Internal API Endpoints (e2e)', () => {
           email: `new-test-${Date.now()}@example.com`,
           password: '$2b$10$anotherHashedPasswordFromAuthService',
         };
-        
+
         return request(app.getHttpServer())
           .post('/api/users')
           .send(newUserData)
@@ -206,7 +210,9 @@ describe('User Internal API Endpoints (e2e)', () => {
           .patch(`/api/users/${createdUserId}/last-login`)
           .expect(200)
           .then((res) => {
-            expect(res.body.data.message).toEqual('Last login updated successfully');
+            expect(res.body.data.message).toEqual(
+              'Last login updated successfully',
+            );
           });
       });
 

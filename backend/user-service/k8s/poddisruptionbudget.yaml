@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: user-service-pdb
+  namespace: microservices
+  labels:
+    app: user-service
+    component: microservice
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: user-service

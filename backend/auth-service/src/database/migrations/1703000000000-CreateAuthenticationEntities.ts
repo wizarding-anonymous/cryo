@@ -79,8 +79,17 @@ export class CreateAuthenticationEntities1703000000000 implements MigrationInter
     `);
 
     // Update tables to use enum types
+    // First drop default values, then change type, then restore defaults
+    await queryRunner.query(`
+      ALTER TABLE "token_blacklist" ALTER COLUMN "reason" DROP DEFAULT
+    `);
+    
     await queryRunner.query(`
       ALTER TABLE "token_blacklist" ALTER COLUMN "reason" TYPE "token_blacklist_reason_enum" USING "reason"::"token_blacklist_reason_enum"
+    `);
+    
+    await queryRunner.query(`
+      ALTER TABLE "token_blacklist" ALTER COLUMN "reason" SET DEFAULT 'logout'
     `);
 
     await queryRunner.query(`

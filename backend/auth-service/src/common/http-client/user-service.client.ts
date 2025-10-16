@@ -62,7 +62,7 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
     }
 
     try {
-      const user = await this.get<User>(`/users/email/${email}`);
+      const user = await this.get<User>(`/api/users/email/${email}`);
       await this.userCacheService.setCachedUserByEmail(email, user);
       this.logger.debug(`User found and cached: ${email}`);
       return user;
@@ -105,7 +105,7 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
     }
 
     try {
-      const user = await this.get<User>(`/users/${id}`);
+      const user = await this.get<User>(`/api/users/${id}`);
       await this.userCacheService.setCachedUserById(id, user);
       this.logger.debug(`User found and cached: ${id}`);
       return user;
@@ -142,7 +142,7 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
    */
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     try {
-      const user = await this.post<User>('/users', createUserDto);
+      const user = await this.post<User>('/api/users', createUserDto);
       
       // Cache the newly created user in both email and ID indexes
       await this.userCacheService.setCachedUser(user);
@@ -176,7 +176,7 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
    */
   async updateLastLogin(userId: string): Promise<void> {
     try {
-      await this.patch(`/users/${userId}/last-login`, {
+      await this.patch(`/api/users/${userId}/last-login`, {
         lastLoginAt: new Date().toISOString(),
       });
       
@@ -206,7 +206,7 @@ export class UserServiceClient extends BaseCircuitBreakerClient {
    */
   async userExists(userId: string): Promise<boolean> {
     try {
-      const response = await this.get<UserExistsResponse>(`/users/${userId}/exists`);
+      const response = await this.get<UserExistsResponse>(`/api/users/${userId}/exists`);
       return response.exists;
     } catch (error) {
       if (error.response?.status === 404) {

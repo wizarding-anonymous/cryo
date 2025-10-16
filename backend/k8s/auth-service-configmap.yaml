@@ -1,0 +1,157 @@
+# =============================================================================
+# Auth Service ConfigMap Configuration
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: microservices
+  labels:
+    app: auth-service
+    tier: backend
+    component: authentication
+data:
+  # Application configuration
+  NODE_ENV: "staging"
+  PORT: "3001"
+  
+  # CORS Configuration
+  CORS_ORIGIN: "http://localhost:3000,https://staging.yourdomain.com"
+  CORS_CREDENTIALS: "true"
+  
+  # Database configuration (non-sensitive)
+  DATABASE_HOST: "postgres-auth"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "auth_db"
+  DATABASE_USERNAME: "auth_service"
+  POSTGRES_AUTH_HOST: "postgres-auth"
+  POSTGRES_AUTH_DB: "auth_db"
+  POSTGRES_AUTH_USER: "auth_service"
+  
+  # Database Connection Pooling
+  DATABASE_MAX_CONNECTIONS: "20"
+  DATABASE_MIN_CONNECTIONS: "5"
+  DATABASE_ACQUIRE_TIMEOUT: "30000"
+  DATABASE_IDLE_TIMEOUT: "30000"
+  DATABASE_CONNECTION_TIMEOUT: "10000"
+  DATABASE_RETRY_ATTEMPTS: "3"
+  DATABASE_RETRY_DELAY: "3000"
+  DATABASE_CONNECT_TIMEOUT: "10000"
+  
+  # Migration Configuration
+  RUN_MIGRATIONS: "true"
+  
+  # Redis configuration (non-sensitive)
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "1"
+  AUTH_REDIS_HOST: "redis"
+  REDIS_TTL: "86400"
+  REDIS_MAX_RETRIES: "3"
+  REDIS_RETRY_DELAY: "1000"
+  REDIS_CONNECT_TIMEOUT: "10000"
+  REDIS_COMMAND_TIMEOUT: "5000"
+  
+  # JWT Configuration (non-sensitive settings)
+  JWT_EXPIRES_IN: "1h"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  JWT_ISSUER: "cryo-auth-service"
+  JWT_AUDIENCE: "cryo-platform"
+  JWT_ALGORITHM: "HS256"
+  
+  # Service URLs (internal cluster communication)
+  USER_SERVICE_URL: "http://user-service:3002"
+  SECURITY_SERVICE_URL: "http://security-service:3010"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:3007"
+  
+  # Circuit Breaker Configuration
+  CIRCUIT_BREAKER_TIMEOUT: "3000"
+  CIRCUIT_BREAKER_ERROR_THRESHOLD: "50"
+  CIRCUIT_BREAKER_RESET_TIMEOUT: "30000"
+  CIRCUIT_BREAKER_ROLLING_TIMEOUT: "10000"
+  CIRCUIT_BREAKER_ROLLING_BUCKETS: "10"
+  CIRCUIT_BREAKER_VOLUME_THRESHOLD: "10"
+  
+  # User Service Circuit Breaker
+  USER_SERVICE_CIRCUIT_BREAKER_TIMEOUT: "3000"
+  USER_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: "50"
+  USER_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: "30000"
+  
+  # Security Service Circuit Breaker
+  SECURITY_SERVICE_CIRCUIT_BREAKER_TIMEOUT: "5000"
+  SECURITY_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: "60"
+  SECURITY_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: "60000"
+  SECURITY_SERVICE_CIRCUIT_BREAKER_VOLUME_THRESHOLD: "5"
+  
+  # Notification Service Circuit Breaker
+  NOTIFICATION_SERVICE_CIRCUIT_BREAKER_TIMEOUT: "5000"
+  NOTIFICATION_SERVICE_CIRCUIT_BREAKER_ERROR_THRESHOLD: "70"
+  NOTIFICATION_SERVICE_CIRCUIT_BREAKER_RESET_TIMEOUT: "60000"
+  NOTIFICATION_SERVICE_CIRCUIT_BREAKER_VOLUME_THRESHOLD: "3"
+  
+  # Event Bus Configuration
+  EVENT_BUS_RETRY_ATTEMPTS: "3"
+  EVENT_BUS_RETRY_DELAY: "1000"
+  SECURITY_EVENTS_QUEUE: "security-events"
+  NOTIFICATION_EVENTS_QUEUE: "notification-events"
+  USER_EVENTS_QUEUE: "user-events"
+  
+  # Session Configuration
+  SESSION_CLEANUP_INTERVAL: "3600000"  # 1 hour in ms
+  SESSION_MAX_AGE: "86400000"          # 24 hours in ms
+  MAX_SESSIONS_PER_USER: "5"
+  
+  # Rate Limiting
+  RATE_LIMIT_WINDOW: "60000"           # 1 minute
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  LOGIN_RATE_LIMIT_WINDOW: "900000"    # 15 minutes
+  LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "5"
+  
+  # Async Operations Configuration
+  MAX_QUEUE_SIZE: "10000"              # Maximum items in priority queue
+  MAX_CONCURRENT_JOBS: "100"           # Maximum concurrent async operations
+  BACKPRESSURE_THRESHOLD: "0.8"        # Backpressure activation threshold (80%)
+  MAX_WORKER_PROCESSES: "4"            # Number of worker processes for CPU-intensive tasks
+  WORKER_SCRIPT_PATH: "./worker-thread.js"  # Path to worker thread script
+  
+  # Performance Tuning
+  CRITICAL_PATH_TIMEOUT: "5000"        # Timeout for critical auth operations (ms)
+  EVENT_PROCESSING_BATCH_SIZE: "10"   # Batch size for event processing
+  ASYNC_OPERATION_TIMEOUT: "30000"    # Default timeout for async operations (ms)
+  
+  # Saga Pattern Configuration
+  USE_SAGA_PATTERN: "true"             # Enable/disable saga pattern for transactions
+  SAGA_TIMEOUT: "30000"                # Default saga step timeout in ms (30 seconds)
+  SAGA_MAX_RETRIES: "3"                # Maximum retry attempts per saga step
+  SAGA_LOCK_TTL: "60000"               # Distributed lock TTL in ms (60 seconds)
+  SAGA_CLEANUP_INTERVAL: "3600000"     # Saga cleanup interval in ms (1 hour)
+  SAGA_RETENTION_HOURS: "24"           # How long to keep completed sagas (hours)
+  
+  # Idempotency Configuration
+  IDEMPOTENCY_TTL_SECONDS: "86400"     # TTL for idempotent operations (24 hours)
+  IDEMPOTENCY_ENABLED: "true"          # Enable/disable idempotency middleware
+  
+  # Performance Monitoring
+  METRICS_RETENTION_HOURS: "24"        # How long to keep performance metrics
+  METRICS_AGGREGATION_INTERVAL: "60000" # Metrics aggregation interval in ms (1 minute)
+  METRICS_CLEANUP_INTERVAL: "300000"   # Metrics cleanup interval in ms (5 minutes)
+  
+  # Critical Path Optimization
+  AUTH_FLOW_FALLBACK_ENABLED: "true"   # Enable fallback for auth operations
+  ASYNC_EVENT_PROCESSING: "true"       # Enable async event processing with setImmediate
+  
+  # Health Check Configuration
+  HEALTH_CHECK_TIMEOUT: "3000"         # Health check timeout in ms
+  HEALTH_CHECK_INTERVAL: "30000"       # Health check interval in ms
+  HEALTH_CHECK_SILENT: "true"
+  
+  # Logging Configuration
+  LOG_LEVEL: "info"                    # Staging log level
+  LOG_FORMAT: "json"                   # Structured logging
+  LOG_MAX_FILES: "5"                   # Maximum log files to keep
+  LOG_MAX_SIZE: "50MB"                 # Maximum log file size
+  
+  # Monitoring configuration
+  METRICS_ENABLED: "true"
+  METRICS_PATH: "/api/metrics"

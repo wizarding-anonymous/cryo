@@ -3,12 +3,58 @@ kind: ConfigMap
 metadata:
   name: user-service-config
   namespace: microservices
+  labels:
+    app: user-service
+    component: microservice
 data:
+  # Application configuration
   NODE_ENV: "production"
-  PORT: "3001"
-  POSTGRES_HOST: "user-service-postgres"
+  PORT: "3002"
+  SERVICE_NAME: "user-service"
+  SERVICE_VERSION: "2.0.0"
+  
+  # Logging configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  
+  # Database configuration
+  POSTGRES_HOST: "postgres-user"
   POSTGRES_PORT: "5432"
-  POSTGRES_DB: "user_service_db"
-  REDIS_HOST: "user-service-redis"
+  POSTGRES_DB: "user_db"
+  POSTGRES_USER: "user_service"
+  POSTGRES_MAX_CONNECTIONS: "20"
+  POSTGRES_MIN_CONNECTIONS: "5"
+  POSTGRES_ACQUIRE_TIMEOUT: "30000"
+  POSTGRES_IDLE_TIMEOUT: "30000"
+  POSTGRES_CONNECTION_TIMEOUT: "2000"
+  
+  # Redis configuration
+  REDIS_HOST: "redis"
   REDIS_PORT: "6379"
-  JWT_EXPIRES_IN: "1h"
+  REDIS_DB: "0"
+  REDIS_KEY_PREFIX: "user-service:"
+  
+  # Cache configuration
+  CACHE_TTL: "300"
+  CACHE_MAX_ITEMS: "10000"
+  
+  # Rate limiting configuration
+  RATE_LIMIT_TTL: "60"
+  RATE_LIMIT_MAX: "100"
+  RATE_LIMIT_BATCH_TTL: "300"
+  RATE_LIMIT_BATCH_MAX: "10"
+  
+  # File upload configuration
+  MAX_FILE_SIZE: "5242880"  # 5MB
+  UPLOAD_PATH: "/usr/src/app/uploads"
+  
+  # Health check configuration
+  HEALTH_CHECK_TIMEOUT: "5000"
+  HEALTH_CHECK_INTERVAL: "30000"
+  
+  # Graceful shutdown configuration
+  SHUTDOWN_TIMEOUT: "30000"
+  
+  # Monitoring configuration
+  METRICS_ENABLED: "true"
+  METRICS_PATH: "/api/metrics"

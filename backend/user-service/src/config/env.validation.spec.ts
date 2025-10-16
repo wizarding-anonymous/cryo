@@ -9,6 +9,7 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
+        ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
       };
 
       const { error } = envValidationSchema.validate(validEnv);
@@ -28,8 +29,6 @@ describe('Environment Validation Schema', () => {
     });
   });
 
-
-
   describe('PORT validation', () => {
     it('should use default port when not provided', () => {
       const env = {
@@ -38,6 +37,7 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
+        ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
       };
 
       const { error, value } = envValidationSchema.validate(env);
@@ -53,6 +53,7 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
+        ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
       };
 
       const { error } = envValidationSchema.validate(invalidEnv);
@@ -72,6 +73,7 @@ describe('Environment Validation Schema', () => {
           POSTGRES_PASSWORD: 'password',
           POSTGRES_DB: 'testdb',
           REDIS_HOST: 'localhost',
+          ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
         };
 
         const { error } = envValidationSchema.validate(env);
@@ -87,6 +89,7 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
+        ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
       };
 
       const { error } = envValidationSchema.validate(invalidEnv);
@@ -103,6 +106,7 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
+        ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
       };
 
       const { error, value } = envValidationSchema.validate(env);
@@ -121,6 +125,7 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
+        ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
       };
 
       const { error, value } = envValidationSchema.validate(env);
@@ -140,6 +145,7 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
+        ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
         GAME_CATALOG_SERVICE_URL: 'http://localhost:3002',
         NOTIFICATION_SERVICE_URL: 'https://api.example.com/notifications',
       };
@@ -155,6 +161,7 @@ describe('Environment Validation Schema', () => {
         POSTGRES_PASSWORD: 'password',
         POSTGRES_DB: 'testdb',
         REDIS_HOST: 'localhost',
+        ENCRYPTION_KEY: 'test-encryption-key-32-chars-long',
         GAME_CATALOG_SERVICE_URL: 'not-a-valid-url',
       };
 

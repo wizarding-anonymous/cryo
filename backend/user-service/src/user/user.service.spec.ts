@@ -4,7 +4,15 @@ import { Repository } from 'typeorm';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
 import { SecurityClient } from '../integrations/security/security.client';
+import { IntegrationService } from '../integrations/integration.service';
+import { CacheService } from '../common/cache/cache.service';
+import { BatchService } from './batch.service';
 import { NotFoundException } from '@nestjs/common';
+import { LoggingService } from '../common/logging/logging.service';
+import { AuditService } from '../common/logging/audit.service';
+import { PaginationService } from '../common/services/pagination.service';
+import { UserEncryptionService } from './services/user-encryption.service';
+import { UserServiceError } from '../common/errors/user-service.error';
 
 // Mock implementations for dependencies
 const mockUserRepository = {
@@ -24,7 +32,6 @@ const mockSecurityClient = {
 
 describe('UserService', () => {
   let service: UserService;
-  let _repository: Repository<User>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -38,11 +45,75 @@ describe('UserService', () => {
           provide: SecurityClient,
           useValue: mockSecurityClient,
         },
+        {
+          provide: IntegrationService,
+          useValue: {
+            notifyUserCreated: jest.fn().mockResolvedValue(undefined),
+            notifyUserUpdated: jest.fn().mockResolvedValue(undefined),
+            notifyUserDeleted: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: CacheService,
+          useValue: {
+            getUser: jest.fn(),
+            setUser: jest.fn(),
+            invalidateUser: jest.fn(),
+            getUsersBatch: jest.fn().mockResolvedValue(new Map()),
+            setUsersBatch: jest.fn(),
+            warmUpCache: jest.fn(),
+            clearCache: jest.fn(),
+            getCacheStats: jest.fn(),
+          },
+        },
+        {
+          provide: BatchService,
+          useValue: {
+            getUsersByIds: jest.fn(),
+            createUsers: jest.fn(),
+            updateUsers: jest.fn(),
+            softDeleteUsers: jest.fn(),
+          },
+        },
+        {
+          provide: LoggingService,
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+            logDatabaseOperation: jest.fn(),
+          },
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            logAuditEvent: jest.fn(),
+            logDataAccess: jest.fn(),
+            logUserOperation: jest.fn(),
+            logEnhancedDataAccess: jest.fn(),
+          },
+        },
+        {
+          provide: PaginationService,
+          useValue: {
+            paginate: jest.fn(),
+            createPaginationResponse: jest.fn(),
+          },
+        },
+        {
+          provide: UserEncryptionService,
+          useValue: {
+            encryptUserData: jest.fn(),
+            decryptUserData: jest.fn(),
+            prepareUserForSave: jest.fn((user) => user),
+            decryptUserForResponse: jest.fn((user) => user),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
-    _repository = module.get<Repository<User>>(getRepositoryToken(User));
   });
 
   afterEach(() => {
@@ -54,11 +125,12 @@ describe('UserService', () => {
   });
 
   describe('create', () => {
-    it('should create a new user with pre-hashed password from auth-service', async () => {
+    it('should create a new user with pre-hashed password from calling service', async () => {
       const createUserDto = {
         name: 'Test',
         email: 'test@example.com',
-        password: '$2b$10$hashedPasswordFromAuthService', // Already hashed by auth-service
+        password:
+          '$2b$10$hashedPasswordFromCallingServiceWithProperLength123456', // Already hashed by calling service
       };
       const userEntity = { ...createUserDto };
       const savedUser = { id: 'a-uuid', ...userEntity };
@@ -68,7 +140,7 @@ describe('UserService', () => {
 
       const result = await service.create(createUserDto);
 
-      // Password should NOT be hashed again since it comes pre-hashed from auth-service
+      // Password should NOT be hashed again since it comes pre-hashed from calling service
       expect(mockUserRepository.create).toHaveBeenCalledWith({
         name: createUserDto.name,
         email: createUserDto.email,
@@ -84,7 +156,7 @@ describe('UserService', () => {
     it('should return a user if found', async () => {
       const email = 'test@example.com';
       const user = { id: 'a-uuid', email };
-      mockUserRepository.findOne.mockResolvedValue(user);
+      mockUserRepository.findOne.mockResolvedValueOnce(user);
 
       const result = await service.findByEmail(email);
 
@@ -105,13 +177,15 @@ describe('UserService', () => {
     it('should delete a user successfully', async () => {
       const userId = 'a-uuid';
       const mockUser = { id: userId, name: 'Test', email: 'test@example.com' };
-      
+
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockUserRepository.softDelete.mockResolvedValue({ affected: 1 });
 
       await service.delete(userId);
 
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({ where: { id: userId } });
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
       expect(mockUserRepository.softDelete).toHaveBeenCalledWith(userId);
     });
 
@@ -119,7 +193,7 @@ describe('UserService', () => {
       const userId = 'a-uuid';
       mockUserRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.delete(userId)).rejects.toThrow(NotFoundException);
+      await expect(service.delete(userId)).rejects.toThrow(UserServiceError);
     });
   });
 });

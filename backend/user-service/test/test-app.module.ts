@@ -61,4 +61,4 @@ import { TestConfigModule } from './test-config.module';
     // ThrottlerGuard is completely disabled in tests
   ],
 })
-export class TestAppModule { }
+export class TestAppModule {}

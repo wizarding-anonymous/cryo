@@ -32,14 +32,12 @@ async function bootstrap() {
     logger: WinstonModule.createLogger(winstonConfig),
   });
 
-  // Get HttpAdapterHost to use with the global exception filter
-  const httpAdapterHost = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
+  // GlobalExceptionFilter теперь применяется через APP_FILTER в AppModule
+  // для правильной инжекции зависимостей
 
   // Apply global interceptors
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(app.get(Reflector)), // For @Exclude decorator
-    new LoggingInterceptor(),
     new ResponseInterceptor(),
   );
 
@@ -55,8 +53,71 @@ async function bootstrap() {
   // --- Swagger API Documentation ---
   const config = new DocumentBuilder()
     .setTitle('User Service API')
-    .setDescription('API documentation for the User Service microservice')
-    .setVersion('1.0')
+    .setDescription(
+      `
+      API documentation for the User Service microservice
+      
+      ## Features
+      - Standardized API responses with correlation IDs
+      - Cursor-based and offset-based pagination
+      - Advanced filtering and search capabilities
+      - Internal microservice endpoints
+      - Comprehensive error handling
+      
+      ## Response Format
+      All public API endpoints return responses in the following standardized format:
+      \`\`\`json
+      {
+        "success": true,
+        "data": { ... },
+        "error": null,
+        "meta": { ... },
+        "timestamp": "2023-12-01T10:00:00Z",
+        "correlationId": "req_123456789"
+      }
+      \`\`\`
+      
+      ## Pagination
+      - **Offset-based**: Use \`page\` and \`limit\` parameters
+      - **Cursor-based**: Use \`cursor\` parameter for better performance with large datasets
+      - Both methods support sorting with \`sortBy\` and \`sortOrder\` parameters
+      
+      ## Filtering
+      Most list endpoints support filtering through query parameters:
+      - Text fields: partial matching (case-insensitive)
+      - Boolean fields: exact matching
+      - Date fields: range filtering with \`from\` and \`to\` suffixes
+    `,
+    )
+    .setVersion('2.0')
+    .addTag('Users', 'User management endpoints with pagination and filtering')
+    .addTag(
+      'Internal Microservice APIs',
+      'Internal endpoints for microservice communication',
+    )
+    .addTag(
+      'Batch Operations',
+      'Bulk operations for high-performance scenarios',
+    )
+    .addTag('Health', 'Service health and monitoring endpoints')
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'X-API-Key',
+        in: 'header',
+        description: 'Internal API key for microservice authentication',
+      },
+      'internal-api-key',
+    )
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Internal JWT token for microservice authentication',
+      },
+      'internal-bearer',
+    )
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/api-docs', app, document);
@@ -64,5 +125,40 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
   console.log(`🚀 Application is running on: http://localhost:${port}/api`);
+
+  // Graceful shutdown handling for Kubernetes
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`🔄 Received ${signal}, starting graceful shutdown...`);
+    
+    try {
+      // Stop accepting new requests
+      await app.close();
+      console.log('✅ HTTP server closed');
+      
+      // Give time for ongoing requests to complete
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      console.log('✅ Graceful shutdown completed');
+      process.exit(0);
+    } catch (error) {
+      console.error('❌ Error during graceful shutdown:', error);
+      process.exit(1);
+    }
+  };
+
+  // Handle termination signals
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    gracefulShutdown('uncaughtException');
+  });
+  
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    gracefulShutdown('unhandledRejection');
+  });
 }
 void bootstrap();

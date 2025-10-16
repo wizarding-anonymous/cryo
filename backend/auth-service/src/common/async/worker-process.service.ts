@@ -42,7 +42,7 @@ export class WorkerProcessService extends EventEmitter implements OnModuleDestro
     workerScript = './worker-thread.js'
   ) {
     super();
-    this.maxWorkers = maxWorkers;
+    this.maxWorkers = Math.max(0, maxWorkers); // Allow 0 workers for fallback mode
     this.workerScript = workerScript;
 
     // Initialize priority queues
@@ -50,12 +50,17 @@ export class WorkerProcessService extends EventEmitter implements OnModuleDestro
     this.taskQueue.set(Priority.NORMAL, []);
     this.taskQueue.set(Priority.LOW, []);
 
-    this.initializeWorkers();
-    this.startTaskDistribution();
+    // Only initialize workers if maxWorkers > 0
+    if (this.maxWorkers > 0) {
+      this.initializeWorkers();
+      this.startTaskDistribution();
+    } else {
+      this.logger.warn('Worker processes disabled (MAX_WORKER_PROCESSES=0). Running in fallback mode.');
+    }
   }
 
   /**
-   * Execute heavy operation in worker process
+   * Execute heavy operation in worker process or fallback to main thread
    */
   async executeInWorker<T>(
     taskType: string,
@@ -65,6 +70,11 @@ export class WorkerProcessService extends EventEmitter implements OnModuleDestro
   ): Promise<T> {
     if (this.isShuttingDown) {
       throw new Error('Worker service is shutting down');
+    }
+
+    // Fallback mode: execute in main thread if no workers
+    if (this.maxWorkers === 0) {
+      return this.executeInMainThread<T>(taskType, payload);
     }
 
     const taskId = this.generateTaskId();
@@ -412,6 +422,74 @@ export class WorkerProcessService extends EventEmitter implements OnModuleDestro
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Execute task in main thread (fallback mode)
+   */
+  private async executeInMainThread<T>(taskType: string, payload: any): Promise<T> {
+    const startTime = Date.now();
+    
+    try {
+      let result: any;
+      
+      // Handle common task types in main thread
+      switch (taskType) {
+        case 'hash-password':
+          const bcrypt = require('bcrypt');
+          const { password, saltRounds = 10 } = payload;
+          result = await bcrypt.hash(password, saltRounds);
+          break;
+          
+        case 'compare-password':
+          const bcryptCompare = require('bcrypt');
+          const { password: pwd, hash } = payload;
+          result = await bcryptCompare.compare(pwd, hash);
+          break;
+          
+        case 'hash-token':
+          const crypto = require('crypto');
+          const { token } = payload;
+          result = crypto.createHash('sha256').update(token).digest('hex');
+          break;
+          
+        default:
+          this.logger.warn(`Unsupported task type in fallback mode: ${taskType}`);
+          throw new Error(`Unsupported task type: ${taskType}`);
+      }
+      
+      const processingTime = Date.now() - startTime;
+      
+      // Record metrics
+      this.metricsService.recordMetric({
+        operationType: `fallback_${taskType}`,
+        duration: processingTime,
+        timestamp: new Date(),
+        success: true,
+        priority: 'normal',
+      });
+      
+      this.logger.debug(`Task ${taskType} executed in main thread (fallback)`, {
+        processingTime,
+      });
+      
+      return result;
+      
+    } catch (error) {
+      const processingTime = Date.now() - startTime;
+      
+      // Record metrics
+      this.metricsService.recordMetric({
+        operationType: `fallback_${taskType}`,
+        duration: processingTime,
+        timestamp: new Date(),
+        success: false,
+        priority: 'normal',
+      });
+      
+      this.logger.error(`Task ${taskType} failed in main thread (fallback):`, error);
+      throw error;
     }
   }
 

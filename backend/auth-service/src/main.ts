@@ -3,6 +3,13 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { webcrypto } from 'crypto';
+
+// Fix for @nestjs/schedule crypto issue in Docker
+// @nestjs/schedule expects Web Crypto API, not Node.js crypto module
+if (!global.crypto) {
+  global.crypto = webcrypto as any;
+}
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');

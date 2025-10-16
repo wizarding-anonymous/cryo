@@ -67,6 +67,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/package.json ./
 # Copy health check script
 COPY --from=builder --chown=nestjs:nodejs /app/health-check.js ./
 
+# Copy worker thread script for async operations
+COPY --from=builder --chown=nestjs:nodejs /app/src/common/async/worker-thread.js ./worker-thread.js
+
 # Copy database migration files if they exist
 COPY --from=builder --chown=nestjs:nodejs /app/typeorm.config.ts ./
 COPY --from=builder --chown=nestjs:nodejs /app/src/migrations ./src/migrations
@@ -92,7 +95,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
 
 # =============================================================================
 # Security and Optimization Features:

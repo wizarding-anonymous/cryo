@@ -87,7 +87,13 @@ describe('Common Components', () => {
         httpAdapter: mockHttpAdapter,
       } as HttpAdapterHost;
 
-      filter = new GlobalExceptionFilter(httpAdapterHost);
+      const mockLoggingService = {
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn(),
+      };
+      filter = new GlobalExceptionFilter(httpAdapterHost, mockLoggingService as any);
     });
 
     it('should catch HttpException and format response', () => {

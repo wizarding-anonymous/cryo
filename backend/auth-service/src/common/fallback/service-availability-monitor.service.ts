@@ -67,7 +67,7 @@ export class ServiceAvailabilityMonitorService {
       {
         name: 'UserService',
         url: this.configService.get<string>('USER_SERVICE_URL', 'http://localhost:3002'),
-        healthPath: '/health',
+        healthPath: '/api/v1/health',
       },
       {
         name: 'SecurityService',

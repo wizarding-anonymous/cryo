@@ -1,0 +1,89 @@
+# Docker Compose configuration for User Service testing and development
+# This file includes only User Service and its direct dependencies
+
+services:
+  # User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service-test
+    ports:
+      - "3002:3002"
+    depends_on:
+      - postgres-user
+      - redis
+    env_file:
+      - ./user-service/.env.docker
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      - NODE_ENV=${NODE_ENV:-development}
+      - DB_HOST=postgres-user
+      - DB_PORT=5432
+      - DB_USER=user_service
+      - DB_PASSWORD=user_password
+      - DB_NAME=user_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USER_SERVICE_PORT=3002
+    networks:
+      - user-service-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL for User Service
+  postgres-user:
+    image: postgres:15-alpine
+    container_name: user-service-postgres-test
+    environment:
+      POSTGRES_USER: user_service
+      POSTGRES_PASSWORD: user_password
+      POSTGRES_DB: user_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_user_test_data:/var/lib/postgresql/data
+    networks:
+      - user-service-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_service -d user_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis Cache (shared)
+  redis:
+    image: redis:7-alpine
+    container_name: user-service-redis-test
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - user-service-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_password}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Volumes for data persistence
+volumes:
+  postgres_user_test_data:
+  redis_test_data:
+
+# Network for User Service testing
+networks:
+  user-service-network:
+    driver: bridge

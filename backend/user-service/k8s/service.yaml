@@ -5,11 +5,37 @@ metadata:
   namespace: microservices
   labels:
     app: user-service
+    component: microservice
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3002"
+    prometheus.io/path: "/api/metrics"
 spec:
   type: ClusterIP
+  sessionAffinity: None
   ports:
-  - port: 3001
-    targetPort: 3001
+  - port: 3002
+    targetPort: 3002
+    protocol: TCP
+    name: http
+  selector:
+    app: user-service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service-headless
+  namespace: microservices
+  labels:
+    app: user-service
+    component: microservice
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 3002
+    targetPort: 3002
     protocol: TCP
     name: http
   selector:

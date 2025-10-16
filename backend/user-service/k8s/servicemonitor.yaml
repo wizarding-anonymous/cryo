@@ -2,9 +2,10 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: user-service-metrics
-  namespace: gaming-platform
+  namespace: microservices
   labels:
     app: user-service
+    component: microservice
     release: prometheus
 spec:
   selector:
@@ -13,5 +14,29 @@ spec:
   endpoints:
   - port: http
     path: /api/metrics
-    interval: 30s
+    interval: 15s
     scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'go_.*'
+      action: drop
+    - sourceLabels: [__name__]
+      regex: 'process_.*'
+      action: drop
+    - sourceLabels: [__name__]
+      regex: 'nodejs_.*'
+      action: keep
+    - sourceLabels: [__name__]
+      regex: 'http_.*'
+      action: keep
+    - sourceLabels: [__name__]
+      regex: 'user_.*'
+      action: keep
+  namespaceSelector:
+    matchNames:
+    - microservices
+  targetLabels:
+  - app
+  - version
+  - component

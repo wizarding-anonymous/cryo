@@ -28,6 +28,9 @@ import { AsyncMonitoringController } from './async-monitoring.controller';
         const maxWorkers = parseInt(process.env.MAX_WORKER_PROCESSES || '4');
         const workerScript = process.env.WORKER_SCRIPT_PATH || './worker-thread.js';
         
+        // Log configuration for debugging
+        console.log(`WorkerProcessService configuration: maxWorkers=${maxWorkers}, workerScript=${workerScript}`);
+        
         return new WorkerProcessService(metricsService, maxWorkers, workerScript);
       },
       inject: [AsyncMetricsService],

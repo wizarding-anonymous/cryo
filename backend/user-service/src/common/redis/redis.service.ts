@@ -47,56 +47,46 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-
-
   /**
-   * Cache user session data
-   * @param userId User ID
-   * @param sessionData Session data to cache
+   * Generic cache operations for user data
+   * @param key Cache key
+   * @param data Data to cache
    * @param ttl Time to live in seconds
    */
-  async cacheUserSession(
-    userId: string,
-    sessionData: any,
-    ttl: number = 3600,
-  ): Promise<void> {
+  async set(key: string, data: any, ttl: number = 300): Promise<void> {
     try {
-      await this.redisClient.setex(
-        `session:${userId}`,
-        ttl,
-        JSON.stringify(sessionData),
-      );
-      this.logger.debug(`User session cached for user: ${userId}`);
+      await this.redisClient.setex(key, ttl, JSON.stringify(data));
+      this.logger.debug(`Data cached with key: ${key}`);
     } catch (error) {
-      this.logger.error(`Failed to cache user session: ${error.message}`);
+      this.logger.error(`Failed to cache data: ${error.message}`);
     }
   }
 
   /**
-   * Get cached user session data
-   * @param userId User ID
-   * @returns Cached session data or null
+   * Get cached data
+   * @param key Cache key
+   * @returns Cached data or null
    */
-  async getUserSession(userId: string): Promise<any | null> {
+  async get(key: string): Promise<any | null> {
     try {
-      const result = await this.redisClient.get(`session:${userId}`);
+      const result = await this.redisClient.get(key);
       return result ? JSON.parse(result) : null;
     } catch (error) {
-      this.logger.error(`Failed to get user session: ${error.message}`);
+      this.logger.error(`Failed to get cached data: ${error.message}`);
       return null;
     }
   }
 
   /**
-   * Remove user session from cache
-   * @param userId User ID
+   * Remove data from cache
+   * @param key Cache key
    */
-  async removeUserSession(userId: string): Promise<void> {
+  async del(key: string): Promise<void> {
     try {
-      await this.redisClient.del(`session:${userId}`);
-      this.logger.debug(`User session removed for user: ${userId}`);
+      await this.redisClient.del(key);
+      this.logger.debug(`Data removed from cache with key: ${key}`);
     } catch (error) {
-      this.logger.error(`Failed to remove user session: ${error.message}`);
+      this.logger.error(`Failed to remove cached data: ${error.message}`);
     }
   }
 

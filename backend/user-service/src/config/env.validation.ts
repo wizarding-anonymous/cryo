@@ -32,11 +32,29 @@ export const envValidationSchema = Joi.object({
   REDIS_MAX_RETRIES: Joi.number().min(0).default(3),
   REDIS_RETRY_DELAY: Joi.number().min(100).default(1000),
 
-
+  // Query Cache Configuration
+  QUERY_CACHE_ENABLED: Joi.boolean().default(true),
+  QUERY_CACHE_TTL: Joi.number().min(30).default(300), // 5 minutes default
+  QUERY_CACHE_MAX_SIZE: Joi.number().min(100).default(10000),
+  SLOW_QUERY_THRESHOLD: Joi.number().min(100).default(1000), // 1 second
 
   // Rate Limiting
   THROTTLE_TTL: Joi.number().min(1000).default(60000), // 1 minute
   THROTTLE_LIMIT: Joi.number().min(1).default(60), // 60 requests per minute
+  
+  // Advanced Rate Limiting
+  RATE_LIMIT_DEFAULT_TTL: Joi.number().min(1000).default(60000), // 1 minute
+  RATE_LIMIT_DEFAULT_LIMIT: Joi.number().min(1).default(60), // 60 requests per minute
+  RATE_LIMIT_BATCH_TTL: Joi.number().min(1000).default(300000), // 5 minutes
+  RATE_LIMIT_BATCH_LIMIT: Joi.number().min(1).default(10), // 10 batch operations per 5 minutes
+  RATE_LIMIT_PROFILE_TTL: Joi.number().min(1000).default(60000), // 1 minute
+  RATE_LIMIT_PROFILE_LIMIT: Joi.number().min(1).default(30), // 30 profile operations per minute
+  RATE_LIMIT_INTERNAL_TTL: Joi.number().min(1000).default(60000), // 1 minute
+  RATE_LIMIT_INTERNAL_LIMIT: Joi.number().min(1).default(1000), // 1000 internal requests per minute
+  RATE_LIMIT_UPLOAD_TTL: Joi.number().min(1000).default(60000), // 1 minute
+  RATE_LIMIT_UPLOAD_LIMIT: Joi.number().min(1).default(5), // 5 uploads per minute
+  RATE_LIMIT_SEARCH_TTL: Joi.number().min(1000).default(60000), // 1 minute
+  RATE_LIMIT_SEARCH_LIMIT: Joi.number().min(1).default(100), // 100 search requests per minute
 
   // Logging
   LOG_LEVEL: Joi.string()
@@ -59,6 +77,14 @@ export const envValidationSchema = Joi.object({
   // Security
   HELMET_ENABLED: Joi.boolean().default(true),
   RATE_LIMIT_ENABLED: Joi.boolean().default(true),
+
+  // Encryption
+  ENCRYPTION_KEY: Joi.string().min(32).required(),
+
+  // Internal Services Security
+  INTERNAL_API_KEYS: Joi.string().allow('').default(''),
+  INTERNAL_ALLOWED_IPS: Joi.string().default('127.0.0.1,::1'),
+  INTERNAL_SERVICE_SECRET: Joi.string().default('user-service-internal'),
 
   // External Services (for future integrations)
   GAME_CATALOG_SERVICE_URL: Joi.string().uri().optional(),
@@ -93,11 +119,29 @@ export interface EnvironmentVariables {
   REDIS_MAX_RETRIES: number;
   REDIS_RETRY_DELAY: number;
 
-
+  // Query Cache
+  QUERY_CACHE_ENABLED: boolean;
+  QUERY_CACHE_TTL: number;
+  QUERY_CACHE_MAX_SIZE: number;
+  SLOW_QUERY_THRESHOLD: number;
 
   // Rate Limiting
   THROTTLE_TTL: number;
   THROTTLE_LIMIT: number;
+  
+  // Advanced Rate Limiting
+  RATE_LIMIT_DEFAULT_TTL: number;
+  RATE_LIMIT_DEFAULT_LIMIT: number;
+  RATE_LIMIT_BATCH_TTL: number;
+  RATE_LIMIT_BATCH_LIMIT: number;
+  RATE_LIMIT_PROFILE_TTL: number;
+  RATE_LIMIT_PROFILE_LIMIT: number;
+  RATE_LIMIT_INTERNAL_TTL: number;
+  RATE_LIMIT_INTERNAL_LIMIT: number;
+  RATE_LIMIT_UPLOAD_TTL: number;
+  RATE_LIMIT_UPLOAD_LIMIT: number;
+  RATE_LIMIT_SEARCH_TTL: number;
+  RATE_LIMIT_SEARCH_LIMIT: number;
 
   // Logging
   LOG_LEVEL: 'error' | 'warn' | 'info' | 'debug' | 'verbose';
@@ -118,6 +162,14 @@ export interface EnvironmentVariables {
   // Security
   HELMET_ENABLED: boolean;
   RATE_LIMIT_ENABLED: boolean;
+
+  // Encryption
+  ENCRYPTION_KEY: string;
+
+  // Internal Services Security
+  INTERNAL_API_KEYS?: string;
+  INTERNAL_ALLOWED_IPS: string;
+  INTERNAL_SERVICE_SECRET: string;
 
   // External Services
   GAME_CATALOG_SERVICE_URL?: string;

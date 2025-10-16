@@ -1,0 +1,97 @@
+# =============================================================================
+# Auth Service Monitoring Configuration
+# =============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: auth-service
+  namespace: microservices
+  labels:
+    app: auth-service
+    tier: backend
+    component: authentication
+spec:
+  selector:
+    matchLabels:
+      app: auth-service
+  endpoints:
+  - port: http
+    path: /api/metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+# Prometheus Rule for Auth Service Alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: auth-service-alerts
+  namespace: microservices
+  labels:
+    app: auth-service
+    tier: backend
+    component: authentication
+spec:
+  groups:
+  - name: auth-service.rules
+    rules:
+    - alert: AuthServiceDown
+      expr: up{job="auth-service"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: auth-service
+      annotations:
+        summary: "Auth Service is down"
+        description: "Auth Service has been down for more than 1 minute"
+    
+    - alert: AuthServiceHighErrorRate
+      expr: rate(http_requests_total{job="auth-service",status=~"5.."}[5m]) > 0.1
+      for: 2m
+      labels:
+        severity: warning
+        service: auth-service
+      annotations:
+        summary: "Auth Service high error rate"
+        description: "Auth Service error rate is above 10% for 2 minutes"
+    
+    - alert: AuthServiceHighLatency
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="auth-service"}[5m])) > 1
+      for: 5m
+      labels:
+        severity: warning
+        service: auth-service
+      annotations:
+        summary: "Auth Service high latency"
+        description: "Auth Service 95th percentile latency is above 1s for 5 minutes"
+    
+    - alert: AuthServiceHighMemoryUsage
+      expr: container_memory_usage_bytes{pod=~"auth-service-.*"} / container_spec_memory_limit_bytes > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        service: auth-service
+      annotations:
+        summary: "Auth Service high memory usage"
+        description: "Auth Service memory usage is above 80% for 5 minutes"
+    
+    - alert: AuthServiceDatabaseConnectionFailure
+      expr: auth_service_database_connections_failed_total > 0
+      for: 1m
+      labels:
+        severity: critical
+        service: auth-service
+      annotations:
+        summary: "Auth Service database connection failure"
+        description: "Auth Service cannot connect to database"
+    
+    - alert: AuthServiceRedisConnectionFailure
+      expr: auth_service_redis_connections_failed_total > 0
+      for: 1m
+      labels:
+        severity: critical
+        service: auth-service
+      annotations:
+        summary: "Auth Service Redis connection failure"
+        description: "Auth Service cannot connect to Redis"

@@ -97,8 +97,6 @@ describe('AppConfigService', () => {
     });
   });
 
-
-
   describe('throttleConfig', () => {
     it('should return throttle configuration object', () => {
       const mockConfig = {

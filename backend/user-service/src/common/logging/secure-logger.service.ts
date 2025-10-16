@@ -21,7 +21,7 @@ export class SecureLoggerService extends Logger {
     }
 
     if (Array.isArray(data)) {
-      return data.map(item => this.sanitizeForLogging(item));
+      return data.map((item) => this.sanitizeForLogging(item));
     }
 
     const sanitized = { ...data };
