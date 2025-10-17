@@ -23,19 +23,10 @@ RUN mkdir -p node_modules && chown -R nestjs:nodejs node_modules
 USER nestjs
 RUN npm ci --legacy-peer-deps && npm cache clean --force
 
-# Switch back to root to create directories
-USER root
-
 # Copy application source with proper ownership
 COPY --chown=nestjs:nodejs . .
 
-# Create dist directory with proper ownership
-RUN mkdir -p dist && chown -R nestjs:nodejs dist
-
-# Switch back to nestjs user
-USER nestjs
-
-# Build the application
+# Build the application (dist directory will be created automatically)
 RUN npm run build
 
 # Stage 2: Production environment with security hardening

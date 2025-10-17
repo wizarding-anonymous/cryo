@@ -80,13 +80,7 @@ export class ConfigFactory {
         softIdleTimeoutMillis: 30000, // Soft idle timeout
 
         // SSL and security
-        ssl:
-          nodeEnv === 'production'
-            ? {
-              rejectUnauthorized: false,
-              sslmode: 'require',
-            }
-            : false,
+        ssl: false, // Disable SSL for Docker environment
 
         // Performance tuning
         keepAlive: true,
@@ -320,38 +314,57 @@ export class ConfigFactory {
 
   /**
    * Get optimized connection pool configuration based on environment
+   * Optimized for microservice architecture and high concurrency
    */
   private getOptimizedPoolConfig(nodeEnv: string, maxConnections: number) {
     const baseConfig = {
       development: {
-        max: Math.min(maxConnections, 10), // Smaller pool for development
-        min: 2, // Keep minimum connections
-        connectionTimeout: 5000, // 5 seconds
-        acquireTimeout: 10000, // 10 seconds to acquire connection
-        idleTimeout: 30000, // 30 seconds idle timeout
+        max: Math.min(maxConnections, 15), // Increased for development testing
+        min: 3, // More minimum connections for stability
+        connectionTimeout: 8000, // Increased for reliability
+        acquireTimeout: 15000, // More time to acquire connection
+        idleTimeout: 45000, // Longer idle timeout for reuse
         statementTimeout: 30000, // 30 seconds for statements
         queryTimeout: 15000, // 15 seconds for queries
         slowQueryThreshold: 1000, // Log queries > 1 second
       },
       test: {
-        max: 5, // Small pool for tests
-        min: 1,
-        connectionTimeout: 3000,
-        acquireTimeout: 5000,
-        idleTimeout: 10000,
-        statementTimeout: 10000,
-        queryTimeout: 5000,
+        max: 8, // Increased for concurrent test execution
+        min: 2, // More minimum connections
+        connectionTimeout: 5000, // Increased for test stability
+        acquireTimeout: 10000, // More time for test scenarios
+        idleTimeout: 15000, // Shorter for test cleanup
+        statementTimeout: 15000, // Adequate for test queries
+        queryTimeout: 8000, // Reasonable for test queries
         slowQueryThreshold: 500, // Log queries > 500ms in tests
       },
       production: {
-        max: maxConnections, // Use full configured pool
-        min: Math.ceil(maxConnections * 0.2), // 20% minimum connections
-        connectionTimeout: 10000, // 10 seconds
-        acquireTimeout: 30000, // 30 seconds to acquire
-        idleTimeout: 60000, // 1 minute idle timeout
-        statementTimeout: 60000, // 1 minute for statements
-        queryTimeout: 30000, // 30 seconds for queries
+        max: Math.min(maxConnections, 50), // Optimized for microservice load
+        min: Math.max(Math.ceil(maxConnections * 0.25), 10), // 25% minimum, at least 10
+        connectionTimeout: 15000, // Increased for network stability
+        acquireTimeout: 45000, // Much more time to handle peak load
+        idleTimeout: 120000, // 2 minutes for better connection reuse
+        statementTimeout: 45000, // Adequate for complex operations
+        queryTimeout: 20000, // Reasonable for production queries
         slowQueryThreshold: 2000, // Log queries > 2 seconds
+        
+        // Additional production optimizations
+        evictionRunIntervalMillis: 30000, // Run eviction every 30 seconds
+        numTestsPerEvictionRun: 5, // Test more connections per run
+        softIdleTimeoutMillis: 60000, // Soft idle timeout for gradual cleanup
+        
+        // Connection validation settings
+        testOnBorrow: true,
+        testWhileIdle: true,
+        validationQuery: 'SELECT 1',
+        validationQueryTimeout: 3000,
+        
+        // Performance tuning for high load
+        maxWaitingClients: 100, // Allow more waiting clients
+        acquireTimeoutMillis: 45000, // Explicit acquire timeout
+        createTimeoutMillis: 10000, // Timeout for creating new connections
+        destroyTimeoutMillis: 5000, // Timeout for destroying connections
+        reapIntervalMillis: 1000, // Check for idle connections every second
       },
     };
 
