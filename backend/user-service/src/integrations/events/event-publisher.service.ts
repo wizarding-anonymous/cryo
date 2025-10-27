@@ -115,7 +115,22 @@ export class EventPublisherService {
    * Publish batch events
    */
   async publishBatchEvents(events: UserEvent[]): Promise<void> {
+    // Check if Redis client is available
+    if (!this.redis) {
+      this.logger.warn(
+        'Redis client not available, skipping batch event publishing',
+      );
+      return;
+    }
+
     const pipeline = this.redis.pipeline();
+
+    if (!pipeline) {
+      this.logger.warn(
+        'Redis pipeline not available, skipping batch event publishing',
+      );
+      return;
+    }
 
     for (const event of events) {
       const eventKey = `user-events:${event.type.toLowerCase()}`;
@@ -264,7 +279,22 @@ export class EventPublisherService {
     event: UserEvent,
     eventData: any,
   ): Promise<void> {
+    // Check if Redis client is available
+    if (!this.redis) {
+      this.logger.warn(
+        'Redis client not available, skipping event metrics update',
+      );
+      return;
+    }
+
     const pipeline = this.redis.pipeline();
+
+    if (!pipeline) {
+      this.logger.warn(
+        'Redis pipeline not available, skipping event metrics update',
+      );
+      return;
+    }
 
     // Increment total counter
     pipeline.incr('user-service:events:total');

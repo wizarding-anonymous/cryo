@@ -233,8 +233,19 @@ export class CacheService implements OnModuleInit {
       const cacheTtl = ttl || this.DEFAULT_USER_TTL;
       const client = this.redisService.getClient();
 
+      // Check if Redis client is available
+      if (!client) {
+        this.logger.warn('Redis client not available, skipping batch cache');
+        return;
+      }
+
       // Use Redis pipeline for efficient batch operations
       const pipeline = client.pipeline();
+
+      if (!pipeline) {
+        this.logger.warn('Redis pipeline not available, skipping batch cache');
+        return;
+      }
 
       users.forEach((user) => {
         const key = this.getKey('user', user.id);
@@ -454,10 +465,10 @@ export class CacheService implements OnModuleInit {
   /**
    * Preload cache with user data based on access patterns
    */
-  async preloadUsers(
+  preloadUsers(
     userIds: string[],
     priority: 'high' | 'medium' | 'low' = 'medium',
-  ): Promise<void> {
+  ): void {
     const ttlMultiplier =
       priority === 'high' ? 2 : priority === 'medium' ? 1 : 0.5;
     const ttl = Math.floor(this.DEFAULT_USER_TTL * ttlMultiplier);

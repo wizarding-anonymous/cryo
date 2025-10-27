@@ -33,11 +33,11 @@ export class HealthController {
   ) {}
 
   @Get('docker')
-  async dockerHealthCheck() {
+  dockerHealthCheck() {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime()
+      uptime: process.uptime(),
     };
   }
 
@@ -48,17 +48,18 @@ export class HealthController {
 
     return this.health.check([
       // Database check with configurable timeout
-      () => this.db.pingCheck('database', { timeout }),
+      () =>
+        this.db.pingCheck('database', { timeout: Math.min(timeout, 10000) }),
       // Memory checks with reasonable limits
-      () => this.memory.checkHeap('memory_heap', 250 * 1024 * 1024),
-      () => this.memory.checkRSS('memory_rss', 250 * 1024 * 1024),
+      () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
+      () => this.memory.checkRSS('memory_rss', 300 * 1024 * 1024),
       // Disk space check
       () => this.disk.checkStorage('storage', { path: '/', threshold: 0.9 }),
       // Redis health check (non-critical)
       () => this.performRedisHealthCheck(),
       // Cache service health check (non-critical)
       () => this.performCacheHealthCheck(),
-      // External services health checks (non-critical)
+      // External services health checks (non-critical) - with shorter timeout
       () => this.performAuthServiceHealthCheck(),
       () => this.performSecurityServiceHealthCheck(),
       // Custom validation check
@@ -88,7 +89,7 @@ export class HealthController {
   @Get('metrics')
   async getHealthMetrics() {
     const startTime = Date.now();
-    
+
     // Collect health metrics from all components
     const [
       dbCheck,
@@ -105,7 +106,7 @@ export class HealthController {
       this.performCacheMetrics(),
       this.performAuthServiceHealthCheck(),
       this.performSecurityServiceHealthCheck(),
-      this.getMemoryMetrics(),
+      Promise.resolve(this.getMemoryMetrics()),
       this.cacheService.getCacheStats(),
       this.getServiceHealthMetrics(),
     ]);
@@ -115,9 +116,12 @@ export class HealthController {
     // Determine overall health status
     const criticalComponents = [dbCheck, redisCheck];
     const overallHealth = criticalComponents.every(
-      result => result.status === 'fulfilled' && 
-      this.getResultValue(result)?.status !== 'unhealthy'
-    ) ? 'healthy' : 'degraded';
+      (result) =>
+        result.status === 'fulfilled' &&
+        this.getResultValue(result)?.status !== 'unhealthy',
+    )
+      ? 'healthy'
+      : 'degraded';
 
     return {
       timestamp: new Date().toISOString(),
@@ -228,10 +232,21 @@ export class HealthController {
     }
   }
 
-  private async performAuthServiceHealthCheck(): Promise<{ [key: string]: any }> {
+  private async performAuthServiceHealthCheck(): Promise<{
+    [key: string]: any;
+  }> {
     try {
       const startTime = Date.now();
-      const isHealthy = await this.authServiceClient.healthCheck();
+      // Use shorter timeout for external services to prevent blocking
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Auth Service health check timeout')),
+          3000,
+        ),
+      );
+
+      const healthPromise = this.authServiceClient.healthCheck();
+      const isHealthy = await Promise.race([healthPromise, timeoutPromise]);
       const latency = Date.now() - startTime;
 
       return {
@@ -245,42 +260,62 @@ export class HealthController {
         },
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         'auth-service': {
           status: 'down',
-          message: `Auth Service health check failed: ${error.message}`,
+          message: `Auth Service health check failed: ${errorMessage}`,
           critical: false,
         },
       };
     }
   }
 
-  private async performSecurityServiceHealthCheck(): Promise<{ [key: string]: any }> {
+  private async performSecurityServiceHealthCheck(): Promise<{
+    [key: string]: any;
+  }> {
     try {
-      const healthResult = await this.securityClient.healthCheck();
+      // Use shorter timeout for external services to prevent blocking
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Security Service health check timeout')),
+          3000,
+        ),
+      );
+
+      const healthPromise = this.securityClient.healthCheck();
+      const healthResult = await Promise.race([healthPromise, timeoutPromise]);
 
       return {
         'security-service': {
-          status: healthResult.status === 'healthy' ? 'up' : 'down',
-          message: healthResult.status === 'healthy'
-            ? 'Security Service is healthy'
-            : 'Security Service is not responding',
-          latency: healthResult.latency ? `${healthResult.latency}ms` : 'unknown',
+          status: (healthResult as any).status === 'healthy' ? 'up' : 'down',
+          message:
+            (healthResult as any).status === 'healthy'
+              ? 'Security Service is healthy'
+              : 'Security Service is not responding',
+          latency: (healthResult as any).latency
+            ? `${(healthResult as any).latency}ms`
+            : 'unknown',
           critical: false, // Security Service is not critical for basic user operations
         },
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         'security-service': {
           status: 'down',
-          message: `Security Service health check failed: ${error.message}`,
+          message: `Security Service health check failed: ${errorMessage}`,
           critical: false,
         },
       };
     }
   }
 
-  private async performExternalServicesReadinessCheck(): Promise<{ [key: string]: any }> {
+  private async performExternalServicesReadinessCheck(): Promise<{
+    [key: string]: any;
+  }> {
     // Check external services but don't fail the readiness probe if they're down
     // This provides visibility into external service status without blocking traffic
     const authCheck = await this.performAuthServiceHealthCheck();
@@ -291,7 +326,9 @@ export class HealthController {
       securityService: securityCheck['security-service'].status,
     };
 
-    const healthyServices = Object.values(externalServicesStatus).filter(status => status === 'up').length;
+    const healthyServices = Object.values(externalServicesStatus).filter(
+      (status) => status === 'up',
+    ).length;
     const totalServices = Object.keys(externalServicesStatus).length;
 
     return {
@@ -374,7 +411,7 @@ export class HealthController {
 
   private getMemoryMetrics(): { [key: string]: any } {
     const memUsage = process.memoryUsage();
-    
+
     return {
       heap: {
         used: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
@@ -433,15 +470,12 @@ export class HealthController {
   private async getServiceHealthMetrics(): Promise<{ [key: string]: any }> {
     try {
       // Get service-specific health metrics
-      const [
-        operationMetrics,
-        performanceMetrics,
-        resourceMetrics,
-      ] = await Promise.allSettled([
-        this.getOperationMetrics(),
-        this.getPerformanceMetrics(),
-        this.getResourceMetrics(),
-      ]);
+      const [operationMetrics, performanceMetrics, resourceMetrics] =
+        await Promise.allSettled([
+          this.getOperationMetrics(),
+          this.getPerformanceMetrics(),
+          this.getResourceMetrics(),
+        ]);
 
       return {
         operations: this.getResultValue(operationMetrics),
@@ -450,9 +484,11 @@ export class HealthController {
         healthScore: await this.calculateHealthScore(),
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         status: 'error',
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -473,9 +509,11 @@ export class HealthController {
       }
       return { status: 'metrics_service_unavailable' };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         status: 'error',
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -484,7 +522,7 @@ export class HealthController {
     try {
       const memUsage = process.memoryUsage();
       const cpuUsage = process.cpuUsage();
-      
+
       return {
         memory: {
           heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
@@ -500,9 +538,11 @@ export class HealthController {
         eventLoopLag: await this.measureEventLoopLag(),
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         status: 'error',
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -522,9 +562,11 @@ export class HealthController {
       }
       return { status: 'system_metrics_service_unavailable' };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         status: 'error',
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -532,7 +574,7 @@ export class HealthController {
   private async calculateHealthScore(): Promise<number> {
     try {
       let score = 100;
-      
+
       // Check database health (critical - 40 points)
       try {
         await this.db.pingCheck('database', { timeout: 3000 });
@@ -550,7 +592,8 @@ export class HealthController {
 
       // Check memory usage (important - 20 points)
       const memUsage = process.memoryUsage();
-      const memoryUsagePercent = (memUsage.heapUsed / (250 * 1024 * 1024)) * 100;
+      const memoryUsagePercent =
+        (memUsage.heapUsed / (250 * 1024 * 1024)) * 100;
       if (memoryUsagePercent > 90) score -= 20;
       else if (memoryUsagePercent > 80) score -= 10;
 

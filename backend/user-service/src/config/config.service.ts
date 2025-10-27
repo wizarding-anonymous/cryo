@@ -98,7 +98,9 @@ export class AppConfigService {
 
   // Health Check
   get healthCheckTimeout(): number {
-    return this.configService.get('HEALTH_CHECK_TIMEOUT', { infer: true });
+    return (
+      this.configService.get('HEALTH_CHECK_TIMEOUT', { infer: true }) || 10000
+    ); // Default 10 seconds
   }
 
   // Metrics

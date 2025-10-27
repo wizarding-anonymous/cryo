@@ -224,7 +224,7 @@ export class RateLimitGuard implements CanActivate {
 
     const clientIP = this.getClientIP(request);
     const userId = ((request as any).user?.id as string) || 'anonymous';
-    const baseKey = `rate_limit:${config.type}:${clientIP}:${userId}`;
+    const baseKey = `user-service:rate_limit:${config.type}:${clientIP}:${userId}`;
 
     if (config.type === RateLimitType.BATCH) {
       const batchSize = this.getBatchSize(request);
@@ -247,7 +247,32 @@ export class RateLimitGuard implements CanActivate {
     const windowStart = now - config.windowMs;
 
     try {
+      // Check if Redis client is available and ready
+      if (!this.redis) {
+        this.logger.warn(
+          'Redis client not available, allowing request (fail-open)',
+        );
+        return true;
+      }
+
+      // Additional safety check for pipeline method
+      if (typeof this.redis.pipeline !== 'function') {
+        this.logger.warn(
+          'Redis pipeline method not available, allowing request (fail-open)',
+        );
+        return true;
+      }
+
       const pipeline = this.redis.pipeline();
+
+      // Ensure pipeline is valid before using
+      if (!pipeline) {
+        this.logger.warn(
+          'Redis pipeline creation failed, allowing request (fail-open)',
+        );
+        return true;
+      }
+
       pipeline.zremrangebyscore(key, 0, windowStart);
       pipeline.zadd(key, now, `${now}-${Math.random()}`);
       pipeline.zcard(key);
@@ -255,8 +280,10 @@ export class RateLimitGuard implements CanActivate {
 
       const results = await pipeline.exec();
 
-      if (!results) {
-        throw new Error('Redis pipeline execution failed');
+      if (!results || !Array.isArray(results) || results.length < 3) {
+        throw new Error(
+          'Redis pipeline execution failed or returned invalid results',
+        );
       }
 
       const requestCount = results[2][1] as number;
@@ -266,8 +293,11 @@ export class RateLimitGuard implements CanActivate {
       );
 
       return requestCount <= config.maxRequests;
-    } catch (error: any) {
-      this.logger.error(`Redis error in rate limiting: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(`Redis error in rate limiting: ${errorMessage}`);
+      // Fail-open: allow request when Redis is unavailable
       return true;
     }
   }
@@ -285,22 +315,25 @@ export class RateLimitGuard implements CanActivate {
       }
 
       if (request.method === 'GET' && request.query.ids) {
-        const ids = Array.isArray(request.query.ids)
-          ? request.query.ids
-          : String(request.query.ids).split(',');
+        const queryIds = request.query.ids;
+        const ids = Array.isArray(queryIds)
+          ? queryIds
+          : String(queryIds).split(',');
         return ids.length;
       }
 
       return 1;
-    } catch (error: any) {
-      this.logger.warn(`Error determining batch size: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Error determining batch size: ${errorMessage}`);
       return 1;
     }
   }
 
   private async checkDockerHealthRateLimit(request: Request): Promise<boolean> {
     const clientIP = this.getClientIP(request);
-    const key = `rate_limit:docker_health:${clientIP}`;
+    const key = `user-service:rate_limit:docker_health:${clientIP}`;
 
     const config: RateLimitConfig = {
       type: RateLimitType.DEFAULT,
@@ -320,9 +353,11 @@ export class RateLimitGuard implements CanActivate {
       }
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Error checking Docker health rate limit: ${error.message}`,
+        `Error checking Docker health rate limit: ${errorMessage}`,
       );
       return true;
     }
