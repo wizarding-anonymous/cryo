@@ -59,28 +59,25 @@ describe('Security Improvements (e2e)', () => {
 
       for (const test of weakPasswordTests) {
         const response = await request(app.getHttpServer())
-          .post('/api/auth/register')
+          .post('/api/users')
           .send({
             name: 'Test User',
             email: `test${Date.now()}@example.com`,
             password: test.password,
           });
 
-        expect(response.status).toBe(400);
-        expect(response.body.message).toEqual(
-          expect.arrayContaining([
-            expect.stringContaining(test.expectedMessage),
-          ]),
-        );
+        // User Service now only validates basic format, not password strength
+        // Password strength validation is handled by Auth Service
+        expect(response.status).toBe(201);
       }
     });
 
-    it('should accept strong passwords during registration', async () => {
+    it('should accept strong passwords during user creation', async () => {
       const strongPassword = 'StrongPass123!';
       const email = `test${Date.now()}@example.com`;
 
       const response = await request(app.getHttpServer())
-        .post('/api/auth/register')
+        .post('/api/users')
         .send({
           name: 'Test User',
           email,
@@ -88,12 +85,11 @@ describe('Security Improvements (e2e)', () => {
         });
 
       expect(response.status).toBe(201);
-      expect(response.body.user).toBeDefined();
-      expect(response.body.access_token).toBeDefined();
+      expect(response.body.id).toBeDefined();
+      expect(response.body.email).toBe(email);
 
       // Store for later tests
-      authToken = response.body.access_token;
-      userId = response.body.user.id;
+      userId = response.body.id;
     });
   });
 

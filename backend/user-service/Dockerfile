@@ -23,8 +23,13 @@ RUN mkdir -p node_modules && chown -R nestjs:nodejs node_modules
 USER nestjs
 RUN npm ci --legacy-peer-deps && npm cache clean --force
 
-# Copy application source with proper ownership
-COPY --chown=nestjs:nodejs . .
+# Switch to root to copy source and set permissions
+USER root
+COPY . .
+RUN chown -R nestjs:nodejs /usr/src/app
+
+# Switch back to nestjs user
+USER nestjs
 
 # Build the application (dist directory will be created automatically)
 RUN npm run build
@@ -55,9 +60,9 @@ RUN npm ci --only=production --legacy-peer-deps && \
 # Copy the built application from the builder stage
 COPY --from=builder --chown=nestjs:nodejs /usr/src/app/dist ./dist
 
-# Create uploads directory with proper permissions
-RUN mkdir -p uploads/avatars && \
-    chown -R nestjs:nodejs uploads
+# Create uploads and logs directories with proper permissions
+RUN mkdir -p uploads/avatars logs && \
+    chown -R nestjs:nodejs uploads logs
 
 # Switch to non-root user
 USER nestjs

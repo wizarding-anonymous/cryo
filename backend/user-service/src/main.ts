@@ -30,7 +30,12 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger(winstonConfig),
+    bodyParser: true,
   });
+
+  // Configure body size limits for large batch operations
+  app.use(require('express').json({ limit: '50mb' }));
+  app.use(require('express').urlencoded({ limit: '50mb', extended: true }));
 
   // GlobalExceptionFilter теперь применяется через APP_FILTER в AppModule
   // для правильной инжекции зависимостей
@@ -52,60 +57,95 @@ async function bootstrap() {
 
   // --- Swagger API Documentation ---
   const config = new DocumentBuilder()
-    .setTitle('User Service API')
+    .setTitle('User Service API v2.0 - Рефакторинг')
     .setDescription(
       `
-      API documentation for the User Service microservice
+      # User Service API - Высокопроизводительный микросервис управления пользователями
       
-      ## Features
-      - Standardized API responses with correlation IDs
-      - Cursor-based and offset-based pagination
-      - Advanced filtering and search capabilities
-      - Internal microservice endpoints
-      - Comprehensive error handling
+      После успешного рефакторинга и выделения Auth Service, User Service оптимизирован для управления пользовательскими данными и профилями в микросервисной архитектуре российской игровой платформы.
       
-      ## Response Format
-      All public API endpoints return responses in the following standardized format:
+      ## 🚀 Ключевые возможности
+      - **Высокопроизводительные batch операции** - до 5000 записей за запрос
+      - **Многоуровневое кэширование** с Redis интеграцией и namespace стратегией
+      - **Специализированные внутренние API** для каждого микросервиса
+      - **Event-driven интеграция** с публикацией событий изменений
+      - **Комплексная безопасность** с шифрованием данных и аудитом операций
+      - **Продвинутый мониторинг** через Prometheus метрики и health checks
+      
+      ## 🏗️ Архитектура интеграции
+      User Service интегрируется с:
+      - **Auth Service** - аутентификация и управление сессиями
+      - **Game Catalog Service** - персонализация игрового каталога
+      - **Payment Service** - обработка платежей и биллинговая информация
+      - **Library Service** - синхронизация игровых предпочтений
+      - **Social Service** - социальные функции и настройки приватности
+      - **Achievement Service** - система достижений и уведомлений
+      - **Notification Service** - отправка уведомлений о событиях
+      - **Security Service** - аудит операций и мониторинг безопасности
+      
+      ## 📊 Стандартизированный формат ответов
+      Все API endpoints возвращают ответы в единообразном формате:
       \`\`\`json
       {
         "success": true,
         "data": { ... },
         "error": null,
-        "meta": { ... },
-        "timestamp": "2023-12-01T10:00:00Z",
-        "correlationId": "req_123456789"
+        "meta": {
+          "pagination": { ... },
+          "cache": { "hit": true, "ttl": 300 },
+          "performance": { "processingTime": "45ms" }
+        },
+        "timestamp": "2024-01-15T10:00:00Z",
+        "correlationId": "req_20240115_100000_abc123"
       }
       \`\`\`
       
-      ## Pagination
-      - **Offset-based**: Use \`page\` and \`limit\` parameters
-      - **Cursor-based**: Use \`cursor\` parameter for better performance with large datasets
-      - Both methods support sorting with \`sortBy\` and \`sortOrder\` parameters
+      ## 🔄 Пагинация и производительность
+      - **Cursor-based пагинация** - для больших объемов данных (рекомендуется)
+      - **Offset-based пагинация** - для простых случаев использования
+      - **Кэширование результатов** - автоматическое кэширование с TTL
+      - **Batch операции** - массовая обработка до 5000 записей
       
-      ## Filtering
-      Most list endpoints support filtering through query parameters:
-      - Text fields: partial matching (case-insensitive)
-      - Boolean fields: exact matching
-      - Date fields: range filtering with \`from\` and \`to\` suffixes
+      ## 🔍 Фильтрация и поиск
+      Поддерживаемые параметры фильтрации:
+      - \`fields\` - выбор конкретных полей для возврата
+      - \`includeDeleted\` - включение soft deleted записей
+      - \`includePreferences\` - включение пользовательских предпочтений
+      - \`includePrivacySettings\` - включение настроек приватности
+      - \`publicOnly\` - только публичные данные (для Social Service)
+      
+      ## 🔐 Аутентификация и безопасность
+      - **API Keys** - для внутренних микросервисов
+      - **Bearer Tokens** - для внутренней аутентификации
+      - **IP Whitelisting** - дополнительная защита внутренних API
+      - **Rate Limiting** - различные лимиты для разных сервисов
+      - **Аудит операций** - логирование всех операций с данными
+      
+      ## 📈 Мониторинг и метрики
+      - **Prometheus метрики** - производительность, кэш, ошибки
+      - **Health checks** - проверка всех зависимостей
+      - **Correlation ID** - трассировка запросов между сервисами
+      - **Performance профилирование** - анализ узких мест
     `,
     )
     .setVersion('2.0')
-    .addTag('Users', 'User management endpoints with pagination and filtering')
-    .addTag(
-      'Internal Microservice APIs',
-      'Internal endpoints for microservice communication',
-    )
-    .addTag(
-      'Batch Operations',
-      'Bulk operations for high-performance scenarios',
-    )
-    .addTag('Health', 'Service health and monitoring endpoints')
+    .addTag('🔐 Auth Service Integration', 'API для Auth Service - аутентификация и управление сессиями')
+    .addTag('🎮 Game Catalog Integration', 'API для Game Catalog Service - персонализация каталога')
+    .addTag('💳 Payment Service Integration', 'API для Payment Service - биллинговая информация')
+    .addTag('📚 Library Service Integration', 'API для Library Service - игровые предпочтения')
+    .addTag('👥 Social Service Integration', 'API для Social Service - социальные функции')
+    .addTag('🏆 Achievement Integration', 'API для Achievement Service - система достижений')
+    .addTag('⚡ Batch Operations', 'Высокопроизводительные массовые операции (до 5000 записей)')
+    .addTag('👤 Profile Management', 'Управление профилями пользователей и настройками')
+    .addTag('🔍 User Operations', 'Основные операции с пользователями')
+    .addTag('📊 Monitoring & Health', 'Мониторинг, метрики и health checks')
+    .addTag('🗄️ Cache Management', 'Управление кэшем и статистика производительности')
     .addApiKey(
       {
         type: 'apiKey',
-        name: 'X-API-Key',
+        name: 'x-api-key',
         in: 'header',
-        description: 'Internal API key for microservice authentication',
+        description: 'API ключ для внутренних микросервисов (auth-service-key, game-catalog-key, payment-service-key, etc.)',
       },
       'internal-api-key',
     )
@@ -114,10 +154,16 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Internal JWT token for microservice authentication',
+        description: 'Bearer токен для внутренней аутентификации микросервисов',
       },
       'internal-bearer',
     )
+    .addSecurity('internal-service-header', {
+      type: 'apiKey',
+      name: 'x-internal-service',
+      in: 'header',
+      description: 'Заголовок для внутренней аутентификации сервисов',
+    })
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/api-docs', app, document);

@@ -9,7 +9,7 @@ import { tap, catchError } from 'rxjs/operators';
 import { Request, Response } from 'express';
 import { throwError } from 'rxjs';
 import { LoggingService, LogContext } from '../logging/logging.service';
-import { v4 as uuidv4 } from 'uuid';
+const { v4: uuidv4 } = require('uuid');
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {

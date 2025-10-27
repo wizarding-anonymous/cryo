@@ -39,28 +39,24 @@ export class User {
   name: string;
 
   @Column({
-    type: 'timestamp with time zone',
     name: 'last_login_at',
     nullable: true,
   })
   lastLoginAt?: Date;
 
   @CreateDateColumn({
-    type: 'timestamp with time zone',
     name: 'created_at',
     default: () => 'CURRENT_TIMESTAMP',
   })
   createdAt: Date;
 
   @UpdateDateColumn({
-    type: 'timestamp with time zone',
     name: 'updated_at',
     default: () => 'CURRENT_TIMESTAMP',
   })
   updatedAt: Date;
 
   @DeleteDateColumn({
-    type: 'timestamp with time zone',
     name: 'deleted_at',
     nullable: true,
   })
@@ -100,7 +96,7 @@ export class User {
   isActive: boolean;
 
   @Column({
-    type: 'jsonb',
+    type: 'simple-json',
     nullable: true,
   })
   metadata?: Record<string, any>;

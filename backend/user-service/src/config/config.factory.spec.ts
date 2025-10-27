@@ -82,10 +82,7 @@ describe('ConfigFactory', () => {
         type: 'postgres',
         host: 'prod-host',
       });
-      expect(typeOrmConfig.extra.ssl).toEqual({
-        rejectUnauthorized: false,
-        sslmode: 'require',
-      });
+      expect(typeOrmConfig.extra.ssl).toBe(false);
       expect(typeOrmConfig.extra.max).toBe(20);
     });
   });
@@ -108,9 +105,36 @@ describe('ConfigFactory', () => {
           {
             name: 'default',
             ttl: 60000,
+            limit: 60,
+          },
+          {
+            name: 'batch',
+            ttl: 300000,
+            limit: 10,
+          },
+          {
+            name: 'profile',
+            ttl: 60000,
+            limit: 30,
+          },
+          {
+            name: 'internal',
+            ttl: 60000,
+            limit: 1000,
+          },
+          {
+            name: 'upload',
+            ttl: 60000,
+            limit: 5,
+          },
+          {
+            name: 'search',
+            ttl: 60000,
             limit: 100,
           },
         ],
+        errorMessage: 'Too many requests, please try again later',
+        skipIf: expect.any(Function),
       });
     });
 

@@ -59,7 +59,8 @@ describe('Internal API Endpoints (e2e)', () => {
 
     // Apply the same global pipes, filters, and interceptors as in main.ts
     const httpAdapterHost = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
+    const loggingService = app.get('LoggingService');
+    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost, loggingService));
     app.useGlobalInterceptors(
       new ClassSerializerInterceptor(app.get(Reflector)), // For @Exclude decorator
       new ResponseInterceptor(),

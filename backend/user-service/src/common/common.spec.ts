@@ -79,7 +79,9 @@ describe('Common Components', () => {
     let mockResponse: any;
 
     beforeEach(() => {
-      mockResponse = {};
+      mockResponse = {
+        setHeader: jest.fn(),
+      };
       mockHttpAdapter = {
         reply: jest.fn(),
       };
@@ -92,6 +94,7 @@ describe('Common Components', () => {
         warn: jest.fn(),
         error: jest.fn(),
         debug: jest.fn(),
+        logSecurityEvent: jest.fn(),
       };
       filter = new GlobalExceptionFilter(httpAdapterHost, mockLoggingService as any);
     });
@@ -120,7 +123,7 @@ describe('Common Components', () => {
       expect(mockHttpAdapter.reply).toHaveBeenCalledWith(
         mockResponse,
         {
-          message: 'Internal server error',
+          message: 'Generic error',
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );

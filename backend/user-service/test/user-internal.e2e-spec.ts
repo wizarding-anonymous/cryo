@@ -2,13 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   INestApplication,
   ValidationPipe,
-  ClassSerializerInterceptor,
 } from '@nestjs/common';
 import * as request from 'supertest';
 import { TestAppModule } from './test-app.module';
 import { GlobalExceptionFilter } from '../src/common/filters/global-exception.filter';
-import { HttpAdapterHost, Reflector } from '@nestjs/core';
+import { HttpAdapterHost } from '@nestjs/core';
 import { ResponseInterceptor } from '../src/common/interceptors/response.interceptor';
+import { LoggingService } from '../src/common/logging/logging.service';
 
 describe('User Internal API Endpoints (e2e)', () => {
   let app: INestApplication;
@@ -59,9 +59,9 @@ describe('User Internal API Endpoints (e2e)', () => {
 
     // Apply the same global pipes, filters, and interceptors as in main.ts
     const httpAdapterHost = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
+    const loggingService = app.get(LoggingService);
+    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost, loggingService));
     app.useGlobalInterceptors(
-      new ClassSerializerInterceptor(app.get(Reflector)), // For @Exclude decorator
       new ResponseInterceptor(),
     );
     app.setGlobalPrefix('api');
@@ -77,23 +77,47 @@ describe('User Internal API Endpoints (e2e)', () => {
   }, 10000);
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      try {
+        await app.close();
+      } catch (error) {
+        console.warn('Failed to close app:', error.message);
+      }
+    }
+  });
+
+  beforeEach(async () => {
+    // Clean up database before each test to ensure isolation
+    try {
+      const dataSource = app.get('DataSource');
+      if (dataSource && dataSource.isInitialized) {
+        await dataSource.query('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
+      }
+    } catch (error) {
+      // If DataSource is not available, skip cleanup
+      console.warn('Could not clean database:', error.message);
+    }
   });
 
   describe('Internal User Management API for Auth Service Integration', () => {
     const testUserData = {
       name: 'Test User',
       email: `test-${Date.now()}@example.com`,
-      password: '$2b$10$hashedPasswordFromAuthService', // Pre-hashed password
+      password: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', // Valid bcrypt hash (60 chars)
     };
     let createdUserId: string;
 
     beforeAll(async () => {
       // Create a user for tests that need an existing user
       const response = await request(app.getHttpServer())
-        .post('/api/users')
-        .send(testUserData)
-        .expect(201);
+        .post('/api/internal/users')
+        .set('x-api-key', 'test-api-key')
+        .send(testUserData);
+
+      if (response.status !== 201) {
+        console.error('Failed to create test user:', response.status, response.body);
+        throw new Error(`Failed to create test user: ${response.status} - ${JSON.stringify(response.body)}`);
+      }
 
       createdUserId = response.body.data.id;
     });
@@ -103,11 +127,12 @@ describe('User Internal API Endpoints (e2e)', () => {
         const newUserData = {
           name: 'New Test User',
           email: `new-test-${Date.now()}@example.com`,
-          password: '$2b$10$anotherHashedPasswordFromAuthService',
+          password: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
         };
 
         return request(app.getHttpServer())
-          .post('/api/users')
+          .post('/api/internal/users')
+          .set('x-api-key', 'test-api-key')
           .send(newUserData)
           .expect(201)
           .then((res) => {
@@ -122,28 +147,31 @@ describe('User Internal API Endpoints (e2e)', () => {
 
       it('should return 409 for duplicate email', () => {
         return request(app.getHttpServer())
-          .post('/api/users')
+          .post('/api/internal/users')
+          .set('x-api-key', 'test-api-key')
           .send(testUserData) // Same email as above
           .expect(409);
       });
 
       it('should return 400 for invalid email', () => {
         return request(app.getHttpServer())
-          .post('/api/users')
+          .post('/api/internal/users')
+          .set('x-api-key', 'test-api-key')
           .send({
             name: 'Test User',
             email: 'invalid-email',
-            password: '$2b$10$hashedPassword',
+            password: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
           })
           .expect(400)
           .then((res) => {
-            expect(res.body.message).toContain('email must be an email');
+            expect(res.body.message).toContain('Email must be valid');
           });
       });
 
       it('should return 400 for missing required fields', () => {
         return request(app.getHttpServer())
-          .post('/api/users')
+          .post('/api/internal/users')
+          .set('x-api-key', 'test-api-key')
           .send({
             name: 'Test User',
             // Missing email and password
@@ -155,7 +183,8 @@ describe('User Internal API Endpoints (e2e)', () => {
     describe('GET /users/email/:email', () => {
       it('should find user by email', () => {
         return request(app.getHttpServer())
-          .get(`/api/users/email/${testUserData.email}`)
+          .get(`/api/internal/users/email/${testUserData.email}`)
+          .set('x-api-key', 'test-api-key')
           .expect(200)
           .then((res) => {
             expect(res.body.data.email).toEqual(testUserData.email);
@@ -167,10 +196,11 @@ describe('User Internal API Endpoints (e2e)', () => {
 
       it('should return 404 for non-existent email', () => {
         return request(app.getHttpServer())
-          .get('/api/users/email/nonexistent@example.com')
+          .get('/api/internal/users/email/nonexistent@example.com')
+          .set('x-api-key', 'test-api-key')
           .expect(404)
           .then((res) => {
-            expect(res.body.message).toContain('User not found');
+            expect(res.body.message).toContain('не найден');
           });
       });
     });
@@ -178,7 +208,8 @@ describe('User Internal API Endpoints (e2e)', () => {
     describe('GET /users/:id', () => {
       it('should find user by ID', () => {
         return request(app.getHttpServer())
-          .get(`/api/users/${createdUserId}`)
+          .get(`/api/internal/users/${createdUserId}`)
+          .set('x-api-key', 'test-api-key')
           .expect(200)
           .then((res) => {
             expect(res.body.data.email).toEqual(testUserData.email);
@@ -190,16 +221,18 @@ describe('User Internal API Endpoints (e2e)', () => {
 
       it('should return 404 for non-existent ID', () => {
         return request(app.getHttpServer())
-          .get('/api/users/123e4567-e89b-12d3-a456-426614174000')
+          .get('/api/internal/users/123e4567-e89b-12d3-a456-426614174000')
+          .set('x-api-key', 'test-api-key')
           .expect(404)
           .then((res) => {
-            expect(res.body.message).toContain('User not found');
+            expect(res.body.message).toContain('не найден');
           });
       });
 
       it('should return 400 for invalid UUID format', () => {
         return request(app.getHttpServer())
-          .get('/api/users/invalid-uuid')
+          .get('/api/internal/users/invalid-uuid')
+          .set('x-api-key', 'test-api-key')
           .expect(400);
       });
     });
@@ -207,7 +240,8 @@ describe('User Internal API Endpoints (e2e)', () => {
     describe('PATCH /users/:id/last-login', () => {
       it('should update last login timestamp', () => {
         return request(app.getHttpServer())
-          .patch(`/api/users/${createdUserId}/last-login`)
+          .patch(`/api/internal/users/${createdUserId}/last-login`)
+          .set('x-api-key', 'test-api-key')
           .expect(200)
           .then((res) => {
             expect(res.body.data.message).toEqual(
@@ -218,7 +252,8 @@ describe('User Internal API Endpoints (e2e)', () => {
 
       it('should return 404 for non-existent user ID', () => {
         return request(app.getHttpServer())
-          .patch('/api/users/123e4567-e89b-12d3-a456-426614174000/last-login')
+          .patch('/api/internal/users/123e4567-e89b-12d3-a456-426614174000/last-login')
+          .set('x-api-key', 'test-api-key')
           .expect(404);
       });
     });
@@ -226,7 +261,8 @@ describe('User Internal API Endpoints (e2e)', () => {
     describe('GET /users/:id/exists', () => {
       it('should return true for existing user', () => {
         return request(app.getHttpServer())
-          .get(`/api/users/${createdUserId}/exists`)
+          .get(`/api/internal/users/${createdUserId}/exists`)
+          .set('x-api-key', 'test-api-key')
           .expect(200)
           .then((res) => {
             expect(res.body.data.exists).toBe(true);
@@ -235,7 +271,8 @@ describe('User Internal API Endpoints (e2e)', () => {
 
       it('should return false for non-existent user', () => {
         return request(app.getHttpServer())
-          .get('/api/users/123e4567-e89b-12d3-a456-426614174000/exists')
+          .get('/api/internal/users/123e4567-e89b-12d3-a456-426614174000/exists')
+          .set('x-api-key', 'test-api-key')
           .expect(200)
           .then((res) => {
             expect(res.body.data.exists).toBe(false);

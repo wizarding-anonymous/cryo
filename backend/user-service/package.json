@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "cross-env NODE_ENV=test jest --config ./test/jest-e2e.json --forceExit --detectOpenHandles",
+    "test:integration": "cross-env NODE_ENV=test jest --config ./test/jest-integration.json --forceExit --detectOpenHandles",
     "test:e2e:setup": "docker-compose -f docker-compose.test.yml up -d",
     "test:e2e:teardown": "docker-compose -f docker-compose.test.yml down",
     "test:e2e:full": "npm run test:e2e:setup && sleep 10 && npm run test:e2e && npm run test:e2e:teardown",
@@ -41,6 +42,7 @@
     "docker:local:logs": "docker-compose logs -f user-service",
     "docker:local:build": "docker-compose build",
     "docker:local:restart": "docker-compose restart user-service",
+    "test:redis": "ts-node -r tsconfig-paths/register scripts/test-redis.ts",
     "security:audit": "node scripts/security-audit.js",
     "security:audit:prod": "node scripts/security-audit.js --env-file .env.docker",
     "security:audit:test": "node scripts/security-audit.js --env-file .env.test",
@@ -49,7 +51,7 @@
     "security:generate-keys:staging": "node scripts/generate-api-keys.js staging --output-file",
     "security:test": "npm run security:audit && npm run test -- --testPathPatterns=internal-service.guard.spec.ts",
     "ci:test": "npm run lint && npm run test -- --passWithNoTests --ci --coverage=false --maxWorkers=2 --forceExit --detectOpenHandles --testTimeout=30000",
-    "ci:test:integration": "npm run test:e2e -- --passWithNoTests --ci --testTimeout=30000 --forceExit",
+    "ci:test:integration": "cross-env NODE_ENV=test npm run test:e2e -- --passWithNoTests --ci --testTimeout=30000 --forceExit --detectOpenHandles",
     "ci:build": "npm run build",
     "ci:docker:build": "docker build -t user-service-ci .",
     "ci:docker:test": "cd ../ && docker-compose -f docker-compose.user-only.yml up -d && sleep 30 && curl -f http://localhost:3002/health && docker-compose -f docker-compose.user-only.yml down -v",
@@ -124,6 +126,7 @@
     "nest-winston": "^1.10.2",
     "pg": "^8.16.3",
     "prom-client": "^15.1.3",
+    "redis": "^4.7.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.26",
@@ -142,6 +145,7 @@
     "@types/node": "^22.18.1",
     "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -149,6 +153,7 @@
     "jest": "^30.0.0",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
+    "sqlite3": "^5.1.7",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
@@ -174,15 +179,16 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "transformIgnorePatterns": [
-      "node_modules/(?!(uuid)/)"
+      "node_modules/(?!(uuid|@nestjs)/)"
     ],
-    "extensionsToTreatAsEsm": [
-      ".ts"
+    "moduleNameMapping": {
+      "uuid": "uuid"
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/../test/setup-e2e.ts"
     ],
-    "globals": {
-      "ts-jest": {
-        "useESM": true
-      }
-    }
+    "testTimeout": 30000,
+    "forceExit": true,
+    "detectOpenHandles": true
   }
 }

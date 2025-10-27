@@ -11,7 +11,10 @@ export class OptimizedCacheService {
   private readonly logger = new Logger(OptimizedCacheService.name);
   
   // L1 Cache (In-Memory) - for frequently accessed data
-  private readonly memoryCache = new Map<string, { data: any; expires: number }>();
+  private readonly memoryCache = new Map<
+    string,
+    { data: any; expires: number }
+  >();
   private readonly maxMemoryCacheSize = 1000; // Maximum items in memory cache
   private readonly memoryCacheCleanupInterval = 60000; // 1 minute cleanup interval
   
@@ -49,7 +52,10 @@ export class OptimizedCacheService {
   /**
    * Get data with multi-level caching strategy
    */
-  async get<T>(key: string, cacheType: keyof typeof this.CACHE_TTL = 'USER_BASIC'): Promise<T | null> {
+  async get<T>(
+    key: string,
+    cacheType: keyof typeof this.CACHE_TTL = 'USER_BASIC',
+  ): Promise<T | null> {
     const startTime = Date.now();
     
     try {
@@ -110,10 +116,8 @@ export class OptimizedCacheService {
     const startTime = Date.now();
     
     try {
-      await Promise.all([
-        this.deleteFromRedis(key),
-        this.deleteFromMemory(key),
-      ]);
+      await this.deleteFromRedis(key);
+      this.deleteFromMemory(key);
       
       this.recordCacheOperation('invalidate', Date.now() - startTime);
     } catch (error) {
@@ -228,7 +232,7 @@ export class OptimizedCacheService {
       return null;
     }
     
-    return cached.data;
+    return cached.data as T;
   }
 
   private setInMemory<T>(
@@ -255,7 +259,7 @@ export class OptimizedCacheService {
   // Private methods for L2 cache (Redis)
   private async getFromRedis<T>(key: string): Promise<T | null> {
     try {
-      const value = await this.redisService.get(key);
+      const value = await this.redisService.get<T>(key);
       return value;
     } catch (error) {
       this.logger.error(`Redis get error for key ${key}:`, error);
@@ -296,7 +300,7 @@ export class OptimizedCacheService {
       for (let i = 0; i < keys.length; i++) {
         if (values[i]) {
           try {
-            results.set(keys[i], JSON.parse(values[i]));
+            results.set(keys[i], JSON.parse(values[i]) as T);
           } catch (parseError) {
             this.logger.error(`JSON parse error for key ${keys[i]}:`, parseError);
           }
@@ -313,7 +317,7 @@ export class OptimizedCacheService {
   private evictLRU(): void {
     // Simple LRU: remove oldest entries (first in Map)
     const keysToRemove = Array.from(this.memoryCache.keys()).slice(0, 100);
-    keysToRemove.forEach(key => this.memoryCache.delete(key));
+    keysToRemove.forEach((key) => this.memoryCache.delete(key));
   }
 
   private startMemoryCacheCleanup(): void {
@@ -327,7 +331,7 @@ export class OptimizedCacheService {
         }
       }
       
-      expiredKeys.forEach(key => this.memoryCache.delete(key));
+      expiredKeys.forEach((key) => this.memoryCache.delete(key));
       
       if (expiredKeys.length > 0) {
         this.logger.debug(`Cleaned up ${expiredKeys.length} expired cache entries`);

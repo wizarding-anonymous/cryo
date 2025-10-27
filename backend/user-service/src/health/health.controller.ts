@@ -32,6 +32,15 @@ export class HealthController {
     private readonly systemMetricsService: SystemMetricsService,
   ) {}
 
+  @Get('docker')
+  async dockerHealthCheck() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    };
+  }
+
   @Get()
   @HealthCheck()
   check() {

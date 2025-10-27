@@ -185,6 +185,26 @@ export class InternalController {
     return { message: 'Last login updated successfully' };
   }
 
+  @Get('users/:id/exists')
+  @ApiOperation({
+    summary: 'Check if user exists (Auth Service)',
+    description: 'Checks if user exists by ID for Auth Service',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'User UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User existence check result',
+  })
+  async checkUserExistsForAuth(@Param('id', ParseUUIDPipe) id: string) {
+    this.logger.log(`Auth Service: Checking if user exists ${id}`);
+    const user = await this.userService.findById(id);
+    return { exists: !!user };
+  }
+
   // ==========================================
   // Game Catalog Service Endpoints
   // ==========================================

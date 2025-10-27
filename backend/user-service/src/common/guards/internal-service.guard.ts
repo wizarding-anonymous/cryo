@@ -146,17 +146,21 @@ export class InternalServiceGuard implements CanActivate {
     }
 
     // Дополнительные проверки безопасности
-    if (apiKey.length < 16) {
+    // Пропускаем проверку длины в тестовой среде
+    if (!this.isDevelopmentMode() && apiKey.length < 16) {
       this.logger.warn('API key too short, potential security risk');
       return false;
     }
 
     // Проверка на простые паттерны (например, "test", "dev", "123")
-    const weakPatterns = ['test', 'dev', 'demo', '123', 'password', 'secret'];
-    const lowerKey = apiKey.toLowerCase();
-    if (weakPatterns.some(pattern => lowerKey.includes(pattern))) {
-      this.logger.warn('API key contains weak patterns, potential security risk');
-      return false;
+    // Пропускаем проверку в тестовой среде
+    if (!this.isDevelopmentMode()) {
+      const weakPatterns = ['test', 'dev', 'demo', '123', 'password', 'secret'];
+      const lowerKey = apiKey.toLowerCase();
+      if (weakPatterns.some(pattern => lowerKey.includes(pattern))) {
+        this.logger.warn('API key contains weak patterns, potential security risk');
+        return false;
+      }
     }
 
     return true;

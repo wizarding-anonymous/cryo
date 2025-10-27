@@ -6,6 +6,7 @@ import { TestAppModule } from './test-app.module';
 import { GlobalExceptionFilter } from '../src/common/filters/global-exception.filter';
 import { HttpAdapterHost } from '@nestjs/core';
 import { ResponseInterceptor } from '../src/common/interceptors/response.interceptor';
+import { LoggingService } from '../src/common/logging/logging.service';
 
 describe('Profile Endpoints (e2e)', () => {
   let app: INestApplication;
@@ -20,7 +21,8 @@ describe('Profile Endpoints (e2e)', () => {
 
     // Apply the same global pipes, filters, and interceptors as in main.ts
     const httpAdapterHost = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
+    const loggingService = app.get(LoggingService);
+    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost, loggingService));
     app.useGlobalInterceptors(new ResponseInterceptor());
     app.setGlobalPrefix('api');
     app.useGlobalPipes(

@@ -52,6 +52,31 @@ export class HealthController {
     private userCacheService: UserCacheService,
   ) {}
 
+  @Get('docker')
+  @ApiOperation({ 
+    summary: 'Lightweight health check for Docker',
+    description: 'Simple health check endpoint optimized for Docker health checks with minimal resource usage'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Service is running',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'ok' },
+        timestamp: { type: 'string', example: '2024-01-15T10:30:00.000Z' },
+        uptime: { type: 'number', example: 12345 }
+      }
+    }
+  })
+  async dockerHealthCheck() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    };
+  }
+
   @Get()
   @ApiOperation({ 
     summary: 'Check service health',

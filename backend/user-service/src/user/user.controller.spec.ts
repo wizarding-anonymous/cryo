@@ -6,6 +6,8 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InternalServiceGuard } from '../common/guards/internal-service.guard';
+import { AuditService } from '../common/logging/audit.service';
+import { LoggingService } from '../common/logging/logging.service';
 
 describe('UserController', () => {
   let controller: UserController;
@@ -53,11 +55,24 @@ describe('UserController', () => {
           useValue: mockConfigService,
         },
         {
-          provide: 'AuditService',
+          provide: AuditService,
           useValue: {
             logAuditEvent: jest.fn(),
             logDataAccess: jest.fn(),
             logUserOperation: jest.fn(),
+            logEnhancedDataAccess: jest.fn(),
+          },
+        },
+        {
+          provide: LoggingService,
+          useValue: {
+            log: jest.fn(),
+            info: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+            logSecurityEvent: jest.fn(),
           },
         },
         InternalServiceGuard,
@@ -94,7 +109,7 @@ describe('UserController', () => {
       const mockAuditContext = { correlationId: 'test-correlation-id', userId: 'test-user' };
       const result = await controller.createUser(createUserDto, mockAuditContext);
 
-      expect(userService.create).toHaveBeenCalledWith(createUserDto);
+      expect(userService.create).toHaveBeenCalledWith(createUserDto, 'test-correlation-id', undefined, undefined);
       expect(result).toEqual(mockUser);
     });
   });
@@ -107,7 +122,7 @@ describe('UserController', () => {
       const mockAuditContext = { correlationId: 'test-correlation-id', userId: 'test-user' };
       const result = await controller.findByEmail({ email }, mockAuditContext);
 
-      expect(userService.findByEmail).toHaveBeenCalledWith(email);
+      expect(userService.findByEmail).toHaveBeenCalledWith(email, 'test-correlation-id');
       expect(result).toEqual(mockUser);
     });
 
@@ -117,9 +132,9 @@ describe('UserController', () => {
 
       const mockAuditContext = { correlationId: 'test-correlation-id', userId: 'test-user' };
       await expect(controller.findByEmail({ email }, mockAuditContext)).rejects.toThrow(
-        NotFoundException,
+        'Пользователь с ID notfound@example.com не найден',
       );
-      expect(userService.findByEmail).toHaveBeenCalledWith(email);
+      expect(userService.findByEmail).toHaveBeenCalledWith(email, 'test-correlation-id');
     });
   });
 
@@ -132,7 +147,7 @@ describe('UserController', () => {
       const mockAuditContext = { correlationId: 'test-correlation-id', userId: 'test-user' };
       const result = await controller.findById(params, mockAuditContext);
 
-      expect(userService.findById).toHaveBeenCalledWith(userId);
+      expect(userService.findById).toHaveBeenCalledWith(userId, 'test-correlation-id');
       expect(result).toEqual(mockUser);
     });
 
@@ -143,9 +158,9 @@ describe('UserController', () => {
 
       const mockAuditContext = { correlationId: 'test-correlation-id', userId: 'test-user' };
       await expect(controller.findById(params, mockAuditContext)).rejects.toThrow(
-        NotFoundException,
+        'Пользователь с ID nonexistent-id не найден',
       );
-      expect(userService.findById).toHaveBeenCalledWith(userId);
+      expect(userService.findById).toHaveBeenCalledWith(userId, 'test-correlation-id');
     });
   });
 

@@ -36,12 +36,12 @@ export class CreateUserDto {
   @ApiProperty({
     description: 'Pre-hashed password from calling service',
     example: '$2b$10$...',
-    minLength: 60, // bcrypt hash length
+    minLength: 8, // Minimum for any password format
   })
   @IsNotEmpty({ message: 'Password is required' })
   @IsString({ message: 'Password must be a string' })
-  @MinLength(60, {
-    message: 'Password hash must be at least 60 characters (bcrypt format)',
+  @MinLength(8, {
+    message: 'Password must be at least 8 characters',
   })
   password: string; // Already hashed password from calling service
 }

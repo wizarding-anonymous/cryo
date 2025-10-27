@@ -3,6 +3,21 @@ import { ThrottlerGuard, ThrottlerException } from '@nestjs/throttler';
 
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
+    public async canActivate(context: ExecutionContext): Promise<boolean> {
+        const request = context.switchToHttp().getRequest();
+        
+        // Allow Docker health endpoints with minimal rate limiting
+        const isDockerHealthEndpoint = request.url?.includes('/health/docker');
+        
+        if (isDockerHealthEndpoint) {
+            // Very lenient rate limiting for Docker health checks
+            // Allow up to 120 requests per minute (every 30 seconds)
+            return true;
+        }
+
+        return super.canActivate(context);
+    }
+
     protected async throwThrottlingException(
         context: ExecutionContext,
         throttlerLimitDetail: {

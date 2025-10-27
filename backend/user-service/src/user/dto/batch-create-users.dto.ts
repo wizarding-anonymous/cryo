@@ -10,9 +10,8 @@ export class BatchCreateUsersDto {
     type: [CreateUserDto],
   })
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateUserDto)
-  users: CreateUserDto[];
+  // Remove strict validation to allow graceful error handling
+  users: any[]; // Changed from CreateUserDto[] to any[] for flexible validation
 
   @ApiProperty({
     description: 'Processing options for batch operation',

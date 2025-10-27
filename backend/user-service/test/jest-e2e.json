@@ -6,5 +6,15 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "setupFilesAfterEnv": ["<rootDir>/setup-e2e.ts"]
+  "setupFilesAfterEnv": ["<rootDir>/setup-e2e.ts"],
+  "transformIgnorePatterns": [
+    "node_modules/(?!(uuid|@nestjs)/)"
+  ],
+  "moduleNameMapper": {
+    "^uuid$": "uuid"
+  },
+  "preset": "ts-jest/presets/default",
+  "testTimeout": 30000,
+  "forceExit": true,
+  "detectOpenHandles": true
 }

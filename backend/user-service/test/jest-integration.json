@@ -1,0 +1,22 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": "integration-real-services.e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "setupFilesAfterEnv": ["<rootDir>/setup-e2e.ts"],
+  "transformIgnorePatterns": [
+    "node_modules/(?!(uuid|@nestjs)/)"
+  ],
+  "moduleNameMapper": {
+    "^uuid$": "uuid"
+  },
+  "preset": "ts-jest/presets/default",
+  "testTimeout": 60000,
+  "forceExit": true,
+  "detectOpenHandles": true,
+  "maxWorkers": 1,
+  "verbose": true
+}

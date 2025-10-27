@@ -39,11 +39,17 @@ describe('LoggingInterceptor', () => {
       method: 'GET',
       url: '/test',
       ip: '127.0.0.1',
+      headers: {
+        'x-correlation-id': 'test-correlation-id',
+        'user-agent': 'test-user-agent',
+      },
       get: jest.fn().mockReturnValue('test-user-agent'),
     };
 
     const mockResponse = {
       statusCode: 200,
+      get: jest.fn().mockReturnValue('application/json'),
+      setHeader: jest.fn(),
     };
 
     const mockContext = {
@@ -90,11 +96,17 @@ describe('LoggingInterceptor', () => {
       method: 'POST',
       url: '/test',
       ip: '127.0.0.1',
+      headers: {
+        'x-correlation-id': 'test-correlation-id',
+        'user-agent': 'test-user-agent',
+      },
       get: jest.fn().mockReturnValue('test-user-agent'),
     };
 
     const mockResponse = {
       statusCode: 500,
+      get: jest.fn().mockReturnValue('application/json'),
+      setHeader: jest.fn(),
     };
 
     const mockContext = {
@@ -140,11 +152,15 @@ describe('LoggingInterceptor', () => {
       method: 'GET',
       url: '/test',
       ip: '127.0.0.1',
+      headers: {
+        'x-correlation-id': 'test-correlation-id',
+      },
       get: jest.fn().mockReturnValue(undefined),
     };
 
     const mockResponse = {
       statusCode: 200,
+      get: jest.fn().mockReturnValue('application/json'),
       setHeader: jest.fn(),
     };
 
@@ -183,6 +199,7 @@ describe('LoggingInterceptor', () => {
 
     const mockResponse = {
       statusCode: 200,
+      get: jest.fn().mockReturnValue('application/json'),
       setHeader: jest.fn(),
     };
 

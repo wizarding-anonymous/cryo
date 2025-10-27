@@ -107,7 +107,7 @@ describe('UserService', () => {
             encryptUserData: jest.fn(),
             decryptUserData: jest.fn(),
             prepareUserForSave: jest.fn((user) => user),
-            decryptUserForResponse: jest.fn((user) => user),
+            prepareUserAfterLoad: jest.fn((user) => user),
           },
         },
       ],

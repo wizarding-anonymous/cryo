@@ -76,7 +76,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       (request as any).correlationId || this.generateCorrelationId();
     const userId = (request as any).user?.id;
     const ipAddress = request.ip || request.socket?.remoteAddress || 'unknown';
-    const userAgent = request.get('User-Agent') || '';
+    const userAgent = (typeof request.get === 'function' ? request.get('User-Agent') : request.headers?.['user-agent']) || '';
 
     // Определяем тип ошибки и извлекаем информацию
     const errorInfo = this.extractErrorInfo(exception, correlationId);
@@ -127,7 +127,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message: exception.message,
         statusCode: exception.statusCode,
         details: exception.details,
-        retryAfter: exception.getRetryAfter(),
+        retryAfter: exception.details?.retryAfter,
         isOperational: exception.isOperational,
         timestamp: exception.timestamp,
       };
@@ -244,8 +244,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           retryable: errorInfo.details?.retryable,
           retryAfter: errorInfo.retryAfter,
           userAgent,
-          referer: request.get('Referer'),
-          origin: request.get('Origin'),
+          referer: (typeof request.get === 'function' ? request.get('Referer') : request.headers?.referer),
+          origin: (typeof request.get === 'function' ? request.get('Origin') : request.headers?.origin),
           details: errorInfo.details,
         },
       },
@@ -360,7 +360,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     request: Request,
   ): ErrorResponse | SimpleErrorResponse | ApiResponseDto<null> {
     const isTestEnv = process.env.NODE_ENV === 'test';
-    const isInternalApi = request.path.startsWith('/internal');
+    const isInternalApi = request.path?.startsWith('/internal') || false;
 
     if (isTestEnv) {
       // Простая структура для тестов (обратная совместимость)

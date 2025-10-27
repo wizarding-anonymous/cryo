@@ -1,0 +1,294 @@
+# Staging docker-compose file for User Service validation
+# This file is used for staging deployment and integration testing
+
+version: '3.8'
+
+services:
+  # User Service (Staging)
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service-staging
+    ports:
+      - "3002:3002"
+    depends_on:
+      - postgres-user-staging
+      - redis-staging
+      - auth-service-staging
+    env_file:
+      - ./user-service/.env.staging
+    environment:
+      - NODE_ENV=staging
+      - POSTGRES_HOST=postgres-user-staging
+      - REDIS_HOST=redis-staging
+      - AUTH_SERVICE_URL=http://auth-service-staging:3001
+      - GAME_CATALOG_SERVICE_URL=http://game-catalog-service-staging:3003
+      - PAYMENT_SERVICE_URL=http://payment-service-staging:3006
+      - NOTIFICATION_SERVICE_URL=http://notification-service-staging:3007
+      - SECURITY_SERVICE_URL=http://security-service-staging:3010
+    networks:
+      - staging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/api/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "environment=staging"
+      - "service=user-service"
+      - "version=1.0.0-staging"
+
+  # Auth Service (Staging) - Required for integration testing
+  auth-service-staging:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service-staging
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres-auth-staging
+      - redis-staging
+    env_file:
+      - ./auth-service/.env.docker
+    environment:
+      - NODE_ENV=staging
+      - POSTGRES_AUTH_HOST=postgres-auth-staging
+      - REDIS_HOST=redis-staging
+      - USER_SERVICE_URL=http://user-service-staging:3002
+      - SECURITY_SERVICE_URL=http://security-service-staging:3010
+    networks:
+      - staging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Game Catalog Service (Staging) - For integration testing
+  game-catalog-service-staging:
+    build:
+      context: ./game-catalog-service
+      dockerfile: Dockerfile
+    container_name: game-catalog-service-staging
+    ports:
+      - "3003:3003"
+    depends_on:
+      - postgres-catalog-staging
+      - redis-staging
+    env_file:
+      - ./game-catalog-service/.env.docker
+    environment:
+      - NODE_ENV=staging
+      - POSTGRES_HOST=postgres-catalog-staging
+      - REDIS_HOST=redis-staging
+      - USER_SERVICE_URL=http://user-service-staging:3002
+    networks:
+      - staging-network
+    restart: unless-stopped
+
+  # Payment Service (Staging) - For integration testing
+  payment-service-staging:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service-staging
+    ports:
+      - "3006:3006"
+    depends_on:
+      - postgres-payment-staging
+      - redis-staging
+    env_file:
+      - ./payment-service/.env.docker
+    environment:
+      - NODE_ENV=staging
+      - POSTGRES_HOST=postgres-payment-staging
+      - REDIS_HOST=redis-staging
+      - USER_SERVICE_URL=http://user-service-staging:3002
+    networks:
+      - staging-network
+    restart: unless-stopped
+
+  # Security Service (Staging) - For audit and security testing
+  security-service-staging:
+    build:
+      context: ./security-service
+      dockerfile: Dockerfile
+    container_name: security-service-staging
+    ports:
+      - "3010:3010"
+    depends_on:
+      - postgres-security-staging
+      - redis-staging
+    env_file:
+      - ./security-service/.env
+    environment:
+      - NODE_ENV=staging
+      - POSTGRES_HOST=postgres-security-staging
+      - REDIS_HOST=redis-staging
+      - USER_SERVICE_URL=http://user-service-staging:3002
+    networks:
+      - staging-network
+    restart: unless-stopped
+
+  # Databases (Staging)
+  postgres-user-staging:
+    image: postgres:15-alpine
+    container_name: postgres-user-staging
+    environment:
+      POSTGRES_USER: user_service
+      POSTGRES_PASSWORD: user_password_staging
+      POSTGRES_DB: user_db_staging
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_user_staging_data:/var/lib/postgresql/data
+    networks:
+      - staging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_service -d user_db_staging"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  postgres-auth-staging:
+    image: postgres:15-alpine
+    container_name: postgres-auth-staging
+    environment:
+      POSTGRES_USER: auth_service
+      POSTGRES_PASSWORD: auth_password_staging
+      POSTGRES_DB: auth_db_staging
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_staging_data:/var/lib/postgresql/data
+    networks:
+      - staging-network
+    restart: unless-stopped
+
+  postgres-catalog-staging:
+    image: postgres:15-alpine
+    container_name: postgres-catalog-staging
+    environment:
+      POSTGRES_USER: catalog_service
+      POSTGRES_PASSWORD: catalog_password_staging
+      POSTGRES_DB: catalog_db_staging
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_catalog_staging_data:/var/lib/postgresql/data
+    networks:
+      - staging-network
+    restart: unless-stopped
+
+  postgres-payment-staging:
+    image: postgres:15-alpine
+    container_name: postgres-payment-staging
+    environment:
+      POSTGRES_USER: payment_service
+      POSTGRES_PASSWORD: payment_password_staging
+      POSTGRES_DB: payment_db_staging
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_payment_staging_data:/var/lib/postgresql/data
+    networks:
+      - staging-network
+    restart: unless-stopped
+
+  postgres-security-staging:
+    image: postgres:15-alpine
+    container_name: postgres-security-staging
+    environment:
+      POSTGRES_USER: security_service
+      POSTGRES_PASSWORD: security_password_staging
+      POSTGRES_DB: security_db_staging
+    ports:
+      - "5441:5432"
+    volumes:
+      - postgres_security_staging_data:/var/lib/postgresql/data
+    networks:
+      - staging-network
+    restart: unless-stopped
+
+  # Redis (Staging)
+  redis-staging:
+    image: redis:7-alpine
+    container_name: redis-staging
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_staging_data:/data
+    networks:
+      - staging-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_password_staging
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password_staging", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Monitoring Services (Staging)
+  prometheus-staging:
+    image: prom/prometheus:latest
+    container_name: prometheus-staging
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-staging.yml:/etc/prometheus/prometheus.yml
+      - prometheus_staging_data:/prometheus
+    networks:
+      - staging-network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+
+  grafana-staging:
+    image: grafana/grafana:latest
+    container_name: grafana-staging
+    ports:
+      - "3100:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=staging_admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_staging_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - staging-network
+    restart: unless-stopped
+
+# Volumes for staging data persistence
+volumes:
+  postgres_user_staging_data:
+  postgres_auth_staging_data:
+  postgres_catalog_staging_data:
+  postgres_payment_staging_data:
+  postgres_security_staging_data:
+  redis_staging_data:
+  prometheus_staging_data:
+  grafana_staging_data:
+
+# Network for staging environment
+networks:
+  staging-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16

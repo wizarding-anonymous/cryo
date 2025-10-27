@@ -1,0 +1,157 @@
+# Docker Compose configuration for User and Auth Services
+# This file includes User Service, Auth Service and their dependencies
+
+services:
+  # Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./auth-service/.env.docker
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-auth-service-super-secret-jwt-key-change-in-production}
+      - AUTH_JWT_REFRESH_SECRET=${AUTH_JWT_REFRESH_SECRET:-auth-service-super-secret-refresh-key-change-in-production}
+      - POSTGRES_AUTH_HOST=postgres-auth
+      - POSTGRES_AUTH_DB=auth_db
+      - POSTGRES_AUTH_USER=auth_service
+      - POSTGRES_AUTH_PASSWORD=auth_password
+      - AUTH_REDIS_HOST=redis
+      - AUTH_REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      - USER_SERVICE_URL=http://user-service:3002
+      - SECURITY_SERVICE_URL=http://security-service:3010
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3007
+    networks:
+      - user-auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health/docker"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./user-service/.env.docker
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      - POSTGRES_HOST=postgres-user
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=user_service
+      - POSTGRES_PASSWORD=user_password
+      - POSTGRES_DB=user_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CONNECT_TIMEOUT=30000
+      - REDIS_COMMAND_TIMEOUT=15000
+      - REDIS_MAX_RETRIES=5
+      - REDIS_RETRY_DELAY=3000
+    networks:
+      - user-auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/api/v1/health/docker"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # PostgreSQL for Auth Service
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: cryo-postgres-auth-db
+    environment:
+      POSTGRES_USER: auth_service
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: auth_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+      - ./auth-service/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - user-auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_service -d auth_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # PostgreSQL for User Service
+  postgres-user:
+    image: postgres:15-alpine
+    container_name: cryo-postgres-user-db
+    environment:
+      POSTGRES_USER: user_service
+      POSTGRES_PASSWORD: user_password
+      POSTGRES_DB: user_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - user-auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_service -d user_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis Cache (shared)
+  redis:
+    image: redis:7-alpine
+    container_name: cryo-redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - user-auth-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password} --tcp-keepalive 60 --timeout 0 --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test:
+        ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_password}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+# Volumes for data persistence
+volumes:
+  postgres_auth_data:
+  postgres_user_data:
+  redis_data:
+
+# Network for User and Auth Services
+networks:
+  user-auth-network:
+    driver: bridge

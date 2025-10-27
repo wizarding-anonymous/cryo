@@ -1,5 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+
+export interface RedisConfig {
+  host: string;
+  port: number;
+  password: string;
+  db: number;
+  maxRetries: number;
+  retryDelay: number;
+}
 import { EnvironmentVariables } from './env.validation';
 
 @Injectable()
@@ -53,14 +62,20 @@ export class AppConfigService {
   }
 
   // Redis
-  get redisConfig() {
+  get redisConfig(): RedisConfig {
     return {
-      host: this.configService.get('REDIS_HOST', { infer: true }),
-      port: this.configService.get('REDIS_PORT', { infer: true }),
-      password: this.configService.get('REDIS_PASSWORD', { infer: true }),
-      db: this.configService.get('REDIS_DB', { infer: true }),
-      maxRetries: this.configService.get('REDIS_MAX_RETRIES', { infer: true }),
-      retryDelay: this.configService.get('REDIS_RETRY_DELAY', { infer: true }),
+      host: this.configService.get<string>('REDIS_HOST', 'localhost'),
+      port: parseInt(this.configService.get<string>('REDIS_PORT', '6379'), 10),
+      password: this.configService.get<string>('REDIS_PASSWORD', ''),
+      db: parseInt(this.configService.get<string>('REDIS_DB', '0'), 10),
+      maxRetries: parseInt(
+        this.configService.get<string>('REDIS_MAX_RETRIES', '3'),
+        10,
+      ),
+      retryDelay: parseInt(
+        this.configService.get<string>('REDIS_RETRY_DELAY', '1000'),
+        10,
+      ),
     };
   }
 

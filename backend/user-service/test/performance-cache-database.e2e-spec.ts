@@ -48,10 +48,21 @@ describe('Performance Cache & Database Tests (e2e)', () => {
   afterAll(async () => {
     // Clean up test data
     if (dataSource?.isInitialized) {
-      await userRepository.query('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
-      await dataSource.destroy();
+      try {
+        await userRepository.query('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
+        await dataSource.destroy();
+      } catch (error) {
+        console.warn('Failed to cleanup database:', error.message);
+      }
     }
-    await app.close();
+    
+    if (app) {
+      try {
+        await app.close();
+      } catch (error) {
+        console.warn('Failed to close app:', error.message);
+      }
+    }
   });
 
   beforeEach(async () => {

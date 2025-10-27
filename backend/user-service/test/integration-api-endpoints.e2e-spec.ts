@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { TestAppModule } from './test-app.module';
+import { TestPerformanceModule } from './test-performance.module';
 import { GlobalExceptionFilter } from '../src/common/filters/global-exception.filter';
 import { HttpAdapterHost } from '@nestjs/core';
 import { ResponseInterceptor } from '../src/common/interceptors/response.interceptor';
+import { LoggingService } from '../src/common/logging/logging.service';
 import { DataSource, Repository } from 'typeorm';
 import { User } from '../src/user/entities/user.entity';
 
@@ -15,7 +16,7 @@ describe('API Endpoints Integration Tests (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [TestAppModule],
+      imports: [TestPerformanceModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -24,7 +25,8 @@ describe('API Endpoints Integration Tests (e2e)', () => {
 
     // Apply global configurations
     const httpAdapterHost = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost, app.get('Logger')));
+    const loggingService = app.get(LoggingService);
+    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost, loggingService));
     app.useGlobalInterceptors(new ResponseInterceptor());
     app.setGlobalPrefix('api');
     app.useGlobalPipes(
@@ -70,7 +72,7 @@ describe('API Endpoints Integration Tests (e2e)', () => {
     beforeEach(async () => {
       // Create a test user for each test
       const response = await request(app.getHttpServer())
-        .post('/api/internal/users')
+        .post('/api/users')
         .set('x-internal-service', 'user-service-internal')
         .send(testUser)
         .expect(201);
@@ -78,7 +80,7 @@ describe('API Endpoints Integration Tests (e2e)', () => {
       createdUserId = response.body.data.id;
     });
 
-    it('should create user via POST /api/internal/users', async () => {
+    it('should create user via POST /api/users', async () => {
       const newUser = {
         name: 'New API User',
         email: `new-api-${Date.now()}@example.com`,
@@ -86,7 +88,7 @@ describe('API Endpoints Integration Tests (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/internal/users')
+        .post('/api/users')
         .set('x-internal-service', 'user-service-internal')
         .set('x-correlation-id', 'api-test-create')
         .send(newUser)
@@ -102,9 +104,9 @@ describe('API Endpoints Integration Tests (e2e)', () => {
       expect(response.body.correlationId).toBe('api-test-create');
     });
 
-    it('should get user by ID via GET /api/internal/users/:id', async () => {
+    it('should get user by ID via GET /api/users/:id', async () => {
       const response = await request(app.getHttpServer())
-        .get(`/api/internal/users/${createdUserId}`)
+        .get(`/api/users/${createdUserId}`)
         .set('x-internal-service', 'user-service-internal')
         .set('x-correlation-id', 'api-test-get-by-id')
         .expect(200);
@@ -116,9 +118,9 @@ describe('API Endpoints Integration Tests (e2e)', () => {
       expect(response.body.correlationId).toBe('api-test-get-by-id');
     });
 
-    it('should get user by email via GET /api/internal/users/email/:email', async () => {
+    it('should get user by email via GET /api/users/email/:email', async () => {
       const response = await request(app.getHttpServer())
-        .get(`/api/internal/users/email/${testUser.email}`)
+        .get(`/api/users/email/${testUser.email}`)
         .set('x-internal-service', 'user-service-internal')
         .set('x-correlation-id', 'api-test-get-by-email')
         .expect(200);
@@ -188,7 +190,7 @@ describe('API Endpoints Integration Tests (e2e)', () => {
 
       // Get batch profiles
       const profilesResponse = await request(app.getHttpServer())
-        .post('/api/internal/users/batch/profiles')
+        .post('/api/users/batch/profiles')
         .set('x-internal-service', 'user-service-internal')
         .set('x-correlation-id', 'api-test-batch-profiles')
         .send({
@@ -218,7 +220,7 @@ describe('API Endpoints Integration Tests (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/internal/users')
+        .post('/api/users')
         .set('x-internal-service', 'user-service-internal')
         .send(testUser)
         .expect(201);

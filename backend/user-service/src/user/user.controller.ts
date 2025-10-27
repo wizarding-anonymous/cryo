@@ -441,7 +441,7 @@ export class UserController {
     const { id } = params;
     const correlationId = (request as any).correlationId;
     const ipAddress = request.ip || request.socket?.remoteAddress;
-    const userAgent = request.get('User-Agent') || '';
+    const userAgent = (typeof request.get === 'function' ? request.get('User-Agent') : request.headers?.['user-agent']) || '';
 
     this.loggingService.info('Update last login request received', {
       correlationId,
@@ -522,7 +522,7 @@ export class UserController {
     const { id } = params;
     const correlationId = (request as any).correlationId;
     const ipAddress = request.ip || request.socket?.remoteAddress;
-    const userAgent = request.get('User-Agent') || '';
+    const userAgent = (typeof request.get === 'function' ? request.get('User-Agent') : request.headers?.['user-agent']) || '';
 
     this.loggingService.info('User existence check request received', {
       correlationId,
@@ -696,7 +696,7 @@ export class UserController {
   ) {
     const correlationId = (request as any).correlationId;
     const ipAddress = request.ip || request.socket?.remoteAddress;
-    const userAgent = request.get('User-Agent') || '';
+    const userAgent = (typeof request.get === 'function' ? request.get('User-Agent') : request.headers?.['user-agent']) || '';
 
     this.loggingService.info('Users pagination request received', {
       correlationId,
@@ -869,7 +869,7 @@ export class UserController {
   ) {
     const correlationId = (request as any).correlationId;
     const ipAddress = request.ip || request.socket?.remoteAddress;
-    const userAgent = request.get('User-Agent') || '';
+    const userAgent = (typeof request.get === 'function' ? request.get('User-Agent') : request.headers?.['user-agent']) || '';
 
     if (!searchTerm || !searchTerm.trim()) {
       this.loggingService.warn('Users search request without search term', {

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { IntegrationService, UserEvent } from './integration.service';
 import { NotificationClient } from './notification/notification.client';
 import { SecurityClient } from './security/security.client';
@@ -58,9 +59,21 @@ describe('IntegrationService', () => {
       resetCircuit: jest.fn(),
     };
 
+    const mockConfigService = {
+      get: jest.fn((key: string, defaultValue?: any) => {
+        const config = {
+          NODE_ENV: 'development', // Изменяем на development для тестирования
+          AUTH_SERVICE_URL: 'http://localhost:3001',
+          REDIS_URL: 'redis://localhost:6379',
+        };
+        return config[key] || defaultValue;
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         IntegrationService,
+        { provide: ConfigService, useValue: mockConfigService },
         { provide: NotificationClient, useValue: mockNotificationClient },
         { provide: SecurityClient, useValue: mockSecurityClient },
         { provide: AuthServiceClient, useValue: mockAuthServiceClient },

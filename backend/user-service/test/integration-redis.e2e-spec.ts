@@ -80,12 +80,24 @@ describe('Redis Integration Tests (e2e)', () => {
   }, 30000);
 
   afterAll(async () => {
-    // Clean up Redis data
+    // Clean up Redis data only if client was successfully created
     if (redisClient && typeof redisClient.flushdb === 'function') {
-      await redisClient.flushdb();
-      await redisClient.disconnect();
+      try {
+        await redisClient.flushdb();
+        await redisClient.disconnect();
+      } catch (error) {
+        console.warn('Failed to cleanup Redis:', error.message);
+      }
     }
-    await app.close();
+    
+    // Close app only if it was successfully created
+    if (app) {
+      try {
+        await app.close();
+      } catch (error) {
+        console.warn('Failed to close app:', error.message);
+      }
+    }
   });
 
   beforeEach(async () => {

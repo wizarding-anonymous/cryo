@@ -80,7 +80,7 @@ export class ConfigFactory {
         softIdleTimeoutMillis: 30000, // Soft idle timeout
 
         // SSL and security
-        ssl: false, // Disable SSL for Docker environment
+        ssl: false, // Disable SSL for Docker environment (PostgreSQL container doesn't support SSL)
 
         // Performance tuning
         keepAlive: true,
@@ -167,19 +167,9 @@ export class ConfigFactory {
           limit: configs.search.limit,
         },
       ],
-      // Use Redis for distributed rate limiting
-      storage: new (require('ioredis'))({
-        host: this.configService.get('REDIS_HOST', { infer: true }),
-        port: this.configService.get('REDIS_PORT', { infer: true }),
-        password: this.configService.get('REDIS_PASSWORD', { infer: true }),
-        db: this.configService.get('REDIS_DB', { infer: true }) + 2, // Use separate DB for throttling
-        keyPrefix: 'user-service:throttle:',
-        maxRetriesPerRequest: 3,
-        retryDelayOnFailover: 100,
-        lazyConnect: true,
-        connectTimeout: 5000,
-        commandTimeout: 3000,
-      }),
+      // Use in-memory storage for rate limiting (simpler and more reliable)
+      // Note: For production with multiple instances, consider using Redis storage
+      // storage: redisStorageInstance,
       // Error handling
       errorMessage: 'Too many requests, please try again later',
       skipIf: (context) => {
@@ -378,11 +368,9 @@ export class ConfigFactory {
    */
   private createQueryCacheConfig(nodeEnv: string) {
     const redisConfig = this.createRedisConfig();
-    const queryCacheEnabled = this.configService.get('QUERY_CACHE_ENABLED', {
-      infer: true,
-    });
+    const queryCacheEnabled = this.configService.get('QUERY_CACHE_ENABLED', 'true');
 
-    if (!queryCacheEnabled) {
+    if (queryCacheEnabled === 'false' || queryCacheEnabled === false) {
       return false; // Disable query caching
     }
 

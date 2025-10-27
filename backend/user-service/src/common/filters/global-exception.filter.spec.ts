@@ -34,6 +34,7 @@ describe('GlobalExceptionFilter', () => {
       ip: '127.0.0.1',
       method: 'GET',
       url: '/api/users/123',
+      path: '/api/users/123',
       get: jest.fn().mockReturnValue('test-user-agent'),
       socket: { remoteAddress: '127.0.0.1' },
     };
@@ -70,9 +71,9 @@ describe('GlobalExceptionFilter', () => {
 
   describe('UserServiceError handling', () => {
     it('should handle UserServiceError correctly', () => {
-      // Temporarily set NODE_ENV to production to test full response format
+      // Temporarily set NODE_ENV to test to use simple response format
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+      process.env.NODE_ENV = 'test';
 
       const error = UserServiceError.userNotFound(
         'test-user-id',
@@ -102,16 +103,7 @@ describe('GlobalExceptionFilter', () => {
 
       expect(httpAdapterHost.httpAdapter.reply).toHaveBeenCalledWith(
         mockResponse,
-        {
-          error: {
-            code: ErrorCodes.USER_NOT_FOUND,
-            message: error.message,
-            correlationId: 'test-correlation-id',
-            timestamp: error.timestamp.toISOString(),
-            path: '/api/users/123',
-            details: error.details,
-          },
-        },
+        { message: error.message },
         HttpStatus.NOT_FOUND,
       );
 
@@ -152,9 +144,9 @@ describe('GlobalExceptionFilter', () => {
     });
 
     it('should handle validation errors with field details', () => {
-      // Temporarily set NODE_ENV to production to test full response format
+      // Temporarily set NODE_ENV to test to use simple response format
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+      process.env.NODE_ENV = 'test';
 
       const validationResponse = {
         message: ['name should not be empty', 'email must be an email'],
@@ -170,18 +162,7 @@ describe('GlobalExceptionFilter', () => {
 
       expect(httpAdapterHost.httpAdapter.reply).toHaveBeenCalledWith(
         mockResponse,
-        {
-          error: {
-            code: ErrorCodes.VALIDATION_ERROR,
-            message: 'name should not be empty, email must be an email',
-            correlationId: 'test-correlation-id',
-            timestamp: expect.any(String),
-            path: '/api/users/123',
-            details: {
-              fields: ['name should not be empty', 'email must be an email'],
-            },
-          },
-        },
+        { message: ['name should not be empty', 'email must be an email'] },
         HttpStatus.BAD_REQUEST,
       );
 

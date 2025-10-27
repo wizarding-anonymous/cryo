@@ -77,10 +77,10 @@ describe('Swagger Documentation (e2e)', () => {
         expect(res.body).toHaveProperty('paths');
 
         // Verify that our main endpoints are documented (with /api prefix)
-        expect(res.body.paths).toHaveProperty('/api/auth/register');
-        expect(res.body.paths).toHaveProperty('/api/auth/login');
-        expect(res.body.paths).toHaveProperty('/api/auth/logout');
-        expect(res.body.paths).toHaveProperty('/api/users/profile');
+        expect(res.body.paths).toHaveProperty('/api/internal/users');
+        expect(res.body.paths).toHaveProperty('/api/internal/users/{id}');
+        expect(res.body.paths).toHaveProperty('/api/internal/users/email/{email}');
+        expect(res.body.paths).toHaveProperty('/api/health');
       });
   });
 });
