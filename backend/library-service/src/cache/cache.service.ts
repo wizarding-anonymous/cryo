@@ -19,6 +19,7 @@ export interface CacheKeyPattern {
 export class CacheService {
   private readonly logger = new Logger(CacheService.name);
   private stats = { hits: 0, misses: 0 };
+  private readonly namespace = 'library:';
 
   // Predefined cache patterns with optimized TTL strategies
   private readonly cachePatterns: Record<string, CacheKeyPattern> = {
@@ -71,14 +72,15 @@ export class CacheService {
    */
   async get<T>(key: string): Promise<T | undefined> {
     try {
-      const value = await this.cacheManager.get<T>(key);
+      const namespacedKey = this.addNamespace(key);
+      const value = await this.cacheManager.get<T>(namespacedKey);
 
       if (value !== undefined && value !== null) {
         this.stats.hits++;
-        this.logger.debug(`Cache HIT for key: ${key}`);
+        this.logger.debug(`Cache HIT for key: ${key} (${namespacedKey})`);
       } else {
         this.stats.misses++;
-        this.logger.debug(`Cache MISS for key: ${key}`);
+        this.logger.debug(`Cache MISS for key: ${key} (${namespacedKey})`);
       }
 
       return value ?? undefined;
@@ -97,9 +99,12 @@ export class CacheService {
    */
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
     try {
+      const namespacedKey = this.addNamespace(key);
       const finalTtl = ttl ?? this.getTtlForKey(key);
-      await this.cacheManager.set(key, value, finalTtl);
-      this.logger.debug(`Cache SET for key: ${key}, TTL: ${finalTtl}s`);
+      await this.cacheManager.set(namespacedKey, value, finalTtl);
+      this.logger.debug(
+        `Cache SET for key: ${key} (${namespacedKey}), TTL: ${finalTtl}s`,
+      );
     } catch (error: unknown) {
       this.logger.error(
         `Cache SET error for key ${key}:`,
@@ -113,8 +118,9 @@ export class CacheService {
    */
   async del(key: string): Promise<void> {
     try {
-      await this.cacheManager.del(key);
-      this.logger.debug(`Cache DEL for key: ${key}`);
+      const namespacedKey = this.addNamespace(key);
+      await this.cacheManager.del(namespacedKey);
+      this.logger.debug(`Cache DEL for key: ${key} (${namespacedKey})`);
     } catch (error: unknown) {
       this.logger.error(
         `Cache DEL error for key ${key}:`,
@@ -156,18 +162,41 @@ export class CacheService {
     const results = new Map<string, T>();
 
     try {
-      const promises = keys.map(async (key) => {
-        const value = await this.get<T>(key);
-        return { key, value };
-      });
+      const namespacedKeys = keys.map((key) => this.addNamespace(key));
 
-      const resolved = await Promise.all(promises);
+      // Use Redis MGET if available, otherwise fallback to individual gets
+      if (
+        this.cacheManager.store &&
+        typeof (this.cacheManager.store as any).mget === 'function'
+      ) {
+        const values = await (this.cacheManager.store as any).mget(
+          ...namespacedKeys,
+        );
 
-      resolved.forEach(({ key, value }) => {
-        if (value !== undefined) {
-          results.set(key, value);
-        }
-      });
+        keys.forEach((originalKey, index) => {
+          const value = values[index] as T;
+          if (value !== undefined && value !== null) {
+            results.set(originalKey, value);
+            this.stats.hits++;
+          } else {
+            this.stats.misses++;
+          }
+        });
+      } else {
+        // Fallback to individual gets
+        const promises = keys.map(async (key) => {
+          const value = await this.get<T>(key);
+          return { key, value };
+        });
+
+        const resolved = await Promise.all(promises);
+
+        resolved.forEach(({ key, value }) => {
+          if (value !== undefined) {
+            results.set(key, value);
+          }
+        });
+      }
 
       this.logger.debug(
         `Bulk GET for ${keys.length} keys, found ${results.size} values`,
@@ -189,11 +218,53 @@ export class CacheService {
     entries: Array<{ key: string; value: T; ttl?: number }>,
   ): Promise<void> {
     try {
-      const promises = entries.map(({ key, value, ttl }) =>
-        this.set(key, value, ttl),
-      );
+      // Use Redis MSET if available and all entries have same TTL, otherwise fallback to individual sets
+      if (
+        this.cacheManager.store &&
+        typeof (this.cacheManager.store as any).mset === 'function'
+      ) {
+        const sameTtl = entries.every(
+          (entry) =>
+            (entry.ttl ?? this.getTtlForKey(entry.key)) ===
+            (entries[0].ttl ?? this.getTtlForKey(entries[0].key)),
+        );
 
-      await Promise.all(promises);
+        if (sameTtl) {
+          const keyValuePairs: any[] = [];
+          entries.forEach(({ key, value }) => {
+            keyValuePairs.push(this.addNamespace(key), value);
+          });
+
+          await (this.cacheManager.store as any).mset(...keyValuePairs);
+
+          // Set TTL for all keys if needed
+          const ttl = entries[0].ttl ?? this.getTtlForKey(entries[0].key);
+          if (ttl > 0) {
+            const expirePromises = entries
+              .map(({ key }) => {
+                const store = this.cacheManager.store as any;
+                return store.expire
+                  ? store.expire(this.addNamespace(key), ttl)
+                  : null;
+              })
+              .filter(Boolean);
+            await Promise.all(expirePromises);
+          }
+        } else {
+          // Different TTLs, use individual sets
+          const promises = entries.map(({ key, value, ttl }) =>
+            this.set(key, value, ttl),
+          );
+          await Promise.all(promises);
+        }
+      } else {
+        // Fallback to individual sets
+        const promises = entries.map(({ key, value, ttl }) =>
+          this.set(key, value, ttl),
+        );
+        await Promise.all(promises);
+      }
+
       this.logger.debug(`Bulk SET for ${entries.length} keys`);
     } catch (error: unknown) {
       this.logger.error(
@@ -208,19 +279,30 @@ export class CacheService {
    */
   async delPattern(pattern: string): Promise<number> {
     try {
-      // Note: This is a simplified implementation
-      // In production, you might want to use Redis SCAN for better performance
-      const keysToDelete = await this.getKeysMatchingPattern(pattern);
+      const namespacedPattern = this.addNamespace(pattern);
+      const keysToDelete = await this.getKeysMatchingPattern(namespacedPattern);
 
       if (keysToDelete.length === 0) {
         return 0;
       }
 
-      const promises = keysToDelete.map((key) => this.del(key));
-      await Promise.all(promises);
+      // Use Redis DEL with multiple keys if available
+      if (
+        this.cacheManager.store &&
+        typeof (this.cacheManager.store as any).del === 'function'
+      ) {
+        await (this.cacheManager.store as any).del(...keysToDelete);
+      } else {
+        // Fallback to individual deletes (remove namespace for individual del calls)
+        const originalKeys = keysToDelete.map((key) =>
+          this.removeNamespace(key),
+        );
+        const promises = originalKeys.map((key) => this.del(key));
+        await Promise.all(promises);
+      }
 
       this.logger.debug(
-        `Deleted ${keysToDelete.length} keys matching pattern: ${pattern}`,
+        `Deleted ${keysToDelete.length} keys matching pattern: ${pattern} (${namespacedPattern})`,
       );
       return keysToDelete.length;
     } catch (error: unknown) {
@@ -259,29 +341,52 @@ export class CacheService {
   }
 
   /**
-   * Invalidate library-specific cache entries for a user
+   * Invalidate library-specific cache entries for a user with pattern support
    * More targeted invalidation for library operations
    */
-  async invalidateUserLibraryCache(userId: string): Promise<void> {
+  async invalidateUserLibraryCache(
+    userId: string,
+    patterns?: string[],
+  ): Promise<void> {
     try {
       const userCacheKeysKey = `user-cache-keys:${userId}`;
       const allUserKeys = (await this.get<string[]>(userCacheKeysKey)) ?? [];
 
-      // Filter for library and search related keys
-      const libraryKeys = allUserKeys.filter(
-        (key) =>
-          key.startsWith('library_') ||
-          key.startsWith('search_') ||
-          key.startsWith('ownership_'),
-      );
+      let keysToDelete: string[] = [];
 
-      if (libraryKeys.length > 0) {
-        const promises = libraryKeys.map((key) => this.del(key));
-        await Promise.all(promises);
+      if (patterns && patterns.length > 0) {
+        // Use provided patterns to filter keys
+        keysToDelete = allUserKeys.filter((key) =>
+          patterns.some((pattern) => this.matchesPattern(key, pattern)),
+        );
+      } else {
+        // Default behavior: filter for library and search related keys
+        keysToDelete = allUserKeys.filter(
+          (key) =>
+            key.startsWith('library_') ||
+            key.startsWith('search_') ||
+            key.startsWith('ownership_'),
+        );
+      }
+
+      if (keysToDelete.length > 0) {
+        // Use bulk delete if available
+        if (
+          this.cacheManager.store &&
+          typeof (this.cacheManager.store as any).del === 'function'
+        ) {
+          const namespacedKeys = keysToDelete.map((key) =>
+            this.addNamespace(key),
+          );
+          await (this.cacheManager.store as any).del(...namespacedKeys);
+        } else {
+          const promises = keysToDelete.map((key) => this.del(key));
+          await Promise.all(promises);
+        }
 
         // Update the tracking key to remove deleted keys
         const remainingKeys = allUserKeys.filter(
-          (key) => !libraryKeys.includes(key),
+          (key) => !keysToDelete.includes(key),
         );
         if (remainingKeys.length > 0) {
           await this.set(userCacheKeysKey, remainingKeys, 0);
@@ -290,7 +395,7 @@ export class CacheService {
         }
 
         this.logger.debug(
-          `Invalidated ${libraryKeys.length} library cache entries for user ${userId}`,
+          `Invalidated ${keysToDelete.length} library cache entries for user ${userId}`,
         );
       }
     } catch (error: unknown) {
@@ -520,6 +625,7 @@ export class CacheService {
         details: {
           canWrite: true,
           canRead: retrieved !== undefined,
+          namespace: this.namespace,
           stats: this.getStats(),
         },
       };
@@ -532,6 +638,7 @@ export class CacheService {
         status: 'unhealthy',
         details: {
           error: error instanceof Error ? error.message : String(error),
+          namespace: this.namespace,
           stats: this.getStats(),
         },
       };
@@ -554,16 +661,72 @@ export class CacheService {
   }
 
   /**
-   * Get keys matching a pattern (simplified implementation)
-   * In production with Redis, you would use SCAN command
+   * Add namespace prefix to key
+   */
+  private addNamespace(key: string): string {
+    return key.startsWith(this.namespace) ? key : `${this.namespace}${key}`;
+  }
+
+  /**
+   * Remove namespace prefix from key
+   */
+  private removeNamespace(key: string): string {
+    return key.startsWith(this.namespace)
+      ? key.slice(this.namespace.length)
+      : key;
+  }
+
+  /**
+   * Check if key matches pattern (supports wildcards)
+   */
+  private matchesPattern(key: string, pattern: string): boolean {
+    // Convert pattern to regex (simple implementation)
+    const regexPattern = pattern.replace(/\*/g, '.*').replace(/\?/g, '.');
+    const regex = new RegExp(`^${regexPattern}$`);
+    return regex.test(key);
+  }
+
+  /**
+   * Get keys matching a pattern using Redis SCAN if available
    */
   private async getKeysMatchingPattern(pattern: string): Promise<string[]> {
-    // This is a simplified implementation
-    // In a real Redis implementation, you would use the SCAN command
-    // For now, we'll return an empty array as this would require direct Redis access
-    this.logger.warn(
-      `Pattern deletion not fully implemented for pattern: ${pattern}`,
-    );
-    return [];
+    try {
+      // Try to use Redis SCAN if available
+      if (
+        this.cacheManager.store &&
+        typeof (this.cacheManager.store as any).keys === 'function'
+      ) {
+        return await (this.cacheManager.store as any).keys(pattern);
+      }
+
+      // Fallback: if we have a direct Redis client access
+      const store = this.cacheManager.store as any;
+      if (store && store.client) {
+        const client = store.client;
+        if (typeof client.keys === 'function') {
+          return await client.keys(pattern);
+        }
+
+        // Use SCAN for better performance in production
+        if (typeof client.scanIterator === 'function') {
+          const keys: string[] = [];
+          for await (const key of client.scanIterator({ MATCH: pattern })) {
+            keys.push(key);
+          }
+          return keys;
+        }
+      }
+
+      this.logger.warn(
+        `Pattern matching not fully implemented for pattern: ${pattern}. Using fallback.`,
+      );
+      return [];
+    } catch (error: unknown) {
+      this.logger.error(
+        `Error getting keys for pattern ${pattern}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+      return [];
+    }
   }
 }

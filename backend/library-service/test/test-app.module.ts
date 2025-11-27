@@ -17,8 +17,8 @@ import { PurchaseHistoryRepository } from '../src/history/repositories/purchase-
 import { GameCatalogClient } from '../src/clients/game-catalog.client';
 import { UserServiceClient } from '../src/clients/user.client';
 import { PaymentServiceClient } from '../src/clients/payment-service.client';
-import { JwtAuthGuard } from '../src/auth/guards/jwt-auth.guard';
-import { TestJwtStrategy } from './auth/test-jwt.strategy';
+// import { JwtAuthGuard } from '../src/auth/guards/jwt-auth.guard'; // TODO: Replace with new auth guards
+// import { TestJwtStrategy } from './auth/test-jwt.strategy'; // TODO: Replace with new test strategy
 import { CacheService } from '../src/cache/cache.service';
 import { BenchmarkService } from '../src/performance/benchmark.service';
 import { PerformanceMonitorService } from '../src/performance/performance-monitor.service';
@@ -64,8 +64,8 @@ import { TestHealthController } from './controllers/test-health.controller';
     LibraryRepository,
     HistoryService,
     PurchaseHistoryRepository,
-    JwtAuthGuard,
-    TestJwtStrategy,
+    // JwtAuthGuard, // TODO: Replace with new auth guards
+    // TestJwtStrategy, // TODO: Replace with new test strategy
     CacheService,
     BenchmarkService,
     PerformanceMonitorService,
@@ -85,4 +85,4 @@ import { TestHealthController } from './controllers/test-health.controller';
     },
   ],
 })
-export class TestAppModule { }
+export class TestAppModule {}

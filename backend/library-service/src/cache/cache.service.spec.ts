@@ -11,6 +11,7 @@ describe('CacheService', () => {
     get: jest.fn(),
     set: jest.fn(),
     del: jest.fn(),
+    store: undefined as any,
   };
 
   beforeEach(async () => {
@@ -37,13 +38,14 @@ describe('CacheService', () => {
   describe('get', () => {
     it('should return cached value and track hit', async () => {
       const key = 'test-key';
+      const namespacedKey = 'library:test-key';
       const value = { data: 'test' };
       mockCacheManager.get.mockResolvedValue(value);
 
       const result = await service.get(key);
 
       expect(result).toEqual(value);
-      expect(mockCacheManager.get).toHaveBeenCalledWith(key);
+      expect(mockCacheManager.get).toHaveBeenCalledWith(namespacedKey);
 
       const stats = service.getStats();
       expect(stats.hits).toBe(1);
@@ -52,12 +54,13 @@ describe('CacheService', () => {
 
     it('should return undefined for non-existent key and track miss', async () => {
       const key = 'non-existent';
+      const namespacedKey = 'library:non-existent';
       mockCacheManager.get.mockResolvedValue(undefined);
 
       const result = await service.get(key);
 
       expect(result).toBeUndefined();
-      expect(mockCacheManager.get).toHaveBeenCalledWith(key);
+      expect(mockCacheManager.get).toHaveBeenCalledWith(namespacedKey);
 
       const stats = service.getStats();
       expect(stats.hits).toBe(0);
@@ -80,30 +83,45 @@ describe('CacheService', () => {
   describe('set', () => {
     it('should set value with explicit TTL', async () => {
       const key = 'test-key';
+      const namespacedKey = 'library:test-key';
       const value = { data: 'test' };
       const ttl = 300;
 
       await service.set(key, value, ttl);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith(key, value, ttl);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        namespacedKey,
+        value,
+        ttl,
+      );
     });
 
     it('should set value with automatic TTL based on key pattern', async () => {
       const key = 'library_user123_page1';
+      const namespacedKey = 'library:library_user123_page1';
       const value = { data: 'test' };
 
       await service.set(key, value);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith(key, value, 300); // library pattern TTL
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        namespacedKey,
+        value,
+        300,
+      ); // library pattern TTL
     });
 
     it('should set value with default TTL for unknown patterns', async () => {
       const key = 'unknown_pattern_key';
+      const namespacedKey = 'library:unknown_pattern_key';
       const value = { data: 'test' };
 
       await service.set(key, value);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith(key, value, 300); // default TTL
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        namespacedKey,
+        value,
+        300,
+      ); // default TTL
     });
 
     it('should handle set errors gracefully', async () => {
@@ -118,10 +136,11 @@ describe('CacheService', () => {
   describe('del', () => {
     it('should delete cached value', async () => {
       const key = 'test-key';
+      const namespacedKey = 'library:test-key';
 
       await service.del(key);
 
-      expect(mockCacheManager.del).toHaveBeenCalledWith(key);
+      expect(mockCacheManager.del).toHaveBeenCalledWith(namespacedKey);
     });
 
     it('should handle delete errors gracefully', async () => {
@@ -135,6 +154,7 @@ describe('CacheService', () => {
   describe('getOrSet', () => {
     it('should return cached data if it exists', async () => {
       const key = 'my-key';
+      const namespacedKey = 'library:my-key';
       const cachedData = { value: 'from-cache' };
       mockCacheManager.get.mockResolvedValue(cachedData);
       const fn = jest.fn();
@@ -142,13 +162,14 @@ describe('CacheService', () => {
       const result = await service.getOrSet(key, fn, 300);
 
       expect(result).toEqual(cachedData);
-      expect(mockCacheManager.get).toHaveBeenCalledWith(key);
+      expect(mockCacheManager.get).toHaveBeenCalledWith(namespacedKey);
       expect(fn).not.toHaveBeenCalled();
       expect(mockCacheManager.set).not.toHaveBeenCalled();
     });
 
     it('should execute function and set cache if data does not exist', async () => {
       const key = 'my-key';
+      const namespacedKey = 'library:my-key';
       const newData = { value: 'from-function' };
       mockCacheManager.get.mockResolvedValue(undefined);
       const fn = jest.fn().mockResolvedValue(newData);
@@ -156,27 +177,32 @@ describe('CacheService', () => {
       const result = await service.getOrSet(key, fn, 300);
 
       expect(result).toEqual(newData);
-      expect(mockCacheManager.get).toHaveBeenCalledWith(key);
+      expect(mockCacheManager.get).toHaveBeenCalledWith(namespacedKey);
       expect(fn).toHaveBeenCalledTimes(1);
-      expect(mockCacheManager.set).toHaveBeenCalledWith(key, newData, 300);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        namespacedKey,
+        newData,
+        300,
+      );
     });
 
     it('should handle function errors', async () => {
       const key = 'my-key';
+      const namespacedKey = 'library:my-key';
       const error = new Error('Function failed');
       mockCacheManager.get.mockResolvedValue(undefined);
       const fn = jest.fn().mockRejectedValue(error);
 
       await expect(service.getOrSet(key, fn, 300)).rejects.toThrow(error);
 
-      expect(mockCacheManager.get).toHaveBeenCalledWith(key);
+      expect(mockCacheManager.get).toHaveBeenCalledWith(namespacedKey);
       expect(fn).toHaveBeenCalledTimes(1);
       expect(mockCacheManager.set).not.toHaveBeenCalled();
     });
   });
 
   describe('mget', () => {
-    it('should get multiple values', async () => {
+    it('should get multiple values using fallback method', async () => {
       const keys = ['key1', 'key2', 'key3'];
       const values = [{ data: 'value1' }, { data: 'value2' }, undefined];
 
@@ -193,8 +219,33 @@ describe('CacheService', () => {
       expect(result.has('key3')).toBe(false);
     });
 
+    it('should use Redis MGET when available', async () => {
+      const keys = ['key1', 'key2', 'key3'];
+      const values = [{ data: 'value1' }, { data: 'value2' }, null];
+
+      const mockStore = {
+        mget: jest.fn().mockResolvedValue(values),
+      };
+      mockCacheManager.store = mockStore;
+
+      const result = await service.mget(keys);
+
+      expect(mockStore.mget).toHaveBeenCalledWith(
+        'library:key1',
+        'library:key2',
+        'library:key3',
+      );
+      expect(result.size).toBe(2);
+      expect(result.get('key1')).toEqual(values[0]);
+      expect(result.get('key2')).toEqual(values[1]);
+      expect(result.has('key3')).toBe(false);
+    });
+
     it('should handle errors in bulk get', async () => {
       const keys = ['key1', 'key2'];
+
+      // Reset the store to undefined to force fallback to individual gets
+      mockCacheManager.store = undefined;
       mockCacheManager.get.mockRejectedValue(new Error('Get error'));
 
       const result = await service.mget(keys);
@@ -204,7 +255,7 @@ describe('CacheService', () => {
   });
 
   describe('mset', () => {
-    it('should set multiple values', async () => {
+    it('should set multiple values using fallback method', async () => {
       const entries = [
         { key: 'key1', value: { data: 'value1' }, ttl: 300 },
         { key: 'key2', value: { data: 'value2' } },
@@ -213,15 +264,65 @@ describe('CacheService', () => {
       await service.mset(entries);
 
       expect(mockCacheManager.set).toHaveBeenCalledWith(
-        'key1',
+        'library:key1',
         entries[0].value,
         300,
       );
       expect(mockCacheManager.set).toHaveBeenCalledWith(
-        'key2',
+        'library:key2',
         entries[1].value,
         300,
       ); // default TTL
+    });
+
+    it('should use Redis MSET when available and TTLs are same', async () => {
+      const entries = [
+        { key: 'key1', value: { data: 'value1' }, ttl: 300 },
+        { key: 'key2', value: { data: 'value2' }, ttl: 300 },
+      ];
+
+      const mockStore = {
+        mset: jest.fn().mockResolvedValue(undefined),
+        expire: jest.fn().mockResolvedValue(undefined),
+      };
+      mockCacheManager.store = mockStore;
+
+      await service.mset(entries);
+
+      expect(mockStore.mset).toHaveBeenCalledWith(
+        'library:key1',
+        { data: 'value1' },
+        'library:key2',
+        { data: 'value2' },
+      );
+      expect(mockStore.expire).toHaveBeenCalledWith('library:key1', 300);
+      expect(mockStore.expire).toHaveBeenCalledWith('library:key2', 300);
+    });
+
+    it('should fallback to individual sets when TTLs differ', async () => {
+      const entries = [
+        { key: 'key1', value: { data: 'value1' }, ttl: 300 },
+        { key: 'key2', value: { data: 'value2' }, ttl: 600 },
+      ];
+
+      const mockStore = {
+        mset: jest.fn().mockResolvedValue(undefined),
+      };
+      mockCacheManager.store = mockStore;
+
+      await service.mset(entries);
+
+      expect(mockStore.mset).not.toHaveBeenCalled();
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'library:key1',
+        entries[0].value,
+        300,
+      );
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'library:key2',
+        entries[1].value,
+        600,
+      );
     });
 
     it('should handle errors in bulk set', async () => {
@@ -242,7 +343,7 @@ describe('CacheService', () => {
       await service.recordUserCacheKey(userId, key);
 
       expect(mockCacheManager.set).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        `library:user-cache-keys:${userId}`,
         [key],
         0,
       );
@@ -271,14 +372,14 @@ describe('CacheService', () => {
 
       // Should call set with some array that includes the new key
       expect(mockCacheManager.set).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        `library:user-cache-keys:${userId}`,
         expect.arrayContaining(['new_key']),
         0,
       );
 
       // Should limit to 100 keys
       const setCall = mockCacheManager.set.mock.calls.find(
-        (call) => call[0] === `user-cache-keys:${userId}`,
+        (call) => call[0] === `library:user-cache-keys:${userId}`,
       );
       expect(setCall[1]).toHaveLength(100);
     });
@@ -294,10 +395,10 @@ describe('CacheService', () => {
       await service.invalidateUserCache(userId);
 
       keysToDelete.forEach((key) => {
-        expect(mockCacheManager.del).toHaveBeenCalledWith(key);
+        expect(mockCacheManager.del).toHaveBeenCalledWith(`library:${key}`);
       });
       expect(mockCacheManager.del).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        `library:user-cache-keys:${userId}`,
       );
     });
 
@@ -309,7 +410,7 @@ describe('CacheService', () => {
       await service.invalidateUserCache(userId);
 
       expect(mockCacheManager.del).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        `library:user-cache-keys:${userId}`,
       );
     });
   });
@@ -389,12 +490,12 @@ describe('CacheService', () => {
       await service.warmUp(warmUpFunctions);
 
       expect(mockCacheManager.set).toHaveBeenCalledWith(
-        'warm-key1',
+        'library:warm-key1',
         { data: 'warm1' },
         600,
       );
       expect(mockCacheManager.set).toHaveBeenCalledWith(
-        'warm-key2',
+        'library:warm-key2',
         { data: 'warm2' },
         300,
       );
@@ -437,6 +538,7 @@ describe('CacheService', () => {
       expect(result.status).toBe('healthy');
       expect(result.details.canWrite).toBe(true);
       expect(result.details.canRead).toBe(true);
+      expect(result.details.namespace).toBe('library:');
     });
 
     it('should return unhealthy status when cache operations fail', async () => {
@@ -451,6 +553,7 @@ describe('CacheService', () => {
       expect(result.status).toBe('unhealthy');
       // The service should detect the failure and return unhealthy status
       expect(result.details).toBeDefined();
+      expect(result.details.namespace).toBe('library:');
     });
   });
 
@@ -471,16 +574,18 @@ describe('CacheService', () => {
 
       // Should delete library, search, and ownership keys
       expect(mockCacheManager.del).toHaveBeenCalledWith(
-        'library_user123_page1',
+        'library:library_user123_page1',
       );
-      expect(mockCacheManager.del).toHaveBeenCalledWith('search_user123_query');
       expect(mockCacheManager.del).toHaveBeenCalledWith(
-        'ownership_user123_game1',
+        'library:search_user123_query',
+      );
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        'library:ownership_user123_game1',
       );
 
       // Should update tracking key with remaining keys
       expect(mockCacheManager.set).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        `library:user-cache-keys:${userId}`,
         ['user_profile_user123', 'other_key_user123'],
         0,
       );
@@ -495,11 +600,48 @@ describe('CacheService', () => {
       await service.invalidateUserLibraryCache(userId);
 
       expect(mockCacheManager.del).toHaveBeenCalledWith(
-        'library_user123_page1',
+        'library:library_user123_page1',
       );
-      expect(mockCacheManager.del).toHaveBeenCalledWith('search_user123_query');
       expect(mockCacheManager.del).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        'library:search_user123_query',
+      );
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        `library:user-cache-keys:${userId}`,
+      );
+    });
+
+    it('should invalidate library cache with custom patterns', async () => {
+      const userId = 'user123';
+      const allKeys = [
+        'library_user123_page1',
+        'search_user123_query',
+        'ownership_user123_game1',
+        'user_profile_user123',
+        'custom_pattern_key',
+      ];
+      const patterns = ['custom_pattern_*', 'library_*'];
+
+      mockCacheManager.get.mockResolvedValue(allKeys);
+
+      await service.invalidateUserLibraryCache(userId, patterns);
+
+      // Should delete keys matching custom patterns
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        'library:custom_pattern_key',
+      );
+      expect(mockCacheManager.del).toHaveBeenCalledWith(
+        'library:library_user123_page1',
+      );
+
+      // Should update tracking key with remaining keys
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        `library:user-cache-keys:${userId}`,
+        [
+          'search_user123_query',
+          'ownership_user123_game1',
+          'user_profile_user123',
+        ],
+        0,
       );
     });
   });
@@ -512,9 +654,13 @@ describe('CacheService', () => {
 
       await service.cacheLibraryData(userId, cacheKey, data);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith(cacheKey, data, 300);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        `library:${cacheKey}`,
+        data,
+        300,
+      );
       expect(mockCacheManager.get).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        `library:user-cache-keys:${userId}`,
       );
     });
 
@@ -527,7 +673,7 @@ describe('CacheService', () => {
       await service.cacheLibraryData(userId, cacheKey, data, customTtl);
 
       expect(mockCacheManager.set).toHaveBeenCalledWith(
-        cacheKey,
+        `library:${cacheKey}`,
         data,
         customTtl,
       );
@@ -542,9 +688,13 @@ describe('CacheService', () => {
 
       await service.cacheSearchResults(userId, cacheKey, results);
 
-      expect(mockCacheManager.set).toHaveBeenCalledWith(cacheKey, results, 300);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        `library:${cacheKey}`,
+        results,
+        300,
+      );
       expect(mockCacheManager.get).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        `library:user-cache-keys:${userId}`,
       );
     });
   });
@@ -567,7 +717,7 @@ describe('CacheService', () => {
       expect(result).toEqual(cachedData);
       expect(fallbackFn).not.toHaveBeenCalled();
       expect(mockCacheManager.get).toHaveBeenCalledWith(
-        `user-cache-keys:${userId}`,
+        `library:user-cache-keys:${userId}`,
       );
     });
 
@@ -589,7 +739,11 @@ describe('CacheService', () => {
 
       expect(result).toEqual(newData);
       expect(fallbackFn).toHaveBeenCalledTimes(1);
-      expect(mockCacheManager.set).toHaveBeenCalledWith(cacheKey, newData, 300);
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        `library:${cacheKey}`,
+        newData,
+        300,
+      );
     });
   });
 
@@ -620,7 +774,7 @@ describe('CacheService', () => {
       await service.invalidateGameCache(gameId);
 
       expect(mockCacheManager.del).toHaveBeenCalledWith(
-        `game_details_${gameId}`,
+        `library:game_details_${gameId}`,
       );
     });
   });

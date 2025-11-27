@@ -9,9 +9,9 @@ import {
   LibraryResponseDto,
   OwnershipResponseDto,
 } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { OwnershipGuard } from '../auth/guards/ownership.guard';
-import { InternalAuthGuard } from '../auth/guards/internal-auth.guard';
+// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // TODO: Replace with new auth guards
+// import { OwnershipGuard } from '../auth/guards/ownership.guard'; // TODO: Replace with new auth guards
+// import { InternalAuthGuard } from '../auth/guards/internal-auth.guard'; // TODO: Replace with new auth guards
 
 describe('LibraryController', () => {
   let controller: LibraryController;
@@ -40,9 +40,9 @@ describe('LibraryController', () => {
         { provide: LibraryService, useValue: mockLibraryService },
         { provide: SearchService, useValue: mockSearchService },
         { provide: ConfigService, useValue: mockConfigService },
-        { provide: JwtAuthGuard, useValue: { canActivate: () => true } },
-        { provide: OwnershipGuard, useValue: { canActivate: () => true } },
-        { provide: InternalAuthGuard, useValue: { canActivate: () => true } },
+        // { provide: JwtAuthGuard, useValue: { canActivate: () => true } }, // TODO: Replace with new auth guards
+        // { provide: OwnershipGuard, useValue: { canActivate: () => true } }, // TODO: Replace with new auth guards
+        // { provide: InternalAuthGuard, useValue: { canActivate: () => true } }, // TODO: Replace with new auth guards
         {
           provide: 'CACHE_MANAGER',
           useValue: { get: jest.fn(), set: jest.fn() },

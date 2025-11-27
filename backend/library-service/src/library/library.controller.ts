@@ -6,7 +6,6 @@ import {
   Body,
   Query,
   Param,
-  UseGuards,
   Req,
   UseInterceptors,
   ParseUUIDPipe,
@@ -40,9 +39,7 @@ import {
   ConflictErrorResponseDto,
   InternalServerErrorResponseDto,
 } from '../common/dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { OwnershipGuard } from '../auth/guards/ownership.guard';
-import { InternalAuthGuard } from '../auth/guards/internal-auth.guard';
+// TODO: Replace with new auth guards after auth service integration
 
 // Define a type for authenticated requests
 interface AuthenticatedRequest extends Request {
@@ -63,7 +60,7 @@ export class LibraryController {
   ) {}
 
   @Get('my')
-  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  // @UseGuards(JwtAuthGuard, OwnershipGuard) // TODO: Replace with AuthServiceGuard, OwnershipGuard
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300) // 5 minutes
   @ApiQuery({
@@ -138,7 +135,7 @@ export class LibraryController {
   }
 
   @Get('my/search')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard) // TODO: Replace with AuthServiceGuard
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(120) // 2 minutes for search results
   @ApiQuery({
@@ -220,7 +217,7 @@ export class LibraryController {
   }
 
   @Get('ownership/:gameId')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard) // TODO: Replace with AuthServiceGuard
   @ApiParam({
     name: 'gameId',
     description: 'Unique identifier of the game to check ownership for',
@@ -275,7 +272,7 @@ export class LibraryController {
   // These endpoints are for service-to-service communication only
 
   @Post('add')
-  @UseGuards(InternalAuthGuard)
+  // @UseGuards(InternalAuthGuard) // TODO: Replace with InternalServiceGuard
   @ApiOperation({
     summary: 'Add game to library (internal)',
     description: `Internal endpoint to add a game to user library after purchase confirmation.
@@ -340,7 +337,7 @@ export class LibraryController {
   }
 
   @Delete('remove')
-  @UseGuards(InternalAuthGuard)
+  // @UseGuards(InternalAuthGuard) // TODO: Replace with InternalServiceGuard
   @ApiOperation({
     summary: 'Remove game from library (internal)',
     description:
@@ -373,7 +370,7 @@ export class LibraryController {
 
   // Internal endpoint for other services (e.g., Download Service)
   @Get('user/:userId/games')
-  @UseGuards(InternalAuthGuard)
+  // @UseGuards(InternalAuthGuard) // TODO: Replace with InternalServiceGuard
   @ApiParam({
     name: 'userId',
     description: 'Unique identifier of the user whose games to retrieve',

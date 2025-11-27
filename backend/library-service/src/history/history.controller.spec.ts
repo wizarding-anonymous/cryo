@@ -7,8 +7,8 @@ import { HistoryService } from './history.service';
 import { HistoryQueryDto, SearchHistoryDto, HistoryResponseDto } from './dto';
 import { PurchaseHistory } from '../entities/purchase-history.entity';
 import { AddGameToLibraryDto } from '../library/dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { InternalAuthGuard } from '../auth/guards/internal-auth.guard';
+// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // TODO: Replace with new auth guards
+// import { InternalAuthGuard } from '../auth/guards/internal-auth.guard'; // TODO: Replace with new auth guards
 import { CacheInterceptor } from '../common/interceptors/cache.interceptor';
 
 describe('HistoryController', () => {
@@ -38,8 +38,8 @@ describe('HistoryController', () => {
       providers: [
         { provide: HistoryService, useValue: mockHistoryService },
         { provide: ConfigService, useValue: mockConfigService },
-        { provide: JwtAuthGuard, useValue: { canActivate: () => true } },
-        { provide: InternalAuthGuard, useValue: { canActivate: () => true } },
+        // { provide: JwtAuthGuard, useValue: { canActivate: () => true } }, // TODO: Replace with new auth guards
+        // { provide: InternalAuthGuard, useValue: { canActivate: () => true } }, // TODO: Replace with new auth guards
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
         CacheInterceptor,
         Reflector,

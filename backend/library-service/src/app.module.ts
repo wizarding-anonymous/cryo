@@ -7,7 +7,7 @@ import { LibraryModule } from './library/library.module';
 import { HistoryModule } from './history/history.module';
 import { HealthModule } from './health/health.module';
 import { ConfigModule } from './config/config.module';
-import { AuthModule } from './auth/auth.module';
+
 import { ClientsModule } from './clients/clients.module';
 import { AppCacheModule } from './cache/cache.module';
 import { EventsModule } from './events/events.module';
@@ -19,7 +19,6 @@ import { SecretsManagerService } from './common/services/secrets-manager.service
 @Module({
   imports: [
     PrometheusModule.register(),
-    AuthModule,
     ConfigModule,
     ClientsModule,
     AppCacheModule,

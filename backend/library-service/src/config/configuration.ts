@@ -54,6 +54,26 @@ export default () => ({
     secret: process.env.JWT_SECRET || 'your-secret-key',
     expiresIn: process.env.JWT_EXPIRES_IN || '1h',
   },
+  auth: {
+    service: {
+      url: process.env.AUTH_SERVICE_URL || 'http://auth-service:3001',
+      timeout: parseInt(process.env.AUTH_SERVICE_TIMEOUT || '5000', 10),
+      retryAttempts: parseInt(
+        process.env.AUTH_SERVICE_RETRY_ATTEMPTS || '3',
+        10,
+      ),
+      internalKey: process.env.AUTH_SERVICE_INTERNAL_KEY || '',
+    },
+    fallback: {
+      enabled: process.env.AUTH_FALLBACK_ENABLED !== 'false',
+      allowedServices: (
+        process.env.AUTH_FALLBACK_ALLOWED_SERVICES ||
+        'user-service,game-catalog-service,payment-service,notification-service,achievement-service,review-service,social-service,download-service,security-service'
+      )
+        .split(',')
+        .map((s) => s.trim()),
+    },
+  },
   services: {
     gamesCatalog: {
       url: process.env.GAMES_CATALOG_SERVICE_URL || 'http://localhost:3001',

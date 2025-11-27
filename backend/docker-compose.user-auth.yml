@@ -78,6 +78,41 @@ services:
       retries: 3
       start_period: 60s
 
+  # Payment Service
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres-payment:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./payment-service/.env.docker
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+      - POSTGRES_HOST=postgres-payment
+      - POSTGRES_PORT=5432
+      - POSTGRES_USERNAME=payment_service
+      - POSTGRES_PASSWORD=payment_password
+      - POSTGRES_DATABASE=payment_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USER_SERVICE_URL=http://user-service:3002
+    networks:
+      - user-auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # PostgreSQL for Auth Service
   postgres-auth:
     image: postgres:15-alpine
@@ -125,6 +160,30 @@ services:
       retries: 3
       start_period: 30s
 
+  # PostgreSQL for Payment Service
+  postgres-payment:
+    image: postgres:15-alpine
+    container_name: cryo-postgres-payment-db
+    environment:
+      POSTGRES_USER: payment_service
+      POSTGRES_PASSWORD: payment_password
+      POSTGRES_DB: payment_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_payment_data:/var/lib/postgresql/data
+      - ./payment-service/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - user-auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_service -d payment_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   # Redis Cache (shared)
   redis:
     image: redis:7-alpine
@@ -149,6 +208,7 @@ services:
 volumes:
   postgres_auth_data:
   postgres_user_data:
+  postgres_payment_data:
   redis_data:
 
 # Network for User and Auth Services

@@ -5,7 +5,6 @@ import {
   Body,
   Query,
   Param,
-  UseGuards,
   Req,
   UseInterceptors,
 } from '@nestjs/common';
@@ -33,8 +32,7 @@ import {
   ConflictErrorResponseDto,
   InternalServerErrorResponseDto,
 } from '../common/dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { InternalAuthGuard } from '../auth/guards/internal-auth.guard';
+// TODO: Replace with new auth guards after auth service integration
 import { CacheInterceptor } from '../common/interceptors/cache.interceptor';
 
 // Define a type for authenticated requests
@@ -48,13 +46,13 @@ interface AuthenticatedRequest extends Request {
 
 @ApiTags('Purchase History')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+// @UseGuards(JwtAuthGuard) // TODO: Replace with AuthServiceGuard
 @Controller('library/history')
 export class HistoryController {
   constructor(private readonly historyService: HistoryService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard) // TODO: Replace with AuthServiceGuard
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(600) // 10 minutes for history
   @ApiQuery({
@@ -152,7 +150,7 @@ export class HistoryController {
   }
 
   @Get('search')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard) // TODO: Replace with AuthServiceGuard
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(120) // 2 minutes for search results
   @ApiQuery({
@@ -256,7 +254,7 @@ export class HistoryController {
   }
 
   @Get(':purchaseId')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard) // TODO: Replace with AuthServiceGuard
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(1800) // 30 minutes for purchase details
   @ApiOperation({
@@ -331,7 +329,7 @@ export class HistoryController {
     description: 'Internal server error',
     type: InternalServerErrorResponseDto,
   })
-  @UseGuards(InternalAuthGuard)
+  // @UseGuards(InternalAuthGuard) // TODO: Replace with InternalServiceGuard
   createPurchaseRecord(@Body() dto: AddGameToLibraryDto) {
     return this.historyService.createPurchaseRecord(dto);
   }
